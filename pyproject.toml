@@ -5,6 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "imdb-sqlite>=2.1.0",
+    "llama-index>=0.14.20",
+    "numpy>=2.4.4",
     "openai-agents>=0.13.6",
+    "pandas>=3.0.2",
     "python-dotenv>=1.2.2",
+    "sqlalchemy>=2.0.49",
 ]
