@@ -1,9 +1,8 @@
+from typing import cast
 import textwrap
 from agents import Agent, RunContextWrapper, Runner, function_tool
 from sqlalchemy import Engine, text
-from modules.agent_context import AgentContext
-from modules.data import PartialQueryAnswer
-from modules.data_agent import DataAgent
+from modules.model import PartialQueryAnswer, AgentContext, DataAgent
 from mschema import m_schema
 from mschema.schema_engine import SchemaEngine
 from pydantic import Field, create_model
@@ -28,6 +27,8 @@ Determine if the following natural language query is relevant to the database sc
 {query}
 """).strip()
 
+
+# TODO: answer can be empty (currently it returns needs instead)
 def sql_agent_instructions(m_schema: str) -> str:
     return textwrap.dedent(f"""
 You are an expert at translating natural language questions into SQL queries. Your task is to generate SQL queries that can be executed on the given database schema to answer the user's question. The database schema is as follows:
@@ -54,7 +55,7 @@ It may be the case that the question can still be answered partially with the cu
 def sql_agent_prompt(query: str, additional_information: str) -> str:
     additional_information_section = f"【Additional Information】\n{additional_information}" if additional_information else ""
 
-    return textwrap.dedent(f"""Please generate SQL query to answer the following question: {query}
+    return textwrap.dedent(f"""Please generate SQL query and execute that SQL query to answer the following question: {query}
 
 {additional_information_section}
 """).strip()
@@ -144,7 +145,7 @@ class SqlDataAgent(DataAgent):
             Args:
                 query: The SQL query to execute.
             """
-            print(f"Executing SQL query: {query}") # TODO: Block non read queries)
+            print(f"        Executing SQL query: {query}") # TODO: Block non read queries)
             with self.db_engine.connect() as conn:
                 result = conn.execute(text(query)).fetchall()
                 return str(result)
@@ -160,4 +161,4 @@ class SqlDataAgent(DataAgent):
             sql_agent_prompt(query, additional_information)
         )
 
-        return result.final_output
+        return cast(PartialQueryAnswer, result.final_output)
