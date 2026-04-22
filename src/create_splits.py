@@ -2,8 +2,8 @@ from agents import Agent
 import os
 import time
 
-from src.modules.model import AgentContext
-from src.modules.splits.splitter import SplitType, create_agents
+from modules.model import AgentContext
+from modules.splits.splitter import SplitType, create_agents
 
 if __name__ == "__main__":
     always_included_columns_mapping = {

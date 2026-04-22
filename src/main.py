@@ -1,9 +1,9 @@
 import os
 from agents import Agent, ModelSettings, trace
 from sqlalchemy import create_engine
-from src.modules.model import DataAgent, AgentContext
-from src.modules.query_coordinator import QueryCoordinator
-from src.modules.sql_data_agent import SqlDataAgent
+from modules.model import DataAgent, AgentContext
+from modules.query_coordinator import QueryCoordinator
+from modules.sql_data_agent import SqlDataAgent
 from openai import AsyncOpenAI
 from openai.types.shared import Reasoning
 from agents import set_default_openai_client

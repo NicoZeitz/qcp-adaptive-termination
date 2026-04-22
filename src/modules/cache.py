@@ -8,7 +8,7 @@ from agents.tracing import response_span
 import cloudpickle
 from openai import BaseModel
 
-from src.modules.model import AgentContext
+from modules.model import AgentContext
 
 CACHE_FOLDER = "../.cache"
 
