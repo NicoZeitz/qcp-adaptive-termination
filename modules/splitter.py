@@ -121,11 +121,14 @@ class SplitTree:
         if n == 1:
             return True
 
+        # Keep semantics aligned with horizontal/vertical splitters:
+        # n means resulting number of leaf splits, so we need n-1 split operations.
+        target_split_operations = n - 1
         nodes_splitted = 0
         last_split_was_horizontal = random.random() < 0.5
 
         nodes_to_split: list[SplitTree] = [self]
-        while nodes_splitted < n:
+        while nodes_splitted < target_split_operations:
             if len(nodes_to_split) == 0:
                 print(f"Not enough splits possible for mixed split with n={n}")
                 return False
