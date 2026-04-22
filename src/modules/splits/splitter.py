@@ -8,8 +8,8 @@ import random
 import datetime
 import uuid
 
-from modules.model import AgentContext, DataAgent
-from modules.sql_data_agent import SqlDataAgent
+from src.modules.model import AgentContext, DataAgent
+from src.modules.sql_data_agent import SqlDataAgent
 
 from sqlalchemy.engine import Engine
 from sqlalchemy import event

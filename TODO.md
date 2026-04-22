@@ -1,9 +1,18 @@
-result agent
-* Results Alignment by Code Generation
-* Final Answer Synthesis.
+Split Generation
+* Data Noise (TRANSLATE, RENAME_COLUMNS, CHANGE_DATA_TYPE, USE_DATA_ABBREVIATIONS, SYNONYMS)
+* Redundancies (Multiple agents having (partially) overlapping data)
 
-handle large intermediate results
+General for all Agents
+* Code Generation and Execution capabilities
+* Long context / Handling large intermediate results / Data management of results (similar to RLM via code lookup / partial preview)
 
-code execution environment for agents
+Data Agents
+* Prompting better
 
-split generation data noise
+Orchestrator Agent
+* Prompting better
+
+Result Agent
+* Prompting better
+* Result Alignment by Code Generation
+* Final Answer Synthesis better

@@ -1,9 +1,9 @@
 import os
 from agents import Agent, ModelSettings, trace
 from sqlalchemy import create_engine
-from modules.model import DataAgent, AgentContext
-from modules.query_coordinator import QueryCoordinator
-from modules.sql_data_agent import SqlDataAgent
+from src.modules.model import DataAgent, AgentContext
+from src.modules.query_coordinator import QueryCoordinator
+from src.modules.sql_data_agent import SqlDataAgent
 from openai import AsyncOpenAI
 from openai.types.shared import Reasoning
 from agents import set_default_openai_client
@@ -13,6 +13,28 @@ load_dotenv()
 # custom_client = AsyncOpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY"))
 custom_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 set_default_openai_client(custom_client)
+
+def create_data_agents_from_folder(folder_path: str) -> list[DataAgent]:
+    data_agents: list[DataAgent] = []
+
+    for file_name in os.listdir(folder_path):
+        if file_name.endswith(".db"):
+            agent_name = os.path.splitext(file_name)[0]
+            data_agent = SqlDataAgent(
+                agent=Agent[AgentContext](
+                    name=agent_name,
+                    model="gpt-5-mini",
+                    model_settings=ModelSettings(
+                        reasoning=Reasoning(effort="low"),
+                        verbosity="low",
+                        parallel_tool_calls=True
+                    )
+                ),
+                db_engine=create_engine(f'sqlite:///{os.path.abspath(os.path.join(folder_path, file_name))}'),
+            )
+            data_agents.append(data_agent)
+
+    return data_agents
 
 def create_data_agents(amount: int) -> list[DataAgent]:
     data_agents: list[DataAgent] = []
@@ -28,7 +50,7 @@ def create_data_agents(amount: int) -> list[DataAgent]:
                     parallel_tool_calls=True
                 )
             ),
-            db_engine=create_engine(f'sqlite:///{os.path.abspath(f"./data/agent{i}.db")}'),
+            db_engine=create_engine(f'sqlite:///{os.path.abspath(f"../data/agent{i}.db")}'),
         )
         data_agents.append(data_agent)
 
@@ -38,7 +60,9 @@ async def main():
     user_query = "What's the actors name who played Rocket in Guardians of the Galaxy?"
 
     with trace("NZ: Collaborative Query Answering", metadata={"query": user_query}):
-        data_agents = create_data_agents(5)
+        # data_agents = create_data_agents(5)
+        data_agents = create_data_agents_from_folder("../data/handmade")
+
         queryCoordinator = QueryCoordinator(
             agent=Agent[AgentContext](
                 name="Query Coordinator",
