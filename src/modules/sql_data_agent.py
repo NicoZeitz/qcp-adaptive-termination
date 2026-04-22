@@ -1,10 +1,10 @@
 import textwrap
 from agents import Agent, RunContextWrapper, Runner, function_tool
 from sqlalchemy import Engine, text
-from src.modules.cache import Cache
-from src.modules.model import PartialQueryAnswer, AgentContext, DataAgent
-from src.modules.mschema import m_schema
-from src.modules.mschema.schema_engine import SchemaEngine
+from modules.cache import Cache
+from modules.model import PartialQueryAnswer, AgentContext, DataAgent
+from modules.mschema import m_schema
+from modules.mschema.schema_engine import SchemaEngine
 from pydantic import Field, create_model
 
 def schema_description_agent_instructions() -> str:
