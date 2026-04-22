@@ -1,7 +1,7 @@
 import os
 import hashlib
 from pathlib import Path
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, Awaitable, Callable, TypeVar, cast
 
 from agents import Agent, agent_span, custom_span
 import cloudpickle
@@ -86,10 +86,12 @@ class Cache:
                     "Cache Hit",
                     data={
                         "agent": agent.name,
-                        "instructions": agent.instructions,
-                        "user_prompt": user_prompt,
+                        "instructions": cast(str, agent.instructions)[:200],
+                        "user_prompt": user_prompt[:200],
                         "tools": [tool.name for tool in agent.tools or []],
-                        "output_model": str(output_model),
+                        "output_model": str(output_model)
+                        if not hasattr(output_model, "model_json_schema")
+                        else cast(type[BaseModel], output_model).model_json_schema(),
                         "value": str(cached_value)
                         if not hasattr(cached_value, "model_dump")
                         else cached_value.model_dump(),
