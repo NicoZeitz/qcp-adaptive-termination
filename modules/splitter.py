@@ -5,6 +5,7 @@ from agents import Agent
 from dataclasses import dataclass
 from sqlalchemy import Inspector, create_engine, inspect, text, text, select
 import random
+import datetime
 import uuid
 
 from modules.model import AgentContext, DataAgent
@@ -196,12 +197,15 @@ def create_split_tree_for_table(table: str, input_db_engine: Engine, input_db_en
         children=[]
     )
 
-def get_splits_for_table(table: str, input_db_engine: Engine, input_db_engine_inspector: Inspector, always_included_columns_mapping: dict[str, list[str]], split_type: SplitType, force_splits: bool, seed: int, agent_amount: int) -> tuple[SplitTree, list[SplitTree]]:
+def get_splits_for_table(table: str, input_db_engine: Engine, input_db_engine_inspector: Inspector, always_included_columns_mapping: dict[str, list[str]], split_type: SplitType, force_splits: bool, max_splits_per_table: int | None, seed: int, agent_amount: int) -> tuple[SplitTree, list[SplitTree]]:
     print(f"================================================== CREATING {split_type.name} SPLITS FOR {table.upper()} ==================================================")
     split_tree = create_split_tree_for_table(table, input_db_engine, input_db_engine_inspector, always_included_columns_mapping)
 
     min_splits = 1 + int(force_splits)
     max_splits = min(split_tree.amount_splits_possible(split_type), agent_amount)
+    if max_splits_per_table is not None:
+        max_splits = min(max_splits, max_splits_per_table)
+
     chosen_splits = random.randint(min_splits, max_splits)
 
     success = False
@@ -517,13 +521,15 @@ def create_agents(
         split_type: SplitType = SplitType.MIXED,
         noise_type: NoiseType = NoiseType.NONE,
         force_splits: bool = False,
+        max_splits_per_table: int | None = None,
         seed: int = 42) -> list[DataAgent]:
     if agent_amount < 1:
         raise ValueError("agent_amount must be at least 1")
 
     random.seed(seed)
 
-    output_path = f"{output_path}/{uuid.uuid4()}"
+    date = datetime.datetime.now().strftime("%Y-%m-%d")
+    output_path = f"{output_path}/{date}-{uuid.uuid4()}"
     os.makedirs(output_path, exist_ok=True)
 
     # write config file config.txt in output dir
@@ -552,7 +558,7 @@ def create_agents(
     # prefer to assign to agents that have less tables assigned already to balance the amount of tables per agent
     for table in table_names:
         recursive_seed = random.randint(0, 1000)
-        root, splits = get_splits_for_table(table, input_db_engine, input_db_engine_inspector, always_included_columns_mapping, split_type, force_splits, recursive_seed, agent_amount)
+        root, splits = get_splits_for_table(table, input_db_engine, input_db_engine_inspector, always_included_columns_mapping, split_type, force_splits, max_splits_per_table, recursive_seed, agent_amount)
         table_splits_mapping[table] = root
 
         # assign splits to agents, if there exists a table with 0 table_names chose that one (only if table names does not exist)
