@@ -8,9 +8,9 @@ from agents.tracing import response_span
 import cloudpickle
 from openai import BaseModel
 
-from modules.model import AgentContext
+from src.modules.model import AgentContext
 
-CACHE_FOLDER = "./.cache"
+CACHE_FOLDER = "../.cache"
 
 T = TypeVar("T")
 
