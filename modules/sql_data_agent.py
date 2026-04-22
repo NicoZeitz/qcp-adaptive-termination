@@ -1,7 +1,7 @@
-from typing import cast
 import textwrap
 from agents import Agent, RunContextWrapper, Runner, function_tool
 from sqlalchemy import Engine, text
+from modules.cache import Cache
 from modules.model import PartialQueryAnswer, AgentContext, DataAgent
 from mschema import m_schema
 from mschema.schema_engine import SchemaEngine
@@ -86,22 +86,24 @@ class SqlDataAgent(DataAgent):
         if not self.schema_initialized:
             await self._initialize_schema()
 
-        return self.m_schema # TODO: remove
-
         relevance_agent = self.agent.clone(
+            name=f"{self.agent.name}_Relevance_Agent",
             instructions=relevance_agent_instructions(self.m_schema),
             output_type=bool
         )
 
-        is_relevant = (await Runner.run(
-            relevance_agent,
-            relevance_agent_prompt(query)
-        )).final_output
+        async def compute_is_relevant():
+            return (await Runner.run(
+                relevance_agent,
+                relevance_agent_prompt(query)
+            )).final_output
+
+        is_relevant = await Cache.instance().get_or_compute(relevance_agent, relevance_agent_prompt(query), bool, compute_is_relevant)
 
         if not is_relevant:
             return None
 
-        return m_schema
+        return self.m_schema
 
     async def _initialize_schema(self):
         m_schema_without_comments = self.schema_engine.mschema.to_mschema()
@@ -117,23 +119,27 @@ class SqlDataAgent(DataAgent):
         DatabaseDescriptionModel = create_model("DatabaseDescriptionModel", **schema_dict)
 
         schema_description_agent = self.agent.clone(
+            name=f"{self.agent.name}_Schema_Description_Agent",
             instructions=schema_description_agent_instructions(),
             output_type=DatabaseDescriptionModel
         )
 
-        result = await Runner.run(
-            schema_description_agent,
-            m_schema_without_comments
-        )
+        async def compute_schema_description():
+            return (await Runner.run(
+                schema_description_agent,
+                m_schema_without_comments
+            )).final_output
+
+        result = await Cache.instance().get_or_compute(schema_description_agent, m_schema_without_comments, DatabaseDescriptionModel, compute_schema_description)
 
         # Update the schema with the generated descriptions
         for table_name, table_info in self.schema_engine.mschema.tables.items():
             for col_name, field_info in table_info["fields"].items():
-                description = result.final_output.__dict__.get(table_name, {}).__dict__.get(col_name)
+                description = getattr(getattr(result, table_name, {}), col_name, None)
                 if description:
                     field_info["comment"] = description
 
-        self.natural_language_description = result.final_output.__dict__.get("database_description", "") + " | Capabilities: Text-to-SQL"
+        self.natural_language_description = result.database_description + " | Capabilities: Text-to-SQL"
         self.m_schema = self.schema_engine.mschema.to_mschema()
         self.schema_initialized = True
 
@@ -151,14 +157,16 @@ class SqlDataAgent(DataAgent):
                 return str(result)
 
         sql_agent = self.agent.clone(
+            name=f"{self.agent.name}_SQL_Agent",
             instructions=sql_agent_instructions(self.m_schema),
             tools=[execute_sql],
             output_type=PartialQueryAnswer
         )
 
-        result = await Runner.run(
-            sql_agent,
-            sql_agent_prompt(query, additional_information)
-        )
+        async def compute_sql_answer() -> PartialQueryAnswer:
+            return (await Runner.run(
+                sql_agent,
+                sql_agent_prompt(query, additional_information)
+            )).final_output
 
-        return cast(PartialQueryAnswer, result.final_output)
+        return await Cache.instance().get_or_compute(sql_agent, sql_agent_prompt(query, additional_information), PartialQueryAnswer, compute_sql_answer)

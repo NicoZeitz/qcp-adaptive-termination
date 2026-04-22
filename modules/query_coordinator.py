@@ -5,6 +5,7 @@ from typing import Any, cast
 from agents import Runner, custom_span, custom_span
 from pydantic import create_model, Field
 
+from modules.cache import Cache
 from modules.model import DataAgent, Need, NeedNotMet, QueryPlan, ReplanningNeeded, ReplanningNeededException, ResponsibleAgentNotFound
 
 def relevance_agent_instructions(agent_registry: str) -> str:
@@ -150,8 +151,7 @@ class QueryCoordinator:
             span.span_data.data["query"] = query
 
             # 1. Query Coordinator identifies Relevant Agents Based on Capabilities.
-            relevant_agents = self.data_agents # TODO: remove
-            # relevant_agents = await self._filter_relevant_agents(query, agent_registry)
+            relevant_agents = await self._filter_relevant_agents(query, agent_registry)
 
             # 2. Data Agents are Asked if they participate
             participating_agents = await self._ask_data_agents_for_participation(relevant_agents, query)
@@ -181,18 +181,22 @@ class QueryCoordinator:
             RelevanceModel = create_model("RelevanceModel", **agent_fields)
 
             relevance_agent = self.agent.clone(
+                name=f"{self.agent.name}_Relevance_Agent",
                 instructions=relevance_agent_instructions(agent_registry),
                 output_type=RelevanceModel
             )
 
-            relevances = (await Runner.run(
-                relevance_agent,
-                relevance_agent_prompt(query)
-            )).final_output
+            async def compute_relevances():
+                return (await Runner.run(
+                    relevance_agent,
+                    relevance_agent_prompt(query)
+                )).final_output
+
+            relevances = await Cache.instance().get_or_compute(relevance_agent, relevance_agent_prompt(query), RelevanceModel, compute_relevances)
 
             relevant_agents = []
             for agent in self.data_agents:
-                relevant = relevances.__dict__.get(agent.name(), False)
+                relevant = getattr(relevances, agent.name(), False)
 
                 span.span_data.data[f"{agent.name()}_relevant"] = relevant
                 if relevant:
@@ -218,34 +222,44 @@ class QueryCoordinator:
 
     async def _draft_query_plan(self, query: str, participating_agents: list[tuple[DataAgent, str]]) -> QueryPlan:
         with custom_span("Draft Query Plan") as span:
+            QueryPlanModel = QueryPlan.create_query_plan_model(participating_agents)
             query_plan_agent = self.agent.clone(
+                name=f"{self.agent.name}_Query_Plan_Agent",
                 instructions=query_plan_agent_instructions(participating_agents),
-                output_type=QueryPlan.create_query_plan_model(participating_agents)
+                output_type=QueryPlanModel
             )
 
-            result = await Runner.run(
-                query_plan_agent,
-                query_plan_agent_prompt(query)
-            )
+            async def compute_query_plan():
+                return (await Runner.run(
+                    query_plan_agent,
+                    query_plan_agent_prompt(query)
+                )).final_output
 
-            query_plan = QueryPlan.map_query_plan_model_to_query_plan(result.final_output)
+            result = await Cache.instance().get_or_compute(query_plan_agent, query_plan_agent_prompt(query), QueryPlanModel, compute_query_plan)
+
+            query_plan = QueryPlan.map_query_plan_model_to_query_plan(result)
 
             span.span_data.data["query_plan"] = query_plan.model_dump()
             return query_plan
 
     async def _replan_query_plan(self, query: str, old_query_plan: QueryPlan, participating_agents: list[tuple[DataAgent, str]], exception: ReplanningNeeded) -> QueryPlan:
+        QueryReplanModel = QueryPlan.create_query_replan_model(participating_agents)
         query_plan_agent = self.agent.clone(
+            name=f"{self.agent.name}_Query_Replan_Agent",
             instructions=query_replan_agent_instructions(participating_agents, old_query_plan),
-            output_type=QueryPlan.create_query_replan_model(participating_agents)
+            output_type=QueryReplanModel
         )
         # TODO: ask all data agents for the information needs again for participation (that are not currently participating)
 
-        result = await Runner.run(
-            query_plan_agent,
-            query_replan_agent_prompt(query, exception)
-        )
+        async def compute_query_replan():
+            return (await Runner.run(
+                query_plan_agent,
+                query_replan_agent_prompt(query, exception)
+            )).final_output
 
-        query_plan = QueryPlan.map_query_replan_model_to_query_plan(result.final_output)
+        result = await Cache.instance().get_or_compute(query_plan_agent, query_replan_agent_prompt(query, exception), QueryReplanModel, compute_query_replan)
+
+        query_plan = QueryPlan.map_query_replan_model_to_query_plan(result)
         return query_plan
 
     async def _execute_query_plan(self, query: str, query_plan: QueryPlan, participating_agents: list[tuple[DataAgent, str]]) -> str:
@@ -340,13 +354,17 @@ class QueryCoordinator:
             span.span_data.data["node"] = node.model_dump()
 
             aggregate_agent = self.agent.clone(
+                name=f"{self.agent.name}_Aggregate_Agent",
                 instructions=aggregate_agent_instructions()
             )
 
-            result = cast(str, (await Runner.run(
-                aggregate_agent,
-                aggregate_agent_prompt(node)
-            )).final_output)
+            async def compute_aggregate_result():
+                return cast(str, (await Runner.run(
+                    aggregate_agent,
+                    aggregate_agent_prompt(node)
+                )).final_output)
+
+            result = cast(str, await Cache.instance().get_or_compute(aggregate_agent, aggregate_agent_prompt(node), str, compute_aggregate_result))
 
             span.span_data.data["result"] = result
             return result
