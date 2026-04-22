@@ -4,9 +4,8 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, TypeVar
 
 from agents import Agent, agent_span, custom_span
-from agents.tracing import response_span
 import cloudpickle
-from openai import BaseModel
+from pydantic import BaseModel
 
 from modules.model import AgentContext
 
@@ -59,7 +58,7 @@ class Cache:
         self,
         agent: Agent[AgentContext],
         user_prompt: str,
-        output_model: BaseModel | None,
+        output_model: type | None,
         compute: Callable[[], Awaitable[T]],
     ) -> T:
         cache_keys = [
