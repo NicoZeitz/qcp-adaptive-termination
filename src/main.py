@@ -1,18 +1,21 @@
 import os
-from agents import Agent, ModelSettings, trace
+
 from sqlalchemy import create_engine
+from agents import Agent, ModelSettings, trace, set_default_openai_client
+from openai import AsyncOpenAI
+from openai.types.shared import Reasoning
+from dotenv import load_dotenv
+
 from modules.model import DataAgent, AgentContext
 from modules.query_coordinator import QueryCoordinator
 from modules.sql_data_agent import SqlDataAgent
-from openai import AsyncOpenAI
-from openai.types.shared import Reasoning
-from agents import set_default_openai_client
-from dotenv import load_dotenv
+
 load_dotenv()
 
 # custom_client = AsyncOpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY"))
 custom_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 set_default_openai_client(custom_client)
+
 
 def create_data_agents_from_folder(folder_path: str) -> list[DataAgent]:
     data_agents: list[DataAgent] = []
@@ -27,14 +30,17 @@ def create_data_agents_from_folder(folder_path: str) -> list[DataAgent]:
                     model_settings=ModelSettings(
                         reasoning=Reasoning(effort="low"),
                         verbosity="low",
-                        parallel_tool_calls=True
-                    )
+                        parallel_tool_calls=True,
+                    ),
                 ),
-                db_engine=create_engine(f'sqlite:///{os.path.abspath(os.path.join(folder_path, file_name))}'),
+                db_engine=create_engine(
+                    f"sqlite:///{os.path.abspath(os.path.join(folder_path, file_name))}"
+                ),
             )
             data_agents.append(data_agent)
 
     return data_agents
+
 
 def create_data_agents(amount: int) -> list[DataAgent]:
     data_agents: list[DataAgent] = []
@@ -47,14 +53,17 @@ def create_data_agents(amount: int) -> list[DataAgent]:
                 model_settings=ModelSettings(
                     reasoning=Reasoning(effort="low"),
                     verbosity="low",
-                    parallel_tool_calls=True
-                )
+                    parallel_tool_calls=True,
+                ),
             ),
-            db_engine=create_engine(f'sqlite:///{os.path.abspath(f"../data/agent{i}.db")}'),
+            db_engine=create_engine(
+                f"sqlite:///{os.path.abspath(f'../data/agent{i}.db')}"
+            ),
         )
         data_agents.append(data_agent)
 
     return data_agents
+
 
 async def main():
     user_query = "What's the actors name who played Rocket in Guardians of the Galaxy?"
@@ -71,8 +80,8 @@ async def main():
                 model_settings=ModelSettings(
                     reasoning=Reasoning(effort="high"),
                     verbosity="low",
-                    parallel_tool_calls=True
-                )
+                    parallel_tool_calls=True,
+                ),
             )
         )
 
@@ -82,6 +91,8 @@ async def main():
         result = await queryCoordinator.collaborative_query_answering(user_query)
         print(result)
 
+
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

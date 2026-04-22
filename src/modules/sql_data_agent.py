@@ -7,10 +7,12 @@ from modules.mschema import m_schema
 from modules.mschema.schema_engine import SchemaEngine
 from pydantic import Field, create_model
 
+
 def schema_description_agent_instructions() -> str:
     return textwrap.dedent(f"""
 You are a database documentation expert. For each column in the following database schema, write a concise description in natural language of what that column likely represents. Example values are not needed. Return the result as a JSON object matching the specified output type. Also generate a concise description of the whole database, including what kind of information it contains (tables, example columns) in natural language without technical details. Include this description in the "database_description" field of the output JSON.
 """).strip()
+
 
 def relevance_agent_instructions(m_schema: str) -> str:
     return textwrap.dedent(f"""
@@ -18,6 +20,7 @@ You are given a natural language query and a database schema. Determine if the q
 
 {m_schema}
 """).strip()
+
 
 def relevance_agent_prompt(query: str) -> str:
     return textwrap.dedent(f"""
@@ -52,13 +55,19 @@ Try to answer the query first. Recheck and retry to be confident in your answer.
 It may be the case that the question can still be answered partially with the current schema. In that case, return the answer that can be obtained with the current schema and also return what information is needed to get the full answer.
 """).strip()
 
+
 def sql_agent_prompt(query: str, additional_information: str) -> str:
-    additional_information_section = f"【Additional Information】\n{additional_information}" if additional_information else ""
+    additional_information_section = (
+        f"【Additional Information】\n{additional_information}"
+        if additional_information
+        else ""
+    )
 
     return textwrap.dedent(f"""Please generate SQL query and execute that SQL query to answer the following question: {query}
 
 {additional_information_section}
 """).strip()
+
 
 class SqlDataAgent(DataAgent):
     def __init__(
@@ -68,7 +77,9 @@ class SqlDataAgent(DataAgent):
     ):
         self.agent = agent
         self.db_engine = db_engine
-        self.schema_engine = SchemaEngine(engine=self.db_engine, db_name=self.agent.name)
+        self.schema_engine = SchemaEngine(
+            engine=self.db_engine, db_name=self.agent.name
+        )
         self.schema_initialized = False
         self.natural_language_description: str = ""
         self.m_schema: str = ""
@@ -89,16 +100,17 @@ class SqlDataAgent(DataAgent):
         relevance_agent = self.agent.clone(
             name=f"{self.agent.name}_Relevance_Agent",
             instructions=relevance_agent_instructions(self.m_schema),
-            output_type=bool
+            output_type=bool,
         )
 
         async def compute_is_relevant():
-            return (await Runner.run(
-                relevance_agent,
-                relevance_agent_prompt(query)
-            )).final_output
+            return (
+                await Runner.run(relevance_agent, relevance_agent_prompt(query))
+            ).final_output
 
-        is_relevant = await Cache.instance().get_or_compute(relevance_agent, relevance_agent_prompt(query), bool, compute_is_relevant)
+        is_relevant = await Cache.instance().get_or_compute(
+            relevance_agent, relevance_agent_prompt(query), bool, compute_is_relevant
+        )
 
         if not is_relevant:
             return None
@@ -113,24 +125,33 @@ class SqlDataAgent(DataAgent):
             fields = {}
             for col_name in table_info["fields"].keys():
                 fields[col_name] = (str, Field(...))
-            schema_dict[table_name] = (create_model(f"{table_name}ColumnDescriptions", **fields), Field(...))
+            schema_dict[table_name] = (
+                create_model(f"{table_name}ColumnDescriptions", **fields),
+                Field(...),
+            )
         schema_dict["database_description"] = (str, Field(...))
 
-        DatabaseDescriptionModel = create_model("DatabaseDescriptionModel", **schema_dict)
+        DatabaseDescriptionModel = create_model(
+            "DatabaseDescriptionModel", **schema_dict
+        )
 
         schema_description_agent = self.agent.clone(
             name=f"{self.agent.name}_Schema_Description_Agent",
             instructions=schema_description_agent_instructions(),
-            output_type=DatabaseDescriptionModel
+            output_type=DatabaseDescriptionModel,
         )
 
         async def compute_schema_description():
-            return (await Runner.run(
-                schema_description_agent,
-                m_schema_without_comments
-            )).final_output
+            return (
+                await Runner.run(schema_description_agent, m_schema_without_comments)
+            ).final_output
 
-        result = await Cache.instance().get_or_compute(schema_description_agent, m_schema_without_comments, DatabaseDescriptionModel, compute_schema_description)
+        result = await Cache.instance().get_or_compute(
+            schema_description_agent,
+            m_schema_without_comments,
+            DatabaseDescriptionModel,
+            compute_schema_description,
+        )
 
         # Update the schema with the generated descriptions
         for table_name, table_info in self.schema_engine.mschema.tables.items():
@@ -139,11 +160,15 @@ class SqlDataAgent(DataAgent):
                 if description:
                     field_info["comment"] = description
 
-        self.natural_language_description = result.database_description + " | Capabilities: Text-to-SQL"
+        self.natural_language_description = (
+            result.database_description + " | Capabilities: Text-to-SQL"
+        )
         self.m_schema = self.schema_engine.mschema.to_mschema()
         self.schema_initialized = True
 
-    async def answer_query(self, query: str, additional_information: str) -> PartialQueryAnswer:
+    async def answer_query(
+        self, query: str, additional_information: str
+    ) -> PartialQueryAnswer:
         @function_tool()
         async def execute_sql(ctx: RunContextWrapper[AgentContext], query: str) -> str:
             """Execute a SQL query and return the results.
@@ -151,7 +176,9 @@ class SqlDataAgent(DataAgent):
             Args:
                 query: The SQL query to execute.
             """
-            print(f"        Executing SQL query: {query}") # TODO: Block non read queries)
+            print(
+                f"        Executing SQL query: {query}"
+            )  # TODO: Block non read queries)
             with self.db_engine.connect() as conn:
                 result = conn.execute(text(query)).fetchall()
                 return str(result)
@@ -160,13 +187,19 @@ class SqlDataAgent(DataAgent):
             name=f"{self.agent.name}_SQL_Agent",
             instructions=sql_agent_instructions(self.m_schema),
             tools=[execute_sql],
-            output_type=PartialQueryAnswer
+            output_type=PartialQueryAnswer,
         )
 
         async def compute_sql_answer() -> PartialQueryAnswer:
-            return (await Runner.run(
-                sql_agent,
-                sql_agent_prompt(query, additional_information)
-            )).final_output
+            return (
+                await Runner.run(
+                    sql_agent, sql_agent_prompt(query, additional_information)
+                )
+            ).final_output
 
-        return await Cache.instance().get_or_compute(sql_agent, sql_agent_prompt(query, additional_information), PartialQueryAnswer, compute_sql_answer)
+        return await Cache.instance().get_or_compute(
+            sql_agent,
+            sql_agent_prompt(query, additional_information),
+            PartialQueryAnswer,
+            compute_sql_answer,
+        )

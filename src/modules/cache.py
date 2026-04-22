@@ -20,7 +20,7 @@ class Cache:
     cache_folder: Path
 
     def __init__(self):
-        raise RuntimeError('Call instance() instead')
+        raise RuntimeError("Call instance() instead")
 
     @classmethod
     def instance(cls):
@@ -55,7 +55,13 @@ class Cache:
 
         os.replace(temporary_file, cache_file)
 
-    async def get_or_compute(self, agent: Agent[AgentContext], user_prompt: str, output_model: BaseModel | None, compute: Callable[[], Awaitable[T]]) -> T:
+    async def get_or_compute(
+        self,
+        agent: Agent[AgentContext],
+        user_prompt: str,
+        output_model: BaseModel | None,
+        compute: Callable[[], Awaitable[T]],
+    ) -> T:
         cache_keys = [
             getattr(agent, "name", None),
             getattr(agent, "model", None),
@@ -66,7 +72,6 @@ class Cache:
         if output_model is not None:
             cache_keys.append(output_model)
 
-
         cached_value = self.get(cache_keys)
         if cached_value is not None:
             print(f"        Cache hit for agent: {agent.name}")
@@ -74,15 +79,23 @@ class Cache:
             with agent_span(
                 agent.name,
                 tools=[tool.name for tool in agent.tools or []],
-                output_type=type(output_model if output_model is not None else "").__name__):
-                with custom_span("Cache Hit", data={
-                    "agent": agent.name,
-                    "instructions": agent.instructions,
-                    "user_prompt": user_prompt,
-                    "tools": [tool.name for tool in agent.tools or []],
-                    "output_model": str(output_model),
-                    "value": str(cached_value) if not hasattr(cached_value, "model_dump") else cached_value.model_dump()
-                }):
+                output_type=type(
+                    output_model if output_model is not None else ""
+                ).__name__,
+            ):
+                with custom_span(
+                    "Cache Hit",
+                    data={
+                        "agent": agent.name,
+                        "instructions": agent.instructions,
+                        "user_prompt": user_prompt,
+                        "tools": [tool.name for tool in agent.tools or []],
+                        "output_model": str(output_model),
+                        "value": str(cached_value)
+                        if not hasattr(cached_value, "model_dump")
+                        else cached_value.model_dump(),
+                    },
+                ):
                     pass
 
             return cached_value
@@ -135,7 +148,10 @@ class Cache:
             return ("tuple", tuple(self._normalize(item) for item in value))
 
         if isinstance(value, set):
-            return ("set", tuple(self._normalize(item) for item in sorted(value, key=repr)))
+            return (
+                "set",
+                tuple(self._normalize(item) for item in sorted(value, key=repr)),
+            )
 
         if isinstance(value, Path):
             return ("path", str(value))

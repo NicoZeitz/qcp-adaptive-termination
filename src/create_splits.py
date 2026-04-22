@@ -11,7 +11,6 @@ if __name__ == "__main__":
         "titles": ["title_id"],
         "ratings": ["title_id"],
         "people": ["person_id"],
-
         # needed
         "akas": ["title_id"],
         "crew": ["title_id", "ordering", "person_id"],
@@ -22,36 +21,36 @@ if __name__ == "__main__":
 
     data_agents = create_agents(
         output_path="../data/splits",
-        database_url=f'sqlite:///{os.path.abspath(f"../data/imdb.db")}',
+        database_url=f"sqlite:///{os.path.abspath(f'../data/imdb.db')}",
         agent=Agent[AgentContext](name=""),
         agent_amount=5,
         always_included_columns_mapping=always_included_columns_mapping,
         split_type=SplitType.MIXED,
         force_splits=False,
         max_splits_per_table=3,
-        seed=42
+        seed=42,
     )
     data_agents = create_agents(
         output_path="../data/splits",
-        database_url=f'sqlite:///{os.path.abspath(f"../data/imdb.db")}',
+        database_url=f"sqlite:///{os.path.abspath(f'../data/imdb.db')}",
         agent=Agent[AgentContext](name=""),
         agent_amount=5,
         always_included_columns_mapping=always_included_columns_mapping,
         split_type=SplitType.VERTICAL,
         force_splits=False,
         max_splits_per_table=3,
-        seed=42
+        seed=42,
     )
     data_agents = create_agents(
         output_path="../data/splits",
-        database_url=f'sqlite:///{os.path.abspath(f"../data/imdb.db")}',
+        database_url=f"sqlite:///{os.path.abspath(f'../data/imdb.db')}",
         agent=Agent[AgentContext](name=""),
         agent_amount=5,
         always_included_columns_mapping=always_included_columns_mapping,
         split_type=SplitType.HORIZONTAL,
         force_splits=False,
         max_splits_per_table=3,
-        seed=42
+        seed=42,
     )
 
     end_time = time.time()
