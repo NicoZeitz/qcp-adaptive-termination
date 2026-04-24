@@ -10,6 +10,11 @@ class AgentContext:
     pass
 
 
+class Need(BaseModel):
+    need: str
+    answer: str
+
+
 class PartialQueryAnswer(BaseModel):
     answer: str = Field(
         description="The answer to the user's question based on the database query results if it exists. Can also only contain a partial result. Does not contain information how to query the answer, instead contains the actual answer to the question."
@@ -37,15 +42,10 @@ class DataAgent(ABC):
 
     @abstractmethod
     async def answer_query(
-        self, query: str, additional_information: str
+        self, query: str, answered_needs: list[Need]
     ) -> PartialQueryAnswer:
         """Answer the given query and return the answer as a string. If the query cannot be answered with the current information, return a string needed"""
         pass
-
-
-class Need(BaseModel):
-    need: str
-    answer: str
 
 
 class QueryPlan(BaseModel):
