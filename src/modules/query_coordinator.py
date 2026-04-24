@@ -1,8 +1,7 @@
 import asyncio
-import textwrap
 from typing import Any, cast
 
-from agents import Runner, custom_span, custom_span
+from agents import Runner, custom_span
 from pydantic import create_model, Field
 
 from modules.cache import Cache
@@ -15,156 +14,7 @@ from modules.model import (
     ReplanningNeededException,
     ResponsibleAgentNotFound,
 )
-
-
-def relevance_agent_instructions(agent_registry: str) -> str:
-    return textwrap.dedent(f"""Assess the relevance of each agent based on the following registry. A agent is relevant if it may be able to provide information that could be used to answer the question, even if only partially. The agent is relevant if it could help answering the question in any indirect, partial or abstract way as well. Only return False if there is no connection between the agent's capabilities and the question.
-
-【Agent Registry】
-{agent_registry}
-""").strip()
-
-
-def relevance_agent_prompt(query: str) -> str:
-    return f"Is the query '{query}' relevant to any of the listed agents?"
-
-
-# TODO: fix don't force sql instructions onto agents for question
-def query_plan_agent_instructions(
-    participating_agents: list[tuple[DataAgent, str]],
-) -> str:
-    participating_agents_str = "\n".join(
-        [
-            f"【{agent.name()}】\n {capability}"
-            for agent, capability in participating_agents
-        ]
-    )
-
-    return textwrap.dedent(
-        """
-You are a query engine responsible for drafting a query plan to answer the user's question.
-A query plan is a tree of information needs, where the root node is the user's original question, and each child node is a sub-question that needs to be answered in order to answer the parent question. The leaf nodes are questions that can be answered directly by the participating agents.
-
-Rules to follow:
-* Break the question down into as many sub-questions as needed to allow for direct answers from the participating agents.
-* Always try to address questions to the agents instead of the 'Coordinator', as invoking the coordinator is more costly than invoking agents.
-* Both agents and the coordinator can ask sub-questions to other agents to provide further context that is missing and is needed to answer the parent question.
-* If a need can possible be answered by multiple agents, include all of them as children nodes.
-* Children nodes are independent from each other and don't have access to each other's information, so if there is a dependence between the needs, they should be nested accordingly to reflect the dependence relationship.
-* Questions should be instructed in natural language instead of a technical language like SQL
-
-Here is a simple example of a query plan for the question "What's the population of New York, Beijing and London?":
-
-A1 - North American Population Information by CityId
-A2 - European Population Information by City Name
-A3 - Asian Population Information by CityId + CityId and Name Mapping Information
-A4 - CityId and Name Mapping Information
-
-```json
-{
-    "need": null,
-    "question": "What's the population of New York, Beijing and London?",
-    "from_agent": "User",
-    "to_agent": "Coordinator",
-    "needs": [
-        {
-            "need": "Population in New York",
-            "question": "What's the population of New York?",
-            "from_agent": "Coordinator",
-            "to_agent": "A1",
-            "needs": [
-                {
-                    "need": "CityId for New York",
-                    "question": "What's the CityId for New York?",
-                    "from_agent": "Coordinator",
-                    "to_agent": "A3",
-                    "needs": []
-                },
-                {
-                   "need": "CityId for New York",
-                    "question": "What's the CityId for New York?",
-                    "from_agent": "Coordinator",
-                    "to_agent": "A4",
-                    "needs": []
-                }
-            ]
-        },
-        {
-            "need": "Population in London",
-            "question": "What's the population of London?",
-            "from_agent": "Coordinator",
-            "to_agent": "A2",
-            "needs": []
-        },
-        {
-            "need": "Population in Beijing",
-            "question": "What's the population of Beijing?",
-            "from_agent": "Coordinator",
-            "to_agent": "A3",
-            "needs": [
-                {
-                    "need": "CityId for Beijing",
-                    "question": "What's the CityId for Beijing?",
-                    "from_agent": "Coordinator",
-                    "to_agent": "A4",
-                    "needs": []
-                }
-            ]
-        }
-    ]
-}
-```
-
-The following agents have volunteered to participate in answering the question, and here are their capabilities:
-
-"""
-        + participating_agents_str
-    ).strip()
-
-
-def query_plan_agent_prompt(query: str) -> str:
-    return textwrap.dedent(f"""{query}""").strip()
-
-
-def query_replan_agent_instructions(
-    participating_agents: list[tuple[DataAgent, str]], old_query_plan: QueryPlan
-) -> str:
-    return (
-        query_plan_agent_instructions(participating_agents)
-        + "\n\n"
-        + textwrap.dedent(f"""
-The initial plan was created on wrong assumptions and needs to be replanned. Please create a new plan based on the same rules.
-
-Here is the initial plan that needs to be replanned:
-
-{old_query_plan.model_dump()}
-""").strip()
-    )
-
-
-def query_replan_agent_prompt(query: str, exception: ReplanningNeeded) -> str:
-    return textwrap.dedent(f"""{query}
-
-Here is a more detailed description of the reason why the initial plan failed and needs to be replanned:
-{exception.model_dump()}
-""").strip()
-
-
-def aggregate_agent_instructions() -> str:
-    return textwrap.dedent(
-        """You are an agent responsible for aggregating the answers to the sub-questions in order to answer the parent question. Your task is to provide a final answer to the user's original question based on the answers to the sub-questions."""
-    ).strip()
-
-
-def aggregate_agent_prompt(node: QueryPlan) -> str:
-    answered_needs = node.answered_needs if node.answered_needs is not None else []
-    additional_information = "\n".join(
-        [f"{need.need}: {need.answer}" for need in answered_needs]
-    )
-
-    return textwrap.dedent(f"""Please provide a final answer to the user's original question based on the following additional information obtained from answering the sub-questions in the query plan:
-{additional_information}
-""").strip()
+from prompt import load_prompt
 
 
 class QueryCoordinator:
@@ -225,20 +75,27 @@ class QueryCoordinator:
             }
             RelevanceModel = create_model("RelevanceModel", **agent_fields)
 
+            instructions = load_prompt(
+                "query_coordinator_relevance_agent_instructions",
+                None,
+                {"agent_registry": agent_registry},
+            )
+            prompt = load_prompt(
+                "query_coordinator_relevance_agent_prompt", None, {"query": query}
+            )
+
             relevance_agent = self.agent.clone(
                 name=f"{self.agent.name}_Relevance_Agent",
-                instructions=relevance_agent_instructions(agent_registry),
+                instructions=instructions,
                 output_type=RelevanceModel,
             )
 
             async def compute_relevances():
-                return (
-                    await Runner.run(relevance_agent, relevance_agent_prompt(query))
-                ).final_output
+                return (await Runner.run(relevance_agent, prompt)).final_output
 
             relevances = await Cache.instance().get_or_compute(
                 relevance_agent,
-                relevance_agent_prompt(query),
+                prompt,
                 RelevanceModel,
                 compute_relevances,
             )
@@ -276,20 +133,34 @@ class QueryCoordinator:
     ) -> QueryPlan:
         with custom_span("Draft Query Plan") as span:
             QueryPlanModel = QueryPlan.create_query_plan_model(participating_agents)
+            participating_agents_str = "\n".join(
+                [
+                    f"【{agent.name()}】\n {capability}"
+                    for agent, capability in participating_agents
+                ]
+            )
+
+            instructions = load_prompt(
+                "query_coordinator_query_plan_agent_instructions",
+                None,
+                {"participating_agents": participating_agents_str},
+            )
+            prompt = load_prompt(
+                "query_coordinator_query_plan_agent_prompt", None, {"query": query}
+            )
+
             query_plan_agent = self.agent.clone(
                 name=f"{self.agent.name}_Query_Plan_Agent",
-                instructions=query_plan_agent_instructions(participating_agents),
+                instructions=instructions,
                 output_type=QueryPlanModel,
             )
 
             async def compute_query_plan():
-                return (
-                    await Runner.run(query_plan_agent, query_plan_agent_prompt(query))
-                ).final_output
+                return (await Runner.run(query_plan_agent, prompt)).final_output
 
             result = await Cache.instance().get_or_compute(
                 query_plan_agent,
-                query_plan_agent_prompt(query),
+                prompt,
                 QueryPlanModel,
                 compute_query_plan,
             )
@@ -306,26 +177,42 @@ class QueryCoordinator:
         participating_agents: list[tuple[DataAgent, str]],
         exception: ReplanningNeeded,
     ) -> QueryPlan:
+        # TODO: ask all data agents for the information needs again for participation (that are not currently participating)
         QueryReplanModel = QueryPlan.create_query_replan_model(participating_agents)
+
+        participating_agents_str = "\n".join(
+            [
+                f"【{agent.name()}】\n {capability}"
+                for agent, capability in participating_agents
+            ]
+        )
+
+        instructions = load_prompt(
+            "query_coordinator_query_replan_agent_instructions",
+            None,
+            {
+                "participating_agents": participating_agents_str,
+                "old_query_plan": old_query_plan.model_dump_json(indent=2),
+            },
+        )
+        prompt = load_prompt(
+            "query_coordinator_query_replan_agent_prompt",
+            None,
+            {"query": query, "exception": exception.model_dump_json(indent=2)},
+        )
+
         query_plan_agent = self.agent.clone(
             name=f"{self.agent.name}_Query_Replan_Agent",
-            instructions=query_replan_agent_instructions(
-                participating_agents, old_query_plan
-            ),
+            instructions=instructions,
             output_type=QueryReplanModel,
         )
-        # TODO: ask all data agents for the information needs again for participation (that are not currently participating)
 
         async def compute_query_replan():
-            return (
-                await Runner.run(
-                    query_plan_agent, query_replan_agent_prompt(query, exception)
-                )
-            ).final_output
+            return (await Runner.run(query_plan_agent, prompt)).final_output
 
         result = await Cache.instance().get_or_compute(
             query_plan_agent,
-            query_replan_agent_prompt(query, exception),
+            prompt,
             QueryReplanModel,
             compute_query_replan,
         )
@@ -430,24 +317,23 @@ class QueryCoordinator:
             answered_needs = (
                 node.answered_needs if node.answered_needs is not None else []
             )
-            additional_information = "\n".join(
-                [f"{need.need}: {need.answer}" for need in answered_needs]
-            )
 
             return await self._answer_query_plan_node_with_agent(
-                node, responsible_data_agent, additional_information
+                node, responsible_data_agent, answered_needs
             )
 
     async def _answer_query_plan_node_with_agent(
-        self, node: QueryPlan, agent: DataAgent, additional_information: str
+        self, node: QueryPlan, agent: DataAgent, answered_needs: list[Need]
     ) -> str:
         with custom_span(
             f"Answer Query Plan Node with Agent {agent.name()}: {node.question}"
         ) as span:
             span.span_data.data["node"] = node.model_dump()
-            span.span_data.data["additional_information"] = additional_information
+            span.span_data.data["answered_needs"] = [
+                answered_need.model_dump() for answered_need in answered_needs
+            ]
 
-            answer = await agent.answer_query(node.question, additional_information)
+            answer = await agent.answer_query(node.question, answered_needs)
             span.span_data.data["answer"] = answer.model_dump()
 
             if answer.needs is not None:
@@ -461,24 +347,41 @@ class QueryCoordinator:
         with custom_span("Answer Query Plan Node") as span:
             span.span_data.data["node"] = node.model_dump()
 
+            answered_needs = (
+                node.answered_needs if node.answered_needs is not None else []
+            )
+            additional_information = "\n".join(
+                [f"{need.need}: {need.answer}" for need in answered_needs]
+            )
+
+            instructions = load_prompt(
+                "query_coordinator_aggregate_agent_instructions", None, {}
+            )
+            prompt = load_prompt(
+                "query_coordinator_aggregate_agent_prompt",
+                None,
+                {
+                    "answered_needs": answered_needs,
+                    "additional_information": additional_information,
+                },
+            )
+
             aggregate_agent = self.agent.clone(
                 name=f"{self.agent.name}_Aggregate_Agent",
-                instructions=aggregate_agent_instructions(),
+                instructions=instructions,
             )
 
             async def compute_aggregate_result():
                 return cast(
                     str,
-                    (
-                        await Runner.run(aggregate_agent, aggregate_agent_prompt(node))
-                    ).final_output,
+                    (await Runner.run(aggregate_agent, prompt)).final_output,
                 )
 
             result = cast(
                 str,
                 await Cache.instance().get_or_compute(
                     aggregate_agent,
-                    aggregate_agent_prompt(node),
+                    prompt,
                     str,
                     compute_aggregate_result,
                 ),
