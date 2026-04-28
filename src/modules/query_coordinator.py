@@ -1,5 +1,6 @@
 import asyncio
 import dataclasses
+import json
 from typing import Any
 
 from agents import (
@@ -193,6 +194,8 @@ class QueryCoordinator:
         # TODO: ask all data agents for the information needs again for participation (that are not currently participating)
         QueryReplanModel = QueryPlan.create_query_replan_model(participating_agents)
 
+        id_index = QueryPlan.collect_answered_needs(old_query_plan)
+
         participating_agents_str = "\n".join(
             [
                 f"【{agent.name()}】\n {capability}"
@@ -200,18 +203,21 @@ class QueryCoordinator:
             ]
         )
 
+        exception_dict = exception.model_dump()
+        exception_dict["query_node"] = exception.query_node.to_replan_context()
+
         instructions = load_prompt(
             "query_coordinator_query_replan_agent_instructions",
             None,
             {
                 "participating_agents": participating_agents_str,
-                "old_query_plan": old_query_plan.model_dump_json(indent=2), # TODO: too large intermediate results
+                "old_query_plan": json.dumps(old_query_plan.to_replan_context(), indent=2),
             },
         )
         prompt = load_prompt(
             "query_coordinator_query_replan_agent_prompt",
             None,
-            {"query": query, "exception": exception.model_dump_json(indent=2)},# TODO: too large intermediate results
+            {"query": query, "exception": json.dumps(exception_dict, indent=2)},
         )
 
         query_replan_agent = self.agent.clone(
@@ -230,7 +236,7 @@ class QueryCoordinator:
             compute_query_replan,
         )
 
-        query_plan = QueryPlan.map_query_replan_model_to_query_plan(result)
+        query_plan = QueryPlan.map_query_replan_model_to_query_plan(result, id_index)
         return query_plan
 
     async def _execute_query_plan(

@@ -210,8 +210,8 @@ class QueryPlan(BaseModel):
         return QueryReplanModel
 
     @staticmethod
-    def map_query_replan_model_to_query_plan(query_replan_model: Any) -> "QueryPlan":
-        return QueryPlan(
+    def map_query_replan_model_to_query_plan(query_replan_model: Any, id_index: dict[str, list["Need"]]) -> "QueryPlan":
+        query_plan = QueryPlan(
             id=query_replan_model.id
             if query_replan_model.id is not None
             else str(uuid.uuid4()),
@@ -220,13 +220,16 @@ class QueryPlan(BaseModel):
             from_agent=query_replan_model.from_agent,
             to_agent=query_replan_model.to_agent,
             needs=[
-                QueryPlan.map_query_replan_model_to_query_plan(need)
+                QueryPlan.map_query_replan_model_to_query_plan(need, id_index)
                 for need in query_replan_model.needs
             ]
             if query_replan_model.needs
             else None,
             answered_needs=None,  # restored from id_index after mapping
         )
+
+        QueryPlan.restore_answered_needs(query_plan, id_index)
+        return query_plan
 
 
 class ReplanningNeeded(BaseModel):
