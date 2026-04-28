@@ -17,6 +17,7 @@ from pydantic import BaseModel, JsonValue, create_model, Field
 from modules.cache import Cache
 from modules.code_execution_environment import CodeExecutionEnvironment
 from modules.model import (
+    CHAR_LIMIT_SPAN,
     AgentContext,
     DataAgent,
     Need,
@@ -26,6 +27,7 @@ from modules.model import (
     ReplanningNeededException,
     ResponsibleAgentNotFound,
     Symbol,
+    preview_text,
     serialize_value,
 )
 from modules.prompt import load_prompt
@@ -437,7 +439,7 @@ class QueryCoordinator:
 
             # Add span data
             span.span_data.data["node"] = node.model_dump()
-            span.span_data.data["result"] = str(result)[:200]
+            span.span_data.data["result"] = preview_text(str(result), CHAR_LIMIT_SPAN)
             code_environment.append_data_to_span(span)
 
             return result

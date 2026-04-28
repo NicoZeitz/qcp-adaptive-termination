@@ -17,11 +17,13 @@ from modules.code_execution_environment import (
     CodeExecutionResult,
 )
 from modules.model import (
+    CHAR_LIMIT_SPAN,
     Need,
     PartialQueryAnswer,
     AgentContext,
     DataAgent,
     Symbol,
+    preview_text,
     serialize_value,
 )
 from modules.mschema.schema_engine import SchemaEngine
@@ -188,9 +190,9 @@ class SqlDataAgent(DataAgent):
 
             result = await compute_code_answer()
 
-            span.span_data.data["answer"] = str(result.answer)[:200]
+            span.span_data.data["answer"] = preview_text(str(result.answer), CHAR_LIMIT_SPAN)
             span.span_data.data["needs"] = [
-                str(need)[:200] for need in result.needs or []
+                preview_text(str(need), CHAR_LIMIT_SPAN) for need in result.needs or []
             ]
             span.span_data.data["sql_queries"] = [str(query) for query in sql_queries]
             code_environment.append_data_to_span(span)

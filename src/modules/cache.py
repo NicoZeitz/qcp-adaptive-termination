@@ -7,7 +7,7 @@ from agents import Agent, agent_span, custom_span
 import cloudpickle
 from pydantic import BaseModel
 
-from modules.model import AgentContext
+from modules.model import CHAR_LIMIT_SPAN, AgentContext, preview_text
 
 CACHE_FOLDER = "../.cache"
 
@@ -102,8 +102,8 @@ class Cache:
                     "Cache Hit",
                     data={
                         "agent": agent.name,
-                        "instructions": cast(str, agent.instructions)[:200],
-                        "user_prompt": user_prompt[:200],
+                        "instructions": preview_text(cast(str, agent.instructions), CHAR_LIMIT_SPAN),
+                        "user_prompt": preview_text(cast(str, user_prompt), CHAR_LIMIT_SPAN),
                         "tools": [tool.name for tool in agent.tools or []],
                         "output_model": str(output_model)
                         if not hasattr(output_model, "model_json_schema")

@@ -7,6 +7,23 @@ from pydantic import BaseModel, JsonValue, create_model
 from pydantic import Field
 import uuid
 
+CHAR_LIMIT_LLM = 600
+CHAR_LIMIT_SPAN = 600
+
+def preview_text(text: str, char_limit = 600):
+    if len(text) <= char_limit:
+        return text
+
+    char_limit_start = char_limit // 2
+    char_limit_end = char_limit - char_limit_start
+
+    omitted_count = len(text) - (char_limit_start + char_limit_end)
+
+    return (
+        text[:char_limit_start]
+        + f"...[{omitted_count} chars]..."
+        + text[-char_limit_end:]
+    )
 
 class Symbol:
     pass
@@ -123,11 +140,11 @@ class QueryPlan(BaseModel):
             answered_needs=None,
         )
 
-    def to_replan_context(self, preview_length: int = 200) -> dict:
+    def to_replan_context(self) -> dict:
         """Compact representation for replan context: answered_needs shown as previews."""
         def make_preview(need: "Need") -> dict:
             s = json.dumps(need.answer, default=str)
-            return {"need": need.need, "answer_preview": s[:preview_length] + ("..." if len(s) > preview_length else "")}
+            return {"need": need.need, "answer_preview": preview_text(s, CHAR_LIMIT_LLM)}
 
         return {
             "id": self.id,
@@ -135,7 +152,7 @@ class QueryPlan(BaseModel):
             "question": self.question,
             "from_agent": self.from_agent,
             "to_agent": self.to_agent,
-            "needs": [n.to_replan_context(preview_length) for n in self.needs] if self.needs else None,
+            "needs": [n.to_replan_context() for n in self.needs] if self.needs else None,
             "answered_needs": [make_preview(n) for n in self.answered_needs] if self.answered_needs else None,
         }
 

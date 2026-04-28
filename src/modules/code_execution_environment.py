@@ -14,7 +14,7 @@ import uuid
 
 from agents import CustomSpanData, FunctionTool, RunContextWrapper, Span, function_tool
 
-from modules.model import AgentContext, serialize_value
+from modules.model import CHAR_LIMIT_LLM, CHAR_LIMIT_SPAN, AgentContext, preview_text, serialize_value
 
 # Explicit allowlist: only builtins that cannot access the filesystem, network, or process state.
 _SAFE_BUILTINS = {
@@ -213,11 +213,6 @@ class CodeExecutionResult:
     formatted: str
     """A short formatted string that can be given to the LLM as information"""
 
-
-CHAR_LIMIT = 200
-"""Char Limit for formatted messages like stdout"""
-
-
 class CodeExecutionEnvironment:
     """Stateful REPL-like environment that persists locals across calls while keeping globals immutable."""
 
@@ -306,8 +301,8 @@ class CodeExecutionEnvironment:
             {
                 "code": code_execution.code,
                 "exception": serialize_value(code_execution.exception),
-                "stdout": code_execution.stdout[:CHAR_LIMIT],
-                "stderr": code_execution.stderr[:CHAR_LIMIT],
+                "stdout": preview_text(code_execution.stdout, CHAR_LIMIT_SPAN),
+                "stderr": preview_text(code_execution.stderr, CHAR_LIMIT_SPAN),
                 "locals": str(
                     [
                         f"{k}: {type(v).__name__}"
@@ -328,26 +323,18 @@ class CodeExecutionEnvironment:
         locals: dict[str, Any],
     ) -> str:
         formatted = ""
-        if len(stdout) > CHAR_LIMIT:
-            formatted += (
-                f"\nStdout: {stdout[:CHAR_LIMIT]}...{len(stdout) - CHAR_LIMIT} chars"
-            )
-        elif len(stdout) > 0:
-            formatted += f"\nStdout: {stdout}"
+        if len(stdout) > 0:
+            formatted += f"\nStdout: {preview_text(stdout, CHAR_LIMIT_LLM)}"
         else:
             formatted += "\nNo Stdout"
 
-        if len(stderr) > CHAR_LIMIT:
-            formatted += (
-                f"\nStderr: {stderr[:CHAR_LIMIT]}...{len(stderr) - CHAR_LIMIT} chars"
-            )
-        elif len(stderr) > 0:
-            formatted += f"\nStderr: {stderr}"
+        if len(stderr) > 0:
+            formatted += f"\nStderr: {preview_text(stderr, CHAR_LIMIT_LLM)}"
         else:
             formatted += "\nNo Stderr"
 
         if exception is not None:
-            formatted += f"\n{type(exception).__name__}: {exception}"
+            formatted += f"\n{type(exception).__name__}: {preview_text(str(exception), CHAR_LIMIT_LLM)}"
 
         available = ",".join(
             [
