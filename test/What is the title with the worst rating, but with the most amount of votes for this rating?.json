@@ -1,0 +1,6 @@
+{
+"select t.original_title\nfrom titles t \njoin ratings r on r.title_id = t.title_id\norder by r.rating asc, r.votes desc\nlimit 1": [
+	{
+		"original_title" : "Reis"
+	}
+]}

@@ -1,0 +1,14 @@
+{
+"select * from titles t where t.\"type\" = 'movie' order by t.runtime_minutes desc limit 1": [
+	{
+		"title_id" : "tt8273150",
+		"type" : "movie",
+		"primary_title" : "Logistics",
+		"original_title" : "Logistics",
+		"is_adult" : 0,
+		"premiered" : 2012,
+		"ended" : null,
+		"runtime_minutes" : 51420,
+		"genres" : "Documentary"
+	}
+]}

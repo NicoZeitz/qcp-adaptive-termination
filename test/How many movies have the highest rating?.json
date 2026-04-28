@@ -1,0 +1,6 @@
+{
+"SELECT \nCOUNT(*)\nFROM \nratings\nWHERE\nrating = 10\n": [
+	{
+		"COUNT(*)" : 7037
+	}
+]}

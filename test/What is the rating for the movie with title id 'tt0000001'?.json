@@ -1,0 +1,6 @@
+{
+"SELECT rating FROM ratings WHERE title_id = 'tt0000001'": [
+	{
+		"rating" : 5.7
+	}
+]}

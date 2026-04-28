@@ -1,0 +1,6 @@
+{
+"SELECT \nCOUNT(*)  \nFROM \ntitles\nWHERE\ntype = 'movie'": [
+	{
+		"COUNT(*)" : 743214
+	}
+]}

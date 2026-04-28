@@ -1,0 +1,43 @@
+{
+"select t.original_title , r.rating\nfrom titles t \ninner join ratings r on r.title_id = t.title_id\nwhere r.votes > 1000000\nand t.\"type\" = 'movie'\norder by r.rating desc\nLIMIT 10": [
+	{
+		"original_title" : "The Shawshank Redemption",
+		"rating" : 9.3
+	},
+	{
+		"original_title" : "The Godfather",
+		"rating" : 9.2
+	},
+	{
+		"original_title" : "The Dark Knight",
+		"rating" : 9.1
+	},
+	{
+		"original_title" : "The Godfather Part II",
+		"rating" : 9.0
+	},
+	{
+		"original_title" : "Schindler's List",
+		"rating" : 9.0
+	},
+	{
+		"original_title" : "The Lord of the Rings: The Return of the King",
+		"rating" : 9.0
+	},
+	{
+		"original_title" : "The Lord of the Rings: The Fellowship of the Ring",
+		"rating" : 8.9
+	},
+	{
+		"original_title" : "Forrest Gump",
+		"rating" : 8.8
+	},
+	{
+		"original_title" : "Pulp Fiction",
+		"rating" : 8.8
+	},
+	{
+		"original_title" : "Fight Club",
+		"rating" : 8.8
+	}
+]}

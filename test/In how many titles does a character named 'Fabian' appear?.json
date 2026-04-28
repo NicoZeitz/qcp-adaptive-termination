@@ -1,0 +1,6 @@
+{
+"SELECT \nCOUNT(*)\nFROM \ntitles\nWHERE\ntitle_id IN (SELECT title_id FROM crew WHERE \"characters\" LIKE '%Fabian%')\n": [
+	{
+		"COUNT(*)" : 5771
+	}
+]}
