@@ -445,13 +445,12 @@ class QueryCoordinator:
             async def compute_aggregate_result() -> PartialQueryAnswer:
                 return (await Runner.run(aggregate_agent, prompt)).final_output
 
-            result = await compute_aggregate_result()
-            # result = await Cache.instance().get_or_compute(
-            #     aggregate_agent,
-            #     prompt,
-            #     JsonValue,
-            #     compute_aggregate_result,
-            # )
+            result = await Cache.instance().get_or_compute(
+                aggregate_agent,
+                prompt,
+                PartialQueryAnswer,
+                compute_aggregate_result,
+            )
 
             span.span_data.data["node"] = node.to_span_data()
             span.span_data.data["answer"] = result.to_span_data()
