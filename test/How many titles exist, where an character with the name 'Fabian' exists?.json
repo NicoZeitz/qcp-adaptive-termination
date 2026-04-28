@@ -1,6 +1,0 @@
-{
-"SELECT count(*)\n  FROM titles t                                                                                                                                                                                                                                                                                                                                                                        \n  JOIN crew c ON t.title_id = c.title_id                                                                                                                                                                           \n  WHERE c.characters LIKE '% Fabian %'\n  OR c.\"characters\" LIKE '%\"Fabian\"%' \n": [
-	{
-		"count(*)" : 1090
-	}
-]}
