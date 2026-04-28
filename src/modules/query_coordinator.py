@@ -2,7 +2,15 @@ import asyncio
 import dataclasses
 from typing import Any
 
-from agents import Agent, AgentOutputSchema, FunctionToolResult, RunContextWrapper, Runner, ToolsToFinalOutputResult, custom_span
+from agents import (
+    Agent,
+    AgentOutputSchema,
+    FunctionToolResult,
+    RunContextWrapper,
+    Runner,
+    ToolsToFinalOutputResult,
+    custom_span,
+)
 from pydantic import BaseModel, JsonValue, create_model, Field
 
 from modules.cache import Cache
@@ -350,12 +358,13 @@ class QueryCoordinator:
 
     async def _aggregate_results(self, node: QueryPlan) -> JsonValue:
         with custom_span("Answer Query Plan Node") as span:
-
-
             answer: Any | Symbol = Symbol()
 
             additional_information = [
-                {"information": answered_need.need, "data": answered_need.answer} # TODO: Type
+                {
+                    "information": answered_need.need,
+                    "data": answered_need.answer,
+                }  # TODO: Type
                 for answered_need in node.answered_needs or []
             ]
 
@@ -376,14 +385,7 @@ class QueryCoordinator:
             instructions = load_prompt(
                 "query_coordinator_aggregate_agent_instructions", None, {}
             )
-            prompt = load_prompt( # TODO: answered_needs
-                "query_coordinator_aggregate_agent_prompt",
-                None,
-                {
-                    "answered_needs": answered_needs,
-                    "additional_information": additional_information,
-                },
-            )
+            prompt = load_prompt("query_coordinator_aggregate_agent_prompt", None, {})
 
             def custom_tool_handler(
                 _context: RunContextWrapper[AgentContext],
@@ -394,7 +396,7 @@ class QueryCoordinator:
 
                 return ToolsToFinalOutputResult(
                     is_final_output=has_answer,
-                    final_output=serialize_value(answer) if has_answer else None
+                    final_output=serialize_value(answer) if has_answer else None,
                 )
 
             class JsonValueModel(BaseModel):
@@ -407,14 +409,17 @@ class QueryCoordinator:
                 tool_use_behavior=custom_tool_handler,
                 output_type=AgentOutputSchema(JsonValueModel, strict_json_schema=False),
                 reset_tool_choice=False,
-                model_settings=dataclasses.replace(self.agent.model_settings,
+                model_settings=dataclasses.replace(
+                    self.agent.model_settings,
                     parallel_tool_calls=False,
-                    tool_choice="required"
-                )
+                    tool_choice="required",
+                ),
             )
 
             async def compute_aggregate_result() -> JsonValue:
-                return serialize_value((await Runner.run(aggregate_agent, prompt)).final_output)
+                return serialize_value(
+                    (await Runner.run(aggregate_agent, prompt)).final_output
+                )
 
             result = await compute_aggregate_result()
             # result = await Cache.instance().get_or_compute(

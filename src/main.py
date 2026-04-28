@@ -1,20 +1,17 @@
+import json
 import os
+from pathlib import Path
+from typing import Any
 
 from sqlalchemy import create_engine, text
 from agents import Agent, ModelSettings, trace, set_default_openai_client
 from openai import AsyncOpenAI
 from openai.types.shared import Reasoning
-from dotenv import load_dotenv
 
+from modules.cache import Cache
 from modules.model import DataAgent, AgentContext
 from modules.query_coordinator import QueryCoordinator
 from modules.sql_data_agent import SqlDataAgent
-
-load_dotenv()
-
-# custom_client = AsyncOpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY"))
-custom_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-set_default_openai_client(custom_client)
 
 
 def create_data_agents_from_folder(folder_path: str) -> list[DataAgent]:
@@ -53,11 +50,26 @@ def create_data_agents_from_folder(folder_path: str) -> list[DataAgent]:
     return data_agents
 
 
-async def main():
-    user_query = "What's the actors name who played Rocket in Guardians of the Galaxy?"
+def load_query(query_path: str) -> tuple[str, str, Any]:
+    user_query = Path(query_path).stem
+    with open(query_path) as f:
+        content = json.load(f)
+        sql_query = list(content.keys())[0]
+        expected_result = content[sql_query]
+
+    return user_query, sql_query, expected_result
+
+
+async def main(data_agents_path: str, query_path: str):
+    user_query, _sql_query, expected_result = load_query(query_path)
 
     with trace("NZ: Collaborative Query Answering", metadata={"query": user_query}):
-        data_agents = create_data_agents_from_folder("../data/handmade")
+        print(
+            "================================================== USER QUERY =================================================="
+        )
+        print(user_query)
+
+        data_agents = create_data_agents_from_folder(data_agents_path)
 
         queryCoordinator = QueryCoordinator(
             agent=Agent[AgentContext](
@@ -76,10 +88,40 @@ async def main():
             queryCoordinator.register_data_agent(data_agent)
 
         result = await queryCoordinator.collaborative_query_answering(user_query)
+        print(
+            "================================================== RESULT =================================================="
+        )
         print(result)
+        print(
+            "================================================== EXPECTED RESULT =================================================="
+        )
+        print(expected_result)
 
 
 if __name__ == "__main__":
     import asyncio
+    from dotenv import load_dotenv
+    import argparse
 
-    asyncio.run(main())
+    load_dotenv()
+
+    # custom_client = AsyncOpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY"))
+    custom_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    set_default_openai_client(custom_client)
+
+    parser = argparse.ArgumentParser(prog="Collaborative Query Answering")
+    parser.add_argument("--data-agents", type=str, default="../data/handmade")
+    parser.add_argument(
+        "--query",
+        type=str,
+        default="../data/test/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json",
+    )
+    parser.add_argument("--cache", action="store_true", default=False)
+    args = parser.parse_args()
+
+    if args.cache:
+        Cache.instance().enable()
+    else:
+        Cache.instance().disable()
+
+    asyncio.run(main(args.data_agents, args.query))
