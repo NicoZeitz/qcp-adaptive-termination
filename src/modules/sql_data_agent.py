@@ -17,7 +17,7 @@ from modules.code_execution_environment import (
 from modules.model import Need, PartialQueryAnswer, AgentContext, DataAgent
 from modules.mschema.schema_engine import SchemaEngine
 from pydantic import Field, create_model
-from prompt import load_prompt
+from modules.prompt import load_prompt
 
 
 class Symbol:

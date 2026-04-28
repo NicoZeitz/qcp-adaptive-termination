@@ -14,7 +14,7 @@ from modules.model import (
     ReplanningNeededException,
     ResponsibleAgentNotFound,
 )
-from prompt import load_prompt
+from modules.prompt import load_prompt
 
 
 class QueryCoordinator:
