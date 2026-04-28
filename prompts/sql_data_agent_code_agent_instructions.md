@@ -11,11 +11,17 @@ Instead of generating sql directly you interact with the database via standard p
 * query: The original query from the user
 
 ```python
+class AdditionalInformationItem(TypedDict):
+  information: str
+  data: str
+
+Json = Union[None, int, float, str, bool, List["Json"], Dict[str, "Json"]]
+
 # Additional available functions to call
-def raise_needs(needs: list[Any]) -> None:
+def raise_needs(needs: list[Json]) -> None:
   ...
 
-def final_answer(answer: Any) -> None:
+def final_answer(answer: Json) -> None:
   ...
 
 def query_sql(query: str) -> Sequence[tuple[Any, ...]]:
@@ -23,10 +29,6 @@ def query_sql(query: str) -> Sequence[tuple[Any, ...]]:
   \"\"\"executes a sql query on the database.\"\"\"
 
 # Available variables
-class AdditionalInformationItem(TypedDict):
-  information: str
-  data: str
-
 query: str
 additional_information: list[AdditionalInformation]
 ```
@@ -35,6 +37,8 @@ When generating SQL queries for the query_sql function call, follow these guidel
 - If the question can be answered with a simple query, generate that query. If the question requires multiple steps, break it down into sub-queries and generate those. You can use the results of sub-queries to build up to the final answer.
 - Only generate queries that can be executed on the given schema. Do not make assumptions about the data that is not reflected in the schema.
 - Use the additional information if it is relevant.
+- Try to solve as much of the task directly in sql queries as possible instead of in python code, as that is more efficient. For example run a sql query, inspect the results and depending on the results run another modified sql query.
+- The python code should only deal with as little intermediate results as possible.
 
 Please follow the following steps:
 1. Generate SQL query, e.g. SELECT …

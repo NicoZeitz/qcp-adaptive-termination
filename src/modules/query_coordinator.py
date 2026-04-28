@@ -1,11 +1,14 @@
 import asyncio
-from typing import Any, cast
+import dataclasses
+from typing import Any
 
-from agents import Runner, custom_span
-from pydantic import create_model, Field
+from agents import Agent, AgentOutputSchema, FunctionToolResult, RunContextWrapper, Runner, ToolsToFinalOutputResult, custom_span
+from pydantic import BaseModel, JsonValue, create_model, Field
 
 from modules.cache import Cache
+from modules.code_execution_environment import CodeExecutionEnvironment
 from modules.model import (
+    AgentContext,
     DataAgent,
     Need,
     NeedNotMet,
@@ -13,14 +16,16 @@ from modules.model import (
     ReplanningNeeded,
     ReplanningNeededException,
     ResponsibleAgentNotFound,
+    Symbol,
+    serialize_value,
 )
 from modules.prompt import load_prompt
 
 
 class QueryCoordinator:
-    def __init__(self, agent):
+    def __init__(self, agent: Agent[AgentContext]):
         self.data_agents: list[DataAgent] = []
-        self.agent = agent
+        self.agent: Agent[AgentContext] = agent
 
     def register_data_agent(self, data_agent: DataAgent):
         print("Register data agent:", data_agent.name())
@@ -30,7 +35,7 @@ class QueryCoordinator:
         print("Unregister data agent:", data_agent.name())
         self.data_agents.remove(data_agent)
 
-    async def collaborative_query_answering(self, query: str) -> str:
+    async def collaborative_query_answering(self, query: str) -> JsonValue:
         agent_registry = await self._build_agent_registry()
 
         with custom_span("Collaborative Query Answering") as span:
@@ -225,7 +230,7 @@ class QueryCoordinator:
         query: str,
         query_plan: QueryPlan,
         participating_agents: list[tuple[DataAgent, str]],
-    ) -> str:
+    ) -> JsonValue:
         plan_to_execute = query_plan
 
         MAX_REPLAN_ATTEMPTS = 2  # Max 5 replans
@@ -268,7 +273,7 @@ class QueryCoordinator:
 
     async def _execute_query_plan_node(
         self, node: QueryPlan, participating_agents: list[tuple[DataAgent, str]]
-    ) -> str:
+    ) -> JsonValue:
         with custom_span(
             f"Execute Query Plan Node ({node.to_agent}): {node.question}"
         ) as span:
@@ -324,7 +329,7 @@ class QueryCoordinator:
 
     async def _answer_query_plan_node_with_agent(
         self, node: QueryPlan, agent: DataAgent, answered_needs: list[Need]
-    ) -> str:
+    ) -> JsonValue:
         with custom_span(
             f"Answer Query Plan Node with Agent {agent.name()}: {node.question}"
         ) as span:
@@ -343,21 +348,35 @@ class QueryCoordinator:
 
             return answer.answer
 
-    async def _aggregate_results(self, node: QueryPlan) -> str:
+    async def _aggregate_results(self, node: QueryPlan) -> JsonValue:
         with custom_span("Answer Query Plan Node") as span:
-            span.span_data.data["node"] = node.model_dump()
 
-            answered_needs = (
-                node.answered_needs if node.answered_needs is not None else []
-            )
-            additional_information = "\n".join(
-                [f"{need.need}: {need.answer}" for need in answered_needs]
+
+            answer: Any | Symbol = Symbol()
+
+            additional_information = [
+                {"information": answered_need.need, "data": answered_need.answer} # TODO: Type
+                for answered_need in node.answered_needs or []
+            ]
+
+            def final_answer(new_answer: Any):
+                nonlocal answer
+                answer = new_answer
+
+            code_environment = CodeExecutionEnvironment(
+                variables={
+                    "query": node.question,
+                    "additional_information": additional_information,
+                },
+                tools={
+                    "final_answer": final_answer,
+                },
             )
 
             instructions = load_prompt(
                 "query_coordinator_aggregate_agent_instructions", None, {}
             )
-            prompt = load_prompt(
+            prompt = load_prompt( # TODO: answered_needs
                 "query_coordinator_aggregate_agent_prompt",
                 None,
                 {
@@ -366,26 +385,48 @@ class QueryCoordinator:
                 },
             )
 
+            def custom_tool_handler(
+                _context: RunContextWrapper[AgentContext],
+                _tool_results: list[FunctionToolResult],
+            ) -> ToolsToFinalOutputResult:
+                nonlocal answer
+                has_answer = isinstance(answer, Symbol)
+
+                return ToolsToFinalOutputResult(
+                    is_final_output=has_answer,
+                    final_output=serialize_value(answer) if has_answer else None
+                )
+
+            class JsonValueModel(BaseModel):
+                __root__: JsonValue
+
             aggregate_agent = self.agent.clone(
                 name=f"{self.agent.name}_Aggregate_Agent",
                 instructions=instructions,
-            )
-
-            async def compute_aggregate_result():
-                return cast(
-                    str,
-                    (await Runner.run(aggregate_agent, prompt)).final_output,
+                tools=[code_environment.as_function_tool()],
+                tool_use_behavior=custom_tool_handler,
+                output_type=AgentOutputSchema(JsonValueModel, strict_json_schema=False),
+                reset_tool_choice=False,
+                model_settings=dataclasses.replace(self.agent.model_settings,
+                    parallel_tool_calls=False,
+                    tool_choice="required"
                 )
-
-            result = cast(
-                str,
-                await Cache.instance().get_or_compute(
-                    aggregate_agent,
-                    prompt,
-                    str,
-                    compute_aggregate_result,
-                ),
             )
 
-            span.span_data.data["result"] = result
+            async def compute_aggregate_result() -> JsonValue:
+                return serialize_value((await Runner.run(aggregate_agent, prompt)).final_output)
+
+            result = await compute_aggregate_result()
+            # result = await Cache.instance().get_or_compute(
+            #     aggregate_agent,
+            #     prompt,
+            #     JsonValue,
+            #     compute_aggregate_result,
+            # )
+
+            # Add span data
+            span.span_data.data["node"] = node.model_dump()
+            span.span_data.data["result"] = str(result)[:200]
+            code_environment.append_data_to_span(span)
+
             return result

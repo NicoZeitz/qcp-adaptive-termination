@@ -12,6 +12,10 @@ import threading
 from typing import Any, Callable
 import uuid
 
+from agents import CustomSpanData, FunctionTool, RunContextWrapper, Span, function_tool
+
+from modules.model import AgentContext, serialize_value
+
 # Explicit allowlist: only builtins that cannot access the filesystem, network, or process state.
 _SAFE_BUILTINS = {
     key: getattr(builtins, key)
@@ -191,6 +195,9 @@ _UNSAFE_BUILTINS = {
 class CodeExecutionResult:
     """Holds the outcome of a single code execution, including captured output and surviving locals."""
 
+    code: str
+    """The code that was executed"""
+
     stdout: str
     """Everything written to sys.stdout during execution."""
 
@@ -202,6 +209,13 @@ class CodeExecutionResult:
 
     locals: dict[str, Any]
     """All local variables that survived after execution."""
+
+    formatted: str
+    """A short formatted string that can be given to the LLM as information"""
+
+
+CHAR_LIMIT = 200
+"""Char Limit for formatted messages like stdout"""
 
 
 class CodeExecutionEnvironment:
@@ -218,6 +232,7 @@ class CodeExecutionEnvironment:
         self._lock = threading.Lock()
         self.variables = variables or {}
         self.tools = tools or {}
+        self.code_executions: list[CodeExecutionResult] = []
 
         self.initial_globals: dict[str, Any] = {
             **_SAFE_BUILTINS.copy(),
@@ -255,9 +270,95 @@ class CodeExecutionEnvironment:
                 stdout = stdout_buf.getvalue()
                 stderr = stderr_buf.getvalue()
 
-        return CodeExecutionResult(
-            stderr=stderr, stdout=stdout, exception=exception, locals=locals
+        execution_result = CodeExecutionResult(
+            code=code,
+            stdout=stdout,
+            stderr=stderr,
+            exception=exception,
+            locals=locals,
+            formatted=self._format_result(stdout, stderr, exception, locals),
         )
+
+        self.code_executions.append(execution_result)
+        return execution_result
+
+    def as_function_tool(self) -> FunctionTool:
+        @function_tool(
+            name_override="execute_code",
+            timeout=60,
+            timeout_behavior="error_as_result",
+        )
+        async def execute_python_code(
+            ctx: RunContextWrapper[AgentContext], code: str
+        ) -> str:
+            """
+            Execute python code. You will only see partial output results.
+            """
+            return self.execute_code(code).formatted
+
+        return execute_python_code
+
+    def get_code_executions(self) -> list[CodeExecutionResult]:
+        return self.code_executions
+
+    def append_data_to_span(self, span: Span[CustomSpanData]):
+        span.span_data.data["code"] = [
+            {
+                "code": code_execution.code,
+                "exception": serialize_value(code_execution.exception),
+                "stdout": code_execution.stdout[:CHAR_LIMIT],
+                "stderr": code_execution.stderr[:CHAR_LIMIT],
+                "locals": str(
+                    [
+                        f"{k}: {type(v).__name__}"
+                        for k, v in code_execution.locals.items()
+                        if not k.startswith("_")
+                    ]
+                ),
+                "formatted": code_execution.formatted,
+            }
+            for code_execution in self.code_executions
+        ]
+
+    def _format_result(
+        self,
+        stdout: str,
+        stderr: str,
+        exception: Exception | None,
+        locals: dict[str, Any],
+    ) -> str:
+        formatted = ""
+        if len(stdout) > CHAR_LIMIT:
+            formatted += (
+                f"\nStdout: {stdout[:CHAR_LIMIT]}...{len(stdout) - CHAR_LIMIT} chars"
+            )
+        elif len(stdout) > 0:
+            formatted += f"\nStdout: {stdout}"
+        else:
+            formatted += "\nNo Stdout"
+
+        if len(stderr) > CHAR_LIMIT:
+            formatted += (
+                f"\nStderr: {stderr[:CHAR_LIMIT]}...{len(stderr) - CHAR_LIMIT} chars"
+            )
+        elif len(stderr) > 0:
+            formatted += f"\nStderr: {stderr}"
+        else:
+            formatted += "\nNo Stderr"
+
+        if exception is not None:
+            formatted += f"\n{type(exception).__name__}: {exception}"
+
+        available = ",".join(
+            [
+                f"'{k}': {type(v).__name__}"
+                for k, v in locals.items()
+                if not k.startswith("_")
+            ]
+        )
+
+        formatted += f"\nLocals: {available}"
+        return formatted.strip()
 
     @contextmanager
     def _exec_variables(self):

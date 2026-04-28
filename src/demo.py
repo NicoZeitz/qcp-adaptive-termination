@@ -1,7 +1,7 @@
 import os
 
 from sqlalchemy import create_engine, text
-from agents import Agent, ModelSettings, trace, set_default_openai_client, run_demo_loop
+from agents import Agent, ModelSettings, trace, set_default_openai_client
 from openai import AsyncOpenAI
 from openai.types.shared import Reasoning
 from dotenv import load_dotenv
@@ -60,7 +60,8 @@ async def main():
         ][0]  # people
         result = await agent.answer_query_code(
             # "What is the person id of Bradley Cooper", []
-            "List all person ids",
+            "List the first 100 person ids when ordered by firstname and lastname",
+            # "List all person ids",
             [],
         )
         print(result)

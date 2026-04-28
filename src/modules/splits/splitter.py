@@ -3,7 +3,7 @@ import os
 from typing import cast
 from agents import Agent
 from dataclasses import dataclass
-from sqlalchemy import Inspector, create_engine, inspect, text, text, select
+from sqlalchemy import Inspector, create_engine, inspect, text
 import random
 import datetime
 import uuid

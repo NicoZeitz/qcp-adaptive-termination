@@ -1,18 +1,12 @@
-import json, os
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Optional
 from sqlalchemy import (
-    create_engine,
     MetaData,
     Table,
-    Column,
-    String,
-    Integer,
     select,
-    text,
 )
 from sqlalchemy.engine import Engine
 from llama_index.core import SQLDatabase
-from .utils import read_json, write_json, save_raw_text, examples_to_str
+from .utils import examples_to_str
 from .m_schema import MSchema
 
 
@@ -22,15 +16,15 @@ class SchemaEngine(SQLDatabase):
         engine: Engine,
         schema: Optional[str] = None,
         metadata: Optional[MetaData] = None,
-        ignore_tables: Optional[List[str]] = None,
-        include_tables: Optional[List[str]] = None,
+        ignore_tables: Optional[list[str]] = None,
+        include_tables: Optional[list[str]] = None,
         sample_rows_in_table_info: int = 3,
         indexes_in_table_info: bool = False,
         custom_table_info: Optional[dict] = None,
         view_support: bool = False,
         max_string_length: int = 300,
         mschema: Optional[MSchema] = None,
-        db_name: Optional[str] = "",
+        db_name: str = "",
     ):
         super().__init__(
             engine,
@@ -47,7 +41,7 @@ class SchemaEngine(SQLDatabase):
 
         self._db_name = db_name
         # Dictionary to store table names and their corresponding schema
-        self._tables_schemas: Dict[
+        self._tables_schemas: dict[
             str, str
         ] = {}  # For MySQL and similar databases, if no schema is specified but db_name is provided,
         # use db_name as the schema to avoid getting tables from all databases
@@ -89,7 +83,7 @@ class SchemaEngine(SQLDatabase):
         """Return M-Schema"""
         return self._mschema
 
-    def get_pk_constraint(self, table_name: str) -> Dict:
+    def get_pk_constraint(self, table_name: str) -> list[str]:
         return self._inspector.get_pk_constraint(
             table_name, self._tables_schemas[table_name]
         )["constrained_columns"]
@@ -99,13 +93,13 @@ class SchemaEngine(SQLDatabase):
             return self._inspector.get_table_comment(
                 table_name, self._tables_schemas[table_name]
             )["text"]
-        except:  # sqlite does not support comments
+        except Exception:  # sqlite does not support comments
             return ""
 
     def default_schema_name(self) -> Optional[str]:
         return self._inspector.default_schema_name
 
-    def get_schema_names(self) -> List[str]:
+    def get_schema_names(self) -> list[str]:
         return self._inspector.get_schema_names()
 
     def get_foreign_keys(self, table_name: str):
@@ -118,7 +112,7 @@ class SchemaEngine(SQLDatabase):
             table_name, self._tables_schemas[table_name]
         )
 
-    def fectch_distinct_values(
+    def fetch_distinct_values(
         self, table_name: str, column_name: str, max_num: int = 5
     ):
         table = Table(
@@ -184,8 +178,8 @@ class SchemaEngine(SQLDatabase):
                     default = f"{default}"
 
                 try:
-                    examples = self.fectch_distinct_values(table_name, field_name, 5)
-                except:
+                    examples = self.fetch_distinct_values(table_name, field_name, 5)
+                except Exception:
                     examples = []
                 examples = examples_to_str(examples)
 

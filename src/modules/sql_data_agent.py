@@ -1,6 +1,8 @@
-from typing import Any, List, Literal, Sequence, TypedDict
+import dataclasses
+from typing import Any, Literal, Sequence, TypedDict
 from agents import (
     Agent,
+    AgentOutputSchema,
     FunctionToolResult,
     RunContextWrapper,
     Runner,
@@ -14,14 +16,17 @@ from modules.code_execution_environment import (
     CodeExecutionEnvironment,
     CodeExecutionResult,
 )
-from modules.model import Need, PartialQueryAnswer, AgentContext, DataAgent
+from modules.model import (
+    Need,
+    PartialQueryAnswer,
+    AgentContext,
+    DataAgent,
+    Symbol,
+    serialize_value,
+)
 from modules.mschema.schema_engine import SchemaEngine
 from pydantic import Field, create_model
 from modules.prompt import load_prompt
-
-
-class Symbol:
-    pass
 
 
 class CodeExecution(TypedDict):
@@ -99,9 +104,9 @@ class SqlDataAgent(DataAgent):
         await self._initialize_schema()
 
         with custom_span("SQL Data Agent - answer_query_code") as span:
-            needs: list[str] = []
-            answer: str | Symbol = Symbol()
-            code_executions: list[CodeExecution] = []
+            needs: list[Any] = []
+            answer: Any | Symbol = Symbol()
+            sql_queries: list[str] = []
 
             additional_information = [
                 {"information": answered_need.need, "data": answered_need.answer}
@@ -109,14 +114,15 @@ class SqlDataAgent(DataAgent):
             ]
 
             def raise_needs(new_needs: list[Any]):
-                needs.extend([str(need) for need in new_needs])  # TODO: Datatype
+                needs.extend(new_needs)
 
             def final_answer(new_answer: Any):
                 nonlocal answer
-                answer = str(new_answer)  # TODO: Datatype
+                answer = new_answer
 
             def query_sql(query: str) -> Sequence[Row[Any]]:
                 with self.db_engine.connect() as conn:
+                    sql_queries.append(query)
                     result = conn.execute(text(query)).fetchall()
                     return result
 
@@ -132,65 +138,18 @@ class SqlDataAgent(DataAgent):
                 },
             )
 
-            @function_tool()
-            async def execute_code(
-                ctx: RunContextWrapper[AgentContext], code: str
-            ) -> str:
-                """
-                Execute python code. You will only see partial output results.
-                """
-                print("EXECUTION CODE: " + code[:10])
-                result = code_environment.execute_code(code)
-
-                char_limit = 200
-
-                result_str = ""
-                if len(result.stdout) > char_limit:
-                    result_str += f"\nStdout: {result.stdout[:char_limit]}...{len(result.stdout) - char_limit} chars"
-                elif len(result.stdout) > 0:
-                    result_str += f"\nStdout: {result.stdout}"
-                else:
-                    result_str += f"\nNo Stdout"
-
-                if len(result.stderr) > char_limit:
-                    result_str += f"\nStderr: {result.stderr[:char_limit]}...{len(result.stderr) - char_limit} chars"
-                elif len(result.stderr) > 0:
-                    result_str += f"\nStderr: {result.stderr}"
-                else:
-                    result_str += f"\nNo Stderr"
-
-                if result.exception is not None:
-                    result_str += (
-                        f"\n{type(result.exception).__name__}: {result.exception}"
-                    )
-
-                available = ",".join(
-                    [
-                        f"'{k}': {type(v).__name__}"
-                        for k, v in result.locals.items()
-                        if not k.startswith("_")
-                    ]
-                )
-
-                result_str += f"\nLocals: {available}"
-                result_str = result_str.strip()
-
-                code_executions.append(
-                    {"code": code, "result": result, "formatted": result_str}
-                )
-                return result_str
-
             def custom_tool_handler(
                 _context: RunContextWrapper[AgentContext],
-                tool_results: List[FunctionToolResult],
+                _tool_results: list[FunctionToolResult],
             ) -> ToolsToFinalOutputResult:
-                nonlocal answer
+                nonlocal answer, needs
                 if len(needs) == 0 and isinstance(answer, Symbol):
                     return ToolsToFinalOutputResult(
                         is_final_output=False, final_output=None
                     )
 
-                answer = "" if isinstance(answer, Symbol) else answer
+                answer = "" if isinstance(answer, Symbol) else serialize_value(answer)
+                needs = [serialize_value(need) for need in needs]
 
                 return ToolsToFinalOutputResult(
                     is_final_output=True,
@@ -204,42 +163,37 @@ class SqlDataAgent(DataAgent):
                     None,
                     {"m_schema": self.m_schema},
                 ),
-                tools=[execute_code],
+                tools=[code_environment.as_function_tool()],
                 tool_use_behavior=custom_tool_handler,
                 reset_tool_choice=False,
-                output_type=PartialQueryAnswer,
+                model_settings=dataclasses.replace(
+                    self.agent.model_settings,
+                    parallel_tool_calls=False,
+                    tool_choice="required",
+                ),
+                output_type=AgentOutputSchema(
+                    PartialQueryAnswer, strict_json_schema=False
+                ),
             )
-            code_agent.model_settings.parallel_tool_calls = False
-            code_agent.model_settings.tool_choice = "required"
 
-            result = (
-                await Runner.run(
-                    code_agent,
-                    load_prompt(
-                        "sql_data_agent_code_agent_prompt", None, {"query": query}
-                    ),
-                )
-            ).final_output  # TODO: cache
+            async def compute_code_answer() -> PartialQueryAnswer:
+                return (
+                    await Runner.run(
+                        code_agent,
+                        load_prompt(
+                            "sql_data_agent_code_agent_prompt", None, {"query": query}
+                        ),
+                    )
+                ).final_output
 
-            span.span_data.data["answer"] = result.answer[:200]
-            span.span_data.data["needs"] = [need[:200] for need in result.needs]
-            span.span_data.data["code"] = [
-                {
-                    "code": exec_result["code"],
-                    "exception": str(exec_result["result"].exception),
-                    "stdout": exec_result["result"].stdout[:100],
-                    "stderr": exec_result["result"].stderr[:100],
-                    "locals": str(
-                        [
-                            f"{k}: {type(v).__name__}"
-                            for k, v in exec_result["result"].locals.items()
-                            if not k.startswith("_")
-                        ]
-                    ),
-                    "formatted": exec_result["formatted"],
-                }
-                for exec_result in code_executions
+            result = await compute_code_answer()
+
+            span.span_data.data["answer"] = str(result.answer)[:200]
+            span.span_data.data["needs"] = [
+                str(need)[:200] for need in result.needs or []
             ]
+            span.span_data.data["sql_queries"] = [str(query) for query in sql_queries]
+            code_environment.append_data_to_span(span)
 
             return result
 
