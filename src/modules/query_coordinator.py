@@ -205,26 +205,26 @@ class QueryCoordinator:
             None,
             {
                 "participating_agents": participating_agents_str,
-                "old_query_plan": old_query_plan.model_dump_json(indent=2),
+                "old_query_plan": old_query_plan.model_dump_json(indent=2), # TODO: too large intermediate results
             },
         )
         prompt = load_prompt(
             "query_coordinator_query_replan_agent_prompt",
             None,
-            {"query": query, "exception": exception.model_dump_json(indent=2)},
+            {"query": query, "exception": exception.model_dump_json(indent=2)},# TODO: too large intermediate results
         )
 
-        query_plan_agent = self.agent.clone(
+        query_replan_agent = self.agent.clone(
             name=f"{self.agent.name}_Query_Replan_Agent",
             instructions=instructions,
             output_type=QueryReplanModel,
         )
 
         async def compute_query_replan():
-            return (await Runner.run(query_plan_agent, prompt)).final_output
+            return (await Runner.run(query_replan_agent, prompt)).final_output
 
         result = await Cache.instance().get_or_compute(
-            query_plan_agent,
+            query_replan_agent,
             prompt,
             QueryReplanModel,
             compute_query_replan,
@@ -349,7 +349,7 @@ class QueryCoordinator:
             answer = await agent.answer_query(node.question, answered_needs)
             span.span_data.data["answer"] = answer.model_dump()
 
-            if answer.needs is not None:
+            if answer.needs is not None and len(answer.needs) > 0:
                 raise ReplanningNeededException(
                     data=NeedNotMet(partial_answer=answer, query_node=node)
                 )
@@ -364,7 +364,7 @@ class QueryCoordinator:
                 {
                     "information": answered_need.need,
                     "data": answered_need.answer,
-                }  # TODO: Type
+                }
                 for answered_need in node.answered_needs or []
             ]
 
