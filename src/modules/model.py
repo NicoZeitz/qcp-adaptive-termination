@@ -1,8 +1,13 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, List, Literal
-from pydantic import BaseModel, create_model
-from pydantic import BaseModel, Field
+from types import ModuleType
+from typing import Any, Literal
+from pydantic import BaseModel, JsonValue, create_model
+from pydantic import Field
+
+
+class Symbol:
+    pass
 
 
 @dataclass
@@ -12,14 +17,36 @@ class AgentContext:
 
 class Need(BaseModel):
     need: str
-    answer: str
+    answer: JsonValue
+
+
+# Adapted from [RLM](https://github.com/alexzhang13/rlm), Original source file: rlm/core/types.py
+def serialize_value(value: Any) -> JsonValue:
+    """Convert a value to a JSON-serializable representation."""
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, tuple):
+        return serialize_value(list(value))
+    if isinstance(value, ModuleType):
+        return f"<module '{value.__name__}'>"
+    if isinstance(value, (list, tuple)):
+        return [serialize_value(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k): serialize_value(v) for k, v in value.items()}
+    if callable(value):
+        return f"<{type(value).__name__} '{getattr(value, '__name__', repr(value))}'>"
+    # Try to convert to string for other types
+    try:
+        return repr(value)
+    except Exception:
+        return f"<{type(value).__name__}>"
 
 
 class PartialQueryAnswer(BaseModel):
-    answer: str = Field(
+    answer: JsonValue = Field(
         description="The answer to the user's question based on the database query results if it exists. Can also only contain a partial result. Does not contain information how to query the answer, instead contains the actual answer to the question."
     )
-    needs: list[str] | None = Field(
+    needs: list[JsonValue] | None = Field(
         description="If the question cannot be answered with the current information, return a list of strings describing what information is needed to answer the question. This can include information that is not in the database, but that would be needed to formulate the correct SQL query or to interpret the results."
     )
 
@@ -88,7 +115,7 @@ class QueryPlan(BaseModel):
                 Field(..., description="The agent to which the question is directed."),
             ),
             needs=(
-                List["QueryPlanModel"] | None,
+                list["QueryPlanModel"] | None,
                 Field(
                     ...,
                     description="The sub-questions that need to be answered in order to answer the parent question. Should be empty if the question can be answered directly by an agent. Multiple needs are independent from each other. If there is a dependence between the needs, they should be nested accordingly to reflect the dependence relationship. ",
@@ -116,6 +143,7 @@ class QueryPlan(BaseModel):
 
     @staticmethod
     def create_query_replan_model(participating_agents: list[tuple[DataAgent, str]]):
+        # TODO: json
         participating_agents_names = [agent.name() for agent, _ in participating_agents]
 
         QueryReplanModel = create_model(
@@ -146,14 +174,14 @@ class QueryPlan(BaseModel):
                 Field(..., description="The agent to which the question is directed."),
             ),
             needs=(
-                List["QueryReplanModel"] | None,
+                list["QueryReplanModel"] | None,
                 Field(
                     ...,
                     description="The sub-questions that need to be answered in order to answer the parent question. Should be empty if the question can be answered directly by an agent. Multiple needs are independent from each other. If there is a dependence between the needs, they should be nested accordingly to reflect the dependence relationship. ",
                 ),
             ),
             answered_needs=(
-                List[Need] | None,
+                list[Need] | None,
                 Field(
                     ...,
                     description="The needs that have already been answered in the old query plan. This is used to keep track of which needs have already been answered and to provide the answers to the replanning agent so that it can make informed decisions about how to replan the query plan.",

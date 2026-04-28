@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     data_agents = create_agents(
         output_path="../data/splits",
-        database_url=f"sqlite:///{os.path.abspath(f'../data/imdb.db')}",
+        database_url=f"sqlite:///{os.path.abspath('../data/imdb.db')}",
         agent=Agent[AgentContext](name=""),
         agent_amount=5,
         always_included_columns_mapping=always_included_columns_mapping,
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     )
     data_agents = create_agents(
         output_path="../data/splits",
-        database_url=f"sqlite:///{os.path.abspath(f'../data/imdb.db')}",
+        database_url=f"sqlite:///{os.path.abspath('../data/imdb.db')}",
         agent=Agent[AgentContext](name=""),
         agent_amount=5,
         always_included_columns_mapping=always_included_columns_mapping,
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     )
     data_agents = create_agents(
         output_path="../data/splits",
-        database_url=f"sqlite:///{os.path.abspath(f'../data/imdb.db')}",
+        database_url=f"sqlite:///{os.path.abspath('../data/imdb.db')}",
         agent=Agent[AgentContext](name=""),
         agent_amount=5,
         always_included_columns_mapping=always_included_columns_mapping,
