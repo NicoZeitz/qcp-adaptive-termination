@@ -6,8 +6,10 @@ from openai import AsyncOpenAI
 from openai.types.shared import Reasoning
 from dotenv import load_dotenv
 
+from modules.cache import Cache
 from modules.model import AgentContext
 from modules.sql_data_agent import SqlDataAgent
+from modules.text_data_agent import TextDataAgent
 
 load_dotenv()
 
@@ -53,21 +55,53 @@ def create_data_agents_from_folder(folder_path: str) -> list[SqlDataAgent]:
 
 
 async def main():
-    with trace("NZ: Code Demo"):
-        data_agents = create_data_agents_from_folder("../data/handmade")
-        agent = [
-            data_agent for data_agent in data_agents if data_agent.agent.name == "A1"
-        ][0]  # people
-        result = await agent.answer_query_code(
-            # "What is the person id of Bradley Cooper", []
-            "List the first 100 person ids when ordered by firstname and lastname",
-            # "List all person ids",
-            [],
+    with trace("NZ: Text Demo"), open("../data/text.txt") as f:
+        data_agent = TextDataAgent(
+            agent=Agent[AgentContext](
+                name="T1",
+                model="gpt-5-mini",
+                model_settings=ModelSettings(
+                    reasoning=Reasoning(effort="low"),
+                    verbosity="low",
+                    parallel_tool_calls=True,
+                ),
+            ),
+            text=f.read(),
         )
-        print(result)
+        print("==============================================================")
+        print(await data_agent.get_data_and_query_capabilities())
+        print("==============================================================")
+        print(
+            await data_agent.get_schema_for_query(
+                "Who was the director of Donald Trump's favorite movie?"
+            )
+        )
+        print("==============================================================")
+        print(
+            await data_agent.answer_query(
+                "Who was the director of Donald Trump's favorite movie?", []
+            )
+        )
+
+    # with trace("NZ: Code Demo"):
+    #     data_agents = create_data_agents_from_folder("../data/handmade")
+    #     agent = [
+    #         data_agent for data_agent in data_agents if data_agent.agent.name == "A1"
+    #     ][0]  # people
+    #     result = await agent.answer_query_code(
+    #         # "What is the person id of Bradley Cooper", []
+    #         "List the first 100 person ids when ordered by firstname and lastname",
+    #         # "List all person ids",
+    #         [],
+    #     )
+    #     print(result)
 
 
 if __name__ == "__main__":
     import asyncio
 
+    Cache.instance().disable()
     asyncio.run(main())
+
+# Director Orson Welles https://www.imdb.com/title/tt0033467/
+# Who was the director of Donald Trump's favorite movie?

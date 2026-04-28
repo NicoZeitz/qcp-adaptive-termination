@@ -3,13 +3,14 @@ from dataclasses import dataclass
 import json
 from types import ModuleType
 from typing import Any, Literal
-from agents import CustomSpanData, Span
+from agents import Agent, CustomSpanData, Span
 from pydantic import BaseModel, JsonValue, create_model
 from pydantic import Field
 import uuid
 
 CHAR_LIMIT_LLM = 600
-CHAR_LIMIT_SPAN = 600
+CHAR_LIMIT_LONG_LLM = 6000
+CHAR_LIMIT_SPAN = 100
 
 
 def preview_text(text: str, char_limit=600):
@@ -23,7 +24,7 @@ def preview_text(text: str, char_limit=600):
 
     return (
         text[:char_limit_start]
-        + f"...[{omitted_count} chars]..."
+        + f"\n...[{omitted_count} chars]...\n"
         + text[-char_limit_end:]
     )
 
@@ -72,10 +73,12 @@ class PartialQueryAnswer(BaseModel):
 
 
 class DataAgent(ABC):
-    @abstractmethod
+    def __init__(self, agent: Agent[AgentContext]):
+        self.agent = agent
+
     def name(self) -> str:
         """Return the name of the agent"""
-        pass
+        return self.agent.name
 
     @abstractmethod
     async def get_data_and_query_capabilities(self) -> str:
