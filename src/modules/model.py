@@ -169,7 +169,7 @@ class QueryPlan(BaseModel):
                 ),
             ),
             answered_needs=(
-                list[Need] | None,
+                list[Need] | None, # TODO: does not work because of json for output type
                 Field(
                     ...,
                     description="The needs that have already been answered in the old query plan. This is used to keep track of which needs have already been answered and to provide the answers to the replanning agent so that it can make informed decisions about how to replan the query plan.",
