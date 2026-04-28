@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import json
 from types import ModuleType
 from typing import Any, Literal
 from pydantic import BaseModel, JsonValue, create_model
@@ -122,6 +123,42 @@ class QueryPlan(BaseModel):
             answered_needs=None,
         )
 
+    def to_replan_context(self, preview_length: int = 200) -> dict:
+        """Compact representation for replan context: answered_needs shown as previews."""
+        def make_preview(need: "Need") -> dict:
+            s = json.dumps(need.answer, default=str)
+            return {"need": need.need, "answer_preview": s[:preview_length] + ("..." if len(s) > preview_length else "")}
+
+        return {
+            "id": self.id,
+            "need": self.need,
+            "question": self.question,
+            "from_agent": self.from_agent,
+            "to_agent": self.to_agent,
+            "needs": [n.to_replan_context(preview_length) for n in self.needs] if self.needs else None,
+            "answered_needs": [make_preview(n) for n in self.answered_needs] if self.answered_needs else None,
+        }
+
+    @staticmethod
+    def collect_answered_needs(plan: "QueryPlan") -> dict[str, list["Need"]]:
+        """Build a flat {id: answered_needs} index from a query plan tree."""
+        index: dict[str, list[Need]] = {}
+        if plan.answered_needs:
+            index[plan.id] = plan.answered_needs
+        if plan.needs:
+            for child in plan.needs:
+                index.update(QueryPlan.collect_answered_needs(child))
+        return index
+
+    @staticmethod
+    def restore_answered_needs(plan: "QueryPlan", id_index: dict[str, list["Need"]]) -> None:
+        """Restore full answered_needs for nodes whose IDs appear in id_index."""
+        if plan.id in id_index:
+            plan.answered_needs = id_index[plan.id]
+        if plan.needs:
+            for child in plan.needs:
+                QueryPlan.restore_answered_needs(child, id_index)
+
     @staticmethod
     def create_query_replan_model(participating_agents: list[tuple[DataAgent, str]]):
         # TODO: json
@@ -168,20 +205,12 @@ class QueryPlan(BaseModel):
                     description="The sub-questions that need to be answered in order to answer the parent question. Should be empty if the question can be answered directly by an agent. Multiple needs are independent from each other. If there is a dependence between the needs, they should be nested accordingly to reflect the dependence relationship. ",
                 ),
             ),
-            answered_needs=(
-                list[Need] | None, # TODO: does not work because of json for output type
-                Field(
-                    ...,
-                    description="The needs that have already been answered in the old query plan. This is used to keep track of which needs have already been answered and to provide the answers to the replanning agent so that it can make informed decisions about how to replan the query plan.",
-                ),
-            ),
         )
         QueryReplanModel.model_rebuild()
         return QueryReplanModel
 
     @staticmethod
     def map_query_replan_model_to_query_plan(query_replan_model: Any) -> "QueryPlan":
-        # TODO: map nodes from old query plan
         return QueryPlan(
             id=query_replan_model.id
             if query_replan_model.id is not None
@@ -191,12 +220,12 @@ class QueryPlan(BaseModel):
             from_agent=query_replan_model.from_agent,
             to_agent=query_replan_model.to_agent,
             needs=[
-                QueryPlan.map_query_plan_model_to_query_plan(need)
+                QueryPlan.map_query_replan_model_to_query_plan(need)
                 for need in query_replan_model.needs
             ]
             if query_replan_model.needs
             else None,
-            answered_needs=query_replan_model.answered_needs,
+            answered_needs=None,  # restored from id_index after mapping
         )
 
 

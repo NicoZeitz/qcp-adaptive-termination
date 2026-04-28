@@ -114,7 +114,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--query",
         type=str,
-        default="../data/test/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json",
+        default="../test/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json",
     )
     parser.add_argument("--cache", action="store_true", default=False)
     args = parser.parse_args()

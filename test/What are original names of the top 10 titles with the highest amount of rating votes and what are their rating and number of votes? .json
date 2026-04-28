@@ -1,0 +1,53 @@
+{
+"select t.original_title, r.rating, r.votes \nfrom titles t \njoin ratings r on r.title_id = t.title_id \norder by r.votes  desc\nlimit 10": [
+	{
+		"original_title" : "The Shawshank Redemption",
+		"rating" : 9.3,
+		"votes" : 3178259
+	},
+	{
+		"original_title" : "The Dark Knight",
+		"rating" : 9.1,
+		"votes" : 3157766
+	},
+	{
+		"original_title" : "Inception",
+		"rating" : 8.8,
+		"votes" : 2807311
+	},
+	{
+		"original_title" : "Game of Thrones",
+		"rating" : 9.2,
+		"votes" : 2604515
+	},
+	{
+		"original_title" : "Breaking Bad",
+		"rating" : 9.5,
+		"votes" : 2600466
+	},
+	{
+		"original_title" : "Fight Club",
+		"rating" : 8.8,
+		"votes" : 2596456
+	},
+	{
+		"original_title" : "Interstellar",
+		"rating" : 8.7,
+		"votes" : 2513998
+	},
+	{
+		"original_title" : "Forrest Gump",
+		"rating" : 8.8,
+		"votes" : 2488731
+	},
+	{
+		"original_title" : "Pulp Fiction",
+		"rating" : 8.8,
+		"votes" : 2428417
+	},
+	{
+		"original_title" : "The Matrix",
+		"rating" : 8.7,
+		"votes" : 2240593
+	}
+]}

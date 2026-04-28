@@ -1,0 +1,6 @@
+{
+"SELECT name FROM people WHERE person_id = 'nm0000042'": [
+	{
+		"name" : "Alan Ladd"
+	}
+]}
