@@ -12,12 +12,11 @@ from agents import (
     ToolsToFinalOutputResult,
     custom_span,
 )
-from pydantic import BaseModel, JsonValue, create_model, Field
+from pydantic import JsonValue, create_model, Field
 
 from modules.cache import Cache
 from modules.code_execution_environment import CodeExecutionEnvironment
 from modules.model import (
-    CHAR_LIMIT_SPAN,
     AgentContext,
     DataAgent,
     Need,
@@ -29,7 +28,6 @@ from modules.model import (
     ResponsibleAgentNotFound,
     Symbol,
     append_json_preview_to_span,
-    preview_text,
     serialize_value,
 )
 from modules.prompt import load_prompt
