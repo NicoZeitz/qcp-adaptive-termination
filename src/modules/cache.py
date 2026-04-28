@@ -16,10 +16,17 @@ T = TypeVar("T")
 
 class Cache:
     _instance = None
+    disabled = False
     cache_folder: Path
 
     def __init__(self):
         raise RuntimeError("Call instance() instead")
+
+    def enable(self):
+        self.disabled = False
+
+    def disable(self):
+        self.disabled = True
 
     @classmethod
     def instance(cls):
@@ -31,6 +38,9 @@ class Cache:
         return cls._instance
 
     def get(self, keys: list[Any]) -> Any | None:
+        if self.disabled:
+            return None
+
         cache_file = self._cache_file_for_keys(keys)
 
         if not cache_file.exists():
@@ -45,6 +55,9 @@ class Cache:
             return None
 
     def store(self, keys: list[Any], value: Any) -> None:
+        if self.disabled:
+            return None
+
         cache_file = self._cache_file_for_keys(keys)
         payload = cloudpickle.dumps(value)
         temporary_file = cache_file.with_suffix(".tmp")
@@ -61,6 +74,9 @@ class Cache:
         output_model: type | None,
         compute: Callable[[], Awaitable[T]],
     ) -> T:
+        if self.disabled:
+            return await compute()
+
         cache_keys = [
             getattr(agent, "name", None),
             getattr(agent, "model", None),

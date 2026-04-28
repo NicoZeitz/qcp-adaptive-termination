@@ -11,11 +11,11 @@ Instead of generating sql directly you interact with the database via standard p
 * query: The original query from the user
 
 ```python
+Json = Union[None, int, float, str, bool, List["Json"], Dict[str, "Json"]]
 class AdditionalInformationItem(TypedDict):
   information: str
-  data: str
+  data: Json
 
-Json = Union[None, int, float, str, bool, List["Json"], Dict[str, "Json"]]
 
 # Additional available functions to call
 def raise_needs(needs: list[Json]) -> None:

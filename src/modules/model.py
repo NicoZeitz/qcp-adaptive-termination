@@ -4,6 +4,7 @@ from types import ModuleType
 from typing import Any, Literal
 from pydantic import BaseModel, JsonValue, create_model
 from pydantic import Field
+import uuid
 
 
 class Symbol:
@@ -18,28 +19,6 @@ class AgentContext:
 class Need(BaseModel):
     need: str
     answer: JsonValue
-
-
-# Adapted from [RLM](https://github.com/alexzhang13/rlm), Original source file: rlm/core/types.py
-def serialize_value(value: Any) -> JsonValue:
-    """Convert a value to a JSON-serializable representation."""
-    if value is None or isinstance(value, (bool, int, float, str)):
-        return value
-    if isinstance(value, tuple):
-        return serialize_value(list(value))
-    if isinstance(value, ModuleType):
-        return f"<module '{value.__name__}'>"
-    if isinstance(value, (list, tuple)):
-        return [serialize_value(v) for v in value]
-    if isinstance(value, dict):
-        return {str(k): serialize_value(v) for k, v in value.items()}
-    if callable(value):
-        return f"<{type(value).__name__} '{getattr(value, '__name__', repr(value))}'>"
-    # Try to convert to string for other types
-    try:
-        return repr(value)
-    except Exception:
-        return f"<{type(value).__name__}>"
 
 
 class PartialQueryAnswer(BaseModel):
@@ -76,6 +55,7 @@ class DataAgent(ABC):
 
 
 class QueryPlan(BaseModel):
+    id: str
     need: str | None
     question: str
     from_agent: Literal["User", "Coordinator"] | str
@@ -128,6 +108,7 @@ class QueryPlan(BaseModel):
     @staticmethod
     def map_query_plan_model_to_query_plan(query_plan_model: Any) -> "QueryPlan":
         return QueryPlan(
+            id=str(uuid.uuid4()),
             need=query_plan_model.need,
             question=query_plan_model.question,
             from_agent=query_plan_model.from_agent,
@@ -148,6 +129,13 @@ class QueryPlan(BaseModel):
 
         QueryReplanModel = create_model(
             "QueryReplanModel",
+            id=(
+                str | None,
+                Field(
+                    ...,
+                    description="A unique id referencing a existing node in the old query plan. Left empty if it is a newly created node",
+                ),
+            ),
             need=(
                 str | None,
                 Field(
@@ -193,7 +181,11 @@ class QueryPlan(BaseModel):
 
     @staticmethod
     def map_query_replan_model_to_query_plan(query_replan_model: Any) -> "QueryPlan":
+        # TODO: map nodes from old query plan
         return QueryPlan(
+            id=query_replan_model.id
+            if query_replan_model.id is not None
+            else str(uuid.uuid4()),
             need=query_replan_model.need,
             question=query_replan_model.question,
             from_agent=query_replan_model.from_agent,
@@ -223,3 +215,25 @@ class NeedNotMet(ReplanningNeeded):
 @dataclass
 class ReplanningNeededException(Exception):
     data: ReplanningNeeded
+
+
+# Adapted from [RLM](https://github.com/alexzhang13/rlm), Original source file: rlm/core/types.py
+def serialize_value(value: Any) -> JsonValue:
+    """Convert a value to a JSON-serializable representation."""
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, tuple):
+        return serialize_value(list(value))
+    if isinstance(value, ModuleType):
+        return f"<module '{value.__name__}'>"
+    if isinstance(value, (list, tuple)):
+        return [serialize_value(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k): serialize_value(v) for k, v in value.items()}
+    if callable(value):
+        return f"<{type(value).__name__} '{getattr(value, '__name__', repr(value))}'>"
+    # Try to convert to string for other types
+    try:
+        return repr(value)
+    except Exception:
+        return f"<{type(value).__name__}>"
