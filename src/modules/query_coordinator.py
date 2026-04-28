@@ -22,11 +22,13 @@ from modules.model import (
     DataAgent,
     Need,
     NeedNotMet,
+    PartialQueryAnswer,
     QueryPlan,
     ReplanningNeeded,
     ReplanningNeededException,
     ResponsibleAgentNotFound,
     Symbol,
+    append_json_preview_to_span,
     preview_text,
     serialize_value,
 )
@@ -49,25 +51,19 @@ class QueryCoordinator:
     async def collaborative_query_answering(self, query: str) -> JsonValue:
         agent_registry = await self._build_agent_registry()
 
-        with custom_span("Collaborative Query Answering") as span:
-            span.span_data.data["agent_registry"] = agent_registry
-            span.span_data.data["query"] = query
+        # 1. Query Coordinator identifies Relevant Agents Based on Capabilities.
+        relevant_agents = await self._filter_relevant_agents(query, agent_registry)
 
-            # 1. Query Coordinator identifies Relevant Agents Based on Capabilities.
-            relevant_agents = await self._filter_relevant_agents(query, agent_registry)
+        # 2. Data Agents are Asked if they participate
+        participating_agents = await self._ask_data_agents_for_participation(
+            relevant_agents, query
+        )
 
-            # 2. Data Agents are Asked if they participate
-            participating_agents = await self._ask_data_agents_for_participation(
-                relevant_agents, query
-            )
+        # 3. Coordinator Drafts Query Plan & Initializes Stack Based on Previously Identified Agents.
+        query_plan = await self._draft_query_plan(query, participating_agents)
 
-            # 3. Coordinator Drafts Query Plan & Initializes Stack Based on Previously Identified Agents.
-            query_plan = await self._draft_query_plan(query, participating_agents)
-
-            result = await self._execute_query_plan(
-                query, query_plan, participating_agents
-            )
-            return result
+        result = await self._execute_query_plan(query, query_plan, participating_agents)
+        return result
 
     async def _build_agent_registry(self) -> str:
         with custom_span("Build Agent Registry") as span:
@@ -79,6 +75,8 @@ class QueryCoordinator:
             for agent, capability in zip(self.data_agents, capabilities):
                 span.span_data.data[f"{agent.name()}_capability"] = capability
                 agent_registry += f"{agent.name()}: {capability}\n"
+
+            span.span_data.data["agent_registry"] = agent_registry
 
             return agent_registry.strip()
 
@@ -182,8 +180,7 @@ class QueryCoordinator:
             )
 
             query_plan = QueryPlan.map_query_plan_model_to_query_plan(result)
-
-            span.span_data.data["query_plan"] = query_plan.model_dump()
+            span.span_data.data["query_plan"] = query_plan.to_span_data()
             return query_plan
 
     async def _replan_query_plan(
@@ -213,7 +210,9 @@ class QueryCoordinator:
             None,
             {
                 "participating_agents": participating_agents_str,
-                "old_query_plan": json.dumps(old_query_plan.to_replan_context(), indent=2),
+                "old_query_plan": json.dumps(
+                    old_query_plan.to_replan_context(), indent=2
+                ),
             },
         )
         prompt = load_prompt(
@@ -255,7 +254,7 @@ class QueryCoordinator:
             try:
                 with custom_span(f"{i}: Execute Query Plan") as span:
                     print(f"{i}: Execute Query Plan")
-                    span.span_data.data["query_plan"] = plan_to_execute.model_dump()
+                    span.span_data.data["query_plan"] = plan_to_execute.to_span_data()
                     span.span_data.data["participating_agents"] = [
                         agent.name() for agent, _ in participating_agents
                     ]
@@ -264,26 +263,30 @@ class QueryCoordinator:
                         plan_to_execute, participating_agents
                     )
 
-                    span.span_data.data["final_answer"] = answer
+                    append_json_preview_to_span("final_answer", answer, span)
                     return answer
             except ReplanningNeededException as exception:
                 if i == MAX_REPLAN_ATTEMPTS:
                     with custom_span(f"{i}: Max Replanning Attempts Reached") as span:
-                        span.span_data.data["reason"] = exception.data.model_dump()
+                        span.span_data.data["reason"] = exception.data.to_span_data()
                     break
 
                 with custom_span(f"{i}: Replanning") as span:
                     print(f"{i}: Replanning")
 
                     exception_data = exception.data
-                    span.span_data.data["reason"] = exception_data.model_dump()
-                    span.span_data.data["old_query_plan"] = plan_to_execute.model_dump()
+                    span.span_data.data["reason"] = exception_data.to_span_data()
+                    span.span_data.data["old_query_plan"] = (
+                        plan_to_execute.to_span_data()
+                    )
 
                     plan_to_execute = await self._replan_query_plan(
                         query, query_plan, participating_agents, exception_data
                     )
 
-                    span.span_data.data["new_query_plan"] = plan_to_execute.model_dump()
+                    span.span_data.data["new_query_plan"] = (
+                        plan_to_execute.to_span_data()
+                    )
 
         return "Failed to answer the query after multiple attempts. The query might be too complex or there might be missing information that the agents cannot provide."
 
@@ -295,7 +298,7 @@ class QueryCoordinator:
         ) as span:
             print(f"    Execute Query Plan Node ({node.to_agent}): {node.question}")
 
-            span.span_data.data["node"] = node.model_dump()
+            span.span_data.data["node"] = node.to_span_data()
 
             if node.answered_needs is None:
                 node.answered_needs = []
@@ -315,7 +318,7 @@ class QueryCoordinator:
                     node.needs.remove(need)
 
             span.span_data.data["answered_needs"] = [
-                need.model_dump() for need in node.answered_needs
+                need.to_span_data() for need in node.answered_needs
             ]
 
             if node.to_agent == "Coordinator":
@@ -349,13 +352,13 @@ class QueryCoordinator:
         with custom_span(
             f"Answer Query Plan Node with Agent {agent.name()}: {node.question}"
         ) as span:
-            span.span_data.data["node"] = node.model_dump()
+            span.span_data.data["node"] = node.to_span_data()
             span.span_data.data["answered_needs"] = [
-                answered_need.model_dump() for answered_need in answered_needs
+                answered_need.to_span_data() for answered_need in answered_needs
             ]
 
             answer = await agent.answer_query(node.question, answered_needs)
-            span.span_data.data["answer"] = answer.model_dump()
+            span.span_data.data["answer"] = answer.to_span_data()
 
             if answer.needs is not None and len(answer.needs) > 0:
                 raise ReplanningNeededException(
@@ -366,6 +369,7 @@ class QueryCoordinator:
 
     async def _aggregate_results(self, node: QueryPlan) -> JsonValue:
         with custom_span("Answer Query Plan Node") as span:
+            needs: list[Any] = []
             answer: Any | Symbol = Symbol()
 
             additional_information = [
@@ -375,6 +379,9 @@ class QueryCoordinator:
                 }
                 for answered_need in node.answered_needs or []
             ]
+
+            def raise_needs(new_needs: list[Any]):
+                needs.extend(new_needs)
 
             def final_answer(new_answer: Any):
                 nonlocal answer
@@ -393,29 +400,38 @@ class QueryCoordinator:
             instructions = load_prompt(
                 "query_coordinator_aggregate_agent_instructions", None, {}
             )
-            prompt = load_prompt("query_coordinator_aggregate_agent_prompt", None, {})
+            prompt = load_prompt(
+                "query_coordinator_aggregate_agent_prompt",
+                None,
+                {"query": node.question},
+            )
 
             def custom_tool_handler(
                 _context: RunContextWrapper[AgentContext],
                 _tool_results: list[FunctionToolResult],
             ) -> ToolsToFinalOutputResult:
-                nonlocal answer
-                has_answer = isinstance(answer, Symbol)
+                nonlocal answer, needs
+                if len(needs) == 0 and isinstance(answer, Symbol):
+                    return ToolsToFinalOutputResult(
+                        is_final_output=False, final_output=None
+                    )
+
+                answer = "" if isinstance(answer, Symbol) else serialize_value(answer)
+                needs = [serialize_value(need) for need in needs]
 
                 return ToolsToFinalOutputResult(
-                    is_final_output=has_answer,
-                    final_output=serialize_value(answer) if has_answer else None,
+                    is_final_output=True,
+                    final_output=PartialQueryAnswer(answer=answer, needs=needs),
                 )
-
-            class JsonValueModel(BaseModel):
-                __root__: JsonValue
 
             aggregate_agent = self.agent.clone(
                 name=f"{self.agent.name}_Aggregate_Agent",
                 instructions=instructions,
                 tools=[code_environment.as_function_tool()],
                 tool_use_behavior=custom_tool_handler,
-                output_type=AgentOutputSchema(JsonValueModel, strict_json_schema=False),
+                output_type=AgentOutputSchema(
+                    PartialQueryAnswer, strict_json_schema=False
+                ),
                 reset_tool_choice=False,
                 model_settings=dataclasses.replace(
                     self.agent.model_settings,
@@ -424,10 +440,8 @@ class QueryCoordinator:
                 ),
             )
 
-            async def compute_aggregate_result() -> JsonValue:
-                return serialize_value(
-                    (await Runner.run(aggregate_agent, prompt)).final_output
-                )
+            async def compute_aggregate_result() -> PartialQueryAnswer:
+                return (await Runner.run(aggregate_agent, prompt)).final_output
 
             result = await compute_aggregate_result()
             # result = await Cache.instance().get_or_compute(
@@ -437,9 +451,13 @@ class QueryCoordinator:
             #     compute_aggregate_result,
             # )
 
-            # Add span data
-            span.span_data.data["node"] = node.model_dump()
-            span.span_data.data["result"] = preview_text(str(result), CHAR_LIMIT_SPAN)
+            span.span_data.data["node"] = node.to_span_data()
+            span.span_data.data["answer"] = result.to_span_data()
             code_environment.append_data_to_span(span)
 
-            return result
+            if result.needs is not None and len(result.needs) > 0:
+                raise ReplanningNeededException(
+                    data=NeedNotMet(partial_answer=result, query_node=node)
+                )
+
+            return result.answer

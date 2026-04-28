@@ -14,7 +14,13 @@ import uuid
 
 from agents import CustomSpanData, FunctionTool, RunContextWrapper, Span, function_tool
 
-from modules.model import CHAR_LIMIT_LLM, CHAR_LIMIT_SPAN, AgentContext, preview_text, serialize_value
+from modules.model import (
+    CHAR_LIMIT_LLM,
+    CHAR_LIMIT_SPAN,
+    AgentContext,
+    preview_text,
+    serialize_value,
+)
 
 # Explicit allowlist: only builtins that cannot access the filesystem, network, or process state.
 _SAFE_BUILTINS = {
@@ -212,6 +218,7 @@ class CodeExecutionResult:
 
     formatted: str
     """A short formatted string that can be given to the LLM as information"""
+
 
 class CodeExecutionEnvironment:
     """Stateful REPL-like environment that persists locals across calls while keeping globals immutable."""
