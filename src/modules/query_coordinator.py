@@ -266,7 +266,7 @@ class QueryCoordinator:
                     append_json_preview_to_span("final_answer", answer, span)
                     return answer
             except ReplanningNeededException as exception:
-                if i == MAX_REPLAN_ATTEMPTS:
+                if i == MAX_REPLAN_ATTEMPTS + 1:
                     with custom_span(f"{i}: Max Replanning Attempts Reached") as span:
                         span.span_data.data["reason"] = exception.data.to_span_data()
                     break
