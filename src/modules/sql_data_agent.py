@@ -190,7 +190,9 @@ class SqlDataAgent(DataAgent):
 
             result = await compute_code_answer()
 
-            span.span_data.data["answer"] = preview_text(str(result.answer), CHAR_LIMIT_SPAN)
+            span.span_data.data["answer"] = preview_text(
+                str(result.answer), CHAR_LIMIT_SPAN
+            )
             span.span_data.data["needs"] = [
                 preview_text(str(need), CHAR_LIMIT_SPAN) for need in result.needs or []
             ]

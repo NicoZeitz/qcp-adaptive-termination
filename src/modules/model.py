@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import json
 from types import ModuleType
 from typing import Any, Literal
+from agents import CustomSpanData, Span
 from pydantic import BaseModel, JsonValue, create_model
 from pydantic import Field
 import uuid
@@ -10,7 +11,8 @@ import uuid
 CHAR_LIMIT_LLM = 600
 CHAR_LIMIT_SPAN = 600
 
-def preview_text(text: str, char_limit = 600):
+
+def preview_text(text: str, char_limit=600):
     if len(text) <= char_limit:
         return text
 
@@ -25,6 +27,13 @@ def preview_text(text: str, char_limit = 600):
         + text[-char_limit_end:]
     )
 
+
+def append_json_preview_to_span(
+    key: str, json_value: JsonValue, span: Span[CustomSpanData]
+):
+    span.span_data.data[key] = preview_text(str(json_value), CHAR_LIMIT_SPAN)
+
+
 class Symbol:
     pass
 
@@ -38,6 +47,12 @@ class Need(BaseModel):
     need: str
     answer: JsonValue
 
+    def to_span_data(self) -> JsonValue:
+        return {
+            "need": self.need,
+            "answer": preview_text(str(self.answer), CHAR_LIMIT_SPAN),
+        }
+
 
 class PartialQueryAnswer(BaseModel):
     answer: JsonValue = Field(
@@ -46,6 +61,14 @@ class PartialQueryAnswer(BaseModel):
     needs: list[JsonValue] | None = Field(
         description="If the question cannot be answered with the current information, return a list of strings describing what information is needed to answer the question. This can include information that is not in the database, but that would be needed to formulate the correct SQL query or to interpret the results."
     )
+
+    def to_span_data(self) -> JsonValue:
+        return {
+            "answer": preview_text(str(self.answer), CHAR_LIMIT_SPAN),
+            "needs": [
+                preview_text(str(need), CHAR_LIMIT_SPAN) for need in self.needs or []
+            ],
+        }
 
 
 class DataAgent(ABC):
@@ -142,9 +165,13 @@ class QueryPlan(BaseModel):
 
     def to_replan_context(self) -> dict:
         """Compact representation for replan context: answered_needs shown as previews."""
+
         def make_preview(need: "Need") -> dict:
             s = json.dumps(need.answer, default=str)
-            return {"need": need.need, "answer_preview": preview_text(s, CHAR_LIMIT_LLM)}
+            return {
+                "need": need.need,
+                "answer_preview": preview_text(s, CHAR_LIMIT_LLM),
+            }
 
         return {
             "id": self.id,
@@ -152,8 +179,12 @@ class QueryPlan(BaseModel):
             "question": self.question,
             "from_agent": self.from_agent,
             "to_agent": self.to_agent,
-            "needs": [n.to_replan_context() for n in self.needs] if self.needs else None,
-            "answered_needs": [make_preview(n) for n in self.answered_needs] if self.answered_needs else None,
+            "needs": [n.to_replan_context() for n in self.needs]
+            if self.needs
+            else None,
+            "answered_needs": [make_preview(n) for n in self.answered_needs]
+            if self.answered_needs
+            else None,
         }
 
     @staticmethod
@@ -168,7 +199,9 @@ class QueryPlan(BaseModel):
         return index
 
     @staticmethod
-    def restore_answered_needs(plan: "QueryPlan", id_index: dict[str, list["Need"]]) -> None:
+    def restore_answered_needs(
+        plan: "QueryPlan", id_index: dict[str, list["Need"]]
+    ) -> None:
         """Restore full answered_needs for nodes whose IDs appear in id_index."""
         if plan.id in id_index:
             plan.answered_needs = id_index[plan.id]
@@ -178,7 +211,6 @@ class QueryPlan(BaseModel):
 
     @staticmethod
     def create_query_replan_model(participating_agents: list[tuple[DataAgent, str]]):
-        # TODO: json
         participating_agents_names = [agent.name() for agent, _ in participating_agents]
 
         QueryReplanModel = create_model(
@@ -227,7 +259,9 @@ class QueryPlan(BaseModel):
         return QueryReplanModel
 
     @staticmethod
-    def map_query_replan_model_to_query_plan(query_replan_model: Any, id_index: dict[str, list["Need"]]) -> "QueryPlan":
+    def map_query_replan_model_to_query_plan(
+        query_replan_model: Any, id_index: dict[str, list["Need"]]
+    ) -> "QueryPlan":
         query_plan = QueryPlan(
             id=query_replan_model.id
             if query_replan_model.id is not None
@@ -248,9 +282,26 @@ class QueryPlan(BaseModel):
         QueryPlan.restore_answered_needs(query_plan, id_index)
         return query_plan
 
+    def to_span_data(self) -> JsonValue:
+        return {
+            "id": self.id,
+            "need": self.need,
+            "question": self.question,
+            "from_agent": self.from_agent,
+            "to_agent": self.to_agent,
+            "needs": [need.to_span_data() for need in self.needs or []],
+            "answered_needs": [
+                answered_need.to_span_data()
+                for answered_need in self.answered_needs or []
+            ],
+        }
+
 
 class ReplanningNeeded(BaseModel):
     query_node: QueryPlan
+
+    def to_span_data(self) -> JsonValue:
+        return {"query_node": self.query_node.to_span_data()}
 
 
 class ResponsibleAgentNotFound(ReplanningNeeded):
@@ -259,6 +310,12 @@ class ResponsibleAgentNotFound(ReplanningNeeded):
 
 class NeedNotMet(ReplanningNeeded):
     partial_answer: PartialQueryAnswer
+
+    def to_span_data(self) -> JsonValue:
+        return {
+            "query_node": self.query_node.to_span_data(),
+            "partial_answer": self.partial_answer.to_span_data(),
+        }
 
 
 @dataclass
