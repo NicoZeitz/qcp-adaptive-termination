@@ -302,18 +302,22 @@ class QueryCoordinator:
                 node.answered_needs = []
 
             if node.needs is not None and len(node.needs) > 0:
-                # Satisfy the information needs first
-                for need in node.needs.copy():
-                    answer = await self._execute_query_plan_node(
-                        need, participating_agents
+                # Sibling needs are independent — execute them in parallel
+                needs_snapshot = node.needs.copy()
+                answers = await asyncio.gather(
+                    *(
+                        self._execute_query_plan_node(need, participating_agents)
+                        for need in needs_snapshot
                     )
+                )
+                for need, answer in zip(needs_snapshot, answers):
                     node.answered_needs.append(
                         Need(
                             need=need.need if need.need is not None else "",
                             answer=answer,
                         )
                     )
-                    node.needs.remove(need)
+                node.needs.clear()
 
             span.span_data.data["answered_needs"] = [
                 need.to_span_data() for need in node.answered_needs

@@ -10,6 +10,7 @@ from agents import (
     custom_span,
     function_tool,
 )
+from deprecated import deprecated
 from sqlalchemy import Engine, Row, text
 from modules.cache import Cache
 from modules.code_execution_environment import (
@@ -44,7 +45,7 @@ class SqlDataAgent(DataAgent):
         db_engine: Engine,
         type: Literal["code", "sql"] = "code",
     ):
-        self.agent = agent
+        super().__init__(agent)
         self.db_engine = db_engine
         self.type = type
 
@@ -54,9 +55,6 @@ class SqlDataAgent(DataAgent):
         self.schema_initialized = False
         self.natural_language_description: str = ""
         self.m_schema: str = ""
-
-    def name(self) -> str:
-        return self.agent.name
 
     async def get_data_and_query_capabilities(self) -> str:
         await self._initialize_schema()
@@ -105,7 +103,7 @@ class SqlDataAgent(DataAgent):
     ) -> PartialQueryAnswer:
         await self._initialize_schema()
 
-        with custom_span("SQL Data Agent - answer_query_code") as span:
+        with custom_span("SQL Data Agent - answer_query") as span:
             needs: list[Any] = []
             answer: Any | Symbol = Symbol()
             sql_queries: list[str] = []
@@ -159,7 +157,7 @@ class SqlDataAgent(DataAgent):
                 )
 
             code_agent = self.agent.clone(
-                name=f"{self.agent.name}_SQL_Agent",
+                name=f"{self.agent.name}_Code_Agent",
                 instructions=load_prompt(
                     "sql_data_agent_code_agent_instructions",
                     None,
@@ -201,6 +199,7 @@ class SqlDataAgent(DataAgent):
 
             return result
 
+    @deprecated
     async def answer_query_sql(
         self, query: str, answered_needs: list[Need]
     ) -> PartialQueryAnswer:
