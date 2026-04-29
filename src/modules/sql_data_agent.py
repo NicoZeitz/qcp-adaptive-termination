@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Literal, Sequence, TypedDict
+from typing import Any, Sequence, TypedDict
 from agents import (
     Agent,
     AgentOutputSchema,
@@ -8,9 +8,7 @@ from agents import (
     Runner,
     ToolsToFinalOutputResult,
     custom_span,
-    function_tool,
 )
-from deprecated import deprecated
 from sqlalchemy import Engine, Row, text
 from modules.cache import Cache
 from modules.code_execution_environment import (
@@ -39,15 +37,9 @@ class CodeExecution(TypedDict):
 
 
 class SqlDataAgent(DataAgent):
-    def __init__(
-        self,
-        agent: Agent[AgentContext],
-        db_engine: Engine,
-        type: Literal["code", "sql"] = "code",
-    ):
+    def __init__(self, agent: Agent[AgentContext], db_engine: Engine):
         super().__init__(agent)
         self.db_engine = db_engine
-        self.type = type
 
         self.schema_engine = SchemaEngine(
             engine=self.db_engine, db_name=self.agent.name
@@ -91,14 +83,6 @@ class SqlDataAgent(DataAgent):
         return self.m_schema
 
     async def answer_query(
-        self, query: str, answered_needs: list[Need]
-    ) -> PartialQueryAnswer:
-        if self.type == "code":
-            return await self.answer_query_code(query, answered_needs)
-        else:
-            return await self.answer_query_sql(query, answered_needs)
-
-    async def answer_query_code(
         self, query: str, answered_needs: list[Need]
     ) -> PartialQueryAnswer:
         await self._initialize_schema()
@@ -198,62 +182,6 @@ class SqlDataAgent(DataAgent):
             code_environment.append_data_to_span(span)
 
             return result
-
-    @deprecated
-    async def answer_query_sql(
-        self, query: str, answered_needs: list[Need]
-    ) -> PartialQueryAnswer:
-        await self._initialize_schema()
-
-        additional_information = "\n".join(
-            [f"{need.need}: {need.answer}" for need in answered_needs]
-        )
-        additional_information_section = (
-            f"【Additional Information】\n{additional_information}"
-            if additional_information
-            else ""
-        )
-
-        @function_tool()
-        async def execute_sql(ctx: RunContextWrapper[AgentContext], query: str) -> str:
-            """Execute a SQL query and return the results.
-
-            Args:
-                query: The SQL query to execute.
-            """
-            print(f"        Executing SQL query: {query}")
-            with self.db_engine.connect() as conn:
-                result = conn.execute(text(query)).fetchall()
-                return str(result)
-
-        instructions = load_prompt(
-            "sql_data_agent_sql_agent_instructions", None, {"m_schema": self.m_schema}
-        )
-        prompt = load_prompt(
-            "sql_data_agent_sql_agent_prompt",
-            None,
-            {
-                "query": query,
-                "additional_information_section": additional_information_section,
-            },
-        )
-
-        sql_agent = self.agent.clone(
-            name=f"{self.agent.name}_SQL_Agent",
-            instructions=instructions,
-            tools=[execute_sql],
-            output_type=PartialQueryAnswer,
-        )
-
-        async def compute_sql_answer() -> PartialQueryAnswer:
-            return (await Runner.run(sql_agent, prompt)).final_output
-
-        return await Cache.instance().get_or_compute(
-            sql_agent,
-            prompt,
-            PartialQueryAnswer,
-            compute_sql_answer,
-        )
 
     async def _initialize_schema(self):
         if self.schema_initialized:
