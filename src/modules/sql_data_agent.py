@@ -160,17 +160,19 @@ class SqlDataAgent(DataAgent):
                 ),
             )
 
-            async def compute_code_answer() -> PartialQueryAnswer:
-                return (
-                    await Runner.run(
-                        code_agent,
-                        load_prompt(
-                            "sql_data_agent_code_agent_prompt", None, {"query": query}
-                        ),
-                    )
-                ).final_output
+            code_agent_prompt = load_prompt(
+                "sql_data_agent_code_agent_prompt", None, {"query": query}
+            )
 
-            result = await compute_code_answer()
+            async def compute_code_answer() -> PartialQueryAnswer:
+                return (await Runner.run(code_agent, code_agent_prompt)).final_output
+
+            result = await Cache.instance().get_or_compute(
+                code_agent,
+                code_agent_prompt,
+                PartialQueryAnswer,
+                compute_code_answer,
+            )
 
             code_environment.append_data_to_span(span)
             span.span_data.data["sql_queries"] = [str(query) for query in sql_queries]

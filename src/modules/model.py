@@ -21,7 +21,7 @@ def own_custom_span(span_name: str, data: dict[str, Any] | None = None):
     with custom_span(span_name, data=data) as span:
         parent_depth = span_by_id.get(span.parent_id, 0)
         span_by_id[span.span_id] = parent_depth + 1
-        print("    " * parent_depth + span_name)
+        print("  " * parent_depth + span_name)
         yield span
 
 
