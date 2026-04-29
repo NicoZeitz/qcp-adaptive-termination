@@ -47,21 +47,17 @@ class QueryCoordinator:
         self.data_agents.remove(data_agent)
 
     async def collaborative_query_answering(self, query: str) -> JsonValue:
-        print("Building agent registry...")
         agent_registry = await self._build_agent_registry()
 
         # 1. Query Coordinator identifies Relevant Agents Based on Capabilities.
-        print("Filtering relevant agents...")
         relevant_agents = await self._filter_relevant_agents(query, agent_registry)
 
         # 2. Data Agents are Asked if they participate
-        print("Checking agent participation...")
         participating_agents = await self._ask_data_agents_for_participation(
             relevant_agents, query
         )
 
         # 3. Coordinator Drafts Query Plan & Initializes Stack Based on Previously Identified Agents.
-        print("Drafting query plan...")
         query_plan = await self._draft_query_plan(query, participating_agents)
 
         result = await self._execute_query_plan(query, query_plan, participating_agents)
