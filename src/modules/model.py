@@ -1,16 +1,28 @@
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from dataclasses import dataclass
 import json
 from types import ModuleType
 from typing import Any, Literal
-from agents import Agent, CustomSpanData, Span
+from agents import Agent, CustomSpanData, Span, custom_span
 from pydantic import BaseModel, JsonValue, create_model
 from pydantic import Field
 import uuid
 
 CHAR_LIMIT_LLM = 600
 CHAR_LIMIT_LONG_LLM = 6000
-CHAR_LIMIT_SPAN = 100
+CHAR_LIMIT_SPAN = 50
+
+span_by_id: dict[str | None, int] = {}
+
+
+@contextmanager
+def own_custom_span(span_name: str, data: dict[str, Any] | None = None):
+    with custom_span(span_name, data=data) as span:
+        parent_depth = span_by_id.get(span.parent_id, 0)
+        span_by_id[span.span_id] = parent_depth + 1
+        print("    " * parent_depth + span_name)
+        yield span
 
 
 def preview_text(text: str, char_limit=600):

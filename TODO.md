@@ -2,6 +2,9 @@ Split Generation
 * Data Noise (TRANSLATE, RENAME_COLUMNS, CHANGE_DATA_TYPE, USE_DATA_ABBREVIATIONS, SYNONYMS)
 * Redundancies (Multiple agents having (partially) overlapping data)
 
+General
+* Replanning over returning instead of error (partial plan replanning possible)
+
 Data Agents
 * Prompting better
   * Python code execution (can't see output of sql_query() without anything, should use print instead)

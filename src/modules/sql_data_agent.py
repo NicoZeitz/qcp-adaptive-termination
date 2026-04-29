@@ -7,7 +7,6 @@ from agents import (
     RunContextWrapper,
     Runner,
     ToolsToFinalOutputResult,
-    custom_span,
 )
 from sqlalchemy import Engine, Row, text
 from modules.cache import Cache
@@ -22,6 +21,7 @@ from modules.model import (
     AgentContext,
     DataAgent,
     Symbol,
+    own_custom_span,
     preview_text,
     serialize_value,
 )
@@ -87,7 +87,7 @@ class SqlDataAgent(DataAgent):
     ) -> PartialQueryAnswer:
         await self._initialize_schema()
 
-        with custom_span("SQL Data Agent - answer_query") as span:
+        with own_custom_span("SQL Data Agent - answer_query") as span:
             needs: list[Any] = []
             answer: Any | Symbol = Symbol()
             sql_queries: list[str] = []
@@ -172,14 +172,15 @@ class SqlDataAgent(DataAgent):
 
             result = await compute_code_answer()
 
-            span.span_data.data["answer"] = preview_text(
-                str(result.answer), CHAR_LIMIT_SPAN
-            )
-            span.span_data.data["needs"] = [
-                preview_text(str(need), CHAR_LIMIT_SPAN) for need in result.needs or []
-            ]
-            span.span_data.data["sql_queries"] = [str(query) for query in sql_queries]
             code_environment.append_data_to_span(span)
+            span.span_data.data["sql_queries"] = [str(query) for query in sql_queries]
+            span.span_data.data["partial_answer"] = {
+                "answer": preview_text(str(result.answer), CHAR_LIMIT_SPAN),
+                "needs": [
+                    preview_text(str(need), CHAR_LIMIT_SPAN)
+                    for need in result.needs or []
+                ],
+            }
 
             return result
 

@@ -3,11 +3,11 @@ import hashlib
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Literal, TypeVar, cast
 
-from agents import Agent, agent_span, custom_span
+from agents import Agent, agent_span
 import cloudpickle
 from pydantic import BaseModel
 
-from modules.model import CHAR_LIMIT_SPAN, AgentContext, preview_text
+from modules.model import CHAR_LIMIT_SPAN, AgentContext, own_custom_span, preview_text
 
 CACHE_FOLDER = "../.cache"
 
@@ -95,7 +95,7 @@ class Cache:
                     output_model if output_model is not None else ""
                 ).__name__,
             ):
-                with custom_span(
+                with own_custom_span(
                     "Cache Hit",
                     data={
                         "agent": agent.name,

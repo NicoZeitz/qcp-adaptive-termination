@@ -8,7 +8,6 @@ from agents import (
     RunContextWrapper,
     Runner,
     ToolsToFinalOutputResult,
-    custom_span,
 )
 
 from modules.cache import Cache
@@ -21,6 +20,7 @@ from modules.model import (
     Need,
     PartialQueryAnswer,
     Symbol,
+    own_custom_span,
     preview_text,
     serialize_value,
 )
@@ -80,7 +80,7 @@ class TextDataAgent(DataAgent):
     ) -> PartialQueryAnswer:
         await self._initialize()
 
-        with custom_span("Text Data Agent - answer_query") as span:
+        with own_custom_span("Text Data Agent - answer_query") as span:
             needs: list[Any] = []
             answer: Any | Symbol = Symbol()
 
@@ -159,13 +159,14 @@ class TextDataAgent(DataAgent):
 
             result = await compute_code_answer()
 
-            span.span_data.data["answer"] = preview_text(
-                str(result.answer), CHAR_LIMIT_SPAN
-            )
-            span.span_data.data["needs"] = [
-                preview_text(str(need), CHAR_LIMIT_SPAN) for need in result.needs or []
-            ]
             code_environment.append_data_to_span(span)
+            span.span_data.data["partial_answer"] = {
+                "answer": preview_text(str(result.answer), CHAR_LIMIT_SPAN),
+                "needs": [
+                    preview_text(str(need), CHAR_LIMIT_SPAN)
+                    for need in result.needs or []
+                ],
+            }
 
             return result
 

@@ -10,7 +10,6 @@ from agents import (
     RunContextWrapper,
     Runner,
     ToolsToFinalOutputResult,
-    custom_span,
 )
 from pydantic import JsonValue, create_model, Field
 
@@ -28,6 +27,7 @@ from modules.model import (
     ResponsibleAgentNotFound,
     Symbol,
     append_json_preview_to_span,
+    own_custom_span,
     serialize_value,
 )
 from modules.prompt import load_prompt
@@ -47,24 +47,28 @@ class QueryCoordinator:
         self.data_agents.remove(data_agent)
 
     async def collaborative_query_answering(self, query: str) -> JsonValue:
+        print("Building agent registry...")
         agent_registry = await self._build_agent_registry()
 
         # 1. Query Coordinator identifies Relevant Agents Based on Capabilities.
+        print("Filtering relevant agents...")
         relevant_agents = await self._filter_relevant_agents(query, agent_registry)
 
         # 2. Data Agents are Asked if they participate
+        print("Checking agent participation...")
         participating_agents = await self._ask_data_agents_for_participation(
             relevant_agents, query
         )
 
         # 3. Coordinator Drafts Query Plan & Initializes Stack Based on Previously Identified Agents.
+        print("Drafting query plan...")
         query_plan = await self._draft_query_plan(query, participating_agents)
 
         result = await self._execute_query_plan(query, query_plan, participating_agents)
         return result
 
     async def _build_agent_registry(self) -> str:
-        with custom_span("Build Agent Registry") as span:
+        with own_custom_span("Build Agent Registry") as span:
             capabilities = await asyncio.gather(
                 *(agent.get_data_and_query_capabilities() for agent in self.data_agents)
             )
@@ -81,7 +85,7 @@ class QueryCoordinator:
     async def _filter_relevant_agents(
         self, query: str, agent_registry: str
     ) -> list[DataAgent]:
-        with custom_span("Filtering Relevant Agents") as span:
+        with own_custom_span("Filtering Relevant Agents") as span:
             agent_fields: dict[str, Any] = {
                 agent.name(): (bool, Field(...)) for agent in self.data_agents
             }
@@ -125,7 +129,7 @@ class QueryCoordinator:
     async def _ask_data_agents_for_participation(
         self, relevant_agents: list[DataAgent], query: str
     ) -> list[tuple[DataAgent, str]]:
-        with custom_span("Asking Data Agents for Participation") as span:
+        with own_custom_span("Asking Data Agents for Participation") as span:
             schemas = await asyncio.gather(
                 *(agent.get_schema_for_query(query) for agent in relevant_agents)
             )
@@ -143,7 +147,7 @@ class QueryCoordinator:
     async def _draft_query_plan(
         self, query: str, participating_agents: list[tuple[DataAgent, str]]
     ) -> QueryPlan:
-        with custom_span("Draft Query Plan") as span:
+        with own_custom_span("Draft Query Plan") as span:
             QueryPlanModel = QueryPlan.create_query_plan_model(participating_agents)
             participating_agents_str = "\n".join(
                 [
@@ -250,8 +254,7 @@ class QueryCoordinator:
 
         for i in range(1, MAX_REPLAN_ATTEMPTS + 2):
             try:
-                with custom_span(f"{i}: Execute Query Plan") as span:
-                    print(f"{i}: Execute Query Plan")
+                with own_custom_span(f"{i}: Execute Query Plan") as span:
                     span.span_data.data["query_plan"] = plan_to_execute.to_span_data()
                     span.span_data.data["participating_agents"] = [
                         agent.name() for agent, _ in participating_agents
@@ -265,13 +268,13 @@ class QueryCoordinator:
                     return answer
             except ReplanningNeededException as exception:
                 if i == MAX_REPLAN_ATTEMPTS + 1:
-                    with custom_span(f"{i}: Max Replanning Attempts Reached") as span:
+                    with own_custom_span(
+                        f"{i}: Max Replanning Attempts Reached"
+                    ) as span:
                         span.span_data.data["reason"] = exception.data.to_span_data()
                     break
 
-                with custom_span(f"{i}: Replanning") as span:
-                    print(f"{i}: Replanning")
-
+                with own_custom_span(f"{i}: Replanning") as span:
                     exception_data = exception.data
                     span.span_data.data["reason"] = exception_data.to_span_data()
                     span.span_data.data["old_query_plan"] = (
@@ -291,11 +294,9 @@ class QueryCoordinator:
     async def _execute_query_plan_node(
         self, node: QueryPlan, participating_agents: list[tuple[DataAgent, str]]
     ) -> JsonValue:
-        with custom_span(
+        with own_custom_span(
             f"Execute Query Plan Node ({node.to_agent}): {node.question}"
         ) as span:
-            print(f"    Execute Query Plan Node ({node.to_agent}): {node.question}")
-
             span.span_data.data["node"] = node.to_span_data()
 
             if node.answered_needs is None:
@@ -351,16 +352,13 @@ class QueryCoordinator:
     async def _answer_query_plan_node_with_agent(
         self, node: QueryPlan, agent: DataAgent, answered_needs: list[Need]
     ) -> JsonValue:
-        with custom_span(
+        with own_custom_span(
             f"Answer Query Plan Node with Agent {agent.name()}: {node.question}"
         ) as span:
-            span.span_data.data["node"] = node.to_span_data()
-            span.span_data.data["answered_needs"] = [
-                answered_need.to_span_data() for answered_need in answered_needs
-            ]
-
             answer = await agent.answer_query(node.question, answered_needs)
-            span.span_data.data["answer"] = answer.to_span_data()
+
+            span.span_data.data["node"] = node.to_span_data()
+            span.span_data.data["partial_answer"] = answer.to_span_data()
 
             if answer.needs is not None and len(answer.needs) > 0:
                 raise ReplanningNeededException(
@@ -370,7 +368,9 @@ class QueryCoordinator:
             return answer.answer
 
     async def _aggregate_results(self, node: QueryPlan) -> JsonValue:
-        with custom_span("Answer Query Plan Node") as span:
+        with own_custom_span(
+            f"Answer Query Plan Node with {self.agent.name}: {node.question}"
+        ) as span:
             needs: list[Any] = []
             answer: Any | Symbol = Symbol()
 
@@ -396,6 +396,7 @@ class QueryCoordinator:
                 },
                 tools={
                     "final_answer": final_answer,
+                    "raise_needs": raise_needs,
                 },
             )
 
