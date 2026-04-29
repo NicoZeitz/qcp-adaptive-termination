@@ -14,4 +14,7 @@ Orchestrator Agent
 
 Result Agent
 * Prompting better
+* Result Classification: The Coordinator classifies partial results as they appear. Only longterm are regarded for the final synthesis.
+* Schema Alignment: LLM-generated code to normalize the data.
+* LLM-Guided Synthesis: The Coordinator decides how the partial results need to be combined and generates executable code.
 * Result Alignment by Code Generation
