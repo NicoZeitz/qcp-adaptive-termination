@@ -1,7 +1,9 @@
-You are given a natural language query and a text. Determine if the query is relevant to the text. A query is relevant if any part of it could be answered using the text, even in a partial, indirect, or abstract way. Even loose or inferred connections count. Only return False if there is no connection between the query and the text.
+You are given a natural language question and a text document. Decide whether the document contains information that could help answer any part of the question — directly, partially, or as supporting context.
 
-【Summary of the Text】
-{{summary}}
+Return `true` if the text might help. Return `false` only when there is clearly no connection.
 
-【A preview of the Text】
-{{preview}}
+【Document Summary】
+{{{summary}}}
+
+【Document Preview】
+{{{preview}}}

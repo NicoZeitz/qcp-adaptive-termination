@@ -1,7 +1,7 @@
 import asyncio
 import dataclasses
 import json
-from typing import Any
+from typing import Any, cast
 
 from agents import (
     Agent,
@@ -22,8 +22,8 @@ from modules.model import (
     NeedNotMet,
     PartialQueryAnswer,
     QueryPlan,
+    ReplanMode,
     ReplanningNeeded,
-    ReplanningNeededException,
     ResponsibleAgentNotFound,
     Symbol,
     append_json_preview_to_span,
@@ -34,9 +34,14 @@ from modules.prompt import load_prompt
 
 
 class QueryCoordinator:
-    def __init__(self, agent: Agent[AgentContext]):
+    def __init__(
+        self,
+        agent: Agent[AgentContext],
+        replan_mode: ReplanMode = ReplanMode.GLOBAL,
+    ):
         self.data_agents: list[DataAgent] = []
         self.agent: Agent[AgentContext] = agent
+        self.replan_mode = replan_mode
 
     def register_data_agent(self, data_agent: DataAgent):
         print("Register data agent:", data_agent.name())
@@ -184,14 +189,14 @@ class QueryCoordinator:
     async def _replan_query_plan(
         self,
         query: str,
-        old_query_plan: QueryPlan,
+        current_plan: QueryPlan,
         participating_agents: list[tuple[DataAgent, str]],
-        exception: ReplanningNeeded,
+        failure: ReplanningNeeded,
     ) -> QueryPlan:
         # TODO: ask all data agents for the information needs again for participation (that are not currently participating)
         QueryReplanModel = QueryPlan.create_query_replan_model(participating_agents)
 
-        id_index = QueryPlan.collect_answered_needs(old_query_plan)
+        id_index = QueryPlan.collect_answered_needs(current_plan)
 
         participating_agents_str = "\n".join(
             [
@@ -200,8 +205,8 @@ class QueryCoordinator:
             ]
         )
 
-        exception_dict = exception.model_dump()
-        exception_dict["query_node"] = exception.query_node.to_replan_context()
+        failure_dict = failure.model_dump()
+        failure_dict["query_node"] = failure.query_node.to_replan_context()
 
         instructions = load_prompt(
             "query_coordinator_query_replan_agent_instructions",
@@ -209,14 +214,14 @@ class QueryCoordinator:
             {
                 "participating_agents": participating_agents_str,
                 "old_query_plan": json.dumps(
-                    old_query_plan.to_replan_context(), indent=2
+                    current_plan.to_replan_context(), indent=2
                 ),
             },
         )
         prompt = load_prompt(
             "query_coordinator_query_replan_agent_prompt",
             None,
-            {"query": query, "exception": json.dumps(exception_dict, indent=2)},
+            {"query": query, "exception": json.dumps(failure_dict, indent=2)},
         )
 
         query_replan_agent = self.agent.clone(
@@ -235,8 +240,64 @@ class QueryCoordinator:
             compute_query_replan,
         )
 
-        query_plan = QueryPlan.map_query_replan_model_to_query_plan(result, id_index)
-        return query_plan
+        return QueryPlan.map_query_replan_model_to_query_plan(result, id_index)
+
+    async def _replan_query_plan_local(
+        self,
+        query: str,
+        current_plan: QueryPlan,
+        participating_agents: list[tuple[DataAgent, str]],
+        failure: ReplanningNeeded,
+    ) -> QueryPlan:
+        failing_node = failure.query_node
+        QueryReplanModel = QueryPlan.create_query_replan_model(participating_agents)
+
+        id_index = QueryPlan.collect_answered_needs(failing_node)
+
+        participating_agents_str = "\n".join(
+            [
+                f"【{agent.name()}】\n {capability}"
+                for agent, capability in participating_agents
+            ]
+        )
+
+        failure_dict = failure.model_dump()
+        failure_dict["query_node"] = failing_node.to_replan_context()
+
+        instructions = load_prompt(
+            "query_coordinator_local_replan_agent_instructions",
+            None,
+            {
+                "participating_agents": participating_agents_str,
+                "failing_node": json.dumps(
+                    failing_node.to_replan_context(), indent=2
+                ),
+            },
+        )
+        prompt = load_prompt(
+            "query_coordinator_local_replan_agent_prompt",
+            None,
+            {"query": query, "exception": json.dumps(failure_dict, indent=2)},
+        )
+
+        local_replan_agent = self.agent.clone(
+            name=f"{self.agent.name}_Local_Replan_Agent",
+            instructions=instructions,
+            output_type=QueryReplanModel,
+        )
+
+        async def compute_local_replan():
+            return (await Runner.run(local_replan_agent, prompt)).final_output
+
+        result = await Cache.instance().get_or_compute(
+            local_replan_agent,
+            prompt,
+            QueryReplanModel,
+            compute_local_replan,
+        )
+
+        new_subtree = QueryPlan.map_query_replan_model_to_query_plan(result, id_index)
+        return QueryPlan.replace_node(current_plan, failing_node.id, new_subtree)
 
     async def _execute_query_plan(
         self,
@@ -246,50 +307,59 @@ class QueryCoordinator:
     ) -> JsonValue:
         plan_to_execute = query_plan
 
-        MAX_REPLAN_ATTEMPTS = 2  # Max 5 replans
+        MAX_REPLAN_ATTEMPTS = 2
 
         for i in range(1, MAX_REPLAN_ATTEMPTS + 2):
-            try:
-                with own_custom_span(f"{i}: Execute Query Plan") as span:
-                    span.span_data.data["query_plan"] = plan_to_execute.to_span_data()
-                    span.span_data.data["participating_agents"] = [
-                        agent.name() for agent, _ in participating_agents
-                    ]
+            with own_custom_span(f"{i}: Execute Query Plan") as span:
+                span.span_data.data["query_plan"] = plan_to_execute.to_span_data()
+                span.span_data.data["participating_agents"] = [
+                    agent.name() for agent, _ in participating_agents
+                ]
 
-                    answer = await self._execute_query_plan_node(
-                        plan_to_execute, participating_agents
-                    )
+                result = await self._execute_query_plan_node(
+                    plan_to_execute, participating_agents
+                )
 
-                    append_json_preview_to_span("final_answer", answer, span)
-                    return answer
-            except ReplanningNeededException as exception:
-                if i == MAX_REPLAN_ATTEMPTS + 1:
-                    with own_custom_span(
-                        f"{i}: Max Replanning Attempts Reached"
-                    ) as span:
-                        span.span_data.data["reason"] = exception.data.to_span_data()
-                    break
+                if not isinstance(result, ReplanningNeeded):
+                    append_json_preview_to_span("final_answer", result, span)
+                    return result
 
-                with own_custom_span(f"{i}: Replanning") as span:
-                    exception_data = exception.data
-                    span.span_data.data["reason"] = exception_data.to_span_data()
-                    span.span_data.data["old_query_plan"] = (
-                        plan_to_execute.to_span_data()
-                    )
+                execution_failure = result
+                span.span_data.data["failure"] = execution_failure.to_span_data()
 
+            if i == MAX_REPLAN_ATTEMPTS + 1:
+                with own_custom_span(
+                    f"{i}: Max Replanning Attempts Reached"
+                ) as span:
+                    span.span_data.data["reason"] = execution_failure.to_span_data()
+                break
+
+            with own_custom_span(
+                f"{i}: Replanning ({self.replan_mode.value})"
+            ) as span:
+                span.span_data.data["reason"] = execution_failure.to_span_data()
+                span.span_data.data["old_query_plan"] = (
+                    plan_to_execute.to_span_data()
+                )
+
+                if self.replan_mode == ReplanMode.GLOBAL:
                     plan_to_execute = await self._replan_query_plan(
-                        query, query_plan, participating_agents, exception_data
+                        query, plan_to_execute, participating_agents, execution_failure
+                    )
+                else:
+                    plan_to_execute = await self._replan_query_plan_local(
+                        query, plan_to_execute, participating_agents, execution_failure
                     )
 
-                    span.span_data.data["new_query_plan"] = (
-                        plan_to_execute.to_span_data()
-                    )
+                span.span_data.data["new_query_plan"] = (
+                    plan_to_execute.to_span_data()
+                )
 
         return "Failed to answer the query after multiple attempts. The query might be too complex or there might be missing information that the agents cannot provide."
 
     async def _execute_query_plan_node(
         self, node: QueryPlan, participating_agents: list[tuple[DataAgent, str]]
-    ) -> JsonValue:
+    ) -> JsonValue | ReplanningNeeded:
         with own_custom_span(
             f"Execute Query Plan Node ({node.to_agent}): {node.question}"
         ) as span:
@@ -307,11 +377,17 @@ class QueryCoordinator:
                         for need in needs_snapshot
                     )
                 )
+
+                # Bubble up the first failure — don't process any results
+                for answer in answers:
+                    if isinstance(answer, ReplanningNeeded):
+                        return answer
+
                 for need, answer in zip(needs_snapshot, answers):
                     node.answered_needs.append(
                         Need(
                             need=need.need if need.need is not None else "",
-                            answer=answer,
+                            answer=cast(JsonValue, answer),
                         )
                     )
                 node.needs.clear()
@@ -333,9 +409,7 @@ class QueryCoordinator:
             )
 
             if responsible_data_agent is None:
-                raise ReplanningNeededException(
-                    data=ResponsibleAgentNotFound(query_node=node)
-                )
+                return ResponsibleAgentNotFound(query_node=node)
 
             answered_needs = (
                 node.answered_needs if node.answered_needs is not None else []
@@ -347,7 +421,7 @@ class QueryCoordinator:
 
     async def _answer_query_plan_node_with_agent(
         self, node: QueryPlan, agent: DataAgent, answered_needs: list[Need]
-    ) -> JsonValue:
+    ) -> JsonValue | ReplanningNeeded:
         with own_custom_span(
             f"Answer Query Plan Node with Agent {agent.name()}: {node.question}"
         ) as span:
@@ -357,13 +431,11 @@ class QueryCoordinator:
             span.span_data.data["partial_answer"] = answer.to_span_data()
 
             if answer.needs is not None and len(answer.needs) > 0:
-                raise ReplanningNeededException(
-                    data=NeedNotMet(partial_answer=answer, query_node=node)
-                )
+                return NeedNotMet(partial_answer=answer, query_node=node)
 
             return answer.answer
 
-    async def _aggregate_results(self, node: QueryPlan) -> JsonValue:
+    async def _aggregate_results(self, node: QueryPlan) -> JsonValue | ReplanningNeeded:
         with own_custom_span(
             f"Answer Query Plan Node with {self.agent.name}: {node.question}"
         ) as span:
@@ -454,8 +526,6 @@ class QueryCoordinator:
             code_environment.append_data_to_span(span)
 
             if result.needs is not None and len(result.needs) > 0:
-                raise ReplanningNeededException(
-                    data=NeedNotMet(partial_answer=result, query_node=node)
-                )
+                return NeedNotMet(partial_answer=result, query_node=node)
 
             return result.answer

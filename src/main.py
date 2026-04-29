@@ -9,7 +9,7 @@ from openai import AsyncOpenAI
 from openai.types.shared import Reasoning
 
 from modules.cache import Cache
-from modules.model import DataAgent, AgentContext
+from modules.model import DataAgent, AgentContext, ReplanMode
 from modules.query_coordinator import QueryCoordinator
 from modules.sql_data_agent import SqlDataAgent
 from modules.text_data_agent import TextDataAgent
@@ -18,10 +18,10 @@ from modules.text_data_agent import TextDataAgent
 def get_default_data_agent_config(agent_name: str) -> Agent[AgentContext]:
     return Agent[AgentContext](
         name=agent_name,
-        model="gpt-5-mini",
+        model="gpt-5",
         model_settings=ModelSettings(
-            reasoning=Reasoning(effort="low"),
-            verbosity="low",
+            reasoning=Reasoning(effort="medium"),
+            verbosity="medium",
             parallel_tool_calls=True,
         ),
     )
@@ -34,7 +34,7 @@ def get_default_query_coordinator_agent_config(agent_name: str) -> Agent[AgentCo
         model="gpt-5",
         model_settings=ModelSettings(
             reasoning=Reasoning(effort="high"),
-            verbosity="low",
+            verbosity="medium",
             parallel_tool_calls=True,
         ),
     )
@@ -94,7 +94,12 @@ def load_query(query_path: str) -> tuple[str, str, Any]:
     return user_query, sql_query, expected_result
 
 
-async def main(sql_data_agents_path: str, text_data_agents_path: str, query_path: str):
+async def main(
+    sql_data_agents_path: str,
+    text_data_agents_path: str,
+    query_path: str,
+    replan_mode: ReplanMode,
+):
     user_query, _sql_query, expected_result = load_query(query_path)
 
     with trace("NZ: Collaborative Query Answering", metadata={"query": user_query}):
@@ -102,7 +107,8 @@ async def main(sql_data_agents_path: str, text_data_agents_path: str, query_path
             "================================================== REGISTERING =================================================="
         )
         queryCoordinator = QueryCoordinator(
-            agent=get_default_query_coordinator_agent_config("Query Coordinator")
+            agent=get_default_query_coordinator_agent_config("Query Coordinator"),
+            replan_mode=replan_mode,
         )
 
         sql_data_agents = create_data_agents_from_folder(sql_data_agents_path)
@@ -156,7 +162,20 @@ if __name__ == "__main__":
         choices=["READ_AND_WRITE", "READ_ONLY", "WRITE_ONLY", "DISABLED"],
         default="DISABLED",
     )
+    parser.add_argument(
+        "--replan-mode",
+        type=str,
+        choices=["global", "local"],
+        default="local",
+    )
     args = parser.parse_args()
 
     Cache.instance().set_mode(args.cache)
-    asyncio.run(main(args.sql_data_agents, args.text_data_agents, args.query))
+    asyncio.run(
+        main(
+            args.sql_data_agents,
+            args.text_data_agents,
+            args.query,
+            ReplanMode(args.replan_mode),
+        )
+    )
