@@ -15,4 +15,3 @@ Orchestrator Agent
 Result Agent
 * Prompting better
 * Result Alignment by Code Generation
-* Final Answer Synthesis better

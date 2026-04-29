@@ -100,7 +100,7 @@ async def main():
 if __name__ == "__main__":
     import asyncio
 
-    Cache.instance().disable()
+    Cache.instance().set_mode("DISABLED")
     asyncio.run(main())
 
 # Director Orson Welles https://www.imdb.com/title/tt0033467/

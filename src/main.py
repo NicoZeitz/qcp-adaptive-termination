@@ -116,12 +116,13 @@ if __name__ == "__main__":
         type=str,
         default="../test/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json",
     )
-    parser.add_argument("--cache", action="store_true", default=False)
+    parser.add_argument(
+        "--cache",
+        type=str,
+        choices=["READ_AND_WRITE", "READ_ONLY", "WRITE_ONLY", "DISABLED"],
+        default="DISABLED",
+    )
     args = parser.parse_args()
 
-    if args.cache:
-        Cache.instance().enable()
-    else:
-        Cache.instance().disable()
-
+    Cache.instance().set_mode(args.cache)
     asyncio.run(main(args.data_agents, args.query))

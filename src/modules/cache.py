@@ -1,7 +1,7 @@
 import os
 import hashlib
 from pathlib import Path
-from typing import Any, Awaitable, Callable, TypeVar, cast
+from typing import Any, Awaitable, Callable, Literal, TypeVar, cast
 
 from agents import Agent, agent_span, custom_span
 import cloudpickle
@@ -13,20 +13,20 @@ CACHE_FOLDER = "../.cache"
 
 T = TypeVar("T")
 
+CacheMode = Literal["READ_AND_WRITE", "READ_ONLY", "WRITE_ONLY", "DISABLED"]
+
 
 class Cache:
     _instance = None
+    mode: CacheMode = "READ_AND_WRITE"
     disabled = False
     cache_folder: Path
 
     def __init__(self):
         raise RuntimeError("Call instance() instead")
 
-    def enable(self):
-        self.disabled = False
-
-    def disable(self):
-        self.disabled = True
+    def set_mode(self, mode: CacheMode):
+        self.mode = mode
 
     @classmethod
     def instance(cls):
@@ -38,7 +38,7 @@ class Cache:
         return cls._instance
 
     def get(self, keys: list[Any]) -> Any | None:
-        if self.disabled:
+        if self.mode in ["WRITE_ONLY", "DISABLED"]:
             return None
 
         cache_file = self._cache_file_for_keys(keys)
@@ -55,7 +55,7 @@ class Cache:
             return None
 
     def store(self, keys: list[Any], value: Any) -> None:
-        if self.disabled:
+        if self.mode in ["READ_ONLY", "DISABLED"]:
             return None
 
         cache_file = self._cache_file_for_keys(keys)
@@ -74,9 +74,6 @@ class Cache:
         output_model: type | None,
         compute: Callable[[], Awaitable[T]],
     ) -> T:
-        if self.disabled:
-            return await compute()
-
         cache_keys = [
             getattr(agent, "name", None),
             getattr(agent, "model", None),
@@ -122,8 +119,9 @@ class Cache:
             return cached_value
 
         value = await compute()
-        print(f"        Caching result for agent: {agent.name}")
-        self.store(cache_keys, value)
+        if self.mode in ["READ_AND_WRITE", "WRITE_ONLY"]:
+            print(f"        Caching result for agent: {agent.name}")
+            self.store(cache_keys, value)
         return value
 
     def _cache_file_for_keys(self, keys: list[Any]) -> Path:
