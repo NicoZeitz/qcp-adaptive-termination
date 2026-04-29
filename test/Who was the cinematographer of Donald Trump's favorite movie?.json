@@ -1,0 +1,6 @@
+{
+"SELECT name\nFROM titles\nINNER JOIN crew ON crew.title_id  = titles.title_id \nINNER JOIN people ON people.person_id  = crew.person_id \nWHERE original_title = 'Citizen Kane'\nAND type = \"movie\"\nAND category = \"cinematographer\"": [
+	{
+		"name" : "Gregg Toland"
+	}
+]}

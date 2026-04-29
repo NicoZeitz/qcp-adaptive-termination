@@ -12,6 +12,32 @@ from modules.cache import Cache
 from modules.model import DataAgent, AgentContext
 from modules.query_coordinator import QueryCoordinator
 from modules.sql_data_agent import SqlDataAgent
+from modules.text_data_agent import TextDataAgent
+
+
+def get_default_data_agent_config(agent_name: str) -> Agent[AgentContext]:
+    return Agent[AgentContext](
+        name=agent_name,
+        model="gpt-5-mini",
+        model_settings=ModelSettings(
+            reasoning=Reasoning(effort="low"),
+            verbosity="low",
+            parallel_tool_calls=True,
+        ),
+    )
+
+
+def get_default_query_coordinator_agent_config(agent_name: str) -> Agent[AgentContext]:
+    # https://developers.openai.com/api/docs/pricing
+    return Agent[AgentContext](
+        name=agent_name,
+        model="gpt-5",
+        model_settings=ModelSettings(
+            reasoning=Reasoning(effort="high"),
+            verbosity="low",
+            parallel_tool_calls=True,
+        ),
+    )
 
 
 def create_data_agents_from_folder(folder_path: str) -> list[DataAgent]:
@@ -34,18 +60,26 @@ def create_data_agents_from_folder(folder_path: str) -> list[DataAgent]:
                 conn.commit()
 
             data_agent = SqlDataAgent(
-                agent=Agent[AgentContext](
-                    name=agent_name,
-                    model="gpt-5-mini",
-                    model_settings=ModelSettings(
-                        reasoning=Reasoning(effort="low"),
-                        verbosity="low",
-                        parallel_tool_calls=True,
-                    ),
-                ),
+                agent=get_default_data_agent_config(agent_name),
                 db_engine=db_engine,
             )
             data_agents.append(data_agent)
+
+    return data_agents
+
+
+def create_text_agents_from_folder(folder_path: str) -> list[DataAgent]:
+    data_agents: list[DataAgent] = []
+
+    for file_name in os.listdir(folder_path):
+        if file_name.endswith(".txt"):
+            agent_name = os.path.splitext(file_name)[0]
+
+            with open(os.path.join(folder_path, file_name)) as f:
+                data_agent = TextDataAgent(
+                    agent=get_default_data_agent_config(agent_name), text=f.read()
+                )
+                data_agents.append(data_agent)
 
     return data_agents
 
@@ -60,33 +94,32 @@ def load_query(query_path: str) -> tuple[str, str, Any]:
     return user_query, sql_query, expected_result
 
 
-async def main(data_agents_path: str, query_path: str):
+async def main(sql_data_agents_path: str, text_data_agents_path: str, query_path: str):
     user_query, _sql_query, expected_result = load_query(query_path)
 
     with trace("NZ: Collaborative Query Answering", metadata={"query": user_query}):
         print(
+            "================================================== REGISTERING =================================================="
+        )
+        queryCoordinator = QueryCoordinator(
+            agent=get_default_query_coordinator_agent_config("Query Coordinator")
+        )
+
+        sql_data_agents = create_data_agents_from_folder(sql_data_agents_path)
+        for data_agent in sql_data_agents:
+            queryCoordinator.register_data_agent(data_agent)
+
+        text_data_agents = create_text_agents_from_folder(text_data_agents_path)
+        for data_agent in text_data_agents:
+            queryCoordinator.register_data_agent(data_agent)
+
+        print(
             "================================================== USER QUERY =================================================="
         )
         print(user_query)
-
-        data_agents = create_data_agents_from_folder(data_agents_path)
-
-        queryCoordinator = QueryCoordinator(
-            agent=Agent[AgentContext](
-                name="Query Coordinator",
-                # https://developers.openai.com/api/docs/pricing
-                model="gpt-5",
-                model_settings=ModelSettings(
-                    reasoning=Reasoning(effort="high"),
-                    verbosity="low",
-                    parallel_tool_calls=True,
-                ),
-            )
+        print(
+            "================================================== ANSWERING =================================================="
         )
-
-        for data_agent in data_agents:
-            queryCoordinator.register_data_agent(data_agent)
-
         result = await queryCoordinator.collaborative_query_answering(user_query)
         print(
             "================================================== RESULT =================================================="
@@ -110,11 +143,12 @@ if __name__ == "__main__":
     set_default_openai_client(custom_client)
 
     parser = argparse.ArgumentParser(prog="Collaborative Query Answering")
-    parser.add_argument("--data-agents", type=str, default="../data/handmade")
+    parser.add_argument("--sql-data-agents", type=str, default="../data/handmade")
+    parser.add_argument("--text-data-agents", type=str, default="../data/text")
     parser.add_argument(
         "--query",
         type=str,
-        default="../test/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json",
+        default="../test/Who was the cinematographer of Donald Trump's favorite movie?.json",
     )
     parser.add_argument(
         "--cache",
@@ -125,4 +159,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     Cache.instance().set_mode(args.cache)
-    asyncio.run(main(args.data_agents, args.query))
+    asyncio.run(main(args.sql_data_agents, args.text_data_agents, args.query))
