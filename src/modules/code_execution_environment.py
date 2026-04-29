@@ -306,10 +306,10 @@ class CodeExecutionEnvironment:
     def append_data_to_span(self, span: Span[CustomSpanData]):
         span.span_data.data["code"] = [
             {
-                "code": code_execution.code,
-                "exception": serialize_value(code_execution.exception),
+                "code": preview_text(code_execution.code, CHAR_LIMIT_SPAN),
                 "stdout": preview_text(code_execution.stdout, CHAR_LIMIT_SPAN),
                 "stderr": preview_text(code_execution.stderr, CHAR_LIMIT_SPAN),
+                "exception": serialize_value(code_execution.exception),
                 "locals": str(
                     [
                         f"{k}: {type(v).__name__}"
@@ -317,7 +317,7 @@ class CodeExecutionEnvironment:
                         if not k.startswith("_")
                     ]
                 ),
-                "formatted": code_execution.formatted,
+                # "formatted": code_execution.formatted,
             }
             for code_execution in self.code_executions
         ]
