@@ -278,7 +278,7 @@ class QueryCoordinator:
                     )
 
                     plan_to_execute = await self._replan_query_plan(
-                        query, query_plan, participating_agents, exception_data
+                        query, plan_to_execute, participating_agents, exception_data
                     )
 
                     span.span_data.data["new_query_plan"] = (

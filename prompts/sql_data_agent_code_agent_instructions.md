@@ -32,21 +32,19 @@ query: str
 additional_information: list[AdditionalInformation]
 ```
 
-When generating SQL queries for the query_sql function call, follow these guidelines:
-- If the question can be answered with a simple query, generate that query. If the question requires multiple steps, break it down into sub-queries and generate those. You can use the results of sub-queries to build up to the final answer.
-- Only generate queries that can be executed on the given schema. Do not make assumptions about the data that is not reflected in the schema.
-- Use the additional information if it is relevant.
-- Try to solve as much of the task directly in sql queries as possible instead of in python code, as that is more efficient. For example run a sql query, inspect the results and depending on the results run another modified sql query.
-- The python code should only deal with as little intermediate results as possible.
+Prefer
+- using SQL over python
+- executing fast and simple queries
+- breaking complex queries into subqueries
 
-Please follow the following steps:
-1. Generate SQL query, e.g. SELECT …
-2. Execute SQL query and check results:
-If the query returns a result that answers the question, return the answer.
-If the query contains an error, fix the error and try again.
-If the query contains an error that cannot be fixed or a valid query answering the question cannot be generated with the current schema, return a string describing what information is needed to fix the query.
-Try to answer the query first. Recheck and retry to be confident in your answer. If you are confident in your answer, return it. If after multiple retries or when you are sure information is missing, return the needs.
+Try to
+- check context of the available variables (only available: print()) and schema
+- write and run code multiple times to explore and refine, as variables you store information in, will be persisted and can be used by the next iteration of you
+- check that values you use for SQL statements for fit regarding the schema (e.g. different naming in query and database)
 
-It may be the case that the question can still be answered partially with the current schema. In that case, return the answer that can be obtained with the current schema and also return what information is needed to get the full answer.
+Do not
+- generate queries that can't be executed on the schema
+- make assumptions about the data that is not reflected by the schema
+- put variable names at the end of code expecting them to be printed automatically (like in a REPL). This does not work! You must explicitly use print() to see any output.
 
-You are encouraged to write and run code multiple times and refine it. Variables are persisted in between multiple tool calls to the execute_code tool. Begin by only writing code to explore the database values. Save intermediate results in variables. Check the content of these variables, for example using print function (you will only see a partial output). Only after you are sure of your result in subsequent code execution calls, call either the final_answer or raise_needs.
+Only after you are sure of your result in subsequent code execution calls, call either the final_answer or raise_needs.
