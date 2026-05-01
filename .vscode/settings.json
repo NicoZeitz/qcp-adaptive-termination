@@ -26,7 +26,9 @@
         "akas",
         "dotenv",
         "imdb",
+        "Instrumentor",
         "mschema",
+        "openinference",
         "Segoe"
     ]
 }
