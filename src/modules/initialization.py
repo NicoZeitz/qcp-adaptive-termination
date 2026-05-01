@@ -14,17 +14,23 @@ load_dotenv()
 
 langfuse = get_client()
 
+
 class LangfuseProcessor(SpanProcessor):
-        def on_start(self, span: "Span", parent_context: Optional[Context] = None) -> None:
-            if span.name.startswith("response"): # The name of the generation spans in your trace
-                prompt_info = prompt_info_var.get()
-                if prompt_info:
-                    span.set_attribute("langfuse.prompt.name", prompt_info.get("name"))
-                    span.set_attribute("langfuse.prompt.version", prompt_info.get("version"))
+    def on_start(self, span: "Span", parent_context: Optional[Context] = None) -> None:
+        if span.name.startswith(
+            "response"
+        ):  # The name of the generation spans in your trace
+            prompt_info = prompt_info_var.get()
+            if prompt_info:
+                span.set_attribute("langfuse.prompt.name", prompt_info.get("name"))
+                span.set_attribute(
+                    "langfuse.prompt.version", prompt_info.get("version")
+                )
+
 
 def initialize():
     nest_asyncio.apply()
-    trace.get_tracer_provider().add_span_processor(LangfuseProcessor()) # type: ignore
+    trace.get_tracer_provider().add_span_processor(LangfuseProcessor())  # type: ignore
     OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
 
     if not langfuse.auth_check():

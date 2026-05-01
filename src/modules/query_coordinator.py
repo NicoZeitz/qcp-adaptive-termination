@@ -13,7 +13,6 @@ from agents import (
 )
 from pydantic import JsonValue, create_model, Field
 
-from modules.cache import Cache
 from modules.code_execution_environment import CodeExecutionEnvironment
 from modules.model import (
     AgentContext,
@@ -96,9 +95,7 @@ class QueryCoordinator:
                 "Query Coordinator/Relevance/Instructions",
                 {"agent_registry": agent_registry},
             )
-            prompt = load_prompt(
-                "Query Coordinator/Relevance/Prompt", {"query": query}
-            )
+            prompt = load_prompt("Query Coordinator/Relevance/Prompt", {"query": query})
 
             relevance_agent = self.agent.clone(
                 name=f"{self.agent.name}_Relevance_Agent",
@@ -106,15 +103,7 @@ class QueryCoordinator:
                 output_type=RelevanceModel,
             )
 
-            async def compute_relevances():
-                return (await Runner.run(relevance_agent, prompt)).final_output
-
-            relevances = await Cache.instance().get_or_compute(
-                relevance_agent,
-                prompt,
-                RelevanceModel,
-                compute_relevances,
-            )
+            relevances = (await Runner.run(relevance_agent, prompt)).final_output
 
             relevant_agents = []
             for agent in self.data_agents:
@@ -170,16 +159,7 @@ class QueryCoordinator:
                 output_type=QueryPlanModel,
             )
 
-            async def compute_query_plan():
-                return (await Runner.run(query_plan_agent, prompt)).final_output
-
-            result = await Cache.instance().get_or_compute(
-                query_plan_agent,
-                prompt,
-                QueryPlanModel,
-                compute_query_plan,
-            )
-
+            result = (await Runner.run(query_plan_agent, prompt)).final_output
             query_plan = QueryPlan.map_query_plan_model_to_query_plan(result)
             span.span_data.data["query_plan"] = query_plan.to_span_data()
             return query_plan
@@ -226,16 +206,7 @@ class QueryCoordinator:
             output_type=QueryReplanModel,
         )
 
-        async def compute_query_replan():
-            return (await Runner.run(query_replan_agent, prompt)).final_output
-
-        result = await Cache.instance().get_or_compute(
-            query_replan_agent,
-            prompt,
-            QueryReplanModel,
-            compute_query_replan,
-        )
-
+        result = (await Runner.run(query_replan_agent, prompt)).final_output
         return QueryPlan.map_query_replan_model_to_query_plan(result, id_index)
 
     async def _replan_query_plan_local(
@@ -264,9 +235,7 @@ class QueryCoordinator:
             "Query Coordinator/Local Replan/Instructions",
             {
                 "participating_agents": participating_agents_str,
-                "failing_node": json.dumps(
-                    failing_node.to_replan_context(), indent=2
-                ),
+                "failing_node": json.dumps(failing_node.to_replan_context(), indent=2),
             },
         )
         prompt = load_prompt(
@@ -280,16 +249,7 @@ class QueryCoordinator:
             output_type=QueryReplanModel,
         )
 
-        async def compute_local_replan():
-            return (await Runner.run(local_replan_agent, prompt)).final_output
-
-        result = await Cache.instance().get_or_compute(
-            local_replan_agent,
-            prompt,
-            QueryReplanModel,
-            compute_local_replan,
-        )
-
+        result = (await Runner.run(local_replan_agent, prompt)).final_output
         new_subtree = QueryPlan.map_query_replan_model_to_query_plan(result, id_index)
         return QueryPlan.replace_node(current_plan, failing_node.id, new_subtree)
 
@@ -322,19 +282,13 @@ class QueryCoordinator:
                 span.span_data.data["failure"] = execution_failure.to_span_data()
 
             if i == MAX_REPLAN_ATTEMPTS + 1:
-                with own_custom_span(
-                    f"{i}: Max Replanning Attempts Reached"
-                ) as span:
+                with own_custom_span(f"{i}: Max Replanning Attempts Reached") as span:
                     span.span_data.data["reason"] = execution_failure.to_span_data()
                 break
 
-            with own_custom_span(
-                f"{i}: Replanning ({self.replan_mode.value})"
-            ) as span:
+            with own_custom_span(f"{i}: Replanning ({self.replan_mode.value})") as span:
                 span.span_data.data["reason"] = execution_failure.to_span_data()
-                span.span_data.data["old_query_plan"] = (
-                    plan_to_execute.to_span_data()
-                )
+                span.span_data.data["old_query_plan"] = plan_to_execute.to_span_data()
 
                 if self.replan_mode == ReplanMode.GLOBAL:
                     plan_to_execute = await self._replan_query_plan(
@@ -345,9 +299,7 @@ class QueryCoordinator:
                         query, plan_to_execute, participating_agents, execution_failure
                     )
 
-                span.span_data.data["new_query_plan"] = (
-                    plan_to_execute.to_span_data()
-                )
+                span.span_data.data["new_query_plan"] = plan_to_execute.to_span_data()
 
         return "Failed to answer the query after multiple attempts. The query might be too complex or there might be missing information that the agents cannot provide."
 
@@ -462,9 +414,7 @@ class QueryCoordinator:
                 },
             )
 
-            instructions = load_prompt(
-                "Query Coordinator/Aggregate/Instructions", {}
-            )
+            instructions = load_prompt("Query Coordinator/Aggregate/Instructions", {})
             prompt = load_prompt(
                 "Query Coordinator/Aggregate/Prompt",
                 {"query": node.question},
@@ -504,14 +454,9 @@ class QueryCoordinator:
                 ),
             )
 
-            async def compute_aggregate_result() -> PartialQueryAnswer:
-                return (await Runner.run(aggregate_agent, prompt)).final_output
-
-            result = await Cache.instance().get_or_compute(
-                aggregate_agent,
-                prompt,
+            result = cast(
                 PartialQueryAnswer,
-                compute_aggregate_result,
+                (await Runner.run(aggregate_agent, prompt)).final_output,
             )
 
             span.span_data.data["node"] = node.to_span_data()

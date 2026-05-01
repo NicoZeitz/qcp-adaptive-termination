@@ -2,6 +2,7 @@ import os
 
 from modules.initialization import initialize, langfuse
 
+
 def get_names():
     names = set()
 
@@ -10,6 +11,7 @@ def get_names():
             names.add(root.replace("../prompts/", "") + "/" + file.replace(".md", ""))
 
     return names
+
 
 def up():
     for name in get_names():
@@ -29,9 +31,10 @@ def up():
                 name=name,
                 prompt=prompt_content,
                 type="text",
-                labels=["production", "latest"]
+                labels=["production", "latest"],
             )
             print(f"Up: {name}")
+
 
 def down():
     response = langfuse.api.prompts.list(label="latest", limit=100)
@@ -45,6 +48,7 @@ def down():
             prompt = langfuse.get_prompt(name, label="latest")
             f.write(prompt.prompt)
             print(f"Down: {name}")
+
 
 if __name__ == "__main__":
     import argparse

@@ -11,6 +11,7 @@ from modules.model import AgentContext, DataAgent
 from modules.sql_data_agent import SqlDataAgent
 from modules.text_data_agent import TextDataAgent
 
+
 def get_default_data_agent_config(agent_name: str) -> Agent[AgentContext]:
     return Agent[AgentContext](
         name=agent_name,
