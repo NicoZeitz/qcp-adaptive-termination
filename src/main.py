@@ -1,3 +1,5 @@
+from typing import Literal
+
 from agents import trace
 
 from modules.config import (
@@ -16,10 +18,14 @@ async def main(
     text_data_agents_path: str,
     query_path: str,
     replan_mode: ReplanMode,
+    provider: Literal["University", "Work"],
 ):
     user_query, _sql_query, expected_result = load_query(query_path)
 
-    with trace("NZ: Collaborative Query Answering", metadata={"query": user_query}):
+    with trace(
+        "NZ: Collaborative Query Answering",
+        metadata={"query": user_query, "provider": provider},
+    ):
         print(
             "================================================== REGISTERING ======================================================"
         )
@@ -72,14 +78,18 @@ if __name__ == "__main__":
         choices=["global", "local"],
         default="local",
     )
+    parser.add_argument(
+        "--provider", type=str, choices=["University", "Work"], default="University"
+    )
     args = parser.parse_args()
 
-    initialize()
+    initialize(args.provider)
     asyncio.run(
         main(
             args.sql_data_agents,
             args.text_data_agents,
             args.query,
             ReplanMode(args.replan_mode),
+            args.provider,
         )
     )
