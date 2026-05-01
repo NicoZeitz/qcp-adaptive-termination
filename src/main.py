@@ -1,8 +1,12 @@
 from agents import trace
 
-from modules.config import create_sql_data_agents_from_folder, create_text_agents_from_folder, get_default_query_coordinator_agent_config, load_query
+from modules.config import (
+    create_sql_data_agents_from_folder,
+    create_text_agents_from_folder,
+    get_default_query_coordinator_agent_config,
+    load_query,
+)
 from modules.initialization import initialize
-from modules.cache import Cache
 from modules.model import ReplanMode
 from modules.query_coordinator import QueryCoordinator
 
@@ -71,7 +75,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     initialize()
-    Cache.instance().set_mode("DISABLED") # TODO: Remove cache
     asyncio.run(
         main(
             args.sql_data_agents,

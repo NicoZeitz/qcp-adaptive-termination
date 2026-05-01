@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Sequence, TypedDict
+from typing import Any, Sequence, TypedDict, cast
 from agents import (
     Agent,
     AgentOutputSchema,
@@ -9,7 +9,6 @@ from agents import (
     ToolsToFinalOutputResult,
 )
 from sqlalchemy import Engine, Row, text
-from modules.cache import Cache
 from modules.code_execution_environment import (
     CodeExecutionEnvironment,
     CodeExecutionResult,
@@ -59,9 +58,7 @@ class SqlDataAgent(DataAgent):
             "SQL Data Agent/Relevance/Instructions",
             {"m_schema": self.m_schema},
         )
-        prompt = load_prompt(
-            "SQL Data Agent/Relevance/Prompt", {"query": query}
-        )
+        prompt = load_prompt("SQL Data Agent/Relevance/Prompt", {"query": query})
 
         relevance_agent = self.agent.clone(
             name=f"{self.agent.name}_Relevance_Agent",
@@ -69,11 +66,8 @@ class SqlDataAgent(DataAgent):
             output_type=bool,
         )
 
-        async def compute_is_relevant():
-            return (await Runner.run(relevance_agent, prompt)).final_output
-
-        is_relevant = await Cache.instance().get_or_compute(
-            relevance_agent, prompt, bool, compute_is_relevant
+        is_relevant = cast(
+            bool, (await Runner.run(relevance_agent, prompt)).final_output
         )
 
         if not is_relevant:
@@ -162,14 +156,9 @@ class SqlDataAgent(DataAgent):
                 "SQL Data Agent/Code/Prompt", {"query": query}
             )
 
-            async def compute_code_answer() -> PartialQueryAnswer:
-                return (await Runner.run(code_agent, code_agent_prompt)).final_output
-
-            result = await Cache.instance().get_or_compute(
-                code_agent,
-                code_agent_prompt,
+            result = cast(
                 PartialQueryAnswer,
-                compute_code_answer,
+                (await Runner.run(code_agent, code_agent_prompt)).final_output,
             )
 
             code_environment.append_data_to_span(span)
@@ -218,17 +207,9 @@ class SqlDataAgent(DataAgent):
             {"m_schema_without_comments": m_schema_without_comments},
         )
 
-        async def compute_schema_description():
-            return (
-                await Runner.run(schema_description_agent, schema_prompt)
-            ).final_output
-
-        result = await Cache.instance().get_or_compute(
-            schema_description_agent,
-            schema_prompt,
-            DatabaseDescriptionModel,
-            compute_schema_description,
-        )
+        result = (
+            await Runner.run(schema_description_agent, schema_prompt)
+        ).final_output
 
         # Update the schema with the generated descriptions
         for table_name, table_info in self.schema_engine.mschema.tables.items():

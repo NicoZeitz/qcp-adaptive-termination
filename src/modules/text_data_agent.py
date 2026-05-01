@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any
+from typing import Any, cast
 
 from agents import (
     Agent,
@@ -10,7 +10,6 @@ from agents import (
     ToolsToFinalOutputResult,
 )
 
-from modules.cache import Cache
 from modules.code_execution_environment import CodeExecutionEnvironment
 from modules.model import (
     CHAR_LIMIT_LONG_LLM,
@@ -52,9 +51,7 @@ class TextDataAgent(DataAgent):
                 "preview": preview_text(self.text, CHAR_LIMIT_LONG_LLM),
             },  # TODO: full text as context
         )
-        prompt = load_prompt(
-            "Text Data Agent/Relevance/Prompt", {"query": query}
-        )
+        prompt = load_prompt("Text Data Agent/Relevance/Prompt", {"query": query})
 
         relevance_agent = self.agent.clone(
             name=f"{self.agent.name}_Relevance_Agent",
@@ -62,11 +59,8 @@ class TextDataAgent(DataAgent):
             output_type=bool,
         )
 
-        async def compute_is_relevant():
-            return (await Runner.run(relevance_agent, prompt)).final_output
-
-        is_relevant = await Cache.instance().get_or_compute(
-            relevance_agent, prompt, bool, compute_is_relevant
+        is_relevant = cast(
+            bool, (await Runner.run(relevance_agent, prompt)).final_output
         )
 
         if not is_relevant:
@@ -149,14 +143,9 @@ class TextDataAgent(DataAgent):
                 "Text Data Agent/Code/Prompt", {"query": query}
             )
 
-            async def compute_code_answer() -> PartialQueryAnswer:
-                return (await Runner.run(code_agent, code_agent_prompt)).final_output
-
-            result = await Cache.instance().get_or_compute(
-                code_agent,
-                code_agent_prompt,
+            result = cast(
                 PartialQueryAnswer,
-                compute_code_answer,
+                (await Runner.run(code_agent, code_agent_prompt)).final_output,
             )
 
             code_environment.append_data_to_span(span)
@@ -176,9 +165,7 @@ class TextDataAgent(DataAgent):
 
         summary_agent = self.agent.clone(
             name=f"{self.agent.name}_Summary_Agent",
-            instructions=load_prompt(
-                "Text Data Agent/Summary/Instructions", {}
-            ),
+            instructions=load_prompt("Text Data Agent/Summary/Instructions", {}),
             output_type=str,
         )
 
@@ -187,13 +174,5 @@ class TextDataAgent(DataAgent):
             {"preview": preview_text(self.text, CHAR_LIMIT_LONG_LLM)},
         )
 
-        async def compute_summary():
-            return (await Runner.run(summary_agent, prompt)).final_output
-
-        self.summary = await Cache.instance().get_or_compute(
-            summary_agent,
-            prompt,
-            str,
-            compute_summary,
-        )
+        self.summary = cast(str, (await Runner.run(summary_agent, prompt)).final_output)
         self.initialized = True
