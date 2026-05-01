@@ -157,11 +157,11 @@ class QueryCoordinator:
             )
 
             instructions = load_prompt(
-                "Query/Coordinator/Query Plan/Instructions",
+                "Query Coordinator/Query Plan/Instructions",
                 {"participating_agents": participating_agents_str},
             )
             prompt = load_prompt(
-                "Query/Coordinator/Query Plan/Prompt", {"query": query}
+                "Query Coordinator/Query Plan/Prompt", {"query": query}
             )
 
             query_plan_agent = self.agent.clone(

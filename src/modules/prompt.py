@@ -1,9 +1,17 @@
-from typing import Any
-import chevron
+from contextvars import ContextVar
+from typing import Any, TypedDict
 from langfuse import get_client
 
-# TODO: https://langfuse.com/integrations/frameworks/openai-agents#link-langfuse-prompt
+class PromptInfo(TypedDict):
+    name: str
+    version: int
+
+prompt_info_var = ContextVar[PromptInfo | None]("prompt_info", default=None)
+
 def load_prompt(name: str, parameters: dict[str, Any]) -> str:
-    print("Getting prompt: " + name)
     prompt = get_client().get_prompt(name)
+    prompt_info_var.set({
+        "name": prompt.name,
+        "version": prompt.version,
+    })
     return prompt.compile(**parameters)

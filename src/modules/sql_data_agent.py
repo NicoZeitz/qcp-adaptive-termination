@@ -56,11 +56,11 @@ class SqlDataAgent(DataAgent):
         await self._initialize_schema()
 
         instructions = load_prompt(
-            "Sql Data Agent/Relevance/Instructions",
+            "SQL Data Agent/Relevance/Instructions",
             {"m_schema": self.m_schema},
         )
         prompt = load_prompt(
-            "Sql Data Agent/Relevance/Prompt", {"query": query}
+            "SQL Data Agent/Relevance/Prompt", {"query": query}
         )
 
         relevance_agent = self.agent.clone(
@@ -142,7 +142,7 @@ class SqlDataAgent(DataAgent):
             code_agent = self.agent.clone(
                 name=f"{self.agent.name}_Code_Agent",
                 instructions=load_prompt(
-                    "Sql Data Agent/Code/Instructions",
+                    "SQL Data Agent/Code/Instructions",
                     {"m_schema": self.m_schema},
                 ),
                 tools=[code_environment.as_function_tool()],
@@ -159,7 +159,7 @@ class SqlDataAgent(DataAgent):
             )
 
             code_agent_prompt = load_prompt(
-                "Sql Data Agent/Code/Prompt", {"query": query}
+                "SQL Data Agent/Code/Prompt", {"query": query}
             )
 
             async def compute_code_answer() -> PartialQueryAnswer:
@@ -208,13 +208,13 @@ class SqlDataAgent(DataAgent):
         schema_description_agent = self.agent.clone(
             name=f"{self.agent.name}_Schema_Description_Agent",
             instructions=load_prompt(
-                "Sql Data Agent/Schema Description/Instructions", {}
+                "SQL Data Agent/Schema Description/Instructions", {}
             ),
             output_type=DatabaseDescriptionModel,
         )
 
         schema_prompt = load_prompt(
-            "Sql Data Agent/Schema Description/Prompt",
+            "SQL Data Agent/Schema Description/Prompt",
             {"m_schema_without_comments": m_schema_without_comments},
         )
 
