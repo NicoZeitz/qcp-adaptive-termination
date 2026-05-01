@@ -19,6 +19,7 @@ from modules.model import (
     Need,
     PartialQueryAnswer,
     Symbol,
+    append_to_span_output,
     own_custom_span,
     preview_text,
     serialize_value,
@@ -148,14 +149,16 @@ class TextDataAgent(DataAgent):
                 (await Runner.run(code_agent, code_agent_prompt)).final_output,
             )
 
-            code_environment.append_data_to_span(span)
-            span.span_data.data["partial_answer"] = {
-                "answer": preview_text(str(result.answer), CHAR_LIMIT_SPAN),
-                "needs": [
-                    preview_text(str(need), CHAR_LIMIT_SPAN)
-                    for need in result.needs or []
-                ],
-            }
+            append_to_span_output(span, {
+                "code": code_environment.to_span_data(),
+                "partial_answer": {
+                    "answer": preview_text(str(result.answer), CHAR_LIMIT_SPAN),
+                    "needs": [
+                        preview_text(str(need), CHAR_LIMIT_SPAN)
+                        for need in result.needs or []
+                    ],
+                }
+            })
 
             return result
 

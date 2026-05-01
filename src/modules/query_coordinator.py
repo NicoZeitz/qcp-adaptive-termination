@@ -15,6 +15,7 @@ from pydantic import JsonValue, create_model, Field
 
 from modules.code_execution_environment import CodeExecutionEnvironment
 from modules.model import (
+    CHAR_LIMIT_SPAN,
     AgentContext,
     DataAgent,
     Need,
@@ -25,8 +26,10 @@ from modules.model import (
     ReplanningNeeded,
     ResponsibleAgentNotFound,
     Symbol,
-    append_json_preview_to_span,
+    append_to_span_input,
+    append_to_span_output,
     own_custom_span,
+    preview_text,
     serialize_value,
 )
 from modules.prompt import load_prompt
@@ -75,10 +78,10 @@ class QueryCoordinator:
 
             agent_registry = ""
             for agent, capability in zip(self.data_agents, capabilities):
-                span.span_data.data[f"{agent.name()}_capability"] = capability
+                append_to_span_output(span, {f"{agent.name()}_capability": capability})
                 agent_registry += f"{agent.name()}: {capability}\n"
 
-            span.span_data.data["agent_registry"] = agent_registry
+            append_to_span_output(span, {"agent_registry": agent_registry})
 
             return agent_registry.strip()
 
@@ -109,7 +112,7 @@ class QueryCoordinator:
             for agent in self.data_agents:
                 relevant = getattr(relevances, agent.name(), False)
 
-                span.span_data.data[f"{agent.name()}_relevant"] = relevant
+                append_to_span_output(span, {f"{agent.name()}_relevant": relevant})
                 if relevant:
                     relevant_agents.append(agent)
 
@@ -127,7 +130,7 @@ class QueryCoordinator:
             for agent, schema in zip(relevant_agents, schemas):
                 relevant = schema is not None
 
-                span.span_data.data[f"{agent.name()}_relevant"] = relevant
+                append_to_span_output(span, {f"{agent.name()}_relevant": relevant})
                 if relevant:
                     participating_agents.append((agent, schema))
 
@@ -161,7 +164,7 @@ class QueryCoordinator:
 
             result = (await Runner.run(query_plan_agent, prompt)).final_output
             query_plan = QueryPlan.map_query_plan_model_to_query_plan(result)
-            span.span_data.data["query_plan"] = query_plan.to_span_data()
+            append_to_span_output(span, {"query_plan": query_plan.to_span_data()})
             return query_plan
 
     async def _replan_query_plan(
@@ -265,30 +268,33 @@ class QueryCoordinator:
 
         for i in range(1, MAX_REPLAN_ATTEMPTS + 2):
             with own_custom_span(f"{i}: Execute Query Plan") as span:
-                span.span_data.data["query_plan"] = plan_to_execute.to_span_data()
-                span.span_data.data["participating_agents"] = [
-                    agent.name() for agent, _ in participating_agents
-                ]
+                append_to_span_input(span, {
+                    "query_plan": plan_to_execute.to_span_data(),
+                    "participating_agents": [agent.name() for agent, _ in participating_agents]
+                })
 
                 result = await self._execute_query_plan_node(
                     plan_to_execute, participating_agents
                 )
 
                 if not isinstance(result, ReplanningNeeded):
-                    append_json_preview_to_span("final_answer", result, span)
+                    append_to_span_output(span, {"final_answer": preview_text(str(result), CHAR_LIMIT_SPAN)})
                     return result
 
                 execution_failure = result
-                span.span_data.data["failure"] = execution_failure.to_span_data()
+                append_to_span_output(span, {"failure": execution_failure.to_span_data()})
 
             if i == MAX_REPLAN_ATTEMPTS + 1:
                 with own_custom_span(f"{i}: Max Replanning Attempts Reached") as span:
-                    span.span_data.data["reason"] = execution_failure.to_span_data()
+                    append_to_span_output(span, {"reason": execution_failure.to_span_data()})
                 break
 
             with own_custom_span(f"{i}: Replanning ({self.replan_mode.value})") as span:
-                span.span_data.data["reason"] = execution_failure.to_span_data()
-                span.span_data.data["old_query_plan"] = plan_to_execute.to_span_data()
+                append_to_span_input(span, {
+                    "reason": execution_failure.to_span_data(),
+                    "old_query_plan": plan_to_execute.to_span_data()
+                })
+
 
                 if self.replan_mode == ReplanMode.GLOBAL:
                     plan_to_execute = await self._replan_query_plan(
@@ -299,7 +305,7 @@ class QueryCoordinator:
                         query, plan_to_execute, participating_agents, execution_failure
                     )
 
-                span.span_data.data["new_query_plan"] = plan_to_execute.to_span_data()
+                append_to_span_output(span, {"new_query_plan": plan_to_execute.to_span_data()})
 
         return "Failed to answer the query after multiple attempts. The query might be too complex or there might be missing information that the agents cannot provide."
 
@@ -309,7 +315,7 @@ class QueryCoordinator:
         with own_custom_span(
             f"Execute Query Plan Node ({node.to_agent}): {node.question}"
         ) as span:
-            span.span_data.data["node"] = node.to_span_data()
+            append_to_span_input(span, {"node": node.to_span_data()})
 
             if node.answered_needs is None:
                 node.answered_needs = []
@@ -338,9 +344,8 @@ class QueryCoordinator:
                     )
                 node.needs.clear()
 
-            span.span_data.data["answered_needs"] = [
-                need.to_span_data() for need in node.answered_needs
-            ]
+
+            append_to_span_input(span, {"answered_needs": [need.to_span_data() for need in node.answered_needs]})
 
             if node.to_agent == "Coordinator":
                 return await self._aggregate_results(node)
@@ -371,10 +376,11 @@ class QueryCoordinator:
         with own_custom_span(
             f"Answer Query Plan Node with Agent {agent.name()}: {node.question}"
         ) as span:
+            append_to_span_input(span, {"node": node.to_span_data()})
+
             answer = await agent.answer_query(node.question, answered_needs)
 
-            span.span_data.data["node"] = node.to_span_data()
-            span.span_data.data["partial_answer"] = answer.to_span_data()
+            append_to_span_output(span, {"partial_answer": answer.to_span_data()})
 
             if answer.needs is not None and len(answer.needs) > 0:
                 return NeedNotMet(partial_answer=answer, query_node=node)
@@ -385,6 +391,8 @@ class QueryCoordinator:
         with own_custom_span(
             f"Answer Query Plan Node with {self.agent.name}: {node.question}"
         ) as span:
+            append_to_span_input(span, { "node": node.to_span_data() })
+
             needs: list[Any] = []
             answer: Any | Symbol = Symbol()
 
@@ -459,9 +467,10 @@ class QueryCoordinator:
                 (await Runner.run(aggregate_agent, prompt)).final_output,
             )
 
-            span.span_data.data["node"] = node.to_span_data()
-            span.span_data.data["answer"] = result.to_span_data()
-            code_environment.append_data_to_span(span)
+            append_to_span_output(span, {
+                "code": code_environment.to_span_data(),
+                "answer": result.to_span_data()
+            })
 
             if result.needs is not None and len(result.needs) > 0:
                 return NeedNotMet(partial_answer=result, query_node=node)

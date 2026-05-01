@@ -8,7 +8,7 @@ from modules.config import (
     get_default_query_coordinator_agent_config,
     load_query,
 )
-from modules.initialization import initialize
+from modules.initialization import initialize, langfuse
 from modules.model import ReplanMode
 from modules.query_coordinator import QueryCoordinator
 
@@ -58,7 +58,7 @@ async def main(
             "================================================== EXPECTED RESULT =================================================="
         )
         print(expected_result)
-
+    langfuse.flush()
 
 if __name__ == "__main__":
     import argparse

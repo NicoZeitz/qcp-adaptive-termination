@@ -10,12 +10,26 @@ from pydantic import BaseModel, JsonValue, create_model
 from pydantic import Field
 import uuid
 
+from modules.initialization import langfuse
+
 CHAR_LIMIT_LLM = 600
 CHAR_LIMIT_LONG_LLM = 6000
 CHAR_LIMIT_SPAN = 50
 
 span_by_id: dict[str | None, int] = {}
 
+
+def append_to_span_input(span: Span, data: dict[str, Any]):
+    span.span_data.data["input"] = {
+        **span.span_data.data.get("input", {}),
+        **data
+    }
+
+def append_to_span_output(span: Span, data: dict[str, Any]):
+    span.span_data.data["output"] = {
+        **span.span_data.data.get("output", {}),
+        **data
+    }
 
 @contextmanager
 def own_custom_span(span_name: str, data: dict[str, Any] | None = None):
@@ -25,6 +39,15 @@ def own_custom_span(span_name: str, data: dict[str, Any] | None = None):
         print("  " * parent_depth + span_name)
         yield span
 
+        if "input" in span.span_data.data:
+            langfuse.update_current_span(input=span.span_data.data["input"])
+        if "output" in span.span_data.data:
+            langfuse.update_current_span(output=span.span_data.data["output"])
+
+        metadata = span.span_data.data.copy()
+        metadata.pop("input", None)
+        metadata.pop("output", None)
+        langfuse.update_current_span(metadata=metadata)
 
 def preview_text(text: str, char_limit=600):
     if len(text) <= char_limit:
@@ -40,12 +63,6 @@ def preview_text(text: str, char_limit=600):
         + f"\n...[{omitted_count} chars]...\n"
         + text[-char_limit_end:]
     )
-
-
-def append_json_preview_to_span(
-    key: str, json_value: JsonValue, span: Span[CustomSpanData]
-):
-    span.span_data.data[key] = preview_text(str(json_value), CHAR_LIMIT_SPAN)
 
 
 class Symbol:
