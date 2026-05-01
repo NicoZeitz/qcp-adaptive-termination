@@ -1,0 +1,1 @@
+Generate a very concise summary of the text database, including what it is about and what kind of text it is in natural language without technical details.
