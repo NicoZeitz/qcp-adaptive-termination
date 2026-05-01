@@ -23,7 +23,7 @@ async def main(
     user_query, _sql_query, expected_result = load_query(query_path)
 
     with trace(
-        "NZ: Collaborative Query Answering",
+        "FW: Collaborative Query Answering",
         metadata={"query": user_query, "provider": provider},
     ):
         print(
