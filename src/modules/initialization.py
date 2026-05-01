@@ -9,7 +9,8 @@ from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
 from langfuse import get_client
 from opentelemetry import trace
 from opentelemetry.context import Context
-from opentelemetry.sdk.trace import Span, SpanProcessor
+from opentelemetry.sdk.trace import Span, SpanProcessor, TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
 from modules.prompt import prompt_info_var
 
