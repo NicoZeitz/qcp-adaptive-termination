@@ -46,15 +46,14 @@ class TextDataAgent(DataAgent):
         await self._initialize()
 
         instructions = load_prompt(
-            "text_data_agent_relevance_agent_instructions",
-            None,
+            "Text Data Agent/Relevance/Instructions",
             {
                 "summary": self.summary,
                 "preview": preview_text(self.text, CHAR_LIMIT_LONG_LLM),
             },  # TODO: full text as context
         )
         prompt = load_prompt(
-            "text_data_agent_relevance_agent_prompt", None, {"query": query}
+            "Text Data Agent/Relevance/Prompt", {"query": query}
         )
 
         relevance_agent = self.agent.clone(
@@ -130,8 +129,7 @@ class TextDataAgent(DataAgent):
             code_agent = self.agent.clone(
                 name=f"{self.agent.name}_Code_Agent",
                 instructions=load_prompt(
-                    "text_data_agent_code_agent_instructions",
-                    None,
+                    "Text Data Agent/Code/Instructions",
                     {"summary": self.summary},
                 ),
                 tools=[code_environment.as_function_tool()],
@@ -148,7 +146,7 @@ class TextDataAgent(DataAgent):
             )
 
             code_agent_prompt = load_prompt(
-                "text_data_agent_code_agent_prompt", None, {"query": query}
+                "Text Data Agent/Code/Prompt", {"query": query}
             )
 
             async def compute_code_answer() -> PartialQueryAnswer:
@@ -179,14 +177,13 @@ class TextDataAgent(DataAgent):
         summary_agent = self.agent.clone(
             name=f"{self.agent.name}_Summary_Agent",
             instructions=load_prompt(
-                "text_data_agent_summary_agent_instructions", None, {}
+                "Text Data Agent/Summary/Instructions", {}
             ),
             output_type=str,
         )
 
         prompt = load_prompt(
-            "text_data_agent_summary_agent_prompt",
-            None,
+            "Text Data Agent/Summary/Prompt",
             {"preview": preview_text(self.text, CHAR_LIMIT_LONG_LLM)},
         )
 
