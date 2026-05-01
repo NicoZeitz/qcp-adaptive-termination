@@ -333,12 +333,10 @@ class CodeExecutionEnvironment:
         if len(stdout) > 0:
             formatted += f"\nStdout: {preview_text(stdout, CHAR_LIMIT_LLM)}"
         else:
-            formatted += "\nNo Stdout"
+            formatted += "\nNo Stout (if output was expected: you must use print())"
 
         if len(stderr) > 0:
             formatted += f"\nStderr: {preview_text(stderr, CHAR_LIMIT_LLM)}"
-        else:
-            formatted += "\nNo Stderr"
 
         if exception is not None:
             formatted += f"\n{type(exception).__name__}: {preview_text(str(exception), CHAR_LIMIT_LLM)}"

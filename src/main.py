@@ -102,9 +102,9 @@ async def main(
 ):
     user_query, _sql_query, expected_result = load_query(query_path)
 
-    with trace("NZ: Collaborative Query Answering", metadata={"query": user_query}):
+    with trace("FW: SQL Data Agent Trials", metadata={"query": user_query}):
         print(
-            "================================================== REGISTERING =================================================="
+            "================================================== REGISTERING ======================================================"
         )
         queryCoordinator = QueryCoordinator(
             agent=get_default_query_coordinator_agent_config("Query Coordinator"),
@@ -120,15 +120,15 @@ async def main(
             queryCoordinator.register_data_agent(data_agent)
 
         print(
-            "================================================== USER QUERY =================================================="
+            "================================================== USER QUERY ======================================================="
         )
         print(user_query)
         print(
-            "================================================== ANSWERING =================================================="
+            "================================================== ANSWERING ========================================================"
         )
         result = await queryCoordinator.collaborative_query_answering(user_query)
         print(
-            "================================================== RESULT =================================================="
+            "================================================== RESULT ==========================================================="
         )
         print(result)
         print(
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--query",
         type=str,
-        default="../test/Who was the cinematographer of Donald Trump's favorite movie?.json",
+        default="../test/What is the name of the person with id 42?.json",
     )
     parser.add_argument(
         "--cache",
