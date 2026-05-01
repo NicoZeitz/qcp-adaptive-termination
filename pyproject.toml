@@ -5,7 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "chevron>=0.14.0",
     "cloudpickle>=3.1.2",
     "imdb-sqlite>=2.1.0",
     "langfuse>=4.5.1",
