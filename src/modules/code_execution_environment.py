@@ -303,8 +303,8 @@ class CodeExecutionEnvironment:
     def get_code_executions(self) -> list[CodeExecutionResult]:
         return self.code_executions
 
-    def append_data_to_span(self, span: Span[CustomSpanData]):
-        span.span_data.data["code"] = [
+    def to_span_data(self) -> list[Any]:
+        return [
             {
                 "code": preview_text(code_execution.code, CHAR_LIMIT_SPAN),
                 "stdout": preview_text(code_execution.stdout, CHAR_LIMIT_SPAN),
@@ -321,6 +321,7 @@ class CodeExecutionEnvironment:
             }
             for code_execution in self.code_executions
         ]
+
 
     def _format_result(
         self,
