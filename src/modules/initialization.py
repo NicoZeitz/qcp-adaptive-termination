@@ -1,7 +1,10 @@
-from typing import Optional
+import os
+from typing import Literal, Optional
+from agents import set_default_openai_client
 from dotenv import load_dotenv
 import nest_asyncio
 import sys
+from openai import AsyncOpenAI
 from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
 from langfuse import get_client
 from opentelemetry import trace
@@ -28,15 +31,21 @@ class LangfuseProcessor(SpanProcessor):
                 )
 
 
-def initialize():
+def initialize(provider: Literal["University", "Work"] = "University"):
     nest_asyncio.apply()
     trace.get_tracer_provider().add_span_processor(LangfuseProcessor())  # type: ignore
-    OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
+
+    print(f"Provider: {provider}")
+    if provider == "Work":
+        custom_client = AsyncOpenAI(
+            base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY")
+        )
+        OpenAIAgentsInstrumentor().instrument(exclusive_processor=True)
+    else:
+        custom_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
+    set_default_openai_client(custom_client)
 
     if not langfuse.auth_check():
         print("Langfuse Authentication failed. Please check your credentials and host.")
         sys.exit(1)
-
-    # custom_client = AsyncOpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY"))
-    # custom_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    # set_default_openai_client(custom_client)
