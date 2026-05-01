@@ -141,12 +141,25 @@ if __name__ == "__main__":
     import asyncio
     from dotenv import load_dotenv
     import argparse
+    import nest_asyncio
+    import sys
+    from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
+    from langfuse import get_client
 
     load_dotenv()
 
+    nest_asyncio.apply()
+    OpenAIAgentsInstrumentor().instrument()
+    langfuse = get_client()
+    if langfuse.auth_check():
+        print("Langfuse client is authenticated and ready!")
+    else:
+        print("Authentication failed. Please check your credentials and host.")
+        sys.exit(1)
+
     # custom_client = AsyncOpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY"))
-    custom_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    set_default_openai_client(custom_client)
+    # custom_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    # set_default_openai_client(custom_client)
 
     parser = argparse.ArgumentParser(prog="Collaborative Query Answering")
     parser.add_argument("--sql-data-agents", type=str, default="../data/handmade")

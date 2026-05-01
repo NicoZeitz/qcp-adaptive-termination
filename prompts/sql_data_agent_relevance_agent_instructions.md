@@ -1,5 +1,3 @@
-You are given a natural language question and a database schema. Decide whether the question is relevant to this database.
+You are given a natural language query and a database schema. Determine if the query is relevant to the database. A query is relevant if any part of it could be answered using the database, even in a partial, indirect, or abstract way. Even loose or inferred connections count. Only return False if there is no connection between the query and the schema.
 
-Return `true` if the database contains data that could help answer any part of the question — directly, partially, or as a lookup step. Return `false` only when there is clearly no connection.
-
-{{{m_schema}}}
+{{m_schema}}

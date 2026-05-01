@@ -93,12 +93,11 @@ class QueryCoordinator:
             RelevanceModel = create_model("RelevanceModel", **agent_fields)
 
             instructions = load_prompt(
-                "query_coordinator_relevance_agent_instructions",
-                None,
+                "Query Coordinator / Relevance / Instructions",
                 {"agent_registry": agent_registry},
             )
             prompt = load_prompt(
-                "query_coordinator_relevance_agent_prompt", None, {"query": query}
+                "Query Coordinator / Relevance / Prompt", {"query": query}
             )
 
             relevance_agent = self.agent.clone(
@@ -158,12 +157,11 @@ class QueryCoordinator:
             )
 
             instructions = load_prompt(
-                "query_coordinator_query_plan_agent_instructions",
-                None,
+                "Query / Coordinator / Query Plan / Instructions",
                 {"participating_agents": participating_agents_str},
             )
             prompt = load_prompt(
-                "query_coordinator_query_plan_agent_prompt", None, {"query": query}
+                "Query / Coordinator / Query Plan / Prompt", {"query": query}
             )
 
             query_plan_agent = self.agent.clone(
@@ -209,8 +207,7 @@ class QueryCoordinator:
         failure_dict["query_node"] = failure.query_node.to_replan_context()
 
         instructions = load_prompt(
-            "query_coordinator_query_replan_agent_instructions",
-            None,
+            "Query Coordinator / Query Replan / Instructions",
             {
                 "participating_agents": participating_agents_str,
                 "old_query_plan": json.dumps(
@@ -219,8 +216,7 @@ class QueryCoordinator:
             },
         )
         prompt = load_prompt(
-            "query_coordinator_query_replan_agent_prompt",
-            None,
+            "Query Coordinator / Query Replan / Prompt",
             {"query": query, "exception": json.dumps(failure_dict, indent=2)},
         )
 
@@ -265,8 +261,7 @@ class QueryCoordinator:
         failure_dict["query_node"] = failing_node.to_replan_context()
 
         instructions = load_prompt(
-            "query_coordinator_local_replan_agent_instructions",
-            None,
+            "Query Coordinator / Local Replan / Instructions",
             {
                 "participating_agents": participating_agents_str,
                 "failing_node": json.dumps(
@@ -275,8 +270,7 @@ class QueryCoordinator:
             },
         )
         prompt = load_prompt(
-            "query_coordinator_local_replan_agent_prompt",
-            None,
+            "Query Coordinator / Local Replan / Prompt",
             {"query": query, "exception": json.dumps(failure_dict, indent=2)},
         )
 
@@ -469,11 +463,10 @@ class QueryCoordinator:
             )
 
             instructions = load_prompt(
-                "query_coordinator_aggregate_agent_instructions", None, {}
+                "Query Coordinator / Aggregate / Instructions", {}
             )
             prompt = load_prompt(
-                "query_coordinator_aggregate_agent_prompt",
-                None,
+                "Query Coordinator / Aggregate / Prompt",
                 {"query": node.question},
             )
 
