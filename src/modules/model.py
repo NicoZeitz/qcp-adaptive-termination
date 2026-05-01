@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
+from enum import Enum
 import json
 from types import ModuleType
 from typing import Any, Literal
@@ -311,6 +312,26 @@ class QueryPlan(BaseModel):
             ],
         }
 
+    @staticmethod
+    def replace_node(
+        plan: "QueryPlan", node_id: str, replacement: "QueryPlan"
+    ) -> "QueryPlan":
+        """Return a new plan tree with the node matching node_id replaced by replacement."""
+        if plan.id == node_id:
+            return replacement
+        if plan.needs:
+            new_needs = [
+                QueryPlan.replace_node(child, node_id, replacement)
+                for child in plan.needs
+            ]
+            return plan.model_copy(update={"needs": new_needs})
+        return plan
+
+
+class ReplanMode(str, Enum):
+    GLOBAL = "global"
+    LOCAL = "local"
+
 
 class ReplanningNeeded(BaseModel):
     query_node: QueryPlan
@@ -331,11 +352,6 @@ class NeedNotMet(ReplanningNeeded):
             "query_node": self.query_node.to_span_data(),
             "partial_answer": self.partial_answer.to_span_data(),
         }
-
-
-@dataclass
-class ReplanningNeededException(Exception):
-    data: ReplanningNeeded
 
 
 # Adapted from [RLM](https://github.com/alexzhang13/rlm), Original source file: rlm/core/types.py
