@@ -34,18 +34,18 @@ class LangfuseProcessor(SpanProcessor):
 
 def initialize(provider: Literal["University", "Work"] = "University"):
     nest_asyncio.apply()
+    trace.get_tracer_provider().add_span_processor(LangfuseProcessor())  # type: ignore
 
-    # Set up OpenTelemetry tracer provider
-    provider = TracerProvider()
-    trace.set_tracer_provider(provider)
-
-    # Add the Langfuse processor
-    provider.add_span_processor(LangfuseProcessor())
-
-    # Optionally add a console exporter for debugging
-    # provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-
-    OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
+    print(f"Provider: {provider}")
+    if provider == "Work":
+        custom_client = AsyncOpenAI(
+            base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY")
+        )
+        OpenAIAgentsInstrumentor().instrument(exclusive_processor=True)
+    else:
+        custom_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
+    set_default_openai_client(custom_client)
 
     if not langfuse.auth_check():
         print("Langfuse Authentication failed. Please check your credentials and host.")
