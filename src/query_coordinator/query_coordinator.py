@@ -55,7 +55,7 @@ class QueryCoordinator(ABC):
                 append_to_span_input(
                     span,
                     {
-                        "query_plan": query_plan,
+                        "query_plan": query_plan.to_span_data(),
                         "data_agents": [agent.name for agent in data_agents],
                     },
                 )
@@ -81,7 +81,7 @@ class QueryCoordinator(ABC):
                 append_to_span_input(
                     span,
                     {
-                        "query_plan": query_plan,
+                        "query_plan": query_plan.to_span_data(),
                         "data_agents": [agent.name for agent in data_agents],
                         "reason": failed_execution,
                     },
