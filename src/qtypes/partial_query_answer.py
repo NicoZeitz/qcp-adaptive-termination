@@ -1,5 +1,3 @@
-from typing import Literal
-
 from pydantic import JsonValue, BaseModel
 
 from qtypes.query_plan.need import NeedType, needs_to_span_data
@@ -12,7 +10,6 @@ class PartialQueryAnswer:
     answer: ResultType | None = None
     has_answer: bool = False
     needs: list[NeedType] = []
-    type: Literal["answer", "needs", "answer_and_needs", "empty"] = "empty"
 
     def set_answer(self, answer: ResultType):
         self.answer = answer
