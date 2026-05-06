@@ -1,18 +1,17 @@
 from enum import Enum
 import os
 from typing import cast
-from agents import Agent
 from dataclasses import dataclass
 from sqlalchemy import Inspector, create_engine, inspect, text
 import random
 import datetime
 import uuid
 
-from modules.model import AgentContext, DataAgent
-from modules.sql_data_agent import SqlDataAgent
-
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
+
+from data_agent.data_agent import DataAgent
+from data_agent.sql_data_agent.sql_data_agent import SqlDataAgent
 
 
 @event.listens_for(Engine, "connect")
@@ -675,7 +674,6 @@ def create_splits_visualization(
 def create_agents(
     output_path: str,
     database_url: str,
-    agent: Agent[AgentContext],
     agent_amount: int,
     always_included_columns_mapping: dict[str, list[str]],
     split_type: SplitType = SplitType.MIXED,
@@ -835,14 +833,14 @@ def create_agents(
     data_agents: list[DataAgent] = []
     for data_agent_config in data_agents_config:
         data_agent = SqlDataAgent(
-            agent=agent.clone(name=data_agent_config.agent_name),
+            name=data_agent_config.agent_name,
             db_engine=create_engine(
                 f"sqlite:///{os.path.abspath(data_agent_config.db_file)}"
             ),
         )
         data_agents.append(data_agent)
         print(
-            f"{data_agent.name()}: 'sqlite:///{os.path.abspath(data_agent_config.db_file)}'"
+            f"{data_agent.name}: 'sqlite:///{os.path.abspath(data_agent_config.db_file)}'"
         )
 
     return data_agents

@@ -1,6 +1,6 @@
 import os
 
-from modules.initialization import initialize, langfuse
+from utils.initialization import initialize, langfuse
 
 
 def get_names():

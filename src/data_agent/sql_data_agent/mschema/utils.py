@@ -15,7 +15,7 @@ def read_json(path):
     return data
 
 
-def read_text(filename) -> str:
+def read_text(filename) -> list[str]:
     data = []
     with open(filename, "r", encoding="utf-8") as file:
         for line in file.readlines():
