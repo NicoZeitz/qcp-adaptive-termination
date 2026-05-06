@@ -1,10 +1,12 @@
 from typing import Literal
 
-from pydantic import JsonValue
+from pydantic import JsonValue, BaseModel
 
 from qtypes.query_plan.need import NeedType, needs_to_span_data
 from qtypes.query_plan.result import ResultType, result_to_span_data
 
+class PartialQueryAnswerDummy(BaseModel):
+    pass
 
 class PartialQueryAnswer:
     answer: ResultType | None = None

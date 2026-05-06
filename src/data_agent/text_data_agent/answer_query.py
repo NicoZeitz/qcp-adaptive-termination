@@ -4,7 +4,7 @@ from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResu
 import pandas as pd
 
 from data_agent.data_agent import DataAgent
-from qtypes.partial_query_answer import PartialQueryAnswer
+from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDummy
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.query_plan.need import (
     try_parse_value_to_need_type,
@@ -84,6 +84,7 @@ async def answer_query(
                 reset_tool_choice=False,
                 parallel_tool_calls=False,
                 tool_choice="required",
+                output_type=PartialQueryAnswerDummy, # See: https://github.com/openai/openai-agents-python/blob/main/src/agents/run_internal/turn_resolution.py#L189-L190
             ),
         )
 
