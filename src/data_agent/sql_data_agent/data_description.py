@@ -31,7 +31,7 @@ async def data_description(data_agent: DataAgent, db_engine: Engine) -> str:
     result = await run_agent(
         name_postfix="Schema Description",
         agent_configuration=data_agent.agent_configuration,
-        system_prompt=load_prompt("SQL Data Agent/Schema Description/Instructions", {}),
+        instructions=load_prompt("SQL Data Agent/Schema Description/Instructions", {}),
         prompt=load_prompt(
             "SQL Data Agent/Schema Description/Prompt",
             {"m_schema_without_comments": m_schema_without_comments},

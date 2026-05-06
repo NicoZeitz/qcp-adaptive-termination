@@ -91,7 +91,7 @@ async def draft_query_plan(
         result = await run_agent(
             name_postfix="Draft Query Plan",
             agent_configuration=coordinator.agent_configuration,
-            system_prompt=load_prompt(
+            instructions=load_prompt(
                 "Query Coordinator/Query Plan/Instructions",
                 {"agent_registry": agent_registry},  # TODO: change prompt
             ),

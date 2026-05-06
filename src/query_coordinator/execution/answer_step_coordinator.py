@@ -72,7 +72,7 @@ async def answer_step_coordinator(
             await run_agent(
                 name_postfix="Code",
                 agent_configuration=coordinator.agent_configuration,
-                system_prompt=load_prompt(
+                instructions=load_prompt(
                     "Query Coordinator/Code/Instructions",
                     {},
                 ),
