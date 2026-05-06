@@ -7,7 +7,7 @@ async def is_relevant(data_agent: DataAgent, query: str) -> bool:
     is_relevant = await run_agent(
         name_postfix="Relevance",
         agent_configuration=data_agent.agent_configuration,
-        system_prompt=load_prompt(
+        instructions=load_prompt(
             "SQL Data Agent/Relevance/Instructions",
             {"m_schema": await data_agent.data_description()},
         ),

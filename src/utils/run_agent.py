@@ -21,7 +21,7 @@ async def run_agent[TResult, TContext](
     name_postfix: str,
     agent_configuration: AgentConfiguration,
     prompt: str | list[TResponseInputItem] | RunState[TContext],
-    system_prompt: (
+    instructions: (
         str
         | Callable[
             [RunContextWrapper[TContext], Agent[TContext]],
@@ -53,7 +53,7 @@ async def run_agent[TResult, TContext](
             parallel_tool_calls=parallel_tool_calls,
             tool_choice=tool_choice,
         ),
-        instructions=system_prompt,
+        instructions=instructions,
         tools=tools,
         tool_use_behavior=tool_use_behavior,
         reset_tool_choice=reset_tool_choice,

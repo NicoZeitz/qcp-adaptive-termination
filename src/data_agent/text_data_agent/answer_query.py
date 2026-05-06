@@ -74,7 +74,7 @@ async def answer_query(
             await run_agent(
                 name_postfix="Code",
                 agent_configuration=data_agent.agent_configuration,
-                system_prompt=load_prompt(
+                instructions=load_prompt(
                     "Text Data Agent/Code/Instructions",
                     {"summary": await data_agent.data_description()},
                 ),
