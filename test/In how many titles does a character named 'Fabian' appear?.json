@@ -1,6 +1,8 @@
 {
-"SELECT \nCOUNT(*)\nFROM \ntitles\nWHERE\ntitle_id IN (SELECT title_id FROM crew WHERE \"characters\" LIKE '%Fabian%')\n": [
+"SELECT count(distinct title_id) FROM crew WHERE \"characters\" LIKE '%Fabian%'": [
 	{
 		"COUNT(*)" : 5771
 	}
-]}
+],
+"Relevant agents": ["A2"]
+}
