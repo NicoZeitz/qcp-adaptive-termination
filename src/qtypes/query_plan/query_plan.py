@@ -1,6 +1,7 @@
 from typing import Literal
+from dataclasses import dataclass
 
-from pydantic import BaseModel, Field, JsonValue
+from pydantic import Field, JsonValue
 
 from qtypes.query_plan.result import ResultType
 
@@ -36,20 +37,22 @@ class FieldDefinitions:
     )
 
 
-class QueryDependency(BaseModel):
-    step: "QueryPlanStep" = FieldDefinitions.dependency_step
-    dependency: str = FieldDefinitions.dependency_description
+@dataclass
+class QueryDependency:
+    step: "QueryPlanStep"
+    dependency: str
 
     def to_span_data(self) -> JsonValue:
         return {"step_id": self.step.id, "dependency": self.dependency}
 
 
-class QueryPlanStep(BaseModel):
-    id: str = FieldDefinitions.step_id
-    query: str = FieldDefinitions.step_query
-    to_agent: Literal["Coordinator"] | str = FieldDefinitions.step_to_agents
-    dependencies: list[QueryDependency] = FieldDefinitions.step_dependencies
-    answer: ResultType | None = FieldDefinitions.step_answer
+@dataclass
+class QueryPlanStep:
+    id: str
+    query: str
+    to_agent: Literal["Coordinator"] | str
+    dependencies: list[QueryDependency]
+    answer: ResultType | None
 
     def to_span_data(self) -> JsonValue:
         return {
@@ -63,9 +66,10 @@ class QueryPlanStep(BaseModel):
         }
 
 
-class QueryPlan(BaseModel):
-    query: str = FieldDefinitions.plan_query
-    steps: list[QueryPlanStep] = FieldDefinitions.plan_steps
+@dataclass
+class QueryPlan:
+    query: str
+    steps: list[QueryPlanStep]
 
     def to_span_data(self) -> JsonValue:
         return {"steps": [step.to_span_data() for step in self.steps]}

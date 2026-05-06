@@ -55,14 +55,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         prog="Langfuse Prompt Sync",
-        description="Sync prompts between local files and Langfuse"
+        description="Sync prompts between local files and Langfuse",
     )
     parser.add_argument(
         "--type",
         type=str,
         choices=["down", "up"],
         required=True,
-        help="Sync direction: 'up' (local → Langfuse) or 'down' (Langfuse → local)"
+        help="Sync direction: 'up' (local → Langfuse) or 'down' (Langfuse → local)",
     )
     args = parser.parse_args()
 

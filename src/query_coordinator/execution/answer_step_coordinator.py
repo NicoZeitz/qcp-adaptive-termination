@@ -25,7 +25,7 @@ async def answer_step_coordinator(
 ) -> PartialQueryAnswer:
     query = query_plan_step.query
 
-    with own_custom_span(f"{coordinator.name} - answer query") as span:
+    with own_custom_span("Coordinator - answer query") as span:
         append_to_span_input(
             span,
             {

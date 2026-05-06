@@ -3,6 +3,7 @@ import asyncio
 from agents import CustomSpanData, Span
 
 from data_agent.data_agent import DataAgent
+from utils.preview import CHAR_LIMIT_SPAN, preview_text
 from utils.span import append_to_span_input
 
 
@@ -29,8 +30,8 @@ async def build_agent_registry(
                 "data_agents": [
                     {
                         "name": name,
-                        "description": description,
-                        "capabilities": capabilities,
+                        "description": preview_text(description, CHAR_LIMIT_SPAN),
+                        "capabilities": [preview_text(capability, CHAR_LIMIT_SPAN) for capability in capabilities],
                     }
                     for name, description, capabilities in agent_infos
                 ]
