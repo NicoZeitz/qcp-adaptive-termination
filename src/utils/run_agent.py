@@ -5,6 +5,7 @@ from agents import (
     AgentOutputSchemaBase,
     ModelSettings,
     RunContextWrapper,
+    RunResult,
     RunState,
     Runner,
     StopAtTools,
@@ -41,7 +42,7 @@ async def run_agent[TResult, TContext](
     ) = "run_llm_again",
     parallel_tool_calls: bool | None = True,
     tool_choice: ToolChoice | None = None,
-) -> TResult:
+) -> tuple[TResult, RunResult]:
     tools = tools or []
 
     agent = Agent[TContext](
@@ -60,6 +61,5 @@ async def run_agent[TResult, TContext](
         output_type=output_type,
     )
 
-    return cast(
-        TResult, (await Runner.run(agent, prompt, context=context)).final_output
-    )
+    result = await Runner.run(agent, prompt, context=context)
+    return cast(TResult, result.final_output), result

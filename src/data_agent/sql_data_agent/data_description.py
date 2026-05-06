@@ -28,7 +28,7 @@ async def data_description(data_agent: DataAgent, db_engine: Engine) -> str:
 
     DatabaseDescriptionModel = create_database_description_model(schema_engine)
 
-    result = await run_agent(
+    result, _ = await run_agent(
         name_postfix="Schema Description",
         agent_configuration=data_agent.agent_configuration,
         instructions=load_prompt("SQL Data Agent/Schema Description/Instructions", {}),

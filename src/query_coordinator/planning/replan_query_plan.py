@@ -98,7 +98,7 @@ async def replan_query_plan(
     answer_map = create_answer_map_from_query_plan(query_plan)
     QueryReplanModel = create_query_replan_model(data_agents)
 
-    result = await run_agent(
+    result, _ = await run_agent(
         name_postfix="Draft Query Plan",
         agent_configuration=coordinator.agent_configuration,
         instructions=load_prompt(

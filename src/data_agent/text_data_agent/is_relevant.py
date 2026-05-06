@@ -5,7 +5,7 @@ from utils.run_agent import run_agent
 
 
 async def is_relevant(data_agent: DataAgent, text: str, query: str) -> bool:
-    return await run_agent(
+    result, _ = await run_agent(
         name_postfix="Relevance",
         agent_configuration=data_agent.agent_configuration,
         instructions=load_prompt(
@@ -21,3 +21,4 @@ async def is_relevant(data_agent: DataAgent, text: str, query: str) -> bool:
         ),
         output_type=bool,
     )
+    return result

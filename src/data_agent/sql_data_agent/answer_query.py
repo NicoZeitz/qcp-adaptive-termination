@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, cast
 
-from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
+from agents import FunctionToolResult, RunContextWrapper, RunResult, ToolsToFinalOutputResult
 import pandas as pd
 from pandas import DataFrame
 from pydantic import JsonValue
@@ -105,8 +105,8 @@ async def answer_query(
                 final_output=partial_answer,
             )
 
-        result = cast(
-            PartialQueryAnswer,
+        result, _ = cast(
+            tuple[PartialQueryAnswer, RunResult],
             await run_agent(
                 name_postfix="Code",
                 agent_configuration=data_agent.agent_configuration,

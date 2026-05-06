@@ -1,6 +1,6 @@
 from typing import Any, cast
 
-from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
+from agents import FunctionToolResult, RunContextWrapper, RunResult, ToolsToFinalOutputResult
 import pandas as pd
 
 from code_execution.code_execution_environment import CodeExecutionEnvironment
@@ -67,8 +67,8 @@ async def answer_step_coordinator(
                 final_output=partial_answer,
             )
 
-        result = cast(
-            PartialQueryAnswer,
+        result, _ = cast(
+            tuple[PartialQueryAnswer, RunResult],
             await run_agent(
                 name_postfix="Code",
                 agent_configuration=coordinator.agent_configuration,
