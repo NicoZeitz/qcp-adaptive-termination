@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from pydantic import Field, JsonValue
 
-from qtypes.query_plan.result import ResultType
+from qtypes.query_plan.result import ResultType, result_to_span_data
 
 
 class FieldDefinitions:
@@ -62,7 +62,7 @@ class QueryPlanStep:
             "dependencies": [
                 dependency.to_span_data() for dependency in self.dependencies
             ],
-            "answer_available": self.answer is not None,
+            "answer_available": result_to_span_data(self.answer) if self.answer is not None else None,
         }
 
 
