@@ -19,7 +19,7 @@ langfuse = get_client()
 
 
 class LangfuseProcessor(SpanProcessor):
-    def on_start(self, span: "Span", _parent_context: Optional[Context] = None) -> None:
+    def on_start(self, span: "Span", parent_context: Optional[Context] = None) -> None:
         if span.name.startswith(
             "response"
         ):  # The name of the generation spans in your trace

@@ -69,6 +69,7 @@ def map_query_plan_model_to_query_plan(
             query=step_model.query,
             to_agent=step_model.to_agent,
             dependencies=dependencies,
+            answer=None,
         )
 
         step_mapping[step_model.id] = query_plan_step
@@ -81,7 +82,7 @@ def map_query_plan_model_to_query_plan(
 async def draft_query_plan(
     coordinator: QueryCoordinator, data_agents: list[DataAgent], query: str
 ) -> QueryPlan:
-    with own_custom_span("Draft Query Plan") as span:
+    with own_custom_span("Coordinator - Draft Query Plan") as span:
         append_to_span_input(span, {"query": query})
 
         agent_registry = await build_agent_registry(data_agents, span)

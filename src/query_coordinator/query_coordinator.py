@@ -34,16 +34,7 @@ class QueryCoordinator(ABC):
         data_agents = await self.filter_relevant_agents(data_agents, query)
 
         # Stage 2: Filter relevant agents by asking the agents directly
-        data_agents = [
-            agent
-            for agent, is_relevant in zip(
-                data_agents,
-                await asyncio.gather(
-                    *(agent.is_relevant(query) for agent in data_agents)
-                ),
-            )
-            if is_relevant
-        ]
+        data_agents = await self.ask_relevant_agents(data_agents, query)
 
         # Stage 3: Draft a Query Plan
         query_plan = await self.draft_query_plan(data_agents, query)
@@ -108,6 +99,12 @@ class QueryCoordinator(ABC):
 
     @abstractmethod
     async def filter_relevant_agents(
+        self, data_agents: list[DataAgent], query: str
+    ) -> list[DataAgent]:
+        pass
+
+    @abstractmethod
+    async def ask_relevant_agents(
         self, data_agents: list[DataAgent], query: str
     ) -> list[DataAgent]:
         pass
