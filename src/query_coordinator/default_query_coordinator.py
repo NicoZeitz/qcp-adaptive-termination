@@ -20,13 +20,13 @@ class DefaultQueryCoordinator(QueryCoordinator):
 
     async def filter_relevant_agents(
         self, data_agents: list[DataAgent], query: str
-    ) -> list[DataAgent]:
+    ) -> list[tuple[DataAgent, str]]:
         return await filter_relevant_agents(self, data_agents, query)
 
     async def ask_relevant_agents(
-        self, data_agents: list[DataAgent], query: str
+        self, data_agents_with_reasoning: list[tuple[DataAgent, str]], query: str
     ) -> list[DataAgent]:
-        return await ask_relevant_agents(data_agents, query)
+        return await ask_relevant_agents(data_agents_with_reasoning, query)
 
     async def draft_query_plan(
         self, data_agents: list[DataAgent], query: str

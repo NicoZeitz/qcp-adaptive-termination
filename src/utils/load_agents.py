@@ -33,6 +33,7 @@ def create_sql_data_agents_from_folder(folder_path: str) -> list[DataAgent]:
 
             data_agents.append(data_agent)
 
+    data_agents.sort(key=lambda agent: agent.name)
     return data_agents
 
 
@@ -47,4 +48,5 @@ def create_text_agents_from_folder(folder_path: str) -> list[DataAgent]:
                 data_agent = TextDataAgent(name=agent_name, text=f.read())
                 data_agents.append(data_agent)
 
+    data_agents.sort(key=lambda agent: agent.name)
     return data_agents

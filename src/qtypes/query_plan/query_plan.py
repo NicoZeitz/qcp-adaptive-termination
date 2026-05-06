@@ -62,7 +62,9 @@ class QueryPlanStep:
             "dependencies": [
                 dependency.to_span_data() for dependency in self.dependencies
             ],
-            "answer_available": result_to_span_data(self.answer) if self.answer is not None else None,
+            "answer_available": result_to_span_data(self.answer)
+            if self.answer is not None
+            else None,
         }
 
 

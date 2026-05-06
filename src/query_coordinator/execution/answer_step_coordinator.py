@@ -1,6 +1,11 @@
 from typing import Any, cast
 
-from agents import FunctionToolResult, RunContextWrapper, RunResult, ToolsToFinalOutputResult
+from agents import (
+    FunctionToolResult,
+    RunContextWrapper,
+    RunResult,
+    ToolsToFinalOutputResult,
+)
 import pandas as pd
 
 from code_execution.code_execution_environment import CodeExecutionEnvironment
@@ -82,7 +87,7 @@ async def answer_step_coordinator(
                 reset_tool_choice=False,
                 parallel_tool_calls=False,
                 tool_choice="required",
-                output_type=PartialQueryAnswerDummy, # See: https://github.com/openai/openai-agents-python/blob/main/src/agents/run_internal/turn_resolution.py#L189-L190
+                output_type=PartialQueryAnswerDummy,  # See: https://github.com/openai/openai-agents-python/blob/main/src/agents/run_internal/turn_resolution.py#L189-L190
             ),
         )
 

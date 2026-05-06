@@ -4,7 +4,9 @@ from utils.preview import CHAR_LIMIT_LONG_LLM, preview_text
 from utils.run_agent import run_agent
 
 
-async def is_relevant(data_agent: DataAgent, text: str, query: str) -> bool:
+async def is_relevant(
+    data_agent: DataAgent, text: str, query: str, reasoning: str
+) -> bool:
     result, _ = await run_agent(
         name_postfix="Relevance",
         agent_configuration=data_agent.agent_configuration,
@@ -17,7 +19,7 @@ async def is_relevant(data_agent: DataAgent, text: str, query: str) -> bool:
         ),
         prompt=load_prompt(
             "Text Data Agent/Relevance/Prompt",
-            {"query": query},
+            {"query": query, "reasoning": reasoning},
         ),
         output_type=bool,
     )

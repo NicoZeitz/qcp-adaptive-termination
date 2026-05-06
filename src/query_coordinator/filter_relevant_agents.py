@@ -11,19 +11,34 @@ from utils.run_agent import run_agent
 from utils.span import append_to_span_input, append_to_span_output
 
 
+def build_relevance_model(data_agents: list[DataAgent]) -> type[BaseModel]:
+    agent_fields: dict[str, Any] = {}
+    for agent in data_agents:
+        AgentRelevanceModel = create_model(
+            f"{agent.name}Relevance",
+            is_relevant=(
+                bool,
+                Field(..., description="Whether this agent is relevant to the query"),
+            ),
+            reasoning=(
+                str,
+                Field(
+                    ...,
+                    description="Explanation of why this agent is or isn't relevant",
+                ),
+            ),
+        )
+        agent_fields[agent.name] = (AgentRelevanceModel, Field(...))
+
+    return create_model("RelevanceModel", **agent_fields)
+
+
 async def filter_relevant_agents(
     coordinator: QueryCoordinator, data_agents: list[DataAgent], query: str
-) -> list[DataAgent]:
+) -> list[tuple[DataAgent, str]]:
     with own_custom_span("Coordinator - Filtering Relevant Agents") as span:
-
-        def build_output_model(data_agents: list[DataAgent]) -> type[BaseModel]:
-            agent_fields: dict[str, Any] = {
-                agent.name: (bool, Field(...)) for agent in data_agents
-            }
-            return create_model("RelevanceModel", **agent_fields)
-
         agent_registry = await build_agent_registry(data_agents, span)
-        RelevanceModel = build_output_model(data_agents)
+        RelevanceModel = build_relevance_model(data_agents)
 
         append_to_span_input(span, {"query": query})
 
@@ -38,12 +53,19 @@ async def filter_relevant_agents(
             output_type=RelevanceModel,
         )
 
-        relevant_agents = []
+        relevant_agents_with_reasoning: list[tuple[DataAgent, str]] = []
         for agent in data_agents:
-            relevant = getattr(relevances, agent.name, False)
+            relevant = getattr(getattr(relevances, agent.name), "is_relevant")
+            reasoning = getattr(getattr(relevances, agent.name), "reasoning")
 
-            append_to_span_output(span, {f"{agent.name}_relevant": relevant})
+            append_to_span_output(
+                span,
+                {
+                    f"{agent.name}_relevant": relevant,
+                    f"{agent.name}_reasoning": reasoning,
+                },
+            )
             if relevant:
-                relevant_agents.append(agent)
+                relevant_agents_with_reasoning.append((agent, reasoning))
 
-        return relevant_agents
+        return relevant_agents_with_reasoning

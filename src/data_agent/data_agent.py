@@ -28,7 +28,7 @@ class DataAgent(ABC):
         pass
 
     @abstractmethod
-    async def is_relevant(self, query: str) -> bool:
+    async def is_relevant(self, query: str, reasoning: str) -> bool:
         pass
 
     @abstractmethod

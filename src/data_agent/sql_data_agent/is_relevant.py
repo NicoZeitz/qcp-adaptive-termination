@@ -3,7 +3,7 @@ from utils.prompt import load_prompt
 from utils.run_agent import run_agent
 
 
-async def is_relevant(data_agent: DataAgent, query: str) -> bool:
+async def is_relevant(data_agent: DataAgent, query: str, reasoning: str) -> bool:
     is_relevant, _ = await run_agent(
         name_postfix="Relevance",
         agent_configuration=data_agent.agent_configuration,
@@ -13,7 +13,7 @@ async def is_relevant(data_agent: DataAgent, query: str) -> bool:
         ),
         prompt=load_prompt(
             "SQL Data Agent/Relevance/Prompt",
-            {"query": query},
+            {"query": query, "reasoning": reasoning},
         ),
         output_type=bool,
     )

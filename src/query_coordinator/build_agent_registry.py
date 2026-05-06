@@ -31,7 +31,10 @@ async def build_agent_registry(
                     {
                         "name": name,
                         "description": preview_text(description, CHAR_LIMIT_SPAN),
-                        "capabilities": [preview_text(capability, CHAR_LIMIT_SPAN) for capability in capabilities],
+                        "capabilities": [
+                            preview_text(capability, CHAR_LIMIT_SPAN)
+                            for capability in capabilities
+                        ],
                     }
                     for name, description, capabilities in agent_infos
                 ]
@@ -39,6 +42,6 @@ async def build_agent_registry(
         )
 
     return "\n\n".join(
-        f"【{name}】\nDescription: {description}\nCapabilities: {', '.join(capabilities)}"
+        f"【Agent Name】 {name}\n{description}\n【Capabilities】 {', '.join(capabilities)}"
         for name, description, capabilities in agent_infos
     )
