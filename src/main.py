@@ -1,83 +1,57 @@
 from typing import Literal
+import os
 
 from agents import trace
 
-from modules.config import (
+from query_coordinator.default_query_coordinator import DefaultQueryCoordinator
+from query_coordinator.query_coordinator import QueryCoordinator
+from utils.initialization import initialize, langfuse
+from data_agent.data_agent import DataAgent
+from utils.load_agents import (
     create_sql_data_agents_from_folder,
     create_text_agents_from_folder,
-    get_default_query_coordinator_agent_config,
-    load_query,
 )
-from modules.initialization import initialize, langfuse
-from modules.model import ReplanMode
-from modules.query_coordinator import QueryCoordinator
 
 
 async def main(
     sql_data_agents_path: str,
     text_data_agents_path: str,
-    query_path: str,
-    replan_mode: ReplanMode,
+    query: str,
     provider: Literal["University", "Work"],
 ):
-    user_query, _sql_query, expected_result = load_query(query_path)
+    user = "NZ" if os.getlogin() == "I550817" else "FW"
 
     with trace(
-        "NZ: Collaborative Query Answering",
-        metadata={"query": user_query, "provider": provider},
+        f"{user}: Collaborative Query Answering",
+        metadata={"query": query, "provider": provider},
     ):
-        print(
-            "================================================== REGISTERING ======================================================"
-        )
-        queryCoordinator = QueryCoordinator(
-            agent=get_default_query_coordinator_agent_config("Query Coordinator"),
-            replan_mode=replan_mode,
-        )
+        data_agents: list[DataAgent] = []
+        data_agents.extend(create_sql_data_agents_from_folder(sql_data_agents_path))
+        data_agents.extend(create_text_agents_from_folder(text_data_agents_path))
 
-        sql_data_agents = create_sql_data_agents_from_folder(sql_data_agents_path)
-        for data_agent in sql_data_agents:
-            queryCoordinator.register_data_agent(data_agent)
+        query_coordinator: QueryCoordinator = DefaultQueryCoordinator()
 
-        text_data_agents = create_text_agents_from_folder(text_data_agents_path)
-        for data_agent in text_data_agents:
-            queryCoordinator.register_data_agent(data_agent)
-
-        print(
-            "================================================== USER QUERY ======================================================="
-        )
-        print(user_query)
-        print(
-            "================================================== ANSWERING ========================================================"
-        )
-        result = await queryCoordinator.collaborative_query_answering(user_query)
-        print(
-            "================================================== RESULT ==========================================================="
+        print(query)
+        result = await query_coordinator.collaborative_query_answering(
+            query, data_agents
         )
         print(result)
-        print(
-            "================================================== EXPECTED RESULT =================================================="
-        )
-        print(expected_result)
+
     langfuse.flush()
+
 
 if __name__ == "__main__":
     import argparse
     import asyncio
 
     parser = argparse.ArgumentParser(prog="Collaborative Query Answering")
-    parser.add_argument("--sql-data-agents", type=str, default="../data/handmade")
-    parser.add_argument("--text-data-agents", type=str, default="../data/text")
     parser.add_argument(
         "--query",
         type=str,
-        default="../test/What is the name of the person with id 42?.json",
+        default="Who played Rocket in the movie called 'Guardians of the Galaxy'?",
     )
-    parser.add_argument(
-        "--replan-mode",
-        type=str,
-        choices=["global", "local"],
-        default="local",
-    )
+    parser.add_argument("--sql-data-agents", type=str, default="../data/handmade")
+    parser.add_argument("--text-data-agents", type=str, default="../data/text")
     parser.add_argument(
         "--provider", type=str, choices=["University", "Work"], default="University"
     )
@@ -89,7 +63,6 @@ if __name__ == "__main__":
             args.sql_data_agents,
             args.text_data_agents,
             args.query,
-            ReplanMode(args.replan_mode),
             args.provider,
         )
     )

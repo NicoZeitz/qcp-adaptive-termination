@@ -1,6 +1,5 @@
 """Restricted Python execution environment with a builtin allowlist and isolated I/O."""
 
-import builtins
 from contextlib import contextmanager
 from dataclasses import dataclass
 import io
@@ -12,189 +11,14 @@ import threading
 from typing import Any, Callable
 import uuid
 
-from agents import CustomSpanData, FunctionTool, RunContextWrapper, Span, function_tool
+from agents import FunctionTool, RunContextWrapper, function_tool
+from pydantic import JsonValue
 
-from modules.model import (
-    CHAR_LIMIT_LLM,
-    CHAR_LIMIT_SPAN,
-    AgentContext,
-    preview_text,
+from code_execution.builtins import _SAFE_BUILTINS, _UNSAFE_BUILTINS
+from utils.serialize_value import (
     serialize_value,
 )
-
-# Explicit allowlist: only builtins that cannot access the filesystem, network, or process state.
-_SAFE_BUILTINS = {
-    key: getattr(builtins, key)
-    for key in [
-        "abs",
-        "all",
-        "any",
-        "ascii",
-        "bin",
-        "callable",
-        "chr",
-        "delattr",
-        "dir",
-        "divmod",
-        "format",
-        "getattr",
-        "hasattr",
-        "hash",
-        "hex",
-        "id",
-        "isinstance",
-        "issubclass",
-        "iter",
-        "aiter",
-        "len",
-        "max",
-        "min",
-        "next",
-        "anext",
-        "oct",
-        "ord",
-        "pow",
-        "print",
-        "repr",
-        "round",
-        "setattr",
-        "sorted",
-        "sum",
-        "vars",
-        "None",
-        "Ellipsis",
-        "NotImplemented",
-        "False",
-        "True",
-        "bool",
-        "memoryview",
-        "bytearray",
-        "bytes",
-        "classmethod",
-        "complex",
-        "dict",
-        "enumerate",
-        "filter",
-        "float",
-        "frozenset",
-        "property",
-        "int",
-        "list",
-        "map",
-        "object",
-        "range",
-        "reversed",
-        "set",
-        "slice",
-        "staticmethod",
-        "str",
-        "super",
-        "tuple",
-        "type",
-        "zip",
-        "BaseException",
-        "BaseExceptionGroup",
-        "Exception",
-        "GeneratorExit",
-        "KeyboardInterrupt",
-        "SystemExit",
-        "ArithmeticError",
-        "AssertionError",
-        "AttributeError",
-        "BufferError",
-        "EOFError",
-        "ImportError",
-        "LookupError",
-        "MemoryError",
-        "NameError",
-        "OSError",
-        "ReferenceError",
-        "RuntimeError",
-        "StopAsyncIteration",
-        "StopIteration",
-        "SyntaxError",
-        "SystemError",
-        "TypeError",
-        "ValueError",
-        "Warning",
-        "FloatingPointError",
-        "OverflowError",
-        "ZeroDivisionError",
-        "BytesWarning",
-        "DeprecationWarning",
-        "EncodingWarning",
-        "FutureWarning",
-        "ImportWarning",
-        "PendingDeprecationWarning",
-        "ResourceWarning",
-        "RuntimeWarning",
-        "SyntaxWarning",
-        "UnicodeWarning",
-        "UserWarning",
-        "BlockingIOError",
-        "ChildProcessError",
-        "ConnectionError",
-        "FileExistsError",
-        "FileNotFoundError",
-        "InterruptedError",
-        "IsADirectoryError",
-        "NotADirectoryError",
-        "PermissionError",
-        "ProcessLookupError",
-        "TimeoutError",
-        "IndentationError",
-        "IndexError",
-        "KeyError",
-        "ModuleNotFoundError",
-        "NotImplementedError",
-        # "PythonFinalizationError",
-        "RecursionError",
-        "UnboundLocalError",
-        "UnicodeError",
-        "BrokenPipeError",
-        "ConnectionAbortedError",
-        "ConnectionRefusedError",
-        "ConnectionResetError",
-        "TabError",
-        "UnicodeDecodeError",
-        "UnicodeEncodeError",
-        "UnicodeTranslateError",
-        "ExceptionGroup",
-        "EnvironmentError",
-        "IOError",
-    ]
-}
-
-# Explicitly set to None
-_UNSAFE_BUILTINS = {
-    key: None
-    for key in [
-        "__name__",
-        "__doc__",
-        "__package__",
-        "__loader__",
-        "__spec__",
-        "__build_class__",
-        "__import__",
-        "breakpoint",
-        "compile",
-        "eval",
-        "exec",
-        "globals",
-        "input",
-        "locals",
-        "__debug__",
-        "_IncompleteInputError",
-        "open",
-        "quit",
-        "exit",
-        "copyright",
-        "credits",
-        "license",
-        "help",
-        "_",
-    ]
-}
+from utils.preview import CHAR_LIMIT_LLM, CHAR_LIMIT_SPAN, preview_text
 
 
 @dataclass
@@ -284,14 +108,14 @@ class CodeExecutionEnvironment:
         self.code_executions.append(execution_result)
         return execution_result
 
-    def as_function_tool(self) -> FunctionTool:
+    def as_function_tool[TContext](self) -> FunctionTool:
         @function_tool(
             name_override="execute_code",
             timeout=60,
             timeout_behavior="error_as_result",
         )
         async def execute_python_code(
-            ctx: RunContextWrapper[AgentContext], code: str
+            ctx: RunContextWrapper[TContext], code: str
         ) -> str:
             """
             Execute python code. You will only see partial output results.
@@ -303,7 +127,7 @@ class CodeExecutionEnvironment:
     def get_code_executions(self) -> list[CodeExecutionResult]:
         return self.code_executions
 
-    def to_span_data(self) -> list[Any]:
+    def to_span_data(self) -> JsonValue:
         return [
             {
                 "code": preview_text(code_execution.code, CHAR_LIMIT_SPAN),
@@ -321,7 +145,6 @@ class CodeExecutionEnvironment:
             }
             for code_execution in self.code_executions
         ]
-
 
     def _format_result(
         self,

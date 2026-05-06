@@ -1,0 +1,23 @@
+from data_agent.data_agent import DataAgent
+from utils.prompt import load_prompt
+from utils.preview import CHAR_LIMIT_LONG_LLM, preview_text
+from utils.run_agent import run_agent
+
+
+async def is_relevant(data_agent: DataAgent, text: str, query: str) -> bool:
+    return await run_agent(
+        name_postfix="Relevance",
+        agent_configuration=data_agent.agent_configuration,
+        system_prompt=load_prompt(
+            "Text Data Agent/Relevance/Instructions",
+            {
+                "summary": await data_agent.data_description(),
+                "preview": preview_text(text, CHAR_LIMIT_LONG_LLM),
+            },
+        ),
+        prompt=load_prompt(
+            "Text Data Agent/Relevance/Prompt",
+            {"query": query},
+        ),
+        output_type=bool,
+    )
