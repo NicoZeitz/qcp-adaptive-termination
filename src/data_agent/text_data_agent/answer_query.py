@@ -1,6 +1,6 @@
 from typing import Any, cast
 
-from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
+from agents import FunctionToolResult, RunContextWrapper, RunResult, ToolsToFinalOutputResult
 import pandas as pd
 
 from data_agent.data_agent import DataAgent
@@ -69,8 +69,8 @@ async def answer_query(
                 final_output=partial_answer,
             )
 
-        result = cast(
-            PartialQueryAnswer,
+        result, _ = cast(
+            tuple[PartialQueryAnswer, RunResult],
             await run_agent(
                 name_postfix="Code",
                 agent_configuration=data_agent.agent_configuration,

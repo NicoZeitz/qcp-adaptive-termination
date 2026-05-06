@@ -27,7 +27,7 @@ async def filter_relevant_agents(
 
         append_to_span_input(span, {"query": query})
 
-        relevances = await run_agent(
+        relevances, _ = await run_agent(
             name_postfix="Relevance",
             agent_configuration=coordinator.agent_configuration,
             instructions=load_prompt(
