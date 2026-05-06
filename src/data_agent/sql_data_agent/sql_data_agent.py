@@ -19,8 +19,8 @@ class SqlDataAgent(DataAgent):
     async def query_capabilities(self) -> list[str]:
         return ["Text-to-SQL"]
 
-    async def is_relevant(self, query: str) -> bool:
-        return await is_relevant(self, query)
+    async def is_relevant(self, query: str, reasoning: str) -> bool:
+        return await is_relevant(self, query, reasoning)
 
     async def answer_query(
         self, query: str, additional_information: dict[str, ResultType]

@@ -17,8 +17,8 @@ class TextDataAgent(DataAgent):
     async def query_capabilities(self) -> list[str]:
         return ["Natural Language Question Answering", "Reading Comprehension"]
 
-    async def is_relevant(self, query: str) -> bool:
-        return await is_relevant(self, self.text, query)
+    async def is_relevant(self, query: str, reasoning: str) -> bool:
+        return await is_relevant(self, self.text, query, reasoning)
 
     async def answer_query(
         self, query: str, additional_information: dict[str, ResultType]

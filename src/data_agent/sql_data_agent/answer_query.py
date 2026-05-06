@@ -1,7 +1,12 @@
 from dataclasses import dataclass
 from typing import Any, cast
 
-from agents import FunctionToolResult, RunContextWrapper, RunResult, ToolsToFinalOutputResult
+from agents import (
+    FunctionToolResult,
+    RunContextWrapper,
+    RunResult,
+    ToolsToFinalOutputResult,
+)
 import pandas as pd
 from pandas import DataFrame
 from pydantic import JsonValue
@@ -120,7 +125,7 @@ async def answer_query(
                 reset_tool_choice=False,
                 parallel_tool_calls=False,
                 tool_choice="required",
-                output_type=PartialQueryAnswerDummy, # See: https://github.com/openai/openai-agents-python/blob/main/src/agents/run_internal/turn_resolution.py#L189-L190
+                output_type=PartialQueryAnswerDummy,  # See: https://github.com/openai/openai-agents-python/blob/main/src/agents/run_internal/turn_resolution.py#L189-L190
             ),
         )
 

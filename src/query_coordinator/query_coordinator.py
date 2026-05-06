@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import asyncio
 
 from openai.types.shared import Reasoning
 
@@ -31,10 +30,14 @@ class QueryCoordinator(ABC):
         self, query: str, data_agents: list[DataAgent]
     ) -> ResultType:
         # Stage 1: Filter relevant agents by Query Coordinator
-        data_agents = await self.filter_relevant_agents(data_agents, query)
+        relevant_data_agents_with_reasoning = await self.filter_relevant_agents(
+            data_agents, query
+        )
 
         # Stage 2: Filter relevant agents by asking the agents directly
-        data_agents = await self.ask_relevant_agents(data_agents, query)
+        data_agents = await self.ask_relevant_agents(
+            relevant_data_agents_with_reasoning, query
+        )
 
         # Stage 3: Draft a Query Plan
         query_plan = await self.draft_query_plan(data_agents, query)
@@ -100,12 +103,12 @@ class QueryCoordinator(ABC):
     @abstractmethod
     async def filter_relevant_agents(
         self, data_agents: list[DataAgent], query: str
-    ) -> list[DataAgent]:
+    ) -> list[tuple[DataAgent, str]]:
         pass
 
     @abstractmethod
     async def ask_relevant_agents(
-        self, data_agents: list[DataAgent], query: str
+        self, data_agents_with_reasoning: list[tuple[DataAgent, str]], query: str
     ) -> list[DataAgent]:
         pass
 

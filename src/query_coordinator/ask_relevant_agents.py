@@ -1,21 +1,29 @@
 import asyncio
 
 from data_agent.data_agent import DataAgent
-from query_coordinator.query_coordinator import QueryCoordinator
 from utils.span import append_to_span_input, own_custom_span
 
 
 async def ask_relevant_agents(
-    data_agents: list[DataAgent], query: str
+    data_agents_with_reasoning: list[tuple[DataAgent, str]], query: str
 ) -> list[DataAgent]:
     with own_custom_span("Coordinator - Agent Relevance Filtering") as span:
-        append_to_span_input(span, {"query": query, "data_agents": [agent.name for agent in data_agents]})
+        append_to_span_input(
+            span,
+            {
+                "query": query,
+                "data_agents": [agent.name for agent, _ in data_agents_with_reasoning],
+            },
+        )
 
         relevant_data_agents = []
         for agent, is_relevant in zip(
-            data_agents,
+            [agent for agent, _ in data_agents_with_reasoning],
             await asyncio.gather(
-                *(agent.is_relevant(query) for agent in data_agents)
+                *(
+                    agent.is_relevant(query, reasoning)
+                    for agent, reasoning in data_agents_with_reasoning
+                )
             ),
         ):
             append_to_span_input(span, {agent.name: is_relevant})
