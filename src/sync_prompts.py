@@ -53,16 +53,23 @@ def down():
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(prog="Langfuse Prompt Sync")
-    parser.add_argument("--type", type=str, choices=["down", "up"])
+    parser = argparse.ArgumentParser(
+        prog="Langfuse Prompt Sync",
+        description="Sync prompts between local files and Langfuse"
+    )
+    parser.add_argument(
+        "--type",
+        type=str,
+        choices=["down", "up"],
+        required=True,
+        help="Sync direction: 'up' (local → Langfuse) or 'down' (Langfuse → local)"
+    )
     args = parser.parse_args()
 
     initialize()
     if args.type == "down":
         down()
-        print("synced all changes")
+        print("✓ Synced all changes from Langfuse to local")
     elif args.type == "up":
         up()
-        print("synced all changes")
-    else:
-        print(f"Invalid sync type: {args.type}")
+        print("✓ Synced all changes from local to Langfuse")

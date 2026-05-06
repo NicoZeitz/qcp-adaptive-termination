@@ -1,6 +1,8 @@
 {
-"select count(*) from titles where title_id in (select show_title_id  from episodes where episode_number > 50000) and type = 'tvSeries'": [
+"select count(distinct show_title_id) from episodes where episode_number > 50000": [
 	{
 		"count(*)" : 3
 	}
-]}
+],
+"Relevant agents": ["A3"]
+}
