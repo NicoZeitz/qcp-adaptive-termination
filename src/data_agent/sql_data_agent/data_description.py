@@ -112,6 +112,7 @@ def create_database_description_model(schema_engine: SchemaEngine) -> type[BaseM
 @alru_cache
 async def data_description(data_agent: DataAgent, db_engine: Engine) -> str:
     if data_agent.name in CACHED_DATA_DESCRIPTION:
+        print("Using cached data description for agent:", data_agent.name)
         return CACHED_DATA_DESCRIPTION[data_agent.name]  # TODO:REMOVE
 
     schema_engine = SchemaEngine(db_engine, db_name=data_agent.name)
