@@ -1,6 +1,7 @@
 from typing import cast
 
 from data_agent.data_agent import DataAgent
+from qtypes.AdditionalInformation import AdditionalInformation
 from query_coordinator.execution.answer_step_coordinator import answer_step_coordinator
 from query_coordinator.execution.answer_step_data_agent import answer_step_data_agent
 from query_coordinator.query_coordinator import QueryCoordinator
@@ -11,7 +12,7 @@ from qtypes.query_plan.query_plan_step_execution_result import (
     QueryPlanStepExecutionResult,
     SuccessfulExecution,
 )
-from qtypes.query_plan.result import ResultType, result_to_span_data
+from qtypes.query_plan.result import ResultType
 from utils.span import append_to_span_input, append_to_span_output, own_custom_span
 
 
@@ -20,21 +21,22 @@ async def execute_query_plan_step(
     data_agents: list[DataAgent],
     query_plan_step: QueryPlanStep,
 ) -> PartialQueryAnswer:
-    additional_information = {
-        dependency.dependency: dependency.step.answer
+    additional_information: list[AdditionalInformation] = [
+        AdditionalInformation(
+            dependency=dependency.dependency, data=dependency.step.answer
+        )
         for dependency in query_plan_step.dependencies
         if dependency.step.answer is not None
-    }
+    ]
 
     with own_custom_span(f"Execute Step: {query_plan_step.id}") as span:
         append_to_span_input(
             span,
             {
                 "step": query_plan_step.to_span_data(),
-                "additional_information": {
-                    k: result_to_span_data(v) if v is not None else None
-                    for k, v in additional_information.items()
-                },
+                "additional_information": [
+                    information.to_span_data() for information in additional_information
+                ],
             },
         )
 

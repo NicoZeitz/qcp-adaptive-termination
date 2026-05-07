@@ -9,13 +9,12 @@ from agents import (
 import pandas as pd
 
 from code_execution.code_execution_environment import CodeExecutionEnvironment
+from qtypes.AdditionalInformation import AdditionalInformation
 from query_coordinator.query_coordinator import QueryCoordinator
 from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDummy
 from qtypes.query_plan.need import try_parse_value_to_need_type
 from qtypes.query_plan.query_plan import QueryPlanStep
 from qtypes.query_plan.result import (
-    ResultType,
-    result_to_span_data,
     try_parse_value_to_result_type,
 )
 from utils.prompt import load_prompt
@@ -26,7 +25,7 @@ from utils.span import append_to_span_input, append_to_span_output, own_custom_s
 async def answer_step_coordinator(
     coordinator: QueryCoordinator,
     query_plan_step: QueryPlanStep,
-    additional_information: dict[str, ResultType],
+    additional_information: list[AdditionalInformation],
 ) -> PartialQueryAnswer:
     query = query_plan_step.query
 
@@ -35,10 +34,9 @@ async def answer_step_coordinator(
             span,
             {
                 "query": query,
-                "additional_information": {
-                    k: result_to_span_data(v) if v is not None else None
-                    for k, v in additional_information.items()
-                },
+                "additional_information": [
+                    information.to_span_data() for information in additional_information
+                ],
             },
         )
 

@@ -1,11 +1,11 @@
 from sqlalchemy import Engine
 
 from data_agent.data_agent import DataAgent
+from qtypes.AdditionalInformation import AdditionalInformation
 from qtypes.partial_query_answer import PartialQueryAnswer
 from data_agent.sql_data_agent.answer_query import answer_query
 from data_agent.sql_data_agent.data_description import data_description
 from data_agent.sql_data_agent.is_relevant import is_relevant
-from qtypes.query_plan.result import ResultType
 
 
 class SqlDataAgent(DataAgent):
@@ -23,6 +23,6 @@ class SqlDataAgent(DataAgent):
         return await is_relevant(self, query, reasoning)
 
     async def answer_query(
-        self, query: str, additional_information: dict[str, ResultType]
+        self, query: str, additional_information: list[AdditionalInformation]
     ) -> PartialQueryAnswer:
         return await answer_query(self, self.db_engine, query, additional_information)
