@@ -25,3 +25,6 @@ Result Agent
 
 * Code in Stages
 * Panda dataframes as passing around
+
+* Additional information data preview always in all codes
+* Only inject additional information to the prompt, if it exists
