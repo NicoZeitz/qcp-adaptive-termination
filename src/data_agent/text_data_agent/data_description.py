@@ -13,6 +13,7 @@ CACHED_DATA_DESCRIPTION = {
 @alru_cache
 async def data_description(data_agent: DataAgent, text: str) -> str:
     if data_agent.name in CACHED_DATA_DESCRIPTION:
+        print("Using cached data description for agent:", data_agent.name)
         return CACHED_DATA_DESCRIPTION[data_agent.name]  # TODO:REMOVE
 
     result, _ = await run_agent(
