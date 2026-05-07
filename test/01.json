@@ -1,0 +1,70 @@
+{
+    "query": "Who played Rocket in the movie called 'Guardians of the Galaxy'?",
+    "answer": "Bradley Cooper",
+    "sql_query": "select distinct p.name \nfrom people p \njoin crew c on p.person_id = c.person_id\njoin titles t on c.title_id = t.title_id \nwhere t.original_title  = 'Guardians of the Galaxy'\nand t.\"type\" = 'movie'\nand c.\"characters\" like '%Rocket%'",
+    "relevant_data_agents": [
+        "A1",
+        "A2",
+        "A4",
+        "A5"
+    ],
+    "query_plan": {
+        "query": "Who played Rocket in the movie called 'Guardians of the Galaxy'?",
+        "steps": [
+            {
+                "id": "s1",
+                "query": "Find the title_id of the movie called 'Guardians of the Galaxy'",
+                "to_agent": "A4",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s2",
+                "query": "Find the title_id of the movie called 'Guardians of the Galaxy'",
+                "to_agent": "A5",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s3",
+                "query": "Find the person_id of the crew member who played Rocket in the movie with given title_id",
+                "to_agent": "A2",
+                "dependencies": [
+                    {
+                        "step_id": "s1",
+                        "dependency": "The title_id of the movie called 'Guardians of the Galaxy'"
+                    },
+                    {
+                        "step_id": "s2",
+                        "dependency": "The title_id of the movie called 'Guardians of the Galaxy'"
+                    }
+                ],
+                "answer": null
+            },
+            {
+                "id": "s4",
+                "query": "Find the name of the person with given person_id",
+                "to_agent": "A1",
+                "dependencies": [
+                    {
+                        "step_id": "s3",
+                        "dependency": "The person_id of the crew member who played Rocket in the movie 'Guardians of the Galaxy'"
+                    }
+                ],
+                "answer": null
+            },
+            {
+                "id": "s5",
+                "query": "Who played Rocket in the movie called 'Guardians of the Galaxy'?",
+                "to_agent": "Coordinator",
+                "dependencies": [
+                    {
+                        "step_id": "s4",
+                        "dependency": "The name of the person who played Rocket in the movie with given person_id"
+                    }
+                ],
+                "answer": null
+            }
+        ]
+    }
+}

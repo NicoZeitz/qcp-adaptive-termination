@@ -1,9 +1,7 @@
-from agents import Agent
 import os
 import time
 
-from modules.model import AgentContext
-from modules.splits.splitter import SplitType, create_agents
+from splits.splitter import SplitType, create_agents
 
 if __name__ == "__main__":
     always_included_columns_mapping = {
@@ -22,7 +20,6 @@ if __name__ == "__main__":
     data_agents = create_agents(
         output_path="../data/splits",
         database_url=f"sqlite:///{os.path.abspath('../data/imdb.db')}",
-        agent=Agent[AgentContext](name=""),
         agent_amount=5,
         always_included_columns_mapping=always_included_columns_mapping,
         split_type=SplitType.MIXED,
@@ -33,7 +30,6 @@ if __name__ == "__main__":
     data_agents = create_agents(
         output_path="../data/splits",
         database_url=f"sqlite:///{os.path.abspath('../data/imdb.db')}",
-        agent=Agent[AgentContext](name=""),
         agent_amount=5,
         always_included_columns_mapping=always_included_columns_mapping,
         split_type=SplitType.VERTICAL,
@@ -44,7 +40,6 @@ if __name__ == "__main__":
     data_agents = create_agents(
         output_path="../data/splits",
         database_url=f"sqlite:///{os.path.abspath('../data/imdb.db')}",
-        agent=Agent[AgentContext](name=""),
         agent_amount=5,
         always_included_columns_mapping=always_included_columns_mapping,
         split_type=SplitType.HORIZONTAL,

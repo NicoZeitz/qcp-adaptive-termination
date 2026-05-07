@@ -21,3 +21,10 @@ Result Agent
 * Schema Alignment: LLM-generated code to normalize the data.
 * LLM-Guided Synthesis: The Coordinator decides how the partial results need to be combined and generates executable code.
 * Result Alignment by Code Generation
+
+
+* Code in Stages
+* Panda dataframes as passing around
+
+* Additional information data preview always in all codes
+* Only inject additional information to the prompt, if it exists
