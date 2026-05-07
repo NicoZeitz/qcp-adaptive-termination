@@ -1,7 +1,7 @@
 import pandas as pd
 from pandas import DataFrame, MultiIndex
 
-CHAR_LIMIT_LLM = 600
+CHAR_LIMIT_LLM = 2000
 CHAR_LIMIT_LONG_LLM = 6000
 CHAR_LIMIT_SPAN = 50
 
