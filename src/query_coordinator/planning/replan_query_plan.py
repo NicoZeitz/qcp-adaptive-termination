@@ -102,7 +102,7 @@ async def replan_query_plan(
         name_postfix="Draft Query Plan",
         agent_configuration=coordinator.agent_configuration,
         instructions=load_prompt(
-            "Query Coordinator/Query Replan/Instruction",
+            "Query Coordinator/Query Replan/Instructions",
             {
                 "agent_registry": agent_registry,
                 "old_query_plan": create_query_plan_prompt_context(query_plan),
