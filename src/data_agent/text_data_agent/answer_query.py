@@ -9,14 +9,13 @@ from agents import (
 import pandas as pd
 
 from data_agent.data_agent import DataAgent
+from qtypes.AdditionalInformation import AdditionalInformation
 from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDummy
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.query_plan.need import (
     try_parse_value_to_need_type,
 )
 from qtypes.query_plan.result import (
-    ResultType,
-    result_to_span_data,
     try_parse_value_to_result_type,
 )
 from utils.prompt import load_prompt
@@ -28,17 +27,16 @@ async def answer_query(
     data_agent: DataAgent,
     text: str,
     query: str,
-    additional_information: dict[str, ResultType],
+    additional_information: list[AdditionalInformation],
 ) -> PartialQueryAnswer:
     with own_custom_span("Text Data Agent - answer_query") as span:
         append_to_span_input(
             span,
             {
                 "query": query,
-                "additional_information": {
-                    k: result_to_span_data(v) if v is not None else None
-                    for k, v in additional_information.items()
-                },
+                "additional_information": [
+                    information.to_span_data() for information in additional_information
+                ],
             },
         )
 

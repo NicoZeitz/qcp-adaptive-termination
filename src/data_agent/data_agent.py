@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 
 from openai.types.shared import Reasoning
 
+from qtypes.AdditionalInformation import AdditionalInformation
 from qtypes.agent_configuration import AgentConfiguration
 from qtypes.partial_query_answer import PartialQueryAnswer
-from qtypes.query_plan.result import ResultType
 
 
 class DataAgent(ABC):
@@ -33,6 +33,8 @@ class DataAgent(ABC):
 
     @abstractmethod
     async def answer_query(
-        self, query: str, additional_information: dict[str, ResultType]
+        self,
+        query: str,
+        additional_information: list[AdditionalInformation],
     ) -> PartialQueryAnswer:
         pass
