@@ -19,10 +19,9 @@ async def data_description(data_agent: DataAgent, text: str) -> str:
     result, _ = await run_agent(
         name_postfix="Summary",
         agent_configuration=data_agent.agent_configuration,
-        instructions=load_prompt("Text Data Agent/Summary/Instructions", {}),
-        prompt=load_prompt(
-            "Text Data Agent/Summary/Prompt",
-            {"preview": preview_text(text, CHAR_LIMIT_LONG_LLM)},
-        ),
+        prompt_name="Text Data Agent/Summary",
+        prompt_parameters={
+            "preview": preview_text(text, CHAR_LIMIT_LONG_LLM),
+        },
     )
     return result

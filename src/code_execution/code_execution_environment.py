@@ -134,13 +134,11 @@ class CodeExecutionEnvironment:
                 "stdout": preview_text(code_execution.stdout, CHAR_LIMIT_SPAN),
                 "stderr": preview_text(code_execution.stderr, CHAR_LIMIT_SPAN),
                 "exception": serialize_value(code_execution.exception),
-                "locals": str(
-                    [
-                        f"{k}: {type(v).__name__}"
-                        for k, v in code_execution.locals.items()
-                        if not k.startswith("_")
-                    ]
-                ),
+                "locals": [
+                    f"{k}: {type(v).__name__}"
+                    for k, v in code_execution.locals.items()
+                    if not k.startswith("_")
+                ],
                 # "formatted": code_execution.formatted,
             }
             for code_execution in self.code_executions

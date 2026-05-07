@@ -75,11 +75,10 @@ async def answer_step_coordinator(
             await run_agent(
                 name_postfix="Code",
                 agent_configuration=coordinator.agent_configuration,
-                instructions=load_prompt(
-                    "Query Coordinator/Aggregate/Instructions",
-                    {},
-                ),
-                prompt=load_prompt("Query Coordinator/Aggregate/Prompt", {"query": query}),
+                prompt_name="Query Coordinator/Aggregate",
+                prompt_parameters={
+                    "query": query
+                },
                 tools=[code_environment.as_function_tool()],
                 tool_use_behavior=custom_tool_handler,
                 reset_tool_choice=False,

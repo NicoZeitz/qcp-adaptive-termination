@@ -45,11 +45,11 @@ async def filter_relevant_agents(
         relevances, _ = await run_agent(
             name_postfix="Relevance",
             agent_configuration=coordinator.agent_configuration,
-            instructions=load_prompt(
-                "Query Coordinator/Relevance/Instructions",
-                {"agent_registry": agent_registry},
-            ),
-            prompt=load_prompt("Query Coordinator/Relevance/Prompt", {"query": query}),
+            prompt_name="Query Coordinator/Relevance",
+            prompt_parameters={
+                "agent_registry": agent_registry,
+                "query": query
+            },
             output_type=RelevanceModel,
         )
 

@@ -113,11 +113,11 @@ async def answer_query(
             await run_agent(
                 name_postfix="Code",
                 agent_configuration=data_agent.agent_configuration,
-                instructions=load_prompt(
-                    "SQL Data Agent/Code/Instructions",
-                    {"m_schema": await data_agent.data_description()},
-                ),
-                prompt=load_prompt("SQL Data Agent/Code/Prompt", {"query": query}),
+                prompt_name="SQL Data Agent/Code",
+                prompt_parameters={
+                    "m_schema": await data_agent.data_description(),
+                    "query": query
+                },
                 tools=[code_environment.as_function_tool()],
                 tool_use_behavior=custom_tool_handler,
                 reset_tool_choice=False,
