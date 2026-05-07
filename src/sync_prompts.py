@@ -1,27 +1,46 @@
 import os
+from typing import cast
 
-from modules.initialization import initialize, langfuse
+from langfuse.model import ChatMessageWithPlaceholdersDict_Message
+
+from utils.initialization import initialize, langfuse
 
 
-def get_names():
-    names = set()
+def get_prompts():
+    prompts = dict()
 
-    for root, _dirs, files in os.walk("../prompts"):
+    for root, dirs, files in os.walk("../prompts"):
+        if len(files) == 0:
+            continue
+
+        name = root.replace("../prompts/", "")
+        parts = []
         for file in files:
-            names.add(root.replace("../prompts/", "") + "/" + file.replace(".md", ""))
+            with open(f"{root}/{file}", "r") as f:
+                content = f.read()
+                index, role = os.path.splitext(file)[0].split("-", 1)
+                parts.append({"role": role, "content": content, "index": int(index)})
+        parts.sort(key=lambda x: x["index"])
+        prompts[name] = parts
 
-    return names
+    return prompts
 
+def compare_prompts(prompt, parts):
+    if len(prompt.prompt) != len(parts):
+        return False
+
+    for prompt_part, part in zip(prompt.prompt, parts):
+        if prompt_part["role"] != part["role"] or prompt_part["content"] != part["content"]:
+            return False
+
+    return True
 
 def up():
-    for name in get_names():
-        with open(f"../prompts/{name}.md", "r") as f:
-            prompt_content = f.read()
-
+    for name, parts in get_prompts().items():
         same_prompt = True
         try:
-            prompt = langfuse.get_prompt(name, label="latest")
-            same_prompt = prompt.prompt == prompt_content
+            prompt = langfuse.get_prompt(name, type="chat", label="latest")
+            same_prompt = compare_prompts(prompt, parts)
         except Exception:
             print(f"NEW: {name}")
             same_prompt = False
@@ -29,12 +48,23 @@ def up():
         if not same_prompt:
             langfuse.create_prompt(
                 name=name,
-                prompt=prompt_content,
-                type="text",
+                type="chat",
+                prompt=[{"role": part["role"], "content": part["content"]} for part in parts],
                 labels=["production", "latest"],
             )
             print(f"Up: {name}")
 
+def get_parts(name: str):
+    # for all .md files in folder ../prompts/{name}, read content and role from filename, order by index
+    parts = []
+    for root, dirs, files in os.walk(f"../prompts/{name}"):
+        for file in files:
+            with open(f"{root}/{file}", "r") as f:
+                content = f.read()
+                index, role = os.path.splitext(file)[0].split("-", 1)
+                parts.append({"role": role, "content": content, "index": int(index)})
+    parts.sort(key=lambda x: x["index"])
+    return parts
 
 def down():
     response = langfuse.api.prompts.list(label="latest", limit=100)
@@ -44,10 +74,25 @@ def down():
 
     for prompt in response.data:
         name = prompt.name
-        with open(f"../prompts/{name}.md", "w") as f:
-            prompt = langfuse.get_prompt(name, label="latest")
-            f.write(prompt.prompt)
+
+        prompt = langfuse.get_prompt(name, type="chat", label="latest")
+        parts = get_parts(name)
+
+        if not compare_prompts(prompt, parts):
             print(f"Down: {name}")
+            # delete all files in ../prompts/{name}
+            for root, dirs, files in os.walk(f"../prompts/{name}"):
+                for file in files:
+                    os.remove(f"{root}/{file}")
+            # write all prompts to ../prompts/{name} with filename {index}-{role}.md
+            for index, part in enumerate(cast(list[ChatMessageWithPlaceholdersDict_Message], prompt.prompt)):
+                role = part["role"]
+                content = part["content"]
+                os.makedirs(f"../prompts/{name}", exist_ok=True)
+                with open(f"../prompts/{name}/{index}-{role}.md", "w") as f:
+                    f.write(content)
+                print(f"  {index}-{role}.md")
+
 
 
 if __name__ == "__main__":
@@ -55,14 +100,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         prog="Langfuse Prompt Sync",
-        description="Sync prompts between local files and Langfuse"
+        description="Sync prompts between local files and Langfuse",
     )
     parser.add_argument(
         "--type",
         type=str,
         choices=["down", "up"],
         required=True,
-        help="Sync direction: 'up' (local → Langfuse) or 'down' (Langfuse → local)"
+        help="Sync direction: 'up' (local → Langfuse) or 'down' (Langfuse → local)",
     )
     args = parser.parse_args()
 
