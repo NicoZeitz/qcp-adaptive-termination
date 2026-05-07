@@ -10,17 +10,13 @@ async def is_relevant(
     result, _ = await run_agent(
         name_postfix="Relevance",
         agent_configuration=data_agent.agent_configuration,
-        instructions=load_prompt(
-            "Text Data Agent/Relevance/Instructions",
-            {
-                "summary": await data_agent.data_description(),
-                "preview": preview_text(text, CHAR_LIMIT_LONG_LLM),
-            },
-        ),
-        prompt=load_prompt(
-            "Text Data Agent/Relevance/Prompt",
-            {"query": query, "reasoning": reasoning},
-        ),
+        prompt_name="Text Data Agent/Relevance",
+        prompt_parameters={
+            "summary": await data_agent.data_description(),
+            "preview": preview_text(text, CHAR_LIMIT_LONG_LLM),
+            "query": query,
+            "reasoning": reasoning,
+        },
         output_type=bool,
     )
     return result

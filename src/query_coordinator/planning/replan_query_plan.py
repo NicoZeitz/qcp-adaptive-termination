@@ -101,17 +101,13 @@ async def replan_query_plan(
     result, _ = await run_agent(
         name_postfix="Draft Query Plan",
         agent_configuration=coordinator.agent_configuration,
-        instructions=load_prompt(
-            "Query Coordinator/Query Replan/Instructions",
-            {
-                "agent_registry": agent_registry,
-                "old_query_plan": create_query_plan_prompt_context(query_plan),
-            },  # TODO: change prompt
-        ),
-        prompt=load_prompt(
-            "Query Coordinator/Query Replan/Prompt",
-            {"query": query_plan.query, "reason": create_reason_prompt_context(reason)},
-        ),  # TODO: change prompt
+        prompt_name="Query Coordinator/Query Replan",
+        prompt_parameters={
+            "agent_registry": agent_registry,
+            "old_query_plan": create_query_plan_prompt_context(query_plan),
+            "query": query_plan.query,
+            "reason": create_reason_prompt_context(reason),
+        },
         output_type=QueryReplanModel,
     )
 

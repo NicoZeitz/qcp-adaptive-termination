@@ -1,12 +1,10 @@
-from typing import Awaitable, Callable, Literal, Type, cast
+from typing import Literal, Type, cast
 
 from agents import (
     Agent,
     AgentOutputSchemaBase,
     ModelSettings,
-    RunContextWrapper,
     RunResult,
-    RunState,
     Runner,
     StopAtTools,
     TResponseInputItem,
@@ -16,22 +14,16 @@ from agents import (
 from agents.model_settings import ToolChoice
 
 from qtypes.agent_configuration import AgentConfiguration
+from utils.prompt import load_prompt
 
 
-async def run_agent[TResult, TContext](
+async def run_agent[TResult](
     name_postfix: str,
     agent_configuration: AgentConfiguration,
-    prompt: str | list[TResponseInputItem] | RunState[TContext],
-    instructions: (
-        str
-        | Callable[
-            [RunContextWrapper[TContext], Agent[TContext]],
-            str | Awaitable[str],
-        ]
-        | None
-    ) = None,
+    prompt_name: str,
+    prompt_parameters: dict[str, str],
     *,
-    context: TContext | None = None,
+    context: object | None = None,
     output_type: Type[TResult] | AgentOutputSchemaBase | None = str,
     tools: list[Tool] | None = None,
     reset_tool_choice: bool = True,
@@ -45,7 +37,11 @@ async def run_agent[TResult, TContext](
 ) -> tuple[TResult, RunResult]:
     tools = tools or []
 
-    agent = Agent[TContext](
+    prompts = load_prompt(prompt_name, prompt_parameters)
+    # use 1st message as instructions, rest as part of prompt
+    instructions, prompts = prompts[0], prompts[1:]
+
+    agent = Agent[object](
         name=f"{agent_configuration.name} - {name_postfix}",
         model=agent_configuration.model,
         model_settings=ModelSettings(
@@ -54,12 +50,12 @@ async def run_agent[TResult, TContext](
             parallel_tool_calls=parallel_tool_calls,
             tool_choice=tool_choice,
         ),
-        instructions=instructions,
+        instructions=instructions["content"],
         tools=tools,
         tool_use_behavior=tool_use_behavior,
         reset_tool_choice=reset_tool_choice,
         output_type=output_type,
     )
 
-    result = await Runner.run(agent, prompt, context=context)
+    result = await Runner.run(agent, cast(list[TResponseInputItem], prompts), context=context)
     return cast(TResult, result.final_output), result
