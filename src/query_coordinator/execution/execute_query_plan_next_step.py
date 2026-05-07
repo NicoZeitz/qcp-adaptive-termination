@@ -74,6 +74,8 @@ async def execute_query_plan_next_step(
 
     result = await execute_query_plan_step(coordinator, data_agents, step_to_execute)
 
+    step_to_execute.answer = result.answer  # Update the query plan with the (partial) answer (if any)
+
     if result.has_answer and not result.has_needs:
         return SuccessfulExecution(
             step=step_to_execute,
