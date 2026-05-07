@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 from dataclasses import dataclass
 
 from pydantic import Field, JsonValue
@@ -45,6 +45,16 @@ class QueryDependency:
     def to_span_data(self) -> JsonValue:
         return {"step_id": self.step.id, "dependency": self.dependency}
 
+    @staticmethod
+    def load_from_json(data: Any, steps_by_id: dict[str, "QueryPlanStep"]) -> "QueryDependency":
+        step_id = data["step_id"]
+        dependency = data["dependency"]
+
+        step = steps_by_id.get(step_id)
+        if step is None:
+            raise ValueError(f"Step with id {step_id} not found in query plan steps")
+
+        return QueryDependency(step=step, dependency=dependency)
 
 @dataclass
 class QueryPlanStep:
@@ -67,6 +77,26 @@ class QueryPlanStep:
             else None,
         }
 
+    @staticmethod
+    def load_from_json(data: Any, steps_by_id: dict[str, "QueryPlanStep"]) -> "QueryPlanStep":
+        id = data["id"]
+        query = data["query"]
+        to_agent = data["to_agent"]
+        answer = data.get("answer")
+
+        dependencies = []
+        for dependency_data in data.get("dependencies", []):
+            dependency = QueryDependency.load_from_json(dependency_data, steps_by_id)
+            dependencies.append(dependency)
+
+        return QueryPlanStep(
+            id=id,
+            query=query,
+            to_agent=to_agent,
+            dependencies=dependencies,
+            answer=answer
+        )
+
 
 @dataclass
 class QueryPlan:
@@ -75,3 +105,14 @@ class QueryPlan:
 
     def to_span_data(self) -> JsonValue:
         return {"steps": [step.to_span_data() for step in self.steps]}
+
+    @staticmethod
+    def load_from_json(data: Any) -> "QueryPlan":
+        query = data["query"]
+        steps_by_id = {}
+        steps = []
+        for step_data in data["steps"]:
+            step = QueryPlanStep.load_from_json(step_data, steps_by_id)
+            steps_by_id[step.id] = step
+            steps.append(step)
+        return QueryPlan(query=query, steps=steps)
