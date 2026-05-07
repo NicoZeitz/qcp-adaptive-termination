@@ -86,7 +86,7 @@ class QueryCoordinator(ABC):
                     {
                         "query_plan": query_plan.to_span_data(),
                         "data_agents": [agent.name for agent in data_agents],
-                        "reason": failed_execution,
+                        "reason": failed_execution.to_span_data(),
                     },
                 )
                 # TODO: re-add agents
