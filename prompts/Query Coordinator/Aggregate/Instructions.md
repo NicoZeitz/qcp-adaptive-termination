@@ -24,7 +24,7 @@ def final_answer(answer: pd.DataFrame | str | None) -> None:
 
 # Available variables
 query: str
-
+additional_information: dict[str, AdditionalInformation]
 ```
 
 There are multiple functions available to call
