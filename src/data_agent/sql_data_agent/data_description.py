@@ -6,7 +6,6 @@ from sqlalchemy import Engine
 
 from data_agent.data_agent import DataAgent
 from data_agent.sql_data_agent.mschema.schema_engine import SchemaEngine
-from utils.prompt import load_prompt
 from utils.run_agent import run_agent
 
 CACHED_DATA_DESCRIPTION = {

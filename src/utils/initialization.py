@@ -1,6 +1,6 @@
 import os
-from typing import Literal, Optional
-from agents import set_default_openai_client
+from typing import Literal, Optional, cast
+from agents import set_default_openai_client, set_tracing_export_api_key
 from dotenv import load_dotenv
 import nest_asyncio
 import sys
@@ -36,15 +36,14 @@ def initialize(provider: Literal["University", "Work"] = "University"):
     trace.get_tracer_provider().add_span_processor(LangfuseProcessor())  # type: ignore
 
     print(f"Provider: {provider}")
-    if provider == "Work":
-        custom_client = AsyncOpenAI(
-            base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY")
-        )
-        OpenAIAgentsInstrumentor().instrument(exclusive_processor=True)
-    else:
-        custom_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
+    custom_client = (
+        AsyncOpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY"))
+        if provider == "Work"
+        else AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    )
     set_default_openai_client(custom_client)
+    set_tracing_export_api_key(api_key=cast(str, os.getenv("OPENAI_API_KEY")))
+    OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
 
     if not langfuse.auth_check():
         print("Langfuse Authentication failed. Please check your credentials and host.")

@@ -25,15 +25,20 @@ def get_prompts():
 
     return prompts
 
+
 def compare_prompts(prompt, parts):
     if len(prompt.prompt) != len(parts):
         return False
 
     for prompt_part, part in zip(prompt.prompt, parts):
-        if prompt_part["role"] != part["role"] or prompt_part["content"] != part["content"]:
+        if (
+            prompt_part["role"] != part["role"]
+            or prompt_part["content"] != part["content"]
+        ):
             return False
 
     return True
+
 
 def up():
     for name, parts in get_prompts().items():
@@ -49,10 +54,13 @@ def up():
             langfuse.create_prompt(
                 name=name,
                 type="chat",
-                prompt=[{"role": part["role"], "content": part["content"]} for part in parts],
+                prompt=[
+                    {"role": part["role"], "content": part["content"]} for part in parts
+                ],
                 labels=["production", "latest"],
             )
             print(f"Up: {name}")
+
 
 def get_parts(name: str):
     # for all .md files in folder ../prompts/{name}, read content and role from filename, order by index
@@ -65,6 +73,7 @@ def get_parts(name: str):
                 parts.append({"role": role, "content": content, "index": int(index)})
     parts.sort(key=lambda x: x["index"])
     return parts
+
 
 def down():
     response = langfuse.api.prompts.list(label="latest", limit=100)
@@ -85,14 +94,15 @@ def down():
                 for file in files:
                     os.remove(f"{root}/{file}")
             # write all prompts to ../prompts/{name} with filename {index}-{role}.md
-            for index, part in enumerate(cast(list[ChatMessageWithPlaceholdersDict_Message], prompt.prompt)):
+            for index, part in enumerate(
+                cast(list[ChatMessageWithPlaceholdersDict_Message], prompt.prompt)
+            ):
                 role = part["role"]
                 content = part["content"]
                 os.makedirs(f"../prompts/{name}", exist_ok=True)
                 with open(f"../prompts/{name}/{index}-{role}.md", "w") as f:
                     f.write(content)
                 print(f"  {index}-{role}.md")
-
 
 
 if __name__ == "__main__":

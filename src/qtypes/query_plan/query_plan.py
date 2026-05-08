@@ -46,7 +46,9 @@ class QueryDependency:
         return {"step_id": self.step.id, "dependency": self.dependency}
 
     @staticmethod
-    def load_from_json(data: Any, steps_by_id: dict[str, "QueryPlanStep"]) -> "QueryDependency":
+    def load_from_json(
+        data: Any, steps_by_id: dict[str, "QueryPlanStep"]
+    ) -> "QueryDependency":
         step_id = data["step_id"]
         dependency = data["dependency"]
 
@@ -55,6 +57,7 @@ class QueryDependency:
             raise ValueError(f"Step with id {step_id} not found in query plan steps")
 
         return QueryDependency(step=step, dependency=dependency)
+
 
 @dataclass
 class QueryPlanStep:
@@ -78,7 +81,9 @@ class QueryPlanStep:
         }
 
     @staticmethod
-    def load_from_json(data: Any, steps_by_id: dict[str, "QueryPlanStep"]) -> "QueryPlanStep":
+    def load_from_json(
+        data: Any, steps_by_id: dict[str, "QueryPlanStep"]
+    ) -> "QueryPlanStep":
         id = data["id"]
         query = data["query"]
         to_agent = data["to_agent"]
@@ -94,7 +99,7 @@ class QueryPlanStep:
             query=query,
             to_agent=to_agent,
             dependencies=dependencies,
-            answer=answer
+            answer=answer,
         )
 
 

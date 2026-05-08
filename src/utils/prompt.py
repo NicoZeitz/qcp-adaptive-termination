@@ -3,6 +3,7 @@ from typing import Any, Sequence, TypedDict, cast
 from langfuse import get_client
 from langfuse.model import ChatMessageDict
 
+
 class PromptInfo(TypedDict):
     name: str
     version: int

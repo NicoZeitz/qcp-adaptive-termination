@@ -1,5 +1,4 @@
 from data_agent.data_agent import DataAgent
-from utils.prompt import load_prompt
 from utils.preview import CHAR_LIMIT_LONG_LLM, preview_text
 from utils.run_agent import run_agent
 

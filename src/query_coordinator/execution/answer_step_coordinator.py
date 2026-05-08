@@ -17,7 +17,6 @@ from qtypes.query_plan.query_plan import QueryPlanStep
 from qtypes.query_plan.result import (
     try_parse_value_to_result_type,
 )
-from utils.prompt import load_prompt
 from utils.run_agent import run_agent
 from utils.span import append_to_span_input, append_to_span_output, own_custom_span
 
@@ -76,9 +75,7 @@ async def answer_step_coordinator(
                 name_postfix="Code",
                 agent_configuration=coordinator.agent_configuration,
                 prompt_name="Query Coordinator/Aggregate",
-                prompt_parameters={
-                    "query": query
-                },
+                prompt_parameters={"query": query},
                 tools=[code_environment.as_function_tool()],
                 tool_use_behavior=custom_tool_handler,
                 reset_tool_choice=False,
@@ -87,6 +84,7 @@ async def answer_step_coordinator(
                 output_type=PartialQueryAnswerDummy,  # See: https://github.com/openai/openai-agents-python/blob/main/src/agents/run_internal/turn_resolution.py#L189-L190
             ),
         )
+        result = partial_answer
 
         append_to_span_output(
             span,
