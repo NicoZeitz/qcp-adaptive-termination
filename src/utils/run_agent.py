@@ -57,5 +57,7 @@ async def run_agent[TResult](
         output_type=output_type,
     )
 
-    result = await Runner.run(agent, cast(list[TResponseInputItem], prompts), context=context)
+    result = await Runner.run(
+        agent, cast(list[TResponseInputItem], prompts), context=context
+    )
     return cast(TResult, result.final_output), result

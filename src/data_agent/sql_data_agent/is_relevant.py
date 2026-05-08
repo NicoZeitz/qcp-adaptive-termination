@@ -1,5 +1,4 @@
 from data_agent.data_agent import DataAgent
-from utils.prompt import load_prompt
 from utils.run_agent import run_agent
 
 

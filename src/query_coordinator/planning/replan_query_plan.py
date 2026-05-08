@@ -18,7 +18,6 @@ from qtypes.query_plan.result import (
     ResultType,
     result_to_json_value,
 )
-from utils.prompt import load_prompt
 from utils.run_agent import run_agent
 
 

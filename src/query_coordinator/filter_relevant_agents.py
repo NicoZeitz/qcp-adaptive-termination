@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field, create_model
 from query_coordinator.build_agent_registry import build_agent_registry
 from query_coordinator.query_coordinator import QueryCoordinator
 from utils.span import own_custom_span
-from utils.prompt import load_prompt
 from data_agent.data_agent import DataAgent
 from utils.run_agent import run_agent
 from utils.span import append_to_span_input, append_to_span_output
@@ -46,10 +45,7 @@ async def filter_relevant_agents(
             name_postfix="Relevance",
             agent_configuration=coordinator.agent_configuration,
             prompt_name="Query Coordinator/Relevance",
-            prompt_parameters={
-                "agent_registry": agent_registry,
-                "query": query
-            },
+            prompt_parameters={"agent_registry": agent_registry, "query": query},
             output_type=RelevanceModel,
         )
 

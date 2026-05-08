@@ -11,7 +11,6 @@ from qtypes.query_plan.query_plan import (
 )
 from data_agent.data_agent import DataAgent
 from query_coordinator.query_coordinator import QueryCoordinator
-from utils.prompt import load_prompt
 from utils.run_agent import run_agent
 from utils.span import append_to_span_input, append_to_span_output, own_custom_span
 
