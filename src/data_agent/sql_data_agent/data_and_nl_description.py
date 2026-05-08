@@ -8,6 +8,14 @@ from data_agent.data_agent import DataAgent
 from data_agent.sql_data_agent.mschema.schema_engine import SchemaEngine
 from utils.run_agent import run_agent
 
+CACHED_NL_DESCRIPTION = {
+    "A1": "A small database of notable people containing one table (people) with columns for a person’s unique ID, full name, birth year, and death year. It stores biographical basics for individuals, suitable for listings or film/celebrity records.",
+    "A2": "A database of screen credits linking people to titles and their roles. It contains a crew table with columns for the title ID, an ordering field to sequence credits, the person ID, a role category (such as director, producer, or self), a specific job description, and any character names when the person appears on screen.",
+    "A3": "A compact media database containing TV episode linkage and title ratings. The episodes table maps individual episode titles to their parent show via unique IDs and records each episode’s season and episode numbers. The ratings table stores crowd-sourced evaluation data for titles—linking a title ID to its average rating and the number of votes.",
+    "A4": "This database catalogs screen titles and related metadata. It includes a single table of titles with fields for a unique identifier, title type, primary and original titles, adult-content flag, premiere and end years, runtime in minutes, and associated genres. It provides a concise overview of films and other screen works, enabling basic filtering by type, date, duration, and genre.",
+    "A5": "This database catalogs film and TV works. It contains a titles table with core details for each work (identifier, type, main and original titles, adult flag, premiere and end years, runtime, and genres) and an akas table listing alternate titles used in different regions and languages, including title types, attributes, and whether an entry is the original title.",
+}
+
 CACHED_DATA_DESCRIPTION = {
     "A1": textwrap.dedent("""
         【DB_ID】 A1
@@ -105,15 +113,31 @@ def create_database_description_model(schema_engine: SchemaEngine) -> type[BaseM
             create_model(f"{table_name}ColumnDescriptions", **fields),
             Field(...),
         )
+    schema_dict["database_description"] = (str, Field(...))
+
     return create_model("DatabaseDescriptionModel", **schema_dict)
 
 
-@alru_cache
+async def natural_language_description(data_agent: DataAgent, db_engine: Engine) -> str:
+    if data_agent.name in CACHED_NL_DESCRIPTION:
+        print("Using cached natural language description for agent:", data_agent.name)
+        return CACHED_NL_DESCRIPTION[data_agent.name]  # TODO:REMOVE
+
+    return (await data_and_nl_description(data_agent, db_engine))[1]
+
+
 async def data_description(data_agent: DataAgent, db_engine: Engine) -> str:
     if data_agent.name in CACHED_DATA_DESCRIPTION:
         print("Using cached data description for agent:", data_agent.name)
         return CACHED_DATA_DESCRIPTION[data_agent.name]  # TODO:REMOVE
 
+    return (await data_and_nl_description(data_agent, db_engine))[0]
+
+
+@alru_cache
+async def data_and_nl_description(
+    data_agent: DataAgent, db_engine: Engine
+) -> tuple[str, str]:
     schema_engine = SchemaEngine(db_engine, db_name=data_agent.name)
     m_schema_without_comments = schema_engine.mschema.to_mschema()
 
@@ -136,4 +160,5 @@ async def data_description(data_agent: DataAgent, db_engine: Engine) -> str:
             if description:
                 field_info["comment"] = description
 
-    return schema_engine.mschema.to_mschema()
+    natural_language_description = getattr(result, "database_description")
+    return schema_engine.mschema.to_mschema(), natural_language_description

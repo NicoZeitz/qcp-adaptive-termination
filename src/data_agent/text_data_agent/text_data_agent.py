@@ -1,7 +1,10 @@
 from data_agent.data_agent import DataAgent
 from data_agent.text_data_agent.answer_query import answer_query
 from data_agent.text_data_agent.is_relevant import is_relevant
-from data_agent.text_data_agent.data_description import data_description
+from data_agent.text_data_agent.data_and_nl_description import (
+    data_description,
+    natural_language_description,
+)
 from qtypes.AdditionalInformation import AdditionalInformation
 from qtypes.partial_query_answer import PartialQueryAnswer
 
@@ -13,6 +16,9 @@ class TextDataAgent(DataAgent):
 
     async def data_description(self) -> str:
         return await data_description(self, self.text)
+
+    async def natural_language_description(self) -> str:
+        return await natural_language_description(self, self.text)
 
     async def query_capabilities(self) -> list[str]:
         return ["Natural Language Question Answering", "Reading Comprehension"]
