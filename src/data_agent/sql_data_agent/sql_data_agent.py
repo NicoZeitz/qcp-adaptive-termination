@@ -4,7 +4,10 @@ from data_agent.data_agent import DataAgent
 from qtypes.AdditionalInformation import AdditionalInformation
 from qtypes.partial_query_answer import PartialQueryAnswer
 from data_agent.sql_data_agent.answer_query import answer_query
-from data_agent.sql_data_agent.data_description import data_description
+from data_agent.sql_data_agent.data_and_nl_description import (
+    data_description,
+    natural_language_description,
+)
 from data_agent.sql_data_agent.is_relevant import is_relevant
 
 
@@ -15,6 +18,9 @@ class SqlDataAgent(DataAgent):
 
     async def data_description(self) -> str:
         return await data_description(self, self.db_engine)
+
+    async def natural_language_description(self) -> str:
+        return await natural_language_description(self, self.db_engine)
 
     async def query_capabilities(self) -> list[str]:
         return ["Text-to-SQL"]

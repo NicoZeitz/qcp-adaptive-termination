@@ -24,6 +24,10 @@ class DataAgent(ABC):
         pass
 
     @abstractmethod
+    async def natural_language_description(self) -> str:
+        pass
+
+    @abstractmethod
     async def query_capabilities(self) -> list[str]:
         pass
 
