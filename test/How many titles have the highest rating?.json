@@ -1,8 +1,32 @@
 {
-"SELECT \nCOUNT(*)\nFROM \nratings\nWHERE\nrating = 10\n": [
-	{
-		"COUNT(*)" : 7037
-	}
-],
-"Relevant agents": ["A3"]
+    "query": "How many titles have the highest rating?",
+    "answer": 7037,
+    "sql_query": "SELECT \nCOUNT(*)\nFROM \nratings\nWHERE\nrating = 10\n",
+    "relevant_data_agents": [
+        "A3"
+    ],
+    "query_plan": {
+        "query": "How many titles have the highest rating?",
+        "steps": [
+            {
+                "id": "s1",
+                "query": "Count how many titles have the highest rating value",
+                "to_agent": "A3",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s2",
+                "query": "How many titles have the highest rating?",
+                "to_agent": "Coordinator",
+                "dependencies": [
+                    {
+                        "step_id": "s1",
+                        "dependency": "The number of titles with the highest rating value"
+                    }
+                ],
+                "answer": null
+            }
+        ]
+    }
 }

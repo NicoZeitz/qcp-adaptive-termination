@@ -1,45 +1,107 @@
 {
-"select t.original_title , r.rating\nfrom titles t \ninner join ratings r on r.title_id = t.title_id\nwhere r.votes > 1000000\nand t.\"type\" = 'movie'\norder by r.rating desc\nLIMIT 10": [
-	{
-		"original_title" : "The Shawshank Redemption",
-		"rating" : 9.3
-	},
-	{
-		"original_title" : "The Godfather",
-		"rating" : 9.2
-	},
-	{
-		"original_title" : "The Dark Knight",
-		"rating" : 9.1
-	},
-	{
-		"original_title" : "The Godfather Part II",
-		"rating" : 9.0
-	},
-	{
-		"original_title" : "Schindler's List",
-		"rating" : 9.0
-	},
-	{
-		"original_title" : "The Lord of the Rings: The Return of the King",
-		"rating" : 9.0
-	},
-	{
-		"original_title" : "The Lord of the Rings: The Fellowship of the Ring",
-		"rating" : 8.9
-	},
-	{
-		"original_title" : "Forrest Gump",
-		"rating" : 8.8
-	},
-	{
-		"original_title" : "Pulp Fiction",
-		"rating" : 8.8
-	},
-	{
-		"original_title" : "Fight Club",
-		"rating" : 8.8
-	}
-],
-"Relevant agents": ["A3", "A4", "A5"]
+    "query": "What are 10 best rated movies with more than a million votes, with original title and rating?",
+    "answer": [
+        {
+            "original_title": "The Shawshank Redemption",
+            "rating": 9.3
+        },
+        {
+            "original_title": "The Godfather",
+            "rating": 9.2
+        },
+        {
+            "original_title": "The Dark Knight",
+            "rating": 9.1
+        },
+        {
+            "original_title": "The Godfather Part II",
+            "rating": 9.0
+        },
+        {
+            "original_title": "Schindler's List",
+            "rating": 9.0
+        },
+        {
+            "original_title": "The Lord of the Rings: The Return of the King",
+            "rating": 9.0
+        },
+        {
+            "original_title": "The Lord of the Rings: The Fellowship of the Ring",
+            "rating": 8.9
+        },
+        {
+            "original_title": "Forrest Gump",
+            "rating": 8.8
+        },
+        {
+            "original_title": "Pulp Fiction",
+            "rating": 8.8
+        },
+        {
+            "original_title": "Fight Club",
+            "rating": 8.8
+        }
+    ],
+    "sql_query": "select t.original_title , r.rating\nfrom titles t \ninner join ratings r on r.title_id = t.title_id\nwhere r.votes > 1000000\nand t.\"type\" = 'movie'\norder by r.rating desc\nLIMIT 10",
+    "relevant_data_agents": [
+        "A3",
+        "A4",
+        "A5"
+    ],
+    "query_plan": {
+        "query": "What are 10 best rated movies with more than a million votes, with original title and rating?",
+        "steps": [
+            {
+                "id": "s1",
+                "query": "Find the top 10 title_id values with their ratings where votes are greater than 1000000, ordered by rating descending",
+                "to_agent": "A3",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s2",
+                "query": "Find the original_title and type for the given title_id values",
+                "to_agent": "A4",
+                "dependencies": [
+                    {
+                        "step_id": "s1",
+                        "dependency": "The candidate top-rated title_id values with their ratings and vote counts"
+                    }
+                ],
+                "answer": null
+            },
+            {
+                "id": "s3",
+                "query": "Find the original_title and type for the given title_id values",
+                "to_agent": "A5",
+                "dependencies": [
+                    {
+                        "step_id": "s1",
+                        "dependency": "The candidate top-rated title_id values with their ratings and vote counts"
+                    }
+                ],
+                "answer": null
+            },
+            {
+                "id": "s4",
+                "query": "What are 10 best rated movies with more than a million votes, with original title and rating?",
+                "to_agent": "Coordinator",
+                "dependencies": [
+                    {
+                        "step_id": "s1",
+                        "dependency": "The candidate top-rated title_id values with ratings and vote counts"
+                    },
+                    {
+                        "step_id": "s2",
+                        "dependency": "The original titles and types for those title_id values from A4"
+                    },
+                    {
+                        "step_id": "s3",
+                        "dependency": "The original titles and types for those title_id values from A5"
+                    }
+                ],
+                "answer": null
+            }
+        ]
+    }
 }

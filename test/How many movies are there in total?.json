@@ -1,8 +1,44 @@
 {
-"SELECT \nCOUNT(*)  \nFROM \ntitles\nWHERE\ntype = 'movie'": [
-	{
-		"COUNT(*)" : 743214
-	}
-],
-"Relevant agents": ["A4", "A5"]
+    "query": "How many movies are there in total?",
+    "answer": 743214,
+    "sql_query": "SELECT \nCOUNT(*)  \nFROM \ntitles\nWHERE\ntype = 'movie'",
+    "relevant_data_agents": [
+        "A4",
+        "A5"
+    ],
+    "query_plan": {
+        "query": "How many movies are there in total?",
+        "steps": [
+            {
+                "id": "s1",
+                "query": "Count how many titles have type 'movie'",
+                "to_agent": "A4",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s2",
+                "query": "Count how many titles have type 'movie'",
+                "to_agent": "A5",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s3",
+                "query": "How many movies are there in total?",
+                "to_agent": "Coordinator",
+                "dependencies": [
+                    {
+                        "step_id": "s1",
+                        "dependency": "The count of titles with type 'movie' from A4"
+                    },
+                    {
+                        "step_id": "s2",
+                        "dependency": "The count of titles with type 'movie' from A5"
+                    }
+                ],
+                "answer": null
+            }
+        ]
+    }
 }
