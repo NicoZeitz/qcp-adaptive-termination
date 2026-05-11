@@ -1,8 +1,32 @@
 {
-"SELECT rating FROM ratings WHERE title_id = 'tt0000001'": [
-	{
-		"rating" : 5.7
-	}
-],
-"Relevant agents": ["A3"]
+    "query": "What is the rating for the movie with title id 'tt0000001'?",
+    "answer": 5.7,
+    "sql_query": "SELECT rating FROM ratings WHERE title_id = 'tt0000001'",
+    "relevant_data_agents": [
+        "A3"
+    ],
+    "query_plan": {
+        "query": "What is the rating for the movie with title id 'tt0000001'?",
+        "steps": [
+            {
+                "id": "s1",
+                "query": "Find the rating for title_id 'tt0000001'",
+                "to_agent": "A3",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s2",
+                "query": "What is the rating for the movie with title id 'tt0000001'?",
+                "to_agent": "Coordinator",
+                "dependencies": [
+                    {
+                        "step_id": "s1",
+                        "dependency": "The rating for title_id 'tt0000001'"
+                    }
+                ],
+                "answer": null
+            }
+        ]
+    }
 }

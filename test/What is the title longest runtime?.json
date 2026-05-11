@@ -1,16 +1,44 @@
 {
-"select * from titles t where t.\"type\" = 'movie' order by t.runtime_minutes desc limit 1": [
-	{
-		"title_id" : "tt8273150",
-		"type" : "movie",
-		"primary_title" : "Logistics",
-		"original_title" : "Logistics",
-		"is_adult" : 0,
-		"premiered" : 2012,
-		"ended" : null,
-		"runtime_minutes" : 51420,
-		"genres" : "Documentary"
-	}
-],
-"Relevant agents": ["A4", "A5"]
+    "query": "What is the title longest runtime?",
+    "answer": "Logistics",
+    "sql_query": "select * from titles t where t.\"type\" = 'movie' order by t.runtime_minutes desc limit 1",
+    "relevant_data_agents": [
+        "A4",
+        "A5"
+    ],
+    "query_plan": {
+        "query": "What is the title longest runtime?",
+        "steps": [
+            {
+                "id": "s1",
+                "query": "Find the movie title with the maximum runtime_minutes and return its identifying title information",
+                "to_agent": "A4",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s2",
+                "query": "Find the movie title with the maximum runtime_minutes and return its identifying title information",
+                "to_agent": "A5",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s3",
+                "query": "What is the title longest runtime?",
+                "to_agent": "Coordinator",
+                "dependencies": [
+                    {
+                        "step_id": "s1",
+                        "dependency": "The movie with the maximum runtime from A4"
+                    },
+                    {
+                        "step_id": "s2",
+                        "dependency": "The movie with the maximum runtime from A5"
+                    }
+                ],
+                "answer": null
+            }
+        ]
+    }
 }

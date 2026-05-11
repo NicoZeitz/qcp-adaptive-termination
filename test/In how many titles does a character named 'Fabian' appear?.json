@@ -1,8 +1,32 @@
 {
-"SELECT count(distinct title_id) FROM crew WHERE \"characters\" LIKE '%Fabian%'": [
-	{
-		"COUNT(*)" : 5771
-	}
-],
-"Relevant agents": ["A2"]
+    "query": "In how many titles does a character named 'Fabian' appear?",
+    "answer": 5771,
+    "sql_query": "SELECT count(distinct title_id) FROM crew WHERE \"characters\" LIKE '%Fabian%'",
+    "relevant_data_agents": [
+        "A2"
+    ],
+    "query_plan": {
+        "query": "In how many titles does a character named 'Fabian' appear?",
+        "steps": [
+            {
+                "id": "s1",
+                "query": "Find the distinct title_id values for crew records whose characters field contains 'Fabian'",
+                "to_agent": "A2",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s2",
+                "query": "In how many titles does a character named 'Fabian' appear?",
+                "to_agent": "Coordinator",
+                "dependencies": [
+                    {
+                        "step_id": "s1",
+                        "dependency": "The distinct title_id values for crew records whose characters field contains 'Fabian'"
+                    }
+                ],
+                "answer": null
+            }
+        ]
+    }
 }

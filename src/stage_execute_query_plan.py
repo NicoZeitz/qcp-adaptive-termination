@@ -21,6 +21,8 @@ stages_mapping = [
     "Execute a Query Plan",
 ]
 
+# TODO: also allow the other stages other than execute to be tested with this script, not just stage 4
+
 
 async def main(
     sql_data_agents_path: str,
@@ -69,7 +71,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--test-file",
         type=str,
-        default="../test/01.json",
+        default="../test/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json",
     )
     parser.add_argument("--sql-data-agents", type=str, default="../data/handmade")
     parser.add_argument("--text-data-agents", type=str, default="../data/text")
