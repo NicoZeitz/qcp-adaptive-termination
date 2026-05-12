@@ -53,14 +53,14 @@
         "steps": [
             {
                 "id": "s1",
-                "query": "Find the top 10 title_id values with their ratings where votes are greater than 1000000, ordered by rating descending",
+                "query": "Find the title_id values with their ratings where votes are greater than 1000000, ordered by rating descending",
                 "to_agent": "A3",
                 "dependencies": [],
                 "answer": null
             },
             {
                 "id": "s2",
-                "query": "Find the original_title and type for the given title_id values",
+                "query": "Find the top 10 original_title and type for the given title_id values where type is movie",
                 "to_agent": "A4",
                 "dependencies": [
                     {
@@ -72,7 +72,7 @@
             },
             {
                 "id": "s3",
-                "query": "Find the original_title and type for the given title_id values",
+                "query": "Find the top 10 original_title and type for the given title_id values where type is movie",
                 "to_agent": "A5",
                 "dependencies": [
                     {

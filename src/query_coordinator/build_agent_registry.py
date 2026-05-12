@@ -46,7 +46,13 @@ async def build_agent_registry(
                     for name, description, capabilities in agent_infos
                 ]
             },
+            
         )
+
+    return "\n\n".join(
+        f"【Agent Name】 {name}\n{description}\n【Capabilities】 {', '.join(capabilities)}"
+        for name, description, capabilities in agent_infos
+    )
 
 async def build_nl_agent_registry(
     data_agents: list[DataAgent], span: Span[CustomSpanData] | None = None
