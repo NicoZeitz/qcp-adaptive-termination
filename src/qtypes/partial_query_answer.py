@@ -10,7 +10,6 @@ class PartialQueryAnswerDummy(BaseModel):
     pass
 
 
-@dataclass
 class PartialQueryAnswer:
     answer: ResultType | None = None
     has_answer: bool = False

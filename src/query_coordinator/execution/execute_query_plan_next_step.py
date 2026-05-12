@@ -98,7 +98,8 @@ async def execute_query_plan_next_step(
             has_partial_answer=result.has_answer,
         )
     except (MaxTurnsExceeded, AgentsException) as e:
-        result = PartialQueryAnswer(has_answer=False, needs=[exception_to_need(e)])
+        result = PartialQueryAnswer()
+        result.add_needs({exception_to_need(e)})
         return FailedExecution(
             step=step_to_execute,
             needs=result.needs,
