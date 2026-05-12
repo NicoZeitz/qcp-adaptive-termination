@@ -131,7 +131,7 @@ async def main(
             )
             print_to_log_file(log_file, f"RESULT:\n{result_to_json(result)}\n")
             print_to_log_file(
-                log_file, f"EXPECTED ANSWER:\n{result_to_json(answer)}\n"
+                log_file, f"EXPECTED ANSWER:\n{json.dumps(answer, indent=2)}\n"
             )
         else:
             raise ValueError("Invalid stage")
@@ -172,6 +172,9 @@ if __name__ == "__main__":
         "--provider", type=str, choices=["University", "Work"], default="University"
     )
     args = parser.parse_args()
+
+    args.stage = 3
+    args.test_file = "../test/Who was the cinematographer of Donald Trump's favorite movie?.json"
 
     initialize(args.provider)
     if args.test_file:
