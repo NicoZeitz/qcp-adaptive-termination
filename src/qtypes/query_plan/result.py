@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from pandas import DataFrame
 from pydantic import JsonValue
@@ -46,5 +46,9 @@ def result_to_span_data(result: ResultType) -> JsonValue:
     return preview_dataframe(result)
 
 
-def result_to_json_value(result: ResultType) -> JsonValue:
+def result_to_json_preview(result: ResultType) -> JsonValue:
     return preview_dataframe(result)
+
+
+def result_to_json(result: ResultType) -> JsonValue:
+    return cast(JsonValue, result.to_dict(orient="records"))

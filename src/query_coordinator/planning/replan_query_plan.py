@@ -16,7 +16,7 @@ from qtypes.query_plan.query_plan import (
 from qtypes.query_plan.query_plan_step_execution_result import FailedExecution
 from qtypes.query_plan.result import (
     ResultType,
-    result_to_json_value,
+    result_to_json_preview,
 )
 from utils.run_agent import run_agent
 
@@ -44,7 +44,7 @@ def create_query_plan_prompt_context(query_plan: QueryPlan) -> str:
                         }
                         for dependency in step.dependencies
                     ],
-                    "answer_preview": result_to_json_value(step.answer)
+                    "answer_preview": result_to_json_preview(step.answer)
                     if step.answer is not None
                     else None,
                 }
@@ -63,7 +63,7 @@ def create_reason_prompt_context(reason: FailedExecution) -> str:
         "failed_step_agent": reason.step.to_agent,
     }
     if reason.partial_answer is not None:
-        reason_data["partial_answer"] = result_to_json_value(reason.partial_answer)
+        reason_data["partial_answer"] = result_to_json_preview(reason.partial_answer)
 
     return json.dumps(reason_data, indent=2)
 

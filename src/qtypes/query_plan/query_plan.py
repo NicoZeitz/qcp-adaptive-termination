@@ -3,7 +3,11 @@ from dataclasses import dataclass
 
 from pydantic import Field, JsonValue
 
-from qtypes.query_plan.result import ResultType, result_to_span_data
+from qtypes.query_plan.result import (
+    ResultType,
+    result_to_json,
+    result_to_span_data,
+)
 
 
 class FieldDefinitions:
@@ -45,6 +49,9 @@ class QueryDependency:
     def to_span_data(self) -> JsonValue:
         return {"step_id": self.step.id, "dependency": self.dependency}
 
+    def to_json(self) -> JsonValue:
+        return {"step_id": self.step.id, "dependency": self.dependency}
+
     @staticmethod
     def load_from_json(
         data: Any, steps_by_id: dict[str, "QueryPlanStep"]
@@ -80,6 +87,15 @@ class QueryPlanStep:
             else None,
         }
 
+    def to_json(self) -> JsonValue:
+        return {
+            "id": self.id,
+            "query": self.query,
+            "to_agent": self.to_agent,
+            "dependencies": [dependency.to_json() for dependency in self.dependencies],
+            "answer": result_to_json(self.answer) if self.answer is not None else None,
+        }
+
     @staticmethod
     def load_from_json(
         data: Any, steps_by_id: dict[str, "QueryPlanStep"]
@@ -110,6 +126,12 @@ class QueryPlan:
 
     def to_span_data(self) -> JsonValue:
         return {"steps": [step.to_span_data() for step in self.steps]}
+
+    def to_json(self) -> JsonValue:
+        return {
+            "query": self.query,
+            "steps": [step.to_json() for step in self.steps],
+        }
 
     @staticmethod
     def load_from_json(data: Any) -> "QueryPlan":
