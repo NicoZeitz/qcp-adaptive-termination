@@ -50,7 +50,7 @@
             "rating": 9.7
         }
     ],
-    "sql_query": "select t.original_title , r.rating\nfrom titles t \ninner join ratings r on r.title_id = t.title_id\nwhere r.rating >= 9.5\nand r.votes > 1000\nand t.\"type\" = 'movie'",
+    "sql_query": "SELECT t.original_title , r.rating FROM titles t INNER JOIN ratings r ON r.title_id = t.title_id WHERE r.rating >= 9.5 AND r.votes > 1000 AND t.\"type\" = 'movie'",
     "relevant_data_agents": [
         "A3",
         "A4",

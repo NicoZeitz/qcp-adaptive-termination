@@ -1,7 +1,7 @@
 {
     "query": "How many titles have the highest rating?",
     "answer": 7037,
-    "sql_query": "SELECT \nCOUNT(*)\nFROM \nratings\nWHERE\nrating = 10\n",
+    "sql_query": "SELECT COUNT(*) FROM ratings WHERE rating = 10",
     "relevant_data_agents": [
         "A3"
     ],

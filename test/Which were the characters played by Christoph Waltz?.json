@@ -125,7 +125,7 @@
         "Ernst Stavro Blofeld",
         "Karl Emmanuel"
     ],
-    "sql_query": "SELECT \n*\nFROM \ncrew\nWHERE person_id = (SELECT person_id FROM people WHERE name = 'Christoph Waltz')",
+    "sql_query": "SELECT * FROM crew WHERE person_id = (SELECT person_id FROM people WHERE name = 'Christoph Waltz')",
     "relevant_data_agents": [
         "A1",
         "A2"

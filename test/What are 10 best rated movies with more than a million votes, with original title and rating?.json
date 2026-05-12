@@ -42,7 +42,7 @@
             "rating": 8.8
         }
     ],
-    "sql_query": "select t.original_title , r.rating\nfrom titles t \ninner join ratings r on r.title_id = t.title_id\nwhere r.votes > 1000000\nand t.\"type\" = 'movie'\norder by r.rating desc\nLIMIT 10",
+    "sql_query": "SELECT t.original_title , r.rating FROM titles t INNER JOIN ratings r ON r.title_id = t.title_id WHERE r.votes > 1000000 AND t.\"type\" = 'movie' ORDER BY r.rating DESC LIMIT 10",
     "relevant_data_agents": [
         "A3",
         "A4",

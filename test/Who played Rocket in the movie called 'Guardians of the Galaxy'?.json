@@ -1,7 +1,7 @@
 {
     "query": "Who played Rocket in the movie called 'Guardians of the Galaxy'?",
     "answer": "Bradley Cooper",
-    "sql_query": "select distinct p.name \nfrom people p \njoin crew c on p.person_id = c.person_id\njoin titles t on c.title_id = t.title_id \nwhere t.original_title  = 'Guardians of the Galaxy'\nand t.\"type\" = 'movie'\nand c.\"characters\" like '%Rocket%'",
+    "sql_query": "SELECT distinct p.name FROM people p JOIN crew c ON p.person_id = c.person_id JOIN titles t ON c.title_id = t.title_id WHERE t.original_title  = 'Guardians of the Galaxy' AND t.\"type\" = 'movie' AND c.\"characters\" LIKE '%Rocket%'",
     "relevant_data_agents": [
         "A1",
         "A2",
