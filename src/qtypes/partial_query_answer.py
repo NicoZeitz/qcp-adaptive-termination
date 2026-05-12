@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from pydantic import JsonValue, BaseModel
 
 from qtypes.query_plan.need import NeedType, needs_to_span_data
@@ -8,6 +10,7 @@ class PartialQueryAnswerDummy(BaseModel):
     pass
 
 
+@dataclass
 class PartialQueryAnswer:
     answer: ResultType | None = None
     has_answer: bool = False

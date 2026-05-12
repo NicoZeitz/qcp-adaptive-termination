@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal
 from agents import Model
+from agents.run_config import DEFAULT_MAX_TURNS
 from openai.types.shared import Reasoning
 
 
@@ -10,3 +11,4 @@ class AgentConfiguration:
     model: Model | str | None
     reasoning: Reasoning
     verbosity: Literal["low", "medium", "high"] | None = None
+    max_turns: int | None = DEFAULT_MAX_TURNS * 2
