@@ -1,7 +1,7 @@
 {
     "query": "What is the title with the worst rating, but with the most amount of votes for this rating?",
     "answer": "Reis",
-    "sql_query": "select t.original_title\nfrom titles t \njoin ratings r on r.title_id = t.title_id\norder by r.rating asc, r.votes desc\nlimit 1",
+    "sql_query": "SELECT t.original_title FROM titles t JOIN ratings r ON r.title_id = t.title_id ORDER BY r.rating ASC, r.votes DESC LIMIT 1",
     "relevant_data_agents": [
         "A3",
         "A4",

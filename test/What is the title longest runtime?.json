@@ -1,7 +1,7 @@
 {
     "query": "What is the title longest runtime?",
     "answer": "Logistics",
-    "sql_query": "select * from titles t where t.\"type\" = 'movie' order by t.runtime_minutes desc limit 1",
+    "sql_query": "SELECT * FROM titles t WHERE t.\"type\" = 'movie' ORDER BY t.runtime_minutes DESC LIMIT 1",
     "relevant_data_agents": [
         "A4",
         "A5"

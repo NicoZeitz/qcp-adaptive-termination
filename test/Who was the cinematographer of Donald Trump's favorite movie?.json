@@ -1,7 +1,7 @@
 {
     "query": "Who was the cinematographer of Donald Trump's favorite movie?",
     "answer": "Gregg Toland",
-    "sql_query": "SELECT name\nFROM titles\nINNER JOIN crew ON crew.title_id  = titles.title_id \nINNER JOIN people ON people.person_id  = crew.person_id \nWHERE original_title = 'Citizen Kane'\nAND type = \"movie\"\nAND category = \"cinematographer\"",
+    "sql_query": "SELECT name FROM titles INNER JOIN crew ON crew.title_id  = titles.title_id INNER JOIN people ON people.person_id  = crew.person_id WHERE original_title = 'Citizen Kane' AND type = \"movie\" AND category = \"cinematographer\"",
     "relevant_data_agents": [
         "T1",
         "A1",

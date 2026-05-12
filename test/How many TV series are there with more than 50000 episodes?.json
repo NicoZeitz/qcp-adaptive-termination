@@ -1,7 +1,7 @@
 {
     "query": "How many TV series are there with more than 50000 episodes?",
     "answer": 3,
-    "sql_query": "select count(distinct show_title_id) from episodes where episode_number > 50000",
+    "sql_query": "SELECT COUNT(DISTINCT show_title_id) FROM episodes WHERE episode_number > 50000",
     "relevant_data_agents": [
         "A3"
     ],

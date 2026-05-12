@@ -1,7 +1,7 @@
 {
     "query": "How many movies are there in total?",
     "answer": 743214,
-    "sql_query": "SELECT \nCOUNT(*)  \nFROM \ntitles\nWHERE\ntype = 'movie'",
+    "sql_query": "SELECT COUNT(*) FROM titles WHERE type = 'movie'",
     "relevant_data_agents": [
         "A4",
         "A5"

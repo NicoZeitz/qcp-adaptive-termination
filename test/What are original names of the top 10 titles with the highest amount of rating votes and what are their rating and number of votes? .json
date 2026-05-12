@@ -52,7 +52,7 @@
             "votes": 2240593
         }
     ],
-    "sql_query": "select t.original_title, r.rating, r.votes \nfrom titles t \njoin ratings r on r.title_id = t.title_id \norder by r.votes  desc\nlimit 10",
+    "sql_query": "SELECT t.original_title, r.rating, r.votes FROM titles t JOIN ratings r ON r.title_id = t.title_id ORDER BY r.votes DESC LIMIT 10",
     "relevant_data_agents": [
         "A3",
         "A4",
