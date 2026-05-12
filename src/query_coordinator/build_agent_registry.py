@@ -15,6 +15,7 @@ async def return_agent_info(
         data_agent.query_capabilities(),
     )
 
+
 async def return_nl_agent_info(
     data_agent: DataAgent,
 ) -> tuple[str, str, list[str]]:
@@ -22,6 +23,7 @@ async def return_nl_agent_info(
         data_agent.natural_language_description(),
         data_agent.query_capabilities(),
     )
+
 
 async def build_agent_registry(
     data_agents: list[DataAgent], span: Span[CustomSpanData] | None = None
@@ -46,13 +48,13 @@ async def build_agent_registry(
                     for name, description, capabilities in agent_infos
                 ]
             },
-            
         )
 
     return "\n\n".join(
         f"【Agent Name】 {name}\n{description}\n【Capabilities】 {', '.join(capabilities)}"
         for name, description, capabilities in agent_infos
     )
+
 
 async def build_nl_agent_registry(
     data_agents: list[DataAgent], span: Span[CustomSpanData] | None = None

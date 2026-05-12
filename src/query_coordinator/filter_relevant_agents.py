@@ -2,7 +2,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field, create_model
 
-from query_coordinator.build_agent_registry import build_agent_registry, build_nl_agent_registry
+from query_coordinator.build_agent_registry import (
+    build_nl_agent_registry,
+)
 from query_coordinator.query_coordinator import QueryCoordinator
 from utils.span import own_custom_span
 from data_agent.data_agent import DataAgent
