@@ -1,7 +1,10 @@
 from typing import cast
 
+from agents import AgentsException, MaxTurnsExceeded
+
 from data_agent.data_agent import DataAgent
 from qtypes.AdditionalInformation import AdditionalInformation
+from qtypes.query_plan.need import exception_to_need
 from query_coordinator.execution.answer_step_coordinator import answer_step_coordinator
 from query_coordinator.execution.answer_step_data_agent import answer_step_data_agent
 from query_coordinator.query_coordinator import QueryCoordinator
@@ -72,24 +75,33 @@ async def execute_query_plan_next_step(
             execution_finished=True,
         )
 
-    result = await execute_query_plan_step(coordinator, data_agents, step_to_execute)
+    try:
+        result = await execute_query_plan_step(coordinator, data_agents, step_to_execute)
 
-    step_to_execute.answer = (
-        result.answer
-    )  # Update the query plan with the (partial) answer (if any)
+        step_to_execute.answer = (
+            result.answer
+        )  # Update the query plan with the (partial) answer (if any)
 
-    if result.has_answer and not result.has_needs:
-        return SuccessfulExecution(
+        if result.has_answer and not result.has_needs:
+            return SuccessfulExecution(
+                step=step_to_execute,
+                result=cast(ResultType, result.answer),
+                execution_finished=all(
+                    step.answer is not None for step in query_plan.steps
+                ),
+            )
+
+        return FailedExecution(
             step=step_to_execute,
-            result=cast(ResultType, result.answer),
-            execution_finished=all(
-                step.answer is not None for step in query_plan.steps
-            ),
+            needs=result.needs,
+            partial_answer=result.answer,
+            has_partial_answer=result.has_answer,
         )
-
-    return FailedExecution(
-        step=step_to_execute,
-        needs=result.needs,
-        partial_answer=result.answer,
-        has_partial_answer=result.has_answer,
-    )
+    except (MaxTurnsExceeded, AgentsException) as e:
+        result = PartialQueryAnswer(has_answer=False, needs=[exception_to_need(e)])
+        return FailedExecution(
+            step=step_to_execute,
+            needs=result.needs,
+            partial_answer=result.answer,
+            has_partial_answer=result.has_answer,
+        )

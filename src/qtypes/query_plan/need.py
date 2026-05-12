@@ -24,3 +24,6 @@ def needs_to_span_data(needs: list[NeedType]) -> JsonValue:
 
 def needs_to_json_value(needs: list[NeedType]) -> JsonValue:
     return [need for need in needs]
+
+def exception_to_need(exception: Exception) -> NeedType:
+    return f"ERROR: {str(exception)}"

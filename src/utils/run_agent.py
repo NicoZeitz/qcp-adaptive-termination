@@ -12,6 +12,7 @@ from agents import (
     ToolsToFinalOutputFunction,
 )
 from agents.model_settings import ToolChoice
+from agents.run_config import DEFAULT_MAX_TURNS
 
 from qtypes.agent_configuration import AgentConfiguration
 from utils.prompt import load_prompt
@@ -58,6 +59,9 @@ async def run_agent[TResult](
     )
 
     result = await Runner.run(
-        agent, cast(list[TResponseInputItem], prompts), context=context
+        agent,
+        cast(list[TResponseInputItem], prompts),
+        context=context,
+        max_turns=agent_configuration.max_turns or DEFAULT_MAX_TURNS,
     )
     return cast(TResult, result.final_output), result
