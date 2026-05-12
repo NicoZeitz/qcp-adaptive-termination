@@ -163,11 +163,6 @@ async def multiple_main(
         if file.endswith(".json")
     ]
     for test_file in test_files:
-
-        if "Who played Rocket in the movie called 'Guardians of the Galaxy'?" in test_file:
-            continue
-
-
         await main(
             sql_data_agents_path, text_data_agents_path, test_file, stage, provider
         )
