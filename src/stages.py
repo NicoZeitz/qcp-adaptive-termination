@@ -79,12 +79,12 @@ async def main(
 
             print_to_log_file(log_file, f"QUERY: {query}")
             print_to_log_file(
-                log_file, f"RELEVANT AGENTS FROM COORDINATOR: {[agent.name for agent, _ in relevant_data_agents_with_reasoning]}"
+                log_file, f"RELEVANT AGENTS FROM COORDINATOR: {sorted([agent.name for agent, _ in relevant_data_agents_with_reasoning])}"
             )
             print_to_log_file(
-                log_file, f"RELEVANT AGENTS: {[agent.name for agent in data_agents]}"
+                log_file, f"RELEVANT AGENTS: {sorted([agent.name for agent in data_agents])}"
             )
-            print_to_log_file(log_file, f"EXPECTED RELEVANT AGENTS: {relevant_agents}")
+            print_to_log_file(log_file, f"EXPECTED RELEVANT AGENTS: {sorted(relevant_agents)}")
             print_to_log_file(
                 log_file,
                 f"RELEVANT AGENTS ARE {'TOO FEW' if len(data_agents) < len(relevant_agents) else 'TOO MANY' if len(data_agents) > len(relevant_agents) else 'EQUAL'}\n",
@@ -104,7 +104,7 @@ async def main(
 
             print_to_log_file(log_file, f"QUERY: {query}")
             print_to_log_file(
-                log_file, f"RELEVANT AGENTS: {[agent.name for agent in data_agents]}"
+                log_file, f"RELEVANT AGENTS: {sorted([agent.name for agent in data_agents])}"
             )
             print_to_log_file(
                 log_file,
@@ -123,7 +123,7 @@ async def main(
 
             print_to_log_file(log_file, f"QUERY: {query}")
             print_to_log_file(
-                log_file, f"RELEVANT AGENTS: {[agent.name for agent in data_agents]}"
+                log_file, f"RELEVANT AGENTS: {sorted([agent.name for agent in data_agents])}"
             )
             print_to_log_file(
                 log_file,
