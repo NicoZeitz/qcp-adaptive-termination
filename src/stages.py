@@ -117,7 +117,7 @@ async def main(
             # Execute Query Plan
             result = await query_coordinator.execute_query_plan(data_agents, draft_query_plan)
 
-            print_to_log_file(log_file, f"RESULT:\n{result_to_json(result)}\n")
+            print_to_log_file(log_file, f"RESULT:\n{json.dumps(result_to_json(result), indent=2)}\n")
             print_to_log_file(
                 log_file, f"EXPECTED ANSWER:\n{json.dumps(answer, indent=2)}\n"
             )
@@ -194,7 +194,7 @@ async def main(
 
             result = await query_coordinator.execute_query_plan(data_agents, query_plan)
 
-            print_to_log_file(log_file, f"RESULT:\n{result_to_json(result)}\n")
+            print_to_log_file(log_file, f"RESULT:\n{json.dumps(result_to_json(result), indent=2)}\n")
             print_to_log_file(
                 log_file, f"EXPECTED ANSWER:\n{json.dumps(answer, indent=2)}\n"
             )
