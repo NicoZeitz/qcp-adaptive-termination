@@ -82,7 +82,7 @@ async def execute_query_plan_next_step(
         return SuccessfulExecution(
             step=step_to_execute,
             result=cast(ResultType, result.answer),
-            execution_finished=False,
+            execution_finished=all(step.answer is not None for step in query_plan.steps),
         )
 
     return FailedExecution(
