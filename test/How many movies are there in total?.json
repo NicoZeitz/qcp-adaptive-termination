@@ -7,34 +7,23 @@
         "A5"
     ],
     "query_plan": {
-        "query": "How many movies are there in total?",
+        "query": "Who was born before 1900 and died after 2000?",
         "steps": [
             {
                 "id": "s1",
-                "query": "Count how many titles have type 'movie'",
-                "to_agent": "A4",
+                "query": "List all people who were born before 1900 and died after 2000. Return name, born, and died, sorted by born ascending.",
+                "to_agent": "A1",
                 "dependencies": [],
                 "answer": null
             },
             {
                 "id": "s2",
-                "query": "Count how many titles have type 'movie'",
-                "to_agent": "A5",
-                "dependencies": [],
-                "answer": null
-            },
-            {
-                "id": "s3",
-                "query": "How many movies are there in total?",
+                "query": "Using the results from A1, provide the final answer to: Who was born before 1900 and died after 2000? Present the names with their birth and death years.",
                 "to_agent": "Coordinator",
                 "dependencies": [
                     {
                         "step_id": "s1",
-                        "dependency": "The count of titles with type 'movie' from A4"
-                    },
-                    {
-                        "step_id": "s2",
-                        "dependency": "The count of titles with type 'movie' from A5"
+                        "dependency": "People (name, born, died) with born < 1900 and died > 2000"
                     }
                 ],
                 "answer": null

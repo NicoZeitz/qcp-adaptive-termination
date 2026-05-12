@@ -16,7 +16,7 @@ class DataAgent(ABC):
         return AgentConfiguration(
             name=self.name,
             model="gpt-5",
-            reasoning=Reasoning(effort="minimal"),
+            reasoning=Reasoning(effort="medium"),
         )
 
     @abstractmethod

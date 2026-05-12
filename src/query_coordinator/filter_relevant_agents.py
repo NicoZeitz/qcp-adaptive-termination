@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, create_model
 
-from query_coordinator.build_agent_registry import build_agent_registry
+from query_coordinator.build_agent_registry import build_agent_registry, build_nl_agent_registry
 from query_coordinator.query_coordinator import QueryCoordinator
 from utils.span import own_custom_span
 from data_agent.data_agent import DataAgent
@@ -36,7 +36,8 @@ async def filter_relevant_agents(
     coordinator: QueryCoordinator, data_agents: list[DataAgent], query: str
 ) -> list[tuple[DataAgent, str]]:
     with own_custom_span("Coordinator - Filtering Relevant Agents") as span:
-        agent_registry = await build_agent_registry(data_agents, span)
+        # agent_registry = await build_agent_registry(data_agents, span)
+        agent_registry = await build_nl_agent_registry(data_agents, span)
         RelevanceModel = build_relevance_model(data_agents)
 
         append_to_span_input(span, {"query": query})
