@@ -1,0 +1,110 @@
+{
+  "query": "Which actors worked on which highly rated (>9.0) drama TV series released after 2025 and what alternative titles were used in France?",
+  "sql_query": "SELECT p.name, t.primary_title, r.rating, a.title AS french_title FROM people p JOIN crew c ON p.person_id = c.person_id JOIN titles t ON c.title_id = t.title_id JOIN episodes e ON t.title_id = e.show_title_id JOIN ratings r ON t.title_id = r.title_id JOIN akas a ON t.title_id = a.title_id WHERE t.genres LIKE '%Drama%' AND t.premiered > 2025 AND r.rating >= 9.0 AND a.region = 'FR'",
+  "answer": [
+    {
+      "name": "Alissa Filoramo",
+      "original_title": "My Sexy Mentor Seduced Me",
+      "french_title": "Ma mentor sexy m'a séduite"
+    },
+    {
+      "name": "Eloise Lola Gordon",
+      "original_title": "My Sexy Mentor Seduced Me",
+      "french_title": "Ma mentor sexy m'a séduite"
+    }
+  ],
+  "relevant_data_agents": [
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5"
+  ],
+  "query_plan": {
+    "query": "Which actors worked on which highly rated (>9.0) drama TV series released after 2025 and what alternative titles were used in France?",
+    "steps": [
+      {
+        "id": "s1",
+        "query": "List all drama TV series released in 2026 or later and return title and series identifier.",
+        "to_agent": "A4",
+        "dependencies": [],
+        "answer": null
+      },
+     {
+        "id": "s2",
+        "query": "List all drama TV series released in 2026 or later and return title and series identifier.",
+        "to_agent": "A5",
+        "dependencies": [],
+        "answer": null
+      },
+      {
+        "id": "s3",
+        "query": "For each series identified as qualifying, filter for those with an average rating of 9.0 or higher and return series title and identifiers.",
+        "to_agent": "A3",
+        "dependencies": [
+          {
+            "step_id": "s1",
+            "dependency": "Qualifying drama TV series list with title and identifiers from A4"
+          },
+          {
+            "step_id": "s2",
+            "dependency": "Qualifying drama TV series list with title and identifiers from A5"
+          } 
+        ],
+        "answer": null
+      },
+      {
+        "id": "s4",
+        "query": "For each highly rated drama TV series identified, list all person_ids of actors who worked on the series.",
+        "to_agent": "A2",
+        "dependencies": [
+          {
+            "step_id": "s3",
+            "dependency": "Highly rated drama TV series list with title and identifiers from A3"
+          }
+        ],
+        "answer": null
+      },
+      {
+        "id": "s5",
+        "query": "For each actor identified, list the names of them.",
+        "to_agent": "A1",
+        "dependencies": [
+          {
+            "step_id": "s4",
+            "dependency": "List of actors with person_ids who worked on highly rated drama TV series from A2"
+          }
+        ],
+        "answer": null
+      },
+      {
+        "id": "s6",
+        "query": "For each highly rated drama TV series identified, list the alternative titles used in France.",
+        "to_agent": "A5",
+        "dependencies": [
+          {
+            "step_id": "s3",
+            "dependency": "Highly rated drama TV series list with title and identifiers from A3"
+          }
+        ],
+        "answer": null
+      },
+      {
+        "id": "s7",
+        "query": "Using the retrieved results, compile a final answer that lists which actors worked on which highly rated (>9.0) drama TV series released after 2025 and what alternative titles were used in France.",
+        "to_agent": "Coordinator",
+        "dependencies": [
+          {
+            "step_id": "s5",
+            "dependency": "Names of actors who worked on highly rated drama TV series from A1"
+          },
+          {
+            "step_id": "s6",
+            "dependency": "Alternative titles used in France for highly rated drama TV series from A5"
+          }
+        ],
+        "answer": null
+      }
+    ]
+  }
+}

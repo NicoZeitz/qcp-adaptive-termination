@@ -1,0 +1,42 @@
+{
+	"query": "What are all the different jobs held by person with id nm0000001?",
+	"sql_query": "SELECT DISTINCT job FROM crew WHERE person_id = 'nm0000001'",
+	"answer": [
+		{
+			"job": null
+		},
+		{
+			"job": "producer"
+		},
+		{
+			"job": "executive producer"
+		}
+	],
+	"relevant_data_agents": [
+		"A2"
+	],
+	"query_plan": {
+		"query": "What are all the different jobs held by person with id nm0000001?",
+		"steps": [
+			{
+				"id": "s1",
+				"query": "For the person with IMDb ID nm0000001, list all the different jobs they have been credited with across their career. Return a unique list of job/credit categories (e.g., actor, soundtrack, director, producer, writer, music department, self, thanks, archive footage), with no duplicates and no additional details.",
+				"to_agent": "A2",
+				"dependencies": [],
+				"answer": null
+			},
+			{
+				"id": "s2",
+				"query": "Using the distinct job list returned, answer: What are all the different jobs held by the person with id nm0000001? Provide a concise, comma-separated list.",
+				"to_agent": "Coordinator",
+				"dependencies": [
+					{
+						"step_id": "s1",
+						"dependency": "Distinct list of jobs/credit categories for nm0000001"
+					}
+				],
+				"answer": null
+			}
+		]
+	}
+}

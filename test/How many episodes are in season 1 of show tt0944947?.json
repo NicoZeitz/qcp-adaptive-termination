@@ -1,0 +1,32 @@
+{
+	"query": "How many episodes are in season 1 of show tt0944947?",
+	"sql_query": "SELECT COUNT(*) FROM episodes WHERE show_title_id = 'tt0944947' AND season_number = 1",
+	"answer": 11,
+	"relevant_data_agents": [
+		"A3"
+	],
+	"query_plan": {
+		"query": "How many episodes are in season 1 of show tt0944947?",
+		"steps": [
+			{
+				"id": "s1",
+				"query": "What is the total number of episodes in season 1 of the TV show with IMDb ID tt0944947? If available, also list the episodes in that season.",
+				"to_agent": "A3",
+				"dependencies": [],
+				"answer": null
+			},
+			{
+				"id": "s2",
+				"query": "Provide the final answer: How many episodes are in season 1 of show tt0944947? Use the result from s1. If s1 returned only a list without a count, count the episodes listed.",
+				"to_agent": "Coordinator",
+				"dependencies": [
+					{
+						"step_id": "s1",
+						"dependency": "Episode count or episode list for season 1 of tt0944947"
+					}
+				],
+				"answer": null
+			}
+		]
+	}
+}
