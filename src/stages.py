@@ -16,11 +16,12 @@ from utils.load_agents import (
     create_text_agents_from_folder,
 )
 
-stages_mapping = [
-    "Filter relevant agents",
-    "Draft query plan",
-    "Execute query plan",
-]
+stages_mapping = {
+    0: "All stages",
+    1: "Filter relevant agents",
+    2: "Draft query plan",
+    3: "Execute query plan",
+}
 
 
 def print_to_log_file(log_file: TextIOWrapper, message: str):
@@ -35,7 +36,7 @@ async def main(
     stage: int,
     provider: Literal["University", "Work"],
 ):
-    print(f"Running stage {stage}: {stages_mapping[stage - 1]}")
+    print(f"Running stage {stage}: {stages_mapping[stage]} for test file {test_file} with provider {provider}")
 
     user = "NZ" if os.getlogin() == "I550817" else "FW"
 
@@ -57,7 +58,7 @@ async def main(
 
     with (
         trace(
-            f"{user}: Stage {stage} - {stages_mapping[stage - 1]}",
+            f"{user}: Stage {stage} - {stages_mapping[stage]}",
             metadata={"test_file": test_file, "query": query, "provider": provider},
         ),
         open(log_file_path, "w") as log_file,
@@ -67,7 +68,60 @@ async def main(
         data_agents.extend(create_text_agents_from_folder(text_data_agents_path))
         query_coordinator: QueryCoordinator = DefaultQueryCoordinator()
 
-        if stage == 1:
+        if stage == 0:
+            # All stages
+            print_to_log_file(log_file, f"QUERY: {query}")
+
+            # Filter relevant agents
+            relevant_data_agents_with_reasoning = (
+                await query_coordinator.filter_relevant_agents(data_agents, query)
+            )
+            data_agents = await query_coordinator.ask_relevant_agents(
+                relevant_data_agents_with_reasoning, query
+            )
+
+            print_to_log_file(
+                log_file,
+                f"RELEVANT AGENTS FROM COORDINATOR: {sorted([agent.name for agent, _ in relevant_data_agents_with_reasoning])}",
+            )
+            print_to_log_file(
+                log_file,
+                f"RELEVANT AGENTS: {sorted([agent.name for agent in data_agents])}",
+            )
+            print_to_log_file(
+                log_file, f"EXPECTED RELEVANT AGENTS: {sorted(relevant_agents)}"
+            )
+            print_to_log_file(
+                log_file,
+                f"RELEVANT AGENTS ARE {'TOO FEW' if len(data_agents) < len(relevant_agents) else 'TOO MANY' if len(data_agents) > len(relevant_agents) else 'EQUAL'}\n",
+            )
+            print_to_log_file(
+                log_file,
+                f"RELEVANT AGENTS WITH REASONING:\n{'\n'.join([f'{agent.name}: {reasoning}' for agent, reasoning in relevant_data_agents_with_reasoning])}\n",
+            )
+
+            # Draft query plan
+            draft_query_plan = await query_coordinator.draft_query_plan(
+                data_agents, query
+            )
+
+            print_to_log_file(
+                log_file,
+                f"DRAFTED QUERY PLAN:\n{json.dumps(draft_query_plan.to_json(), indent=2)}\n",
+            )
+            print_to_log_file(
+                log_file,
+                f"EXPECTED QUERY PLAN:\n{json.dumps(query_plan.to_json(), indent=2)}\n",
+            )
+
+            # Execute Query Plan
+            result = await query_coordinator.execute_query_plan(data_agents, draft_query_plan)
+
+            print_to_log_file(log_file, f"RESULT:\n{result_to_json(result)}\n")
+            print_to_log_file(
+                log_file, f"EXPECTED ANSWER:\n{json.dumps(answer, indent=2)}\n"
+            )
+        elif stage == 1:
             # Filter relevant agents
             print_to_log_file(log_file, f"QUERY: {query}")
 
@@ -174,7 +228,7 @@ if __name__ == "__main__":
 
     # uv run stages.py --test-file "../test/Who was the cinematographer of Donald Trump's favorite movie?.json" --stage 1
     parser = argparse.ArgumentParser(prog="Collaborative Query Answering")
-    parser.add_argument("--stage", type=int, choices=[1, 2, 3], default=1)
+    parser.add_argument("--stage", type=int, choices=[0, 1, 2, 3], default=1)
     parser.add_argument("--test-dir", type=str, default="../test/")
     parser.add_argument("--test-file", type=str)
     parser.add_argument("--sql-data-agents", type=str, default="../data/handmade")
