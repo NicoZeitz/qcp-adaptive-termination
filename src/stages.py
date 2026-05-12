@@ -87,7 +87,7 @@ async def main(
             print_to_log_file(log_file, f"EXPECTED RELEVANT AGENTS: {relevant_agents}")
             print_to_log_file(
                 log_file,
-                f"RELEVANT AGENTS ARE {'FEW' if len(data_agents) < len(relevant_agents) else 'TOO MANY' if len(data_agents) > len(relevant_agents) else 'EQUAL'}\n",
+                f"RELEVANT AGENTS ARE {'TOO FEW' if len(data_agents) < len(relevant_agents) else 'TOO MANY' if len(data_agents) > len(relevant_agents) else 'EQUAL'}\n",
             )
             print_to_log_file(
                 log_file,
