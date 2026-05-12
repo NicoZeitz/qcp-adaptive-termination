@@ -1,7 +1,7 @@
 {
     "query": "In how many titles does a character named 'Fabian' appear?",
     "answer": 5771,
-    "sql_query": "SELECT COUNT(DISTINCT title_id) FROM crew WHERE \"characters\" LIKE '%Fabian%'",
+    "sql_query": "SELECT COUNT(DISTINCT title_id) FROM crew WHERE characters LIKE '%Fabian%'",
     "relevant_data_agents": [
         "A2"
     ],
