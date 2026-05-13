@@ -1,110 +1,1582 @@
 {
-  "query": "Which actors worked on which highly rated (>9.0) drama TV series released after 2025 and what alternative titles were used in France?",
-  "sql_query": "SELECT p.name, t.primary_title, r.rating, a.title AS french_title FROM people p JOIN crew c ON p.person_id = c.person_id JOIN titles t ON c.title_id = t.title_id JOIN episodes e ON t.title_id = e.show_title_id JOIN ratings r ON t.title_id = r.title_id JOIN akas a ON t.title_id = a.title_id WHERE t.genres LIKE '%Drama%' AND t.premiered > 2025 AND r.rating >= 9.0 AND a.region = 'FR'",
-  "answer": [
-    {
-      "name": "Alissa Filoramo",
-      "original_title": "My Sexy Mentor Seduced Me",
-      "french_title": "Ma mentor sexy m'a séduite"
-    },
-    {
-      "name": "Eloise Lola Gordon",
-      "original_title": "My Sexy Mentor Seduced Me",
-      "french_title": "Ma mentor sexy m'a séduite"
-    }
-  ],
-  "relevant_data_agents": [
-    "A1",
-    "A2",
-    "A3",
-    "A4",
-    "A5"
-  ],
-  "query_plan": {
     "query": "Which actors worked on which highly rated (>9.0) drama TV series released after 2025 and what alternative titles were used in France?",
-    "steps": [
-      {
-        "id": "s1",
-        "query": "List all drama TV series released in 2026 or later and return title and series identifier.",
-        "to_agent": "A4",
-        "dependencies": [],
-        "answer": null
-      },
-     {
-        "id": "s2",
-        "query": "List all drama TV series released in 2026 or later and return title and series identifier.",
-        "to_agent": "A5",
-        "dependencies": [],
-        "answer": null
-      },
-      {
-        "id": "s3",
-        "query": "For each series identified as qualifying, filter for those with an average rating of 9.0 or higher and return series title and identifiers.",
-        "to_agent": "A3",
-        "dependencies": [
-          {
-            "step_id": "s1",
-            "dependency": "Qualifying drama TV series list with title and identifiers from A4"
-          },
-          {
-            "step_id": "s2",
-            "dependency": "Qualifying drama TV series list with title and identifiers from A5"
-          } 
-        ],
-        "answer": null
-      },
-      {
-        "id": "s4",
-        "query": "For each highly rated drama TV series identified, list all person_ids of actors who worked on the series.",
-        "to_agent": "A2",
-        "dependencies": [
-          {
-            "step_id": "s3",
-            "dependency": "Highly rated drama TV series list with title and identifiers from A3"
-          }
-        ],
-        "answer": null
-      },
-      {
-        "id": "s5",
-        "query": "For each actor identified, list the names of them.",
-        "to_agent": "A1",
-        "dependencies": [
-          {
-            "step_id": "s4",
-            "dependency": "List of actors with person_ids who worked on highly rated drama TV series from A2"
-          }
-        ],
-        "answer": null
-      },
-      {
-        "id": "s6",
-        "query": "For each highly rated drama TV series identified, list the alternative titles used in France.",
-        "to_agent": "A5",
-        "dependencies": [
-          {
-            "step_id": "s3",
-            "dependency": "Highly rated drama TV series list with title and identifiers from A3"
-          }
-        ],
-        "answer": null
-      },
-      {
-        "id": "s7",
-        "query": "Using the retrieved results, compile a final answer that lists which actors worked on which highly rated (>9.0) drama TV series released after 2025 and what alternative titles were used in France.",
-        "to_agent": "Coordinator",
-        "dependencies": [
-          {
-            "step_id": "s5",
-            "dependency": "Names of actors who worked on highly rated drama TV series from A1"
-          },
-          {
-            "step_id": "s6",
-            "dependency": "Alternative titles used in France for highly rated drama TV series from A5"
-          }
-        ],
-        "answer": null
-      }
-    ]
-  }
+    "sql_query": "SELECT DISTINCT p.name, t.primary_title, r.rating , a.title AS french_title FROM titles t JOIN ratings r ON t.title_id = r.title_id JOIN crew c ON c.title_id = t.title_id JOIN people p ON p.person_id = c.person_id LEFT JOIN akas a ON t.title_id = a.title_id WHERE t.genres LIKE '%Drama%' AND t.premiered > 2025 AND r.rating > 9.0 AND t.type IN ('tvSeries', 'tvMiniSeries')",
+    "answer": [
+        {
+            "name": "Georgia White",
+            "primary_title": "Rot in Hell, Dear Ex-Husband",
+            "rating": 9.3,
+            "french_title": "Rot in Hell, Dear Ex-Husband"
+        },
+        {
+            "name": "Tahnee Langshaw",
+            "primary_title": "Rot in Hell, Dear Ex-Husband",
+            "rating": 9.3,
+            "french_title": "Rot in Hell, Dear Ex-Husband"
+        },
+        {
+            "name": "Vivian Davidson-Castro",
+            "primary_title": "Rot in Hell, Dear Ex-Husband",
+            "rating": 9.3,
+            "french_title": "Rot in Hell, Dear Ex-Husband"
+        },
+        {
+            "name": "Joseph Mckerricher",
+            "primary_title": "Rot in Hell, Dear Ex-Husband",
+            "rating": 9.3,
+            "french_title": "Rot in Hell, Dear Ex-Husband"
+        },
+        {
+            "name": "Nathan Rasmussen",
+            "primary_title": "Rot in Hell, Dear Ex-Husband",
+            "rating": 9.3,
+            "french_title": "Rot in Hell, Dear Ex-Husband"
+        },
+        {
+            "name": "Sophie Sedlacek",
+            "primary_title": "Rot in Hell, Dear Ex-Husband",
+            "rating": 9.3,
+            "french_title": "Rot in Hell, Dear Ex-Husband"
+        },
+        {
+            "name": "Michael Wattel",
+            "primary_title": "Rot in Hell, Dear Ex-Husband",
+            "rating": 9.3,
+            "french_title": "Rot in Hell, Dear Ex-Husband"
+        },
+        {
+            "name": "Kevin Ridger",
+            "primary_title": "Karma Never Forgets",
+            "rating": 9.1,
+            "french_title": "Karma Never Forgets"
+        },
+        {
+            "name": "Vanessa Branch",
+            "primary_title": "Karma Never Forgets",
+            "rating": 9.1,
+            "french_title": "Karma Never Forgets"
+        },
+        {
+            "name": "Anita Yoo",
+            "primary_title": "Karma Never Forgets",
+            "rating": 9.1,
+            "french_title": "Karma Never Forgets"
+        },
+        {
+            "name": "Barret Coates",
+            "primary_title": "Karma Never Forgets",
+            "rating": 9.1,
+            "french_title": "Karma Never Forgets"
+        },
+        {
+            "name": "Jack Branch",
+            "primary_title": "Karma Never Forgets",
+            "rating": 9.1,
+            "french_title": "Karma Never Forgets"
+        },
+        {
+            "name": "Mikhail Karabuta",
+            "primary_title": "Karma Never Forgets",
+            "rating": 9.1,
+            "french_title": "Karma Never Forgets"
+        },
+        {
+            "name": "Richard Neil",
+            "primary_title": "Karma Never Forgets",
+            "rating": 9.1,
+            "french_title": "Karma Never Forgets"
+        },
+        {
+            "name": "Makena Alexander",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "Nathalie Biermanns",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "William Brodsky",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "Aurora Forte Brylr",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "Tiger Cain Conniff",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "Martin Corey",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "Patrick Cronen",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "Sophia Delucchi",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "Sky Marie Deville",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "Sarah Drescher",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "Alivia Levie",
+            "primary_title": "Tunnel Vision",
+            "rating": 9.5,
+            "french_title": "Tunnel Vision"
+        },
+        {
+            "name": "Nic Westaway",
+            "primary_title": "Engraved on Your Heart",
+            "rating": 9.6,
+            "french_title": "Engraved on Your Heart"
+        },
+        {
+            "name": "Shanna Sinow",
+            "primary_title": "Engraved on Your Heart",
+            "rating": 9.6,
+            "french_title": "Engraved on Your Heart"
+        },
+        {
+            "name": "Martina Vos",
+            "primary_title": "Engraved on Your Heart",
+            "rating": 9.6,
+            "french_title": "Engraved on Your Heart"
+        },
+        {
+            "name": "Kyra Weston",
+            "primary_title": "Engraved on Your Heart",
+            "rating": 9.6,
+            "french_title": "Engraved on Your Heart"
+        },
+        {
+            "name": "Harlequin Nott",
+            "primary_title": "Engraved on Your Heart",
+            "rating": 9.6,
+            "french_title": "Engraved on Your Heart"
+        },
+        {
+            "name": "Amy Stricker",
+            "primary_title": "Engraved on Your Heart",
+            "rating": 9.6,
+            "french_title": "Engraved on Your Heart"
+        },
+        {
+            "name": "Steven Kammerer",
+            "primary_title": "Engraved on Your Heart",
+            "rating": 9.6,
+            "french_title": "Engraved on Your Heart"
+        },
+        {
+            "name": "Joseph Mckerricher",
+            "primary_title": "Engraved on Your Heart",
+            "rating": 9.6,
+            "french_title": "Engraved on Your Heart"
+        },
+        {
+            "name": "Ty Javos",
+            "primary_title": "Engraved on Your Heart",
+            "rating": 9.6,
+            "french_title": "Engraved on Your Heart"
+        },
+        {
+            "name": "Cassie Collis",
+            "primary_title": "Engraved on Your Heart",
+            "rating": 9.6,
+            "french_title": "Engraved on Your Heart"
+        },
+        {
+            "name": "Daniil Bonk",
+            "primary_title": "That Imposter, in My Three Uncles' Arms",
+            "rating": 9.3,
+            "french_title": "That Imposter, in My Three Uncles' Arms"
+        },
+        {
+            "name": "Francisco DeCun",
+            "primary_title": "That Imposter, in My Three Uncles' Arms",
+            "rating": 9.3,
+            "french_title": "That Imposter, in My Three Uncles' Arms"
+        },
+        {
+            "name": "Olivia Fokova",
+            "primary_title": "That Imposter, in My Three Uncles' Arms",
+            "rating": 9.3,
+            "french_title": "That Imposter, in My Three Uncles' Arms"
+        },
+        {
+            "name": "Sasha Ginchev",
+            "primary_title": "That Imposter, in My Three Uncles' Arms",
+            "rating": 9.3,
+            "french_title": "That Imposter, in My Three Uncles' Arms"
+        },
+        {
+            "name": "Colin Kane",
+            "primary_title": "That Imposter, in My Three Uncles' Arms",
+            "rating": 9.3,
+            "french_title": "That Imposter, in My Three Uncles' Arms"
+        },
+        {
+            "name": "Julia Klinestiver",
+            "primary_title": "That Imposter, in My Three Uncles' Arms",
+            "rating": 9.3,
+            "french_title": "That Imposter, in My Three Uncles' Arms"
+        },
+        {
+            "name": "Milana Manko",
+            "primary_title": "That Imposter, in My Three Uncles' Arms",
+            "rating": 9.3,
+            "french_title": "That Imposter, in My Three Uncles' Arms"
+        },
+        {
+            "name": "Christopher Massie",
+            "primary_title": "That Imposter, in My Three Uncles' Arms",
+            "rating": 9.3,
+            "french_title": "That Imposter, in My Three Uncles' Arms"
+        },
+        {
+            "name": "Richard Neil",
+            "primary_title": "That Imposter, in My Three Uncles' Arms",
+            "rating": 9.3,
+            "french_title": "That Imposter, in My Three Uncles' Arms"
+        },
+        {
+            "name": "Gabi Rae",
+            "primary_title": "That Imposter, in My Three Uncles' Arms",
+            "rating": 9.3,
+            "french_title": "That Imposter, in My Three Uncles' Arms"
+        },
+        {
+            "name": "Griffin Blazi",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes Your Out"
+        },
+        {
+            "name": "Griffin Blazi",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out!"
+        },
+        {
+            "name": "Griffin Blazi",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out"
+        },
+        {
+            "name": "Griffin Blazi",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes of Love"
+        },
+        {
+            "name": "Sasha Ginchev",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes Your Out"
+        },
+        {
+            "name": "Sasha Ginchev",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out!"
+        },
+        {
+            "name": "Sasha Ginchev",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out"
+        },
+        {
+            "name": "Sasha Ginchev",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes of Love"
+        },
+        {
+            "name": "Bridget Cooper",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes Your Out"
+        },
+        {
+            "name": "Bridget Cooper",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out!"
+        },
+        {
+            "name": "Bridget Cooper",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out"
+        },
+        {
+            "name": "Bridget Cooper",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes of Love"
+        },
+        {
+            "name": "Mckenna Bridger",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes Your Out"
+        },
+        {
+            "name": "Mckenna Bridger",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out!"
+        },
+        {
+            "name": "Mckenna Bridger",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out"
+        },
+        {
+            "name": "Mckenna Bridger",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes of Love"
+        },
+        {
+            "name": "Samuel Code",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes Your Out"
+        },
+        {
+            "name": "Samuel Code",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out!"
+        },
+        {
+            "name": "Samuel Code",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out"
+        },
+        {
+            "name": "Samuel Code",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes of Love"
+        },
+        {
+            "name": "Lala Costa",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes Your Out"
+        },
+        {
+            "name": "Lala Costa",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out!"
+        },
+        {
+            "name": "Lala Costa",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out"
+        },
+        {
+            "name": "Lala Costa",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes of Love"
+        },
+        {
+            "name": "Gabriel Jayne",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes Your Out"
+        },
+        {
+            "name": "Gabriel Jayne",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out!"
+        },
+        {
+            "name": "Gabriel Jayne",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out"
+        },
+        {
+            "name": "Gabriel Jayne",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes of Love"
+        },
+        {
+            "name": "Akeem Mair",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes Your Out"
+        },
+        {
+            "name": "Akeem Mair",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out!"
+        },
+        {
+            "name": "Akeem Mair",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes You're Out"
+        },
+        {
+            "name": "Akeem Mair",
+            "primary_title": "Three Strikes You're Out!",
+            "rating": 9.1,
+            "french_title": "Three Strikes of Love"
+        },
+        {
+            "name": "Alissa Filoramo",
+            "primary_title": "My Sexy Mentor Seduced Me",
+            "rating": 9.5,
+            "french_title": "My Sexy Mentor Seduced Me"
+        },
+        {
+            "name": "Alissa Filoramo",
+            "primary_title": "My Sexy Mentor Seduced Me",
+            "rating": 9.5,
+            "french_title": "Ma mentor sexy m'a séduite"
+        },
+        {
+            "name": "Eloise Lola Gordon",
+            "primary_title": "My Sexy Mentor Seduced Me",
+            "rating": 9.5,
+            "french_title": "My Sexy Mentor Seduced Me"
+        },
+        {
+            "name": "Eloise Lola Gordon",
+            "primary_title": "My Sexy Mentor Seduced Me",
+            "rating": 9.5,
+            "french_title": "Ma mentor sexy m'a séduite"
+        },
+        {
+            "name": "Sky Kawai",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Tutoring My Rival Boy"
+        },
+        {
+            "name": "Sky Kawai",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Cours particuliers avec mon ennemi"
+        },
+        {
+            "name": "Sky Kawai",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Dando clases a mi chico rival"
+        },
+        {
+            "name": "Evan Gambardella",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Tutoring My Rival Boy"
+        },
+        {
+            "name": "Evan Gambardella",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Cours particuliers avec mon ennemi"
+        },
+        {
+            "name": "Evan Gambardella",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Dando clases a mi chico rival"
+        },
+        {
+            "name": "Marcus Wells",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Tutoring My Rival Boy"
+        },
+        {
+            "name": "Marcus Wells",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Cours particuliers avec mon ennemi"
+        },
+        {
+            "name": "Marcus Wells",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Dando clases a mi chico rival"
+        },
+        {
+            "name": "Heaven Nunez",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Tutoring My Rival Boy"
+        },
+        {
+            "name": "Heaven Nunez",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Cours particuliers avec mon ennemi"
+        },
+        {
+            "name": "Heaven Nunez",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Dando clases a mi chico rival"
+        },
+        {
+            "name": "Jake Crossman",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Tutoring My Rival Boy"
+        },
+        {
+            "name": "Jake Crossman",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Cours particuliers avec mon ennemi"
+        },
+        {
+            "name": "Jake Crossman",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Dando clases a mi chico rival"
+        },
+        {
+            "name": "Nick Grimes",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Tutoring My Rival Boy"
+        },
+        {
+            "name": "Nick Grimes",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Cours particuliers avec mon ennemi"
+        },
+        {
+            "name": "Nick Grimes",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Dando clases a mi chico rival"
+        },
+        {
+            "name": "Amber Wegner",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Tutoring My Rival Boy"
+        },
+        {
+            "name": "Amber Wegner",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Cours particuliers avec mon ennemi"
+        },
+        {
+            "name": "Amber Wegner",
+            "primary_title": "Tutoring My Rival Boy",
+            "rating": 9.1,
+            "french_title": "Dando clases a mi chico rival"
+        },
+        {
+            "name": "Cayman Cardiff",
+            "primary_title": "That Missing Rockstar Is My Husband",
+            "rating": 9.1,
+            "french_title": "That Missing Rockstar Is My Husband"
+        },
+        {
+            "name": "Elisabeth Montanaro",
+            "primary_title": "That Missing Rockstar Is My Husband",
+            "rating": 9.1,
+            "french_title": "That Missing Rockstar Is My Husband"
+        },
+        {
+            "name": "Tori Kay Harris",
+            "primary_title": "That Missing Rockstar Is My Husband",
+            "rating": 9.1,
+            "french_title": "That Missing Rockstar Is My Husband"
+        },
+        {
+            "name": "Michael Ursu",
+            "primary_title": "That Missing Rockstar Is My Husband",
+            "rating": 9.1,
+            "french_title": "That Missing Rockstar Is My Husband"
+        },
+        {
+            "name": "Richard Baxter",
+            "primary_title": "That Missing Rockstar Is My Husband",
+            "rating": 9.1,
+            "french_title": "That Missing Rockstar Is My Husband"
+        },
+        {
+            "name": "Leticia Carrasco",
+            "primary_title": "That Missing Rockstar Is My Husband",
+            "rating": 9.1,
+            "french_title": "That Missing Rockstar Is My Husband"
+        },
+        {
+            "name": "Adam Chisnall",
+            "primary_title": "That Missing Rockstar Is My Husband",
+            "rating": 9.1,
+            "french_title": "That Missing Rockstar Is My Husband"
+        },
+        {
+            "name": "Sasha Di Capri",
+            "primary_title": "That Missing Rockstar Is My Husband",
+            "rating": 9.1,
+            "french_title": "That Missing Rockstar Is My Husband"
+        },
+        {
+            "name": "Maxwell Maydaniuk",
+            "primary_title": "That Missing Rockstar Is My Husband",
+            "rating": 9.1,
+            "french_title": "That Missing Rockstar Is My Husband"
+        },
+        {
+            "name": "Cindy Sorley",
+            "primary_title": "That Missing Rockstar Is My Husband",
+            "rating": 9.1,
+            "french_title": "That Missing Rockstar Is My Husband"
+        },
+        {
+            "name": "Eric Guilmette",
+            "primary_title": "My Billionaire Devil",
+            "rating": 9.1,
+            "french_title": "My Billionaire Devil"
+        },
+        {
+            "name": "Bridgette Armstrong",
+            "primary_title": "My Billionaire Devil",
+            "rating": 9.1,
+            "french_title": "My Billionaire Devil"
+        },
+        {
+            "name": "Meg Bush",
+            "primary_title": "My Billionaire Devil",
+            "rating": 9.1,
+            "french_title": "My Billionaire Devil"
+        },
+        {
+            "name": "Norman Countryman",
+            "primary_title": "My Billionaire Devil",
+            "rating": 9.1,
+            "french_title": "My Billionaire Devil"
+        },
+        {
+            "name": "Quinlan Deakin",
+            "primary_title": "My Billionaire Devil",
+            "rating": 9.1,
+            "french_title": "My Billionaire Devil"
+        },
+        {
+            "name": "Jacques Pierre Du Casse",
+            "primary_title": "My Billionaire Devil",
+            "rating": 9.1,
+            "french_title": "My Billionaire Devil"
+        },
+        {
+            "name": "Yesim Gulasi",
+            "primary_title": "My Billionaire Devil",
+            "rating": 9.1,
+            "french_title": "My Billionaire Devil"
+        },
+        {
+            "name": "Jessica Holmlund",
+            "primary_title": "My Billionaire Devil",
+            "rating": 9.1,
+            "french_title": "My Billionaire Devil"
+        },
+        {
+            "name": "Paul Hughes",
+            "primary_title": "My Billionaire Devil",
+            "rating": 9.1,
+            "french_title": "My Billionaire Devil"
+        },
+        {
+            "name": "Catherine Mazur",
+            "primary_title": "My Billionaire Devil",
+            "rating": 9.1,
+            "french_title": "My Billionaire Devil"
+        },
+        {
+            "name": "Bree Long",
+            "primary_title": "The Summer I Turned My Sexiest",
+            "rating": 9.6,
+            "french_title": "The Summer I Turned My Sexiest"
+        },
+        {
+            "name": "Volodymyr Pielikh",
+            "primary_title": "The Summer I Turned My Sexiest",
+            "rating": 9.6,
+            "french_title": "The Summer I Turned My Sexiest"
+        },
+        {
+            "name": "Juanita Andersen",
+            "primary_title": "The Summer I Turned My Sexiest",
+            "rating": 9.6,
+            "french_title": "The Summer I Turned My Sexiest"
+        },
+        {
+            "name": "Richard Neil",
+            "primary_title": "The Summer I Turned My Sexiest",
+            "rating": 9.6,
+            "french_title": "The Summer I Turned My Sexiest"
+        },
+        {
+            "name": "Louis Wendruck",
+            "primary_title": "The Summer I Turned My Sexiest",
+            "rating": 9.6,
+            "french_title": "The Summer I Turned My Sexiest"
+        },
+        {
+            "name": "Alexis Abrams",
+            "primary_title": "The Summer I Turned My Sexiest",
+            "rating": 9.6,
+            "french_title": "The Summer I Turned My Sexiest"
+        },
+        {
+            "name": "Angelina Barbieri",
+            "primary_title": "The Summer I Turned My Sexiest",
+            "rating": 9.6,
+            "french_title": "The Summer I Turned My Sexiest"
+        },
+        {
+            "name": "Bruce Clifford",
+            "primary_title": "The Summer I Turned My Sexiest",
+            "rating": 9.6,
+            "french_title": "The Summer I Turned My Sexiest"
+        },
+        {
+            "name": "Perth Tanapon Sukumpantanasan",
+            "primary_title": "Love You Teacher",
+            "rating": 9.2,
+            "french_title": "Love You Teacher"
+        },
+        {
+            "name": "Santa Pongsapak Oudompoch",
+            "primary_title": "Love You Teacher",
+            "rating": 9.2,
+            "french_title": "Love You Teacher"
+        },
+        {
+            "name": "Sammy Samantha Melanie Coates",
+            "primary_title": "Love You Teacher",
+            "rating": 9.2,
+            "french_title": "Love You Teacher"
+        },
+        {
+            "name": "Kay Lertsittichai",
+            "primary_title": "Love You Teacher",
+            "rating": 9.2,
+            "french_title": "Love You Teacher"
+        },
+        {
+            "name": "Patchanok Iamsa-Ard",
+            "primary_title": "Love You Teacher",
+            "rating": 9.2,
+            "french_title": "Love You Teacher"
+        },
+        {
+            "name": "Kapook Ploynira Hiruntaveesin",
+            "primary_title": "Love You Teacher",
+            "rating": 9.2,
+            "french_title": "Love You Teacher"
+        },
+        {
+            "name": "Nick Kellington",
+            "primary_title": "Girl Troop versus Aliens",
+            "rating": 9.1,
+            "french_title": "Girl Troop versus Aliens"
+        },
+        {
+            "name": "Krissi Bohn",
+            "primary_title": "Girl Troop versus Aliens",
+            "rating": 9.1,
+            "french_title": "Girl Troop versus Aliens"
+        },
+        {
+            "name": "Bonnie Hill",
+            "primary_title": "Girl Troop versus Aliens",
+            "rating": 9.1,
+            "french_title": "Girl Troop versus Aliens"
+        },
+        {
+            "name": "Faye Brookes",
+            "primary_title": "Girl Troop versus Aliens",
+            "rating": 9.1,
+            "french_title": "Girl Troop versus Aliens"
+        },
+        {
+            "name": "Cleo Demetriou",
+            "primary_title": "Girl Troop versus Aliens",
+            "rating": 9.1,
+            "french_title": "Girl Troop versus Aliens"
+        },
+        {
+            "name": "Madeleine Mckenna",
+            "primary_title": "Girl Troop versus Aliens",
+            "rating": 9.1,
+            "french_title": "Girl Troop versus Aliens"
+        },
+        {
+            "name": "Kayla-Mai Alvares",
+            "primary_title": "Girl Troop versus Aliens",
+            "rating": 9.1,
+            "french_title": "Girl Troop versus Aliens"
+        },
+        {
+            "name": "Rhys Stephenson",
+            "primary_title": "Girl Troop versus Aliens",
+            "rating": 9.1,
+            "french_title": "Girl Troop versus Aliens"
+        },
+        {
+            "name": "Sebastien Tensel",
+            "primary_title": "Girl Troop versus Aliens",
+            "rating": 9.1,
+            "french_title": "Girl Troop versus Aliens"
+        },
+        {
+            "name": "Hughie Higginson",
+            "primary_title": "Girl Troop versus Aliens",
+            "rating": 9.1,
+            "french_title": "Girl Troop versus Aliens"
+        },
+        {
+            "name": "Mika Salamanca",
+            "primary_title": "The Secrets of Hotel 88",
+            "rating": 9.4,
+            "french_title": "The Secrets of Hotel 88"
+        },
+        {
+            "name": "Brent Manalo",
+            "primary_title": "The Secrets of Hotel 88",
+            "rating": 9.4,
+            "french_title": "The Secrets of Hotel 88"
+        },
+        {
+            "name": "Will Ashley",
+            "primary_title": "The Secrets of Hotel 88",
+            "rating": 9.4,
+            "french_title": "The Secrets of Hotel 88"
+        },
+        {
+            "name": "Bianca De Vera",
+            "primary_title": "The Secrets of Hotel 88",
+            "rating": 9.4,
+            "french_title": "The Secrets of Hotel 88"
+        },
+        {
+            "name": "Dustin Yu",
+            "primary_title": "The Secrets of Hotel 88",
+            "rating": 9.4,
+            "french_title": "The Secrets of Hotel 88"
+        },
+        {
+            "name": "AZ Martinez",
+            "primary_title": "The Secrets of Hotel 88",
+            "rating": 9.4,
+            "french_title": "The Secrets of Hotel 88"
+        },
+        {
+            "name": "Ralph De Leon",
+            "primary_title": "The Secrets of Hotel 88",
+            "rating": 9.4,
+            "french_title": "The Secrets of Hotel 88"
+        },
+        {
+            "name": "River Joseph",
+            "primary_title": "The Secrets of Hotel 88",
+            "rating": 9.4,
+            "french_title": "The Secrets of Hotel 88"
+        },
+        {
+            "name": "Klarisse De Guzman",
+            "primary_title": "The Secrets of Hotel 88",
+            "rating": 9.4,
+            "french_title": "The Secrets of Hotel 88"
+        },
+        {
+            "name": "Esnyr Ranollo",
+            "primary_title": "The Secrets of Hotel 88",
+            "rating": 9.4,
+            "french_title": "The Secrets of Hotel 88"
+        },
+        {
+            "name": "Alex Campbell",
+            "primary_title": "Murder 101",
+            "rating": 9.2,
+            "french_title": "Murder 101"
+        },
+        {
+            "name": "Joseph Marco",
+            "primary_title": "My Husband Is a Mafia Boss",
+            "rating": 9.5,
+            "french_title": "My Husband Is a Mafia Boss"
+        },
+        {
+            "name": "Rhen Escaño",
+            "primary_title": "My Husband Is a Mafia Boss",
+            "rating": 9.5,
+            "french_title": "My Husband Is a Mafia Boss"
+        },
+        {
+            "name": "Ara Mina",
+            "primary_title": "My Husband Is a Mafia Boss",
+            "rating": 9.5,
+            "french_title": "My Husband Is a Mafia Boss"
+        },
+        {
+            "name": "Priscilla Meirelles",
+            "primary_title": "My Husband Is a Mafia Boss",
+            "rating": 9.5,
+            "french_title": "My Husband Is a Mafia Boss"
+        },
+        {
+            "name": "Simon Ibarra",
+            "primary_title": "My Husband Is a Mafia Boss",
+            "rating": 9.5,
+            "french_title": "My Husband Is a Mafia Boss"
+        },
+        {
+            "name": "Roberta Angela Tamondong",
+            "primary_title": "My Husband Is a Mafia Boss",
+            "rating": 9.5,
+            "french_title": "My Husband Is a Mafia Boss"
+        },
+        {
+            "name": "Hazel Calawod",
+            "primary_title": "My Husband Is a Mafia Boss",
+            "rating": 9.5,
+            "french_title": "My Husband Is a Mafia Boss"
+        },
+        {
+            "name": "Kelley Day",
+            "primary_title": "My Husband Is a Mafia Boss",
+            "rating": 9.5,
+            "french_title": "My Husband Is a Mafia Boss"
+        },
+        {
+            "name": "Mo Mitchell",
+            "primary_title": "My Husband Is a Mafia Boss",
+            "rating": 9.5,
+            "french_title": "My Husband Is a Mafia Boss"
+        },
+        {
+            "name": "Naz San Juan",
+            "primary_title": "My Husband Is a Mafia Boss",
+            "rating": 9.5,
+            "french_title": "My Husband Is a Mafia Boss"
+        },
+        {
+            "name": "Adam Bakri",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Indigenous"
+        },
+        {
+            "name": "Adam Bakri",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Sohab El Ard"
+        },
+        {
+            "name": "Menna Shalabi",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Indigenous"
+        },
+        {
+            "name": "Menna Shalabi",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Sohab El Ard"
+        },
+        {
+            "name": "Eyad Nassar",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Indigenous"
+        },
+        {
+            "name": "Eyad Nassar",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Sohab El Ard"
+        },
+        {
+            "name": "Joanna Arida",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Indigenous"
+        },
+        {
+            "name": "Joanna Arida",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Sohab El Ard"
+        },
+        {
+            "name": "Tara Abboud",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Indigenous"
+        },
+        {
+            "name": "Tara Abboud",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Sohab El Ard"
+        },
+        {
+            "name": "Kira Yaghnam",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Indigenous"
+        },
+        {
+            "name": "Kira Yaghnam",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Sohab El Ard"
+        },
+        {
+            "name": "Kamel El Basha",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Indigenous"
+        },
+        {
+            "name": "Kamel El Basha",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Sohab El Ard"
+        },
+        {
+            "name": "Rewan Elghaba",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Indigenous"
+        },
+        {
+            "name": "Rewan Elghaba",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Sohab El Ard"
+        },
+        {
+            "name": "Essam El Sakka",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Indigenous"
+        },
+        {
+            "name": "Essam El Sakka",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Sohab El Ard"
+        },
+        {
+            "name": "Sarah Yousef",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Indigenous"
+        },
+        {
+            "name": "Sarah Yousef",
+            "primary_title": "Indigenous",
+            "rating": 9.4,
+            "french_title": "Sohab El Ard"
+        },
+        {
+            "name": "José María Rivero",
+            "primary_title": "Maid to Love Him",
+            "rating": 9.1,
+            "french_title": "Maid to Love Him"
+        },
+        {
+            "name": "Johann Vera",
+            "primary_title": "Maid to Love Him",
+            "rating": 9.1,
+            "french_title": "Maid to Love Him"
+        },
+        {
+            "name": "Camila Jimenes",
+            "primary_title": "Maid to Love Him",
+            "rating": 9.1,
+            "french_title": "Maid to Love Him"
+        },
+        {
+            "name": "Norberto Rivera",
+            "primary_title": "Maid to Love Him",
+            "rating": 9.1,
+            "french_title": "Maid to Love Him"
+        },
+        {
+            "name": "Jayda Avanzado",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Dylan Menor",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Marco Gallo",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Yumi Garcia",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Kurt Delos Reyes",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Joanna Lara",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Love Yauco",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Martin Venegas",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Iven Lim",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Michael Keith",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Pam Miras",
+            "primary_title": "Project Loki",
+            "rating": 9.3,
+            "french_title": "Project Loki"
+        },
+        {
+            "name": "Adam Farrel",
+            "primary_title": "A and Z: God Willing, Love",
+            "rating": 9.3,
+            "french_title": "A dan Z: InsyaAllah Cinta"
+        },
+        {
+            "name": "Adam Farrel",
+            "primary_title": "A and Z: God Willing, Love",
+            "rating": 9.3,
+            "french_title": "A and Z: God Willing, Love"
+        },
+        {
+            "name": "Zoe Jackson",
+            "primary_title": "A and Z: God Willing, Love",
+            "rating": 9.3,
+            "french_title": "A dan Z: InsyaAllah Cinta"
+        },
+        {
+            "name": "Zoe Jackson",
+            "primary_title": "A and Z: God Willing, Love",
+            "rating": 9.3,
+            "french_title": "A and Z: God Willing, Love"
+        },
+        {
+            "name": "Laura Christina Moane",
+            "primary_title": "A and Z: God Willing, Love",
+            "rating": 9.3,
+            "french_title": "A dan Z: InsyaAllah Cinta"
+        },
+        {
+            "name": "Laura Christina Moane",
+            "primary_title": "A and Z: God Willing, Love",
+            "rating": 9.3,
+            "french_title": "A and Z: God Willing, Love"
+        },
+        {
+            "name": "Rizky Nazar",
+            "primary_title": "A and Z: God Willing, Love",
+            "rating": 9.3,
+            "french_title": "A dan Z: InsyaAllah Cinta"
+        },
+        {
+            "name": "Rizky Nazar",
+            "primary_title": "A and Z: God Willing, Love",
+            "rating": 9.3,
+            "french_title": "A and Z: God Willing, Love"
+        },
+        {
+            "name": "Jon Rust",
+            "primary_title": "Author of My Heart",
+            "rating": 9.1,
+            "french_title": "Author of My Heart"
+        },
+        {
+            "name": "Callie Bacon",
+            "primary_title": "Author of My Heart",
+            "rating": 9.1,
+            "french_title": "Author of My Heart"
+        },
+        {
+            "name": "Hichem Benmira",
+            "primary_title": "Fatma",
+            "rating": 9.2,
+            "french_title": "Fatma"
+        },
+        {
+            "name": "Fethi Nouri",
+            "primary_title": "Fatma",
+            "rating": 9.2,
+            "french_title": "Fatma"
+        },
+        {
+            "name": "Mohamed Oughlis",
+            "primary_title": "Fatma",
+            "rating": 9.2,
+            "french_title": "Fatma"
+        },
+        {
+            "name": "Retaj Abdullah",
+            "primary_title": "Fatma",
+            "rating": 9.2,
+            "french_title": "Fatma"
+        },
+        {
+            "name": "Houria Bahloul",
+            "primary_title": "Fatma",
+            "rating": 9.2,
+            "french_title": "Fatma"
+        },
+        {
+            "name": "Mahfoud Berkane",
+            "primary_title": "Fatma",
+            "rating": 9.2,
+            "french_title": "Fatma"
+        },
+        {
+            "name": "Asma Bnimam",
+            "primary_title": "Fatma",
+            "rating": 9.2,
+            "french_title": "Fatma"
+        },
+        {
+            "name": "Mohamed Amine Mouffok",
+            "primary_title": "Fatma",
+            "rating": 9.2,
+            "french_title": "Fatma"
+        },
+        {
+            "name": "Slimane Benouari",
+            "primary_title": "Fatma",
+            "rating": 9.2,
+            "french_title": "Fatma"
+        },
+        {
+            "name": "Hadjer Serraoui",
+            "primary_title": "Fatma",
+            "rating": 9.2,
+            "french_title": "Fatma"
+        },
+        {
+            "name": "Alba Tonini",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Daniel Frias Faas",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Adrian Sets",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Neda Badel",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Sofía Privitera",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Dorian Sanz",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Aurora Cuenca",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Danilo Cardia",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Luigi Biondo",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Elisa Cano",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Eddy Cardellach",
+            "primary_title": "Sal de mi playlist",
+            "rating": 9.5,
+            "french_title": "Sal de mi playlist"
+        },
+        {
+            "name": "Christine Oswald",
+            "primary_title": "The Wolf's Claim",
+            "rating": 9.1,
+            "french_title": "The Wolf's Claim"
+        },
+        {
+            "name": "Logan Shepard",
+            "primary_title": "The Wolf's Claim",
+            "rating": 9.1,
+            "french_title": "The Wolf's Claim"
+        },
+        {
+            "name": "Bryan Frank",
+            "primary_title": "The Wolf's Claim",
+            "rating": 9.1,
+            "french_title": "The Wolf's Claim"
+        },
+        {
+            "name": "Ross Kaplan",
+            "primary_title": "The Wolf's Claim",
+            "rating": 9.1,
+            "french_title": "The Wolf's Claim"
+        },
+        {
+            "name": "Siddharth Nigam",
+            "primary_title": "Headshot",
+            "rating": 9.4,
+            "french_title": "Headshot"
+        },
+        {
+            "name": "Nidhi Bhanushali",
+            "primary_title": "Headshot",
+            "rating": 9.4,
+            "french_title": "Headshot"
+        },
+        {
+            "name": "Luke Kenny",
+            "primary_title": "Headshot",
+            "rating": 9.4,
+            "french_title": "Headshot"
+        },
+        {
+            "name": "Rajan Arora",
+            "primary_title": "Headshot",
+            "rating": 9.4,
+            "french_title": "Headshot"
+        },
+        {
+            "name": "Kamal Batra",
+            "primary_title": "Headshot",
+            "rating": 9.4,
+            "french_title": "Headshot"
+        },
+        {
+            "name": "Isha Sandhir",
+            "primary_title": "Headshot",
+            "rating": 9.4,
+            "french_title": "Headshot"
+        },
+        {
+            "name": "Vijay Nikam",
+            "primary_title": "Headshot",
+            "rating": 9.4,
+            "french_title": "Headshot"
+        },
+        {
+            "name": "Mohit Chhikara",
+            "primary_title": "Headshot",
+            "rating": 9.4,
+            "french_title": "Headshot"
+        },
+        {
+            "name": "Anuj Singh Duhan",
+            "primary_title": "Headshot",
+            "rating": 9.4,
+            "french_title": "Headshot"
+        },
+        {
+            "name": "Nihan Jain",
+            "primary_title": "Headshot",
+            "rating": 9.4,
+            "french_title": "Headshot"
+        }
+    ],
+    "relevant_data_agents": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+    ],
+    "query_plan": {
+        "query": "Which actors worked on which highly rated (>9.0) drama TV series released after 2025 and what alternative titles were used in France?",
+        "steps": [
+            {
+                "id": "s1",
+                "query": "List all drama TV series released in 2026 or later and return title and series identifier.",
+                "to_agent": "A4",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s2",
+                "query": "List all drama TV series released in 2026 or later and return title and series identifier.",
+                "to_agent": "A5",
+                "dependencies": [],
+                "answer": null
+            },
+            {
+                "id": "s3",
+                "query": "For each series identified as qualifying, filter for those with an average rating of 9.0 or higher and return series title and identifiers.",
+                "to_agent": "A3",
+                "dependencies": [
+                    {
+                        "step_id": "s1",
+                        "dependency": "Qualifying drama TV series list with title and identifiers from A4"
+                    },
+                    {
+                        "step_id": "s2",
+                        "dependency": "Qualifying drama TV series list with title and identifiers from A5"
+                    }
+                ],
+                "answer": null
+            },
+            {
+                "id": "s4",
+                "query": "For each highly rated drama TV series identified, list all person_ids of actors who worked on the series.",
+                "to_agent": "A2",
+                "dependencies": [
+                    {
+                        "step_id": "s3",
+                        "dependency": "Highly rated drama TV series list with title and identifiers from A3"
+                    }
+                ],
+                "answer": null
+            },
+            {
+                "id": "s5",
+                "query": "For each actor identified, list the names of them.",
+                "to_agent": "A1",
+                "dependencies": [
+                    {
+                        "step_id": "s4",
+                        "dependency": "List of actors with person_ids who worked on highly rated drama TV series from A2"
+                    }
+                ],
+                "answer": null
+            },
+            {
+                "id": "s6",
+                "query": "For each highly rated drama TV series identified, list the alternative titles used in France.",
+                "to_agent": "A5",
+                "dependencies": [
+                    {
+                        "step_id": "s3",
+                        "dependency": "Highly rated drama TV series list with title and identifiers from A3"
+                    }
+                ],
+                "answer": null
+            },
+            {
+                "id": "s7",
+                "query": "Using the retrieved results, compile a final answer that lists which actors worked on which highly rated (>9.0) drama TV series released after 2025 and what alternative titles were used in France.",
+                "to_agent": "Coordinator",
+                "dependencies": [
+                    {
+                        "step_id": "s5",
+                        "dependency": "Names of actors who worked on highly rated drama TV series from A1"
+                    },
+                    {
+                        "step_id": "s6",
+                        "dependency": "Alternative titles used in France for highly rated drama TV series from A5"
+                    }
+                ],
+                "answer": null
+            }
+        ]
+    }
 }
