@@ -1,15 +1,30 @@
 {
 	"query": "What are all the different jobs held by person with id nm0000001?",
-	"sql_query": "SELECT DISTINCT job FROM crew WHERE person_id = 'nm0000001'",
+	"sql_query": "SELECT DISTINCT job, category FROM crew WHERE person_id = 'nm0000001'",
 	"answer": [
 		{
-			"job": null
+			"job": null,
+			"category": "actor"
 		},
 		{
-			"job": "producer"
+			"job": null,
+			"category": "archive_footage"
 		},
 		{
-			"job": "executive producer"
+			"job": null,
+			"category": "self"
+		},
+		{
+			"job": null,
+			"category": "archive_sound"
+		},
+		{
+			"job": "producer",
+			"category": "producer"
+		},
+		{
+			"job": "executive producer",
+			"category": "producer"
 		}
 	],
 	"relevant_data_agents": [
