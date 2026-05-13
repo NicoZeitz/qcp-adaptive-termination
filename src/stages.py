@@ -47,7 +47,7 @@ async def main(
 
     query = test_data["query"]
     answer = test_data["answer"]
-    # sql_query = test_data["sql_query"]
+    sql_query = test_data["sql_query"]
     relevant_agents = test_data["relevant_data_agents"]
     query_plan = QueryPlan.load_from_json(test_data["query_plan"])
 
@@ -70,10 +70,11 @@ async def main(
         data_agents.extend(create_text_agents_from_folder(text_data_agents_path))
         query_coordinator: QueryCoordinator = DefaultQueryCoordinator()
 
+        print_to_log_file(log_file, f"QUERY: {query}")
+        print_to_log_file(log_file, f"SQL QUERY: {sql_query}")
+
         if stage == 0:
             # All stages
-            print_to_log_file(log_file, f"QUERY: {query}")
-
             # Filter relevant agents
             relevant_data_agents_with_reasoning = (
                 await query_coordinator.filter_relevant_agents(data_agents, query)
@@ -129,8 +130,6 @@ async def main(
             )
         elif stage == 1:
             # Filter relevant agents
-            print_to_log_file(log_file, f"QUERY: {query}")
-
             relevant_data_agents_with_reasoning = (
                 await query_coordinator.filter_relevant_agents(data_agents, query)
             )
@@ -164,7 +163,6 @@ async def main(
                 agent for agent in data_agents if agent.name in relevant_agents
             ]
 
-            print_to_log_file(log_file, f"QUERY: {query}")
             print_to_log_file(
                 log_file,
                 f"RELEVANT AGENTS: {sorted([agent.name for agent in data_agents])}",
