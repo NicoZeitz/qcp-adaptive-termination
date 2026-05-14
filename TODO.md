@@ -9,7 +9,7 @@ API Design
 * 1 Runner per database
 
 Datasets
-* Execute BRID Benchmark
+* Execute BIRD Benchmark
 
 Test differences
 * Multiple questions in one query (IMDB) -> new json files (query, sql_query, answer, relevant_agents)
