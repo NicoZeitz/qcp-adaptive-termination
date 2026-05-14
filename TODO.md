@@ -1,30 +1,25 @@
+Make the code more modular
+* Different stages (Discovery, Planning, Execution)
+* Classes to inject (With coordinator reasoning, without, ...)
+* Cache stages (write-back, read-only)
+* File exporter for span data + remove span limits (OpenAI, https://github.com/openai/openai-agents-python/blob/656baf8ead8c970529d2c935acecac70ddc4fdc9/src/agents/tracing/processors.py#L33)
+
+API Design
+* Input multiple folders for data agents
+* 1 Runner per database
+
+Datasets
+* Execute BRID Benchmark
+
+Test differences
+* Multiple questions in one query (IMDB) -> new json files (query, sql_query, answer, relevant_agents)
+* Multiple irrelevant databases (IMDB + databases from BIRD)
+* Split imdb e.g. 10 horizontal if it works (IMDB)
+
+Code Changes
+* Replanning prompting force not to reuse step ids if not the same
+* Replanning: Ask all data agents for the information needs again for participation (that are not currently participating)
+
 Split Generation
 * Data Noise (TRANSLATE, RENAME_COLUMNS, CHANGE_DATA_TYPE, USE_DATA_ABBREVIATIONS, SYNONYMS)
 * Redundancies (Multiple agents having (partially) overlapping data)
-
-General
-* Replanning over returning instead of error (partial plan replanning possible)
-
-Data Agents
-* Prompting better
-  * Python code execution (can't see output of sql_query() without anything, should use print instead)
-
-Orchestrator Agent
-* Prompting better
-  * Planning: Wrong dependencies (e.g. with person id's, no needs, but answer)
-  * Replanning: Takes failed node and just adds new nodes to the plan somewhere else, just keeps the failed node the same
-* Replanning: Ask all data agents for the information needs again for participation (that are not currently participating)
-
-Result Agent
-* Prompting better
-* Result Classification: The Coordinator classifies partial results as they appear. Only longterm are regarded for the final synthesis.
-* Schema Alignment: LLM-generated code to normalize the data.
-* LLM-Guided Synthesis: The Coordinator decides how the partial results need to be combined and generates executable code.
-* Result Alignment by Code Generation
-
-
-* Code in Stages
-* Panda dataframes as passing around
-
-* Additional information data preview always in all codes
-* Only inject additional information to the prompt, if it exists
