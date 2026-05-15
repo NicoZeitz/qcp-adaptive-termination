@@ -3,6 +3,7 @@ Make the code more modular
 * Classes to inject (With coordinator reasoning, without, ...)
 * Cache stages (write-back, read-only)
 * File exporter for span data + remove span limits (OpenAI, https://github.com/openai/openai-agents-python/blob/656baf8ead8c970529d2c935acecac70ddc4fdc9/src/agents/tracing/processors.py#L33)
+* Explore & add boundary from full schema injection of coordinator vs only nl descriptions 
 
 API Design
 * Input multiple folders for data agents
