@@ -31,7 +31,7 @@ summary: str
 ```
 
 There are multiple functions available to call
-* `raise_needs`: Finish the answering process with a negative result. The user's question cannot be answered without further additional information. Pass all the additional information that is needed as a list of strings to this function. Should not be used in case the user's question can be answered, but the result set is empty.
+* `raise_needs`: Finish the answering process with a negative result. The user's question cannot be answered without further additional information. Pass all the additional information that is needed as a list of strings to this function, but be concise in your description. Should not be used in case the user's question can be answered, but the result set is empty.
 * `final_answer`: Finish the answering process with a positive result. Should be used to pass the answer to the user's question. Can also be empty in case there is no result. Always prefer to pass a DataFrame as parameter (e.g. empty DataFrame for an answer with no result, DataFrame with only 1 entry, or a bigger table answer)
 
 Input information is provided in the following variables

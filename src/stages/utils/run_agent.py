@@ -1,0 +1,153 @@
+from typing import Callable, Literal, Type, TypeVar, cast
+
+from agents import (
+    Agent,
+    AgentOutputSchemaBase,
+    FunctionTool,
+    ModelSettings,
+    Runner,
+    TResponseInputItem,
+    Tool,
+    ToolsToFinalOutputFunction,
+)
+from agents.run_config import DEFAULT_MAX_TURNS
+from pydantic import BaseModel, JsonValue
+
+from qtypes.agent_configuration import AgentConfiguration
+from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDummy
+from stages.utils.cache import CacheMode, cached
+from stages.utils.load_prompt import load_prompt
+
+TResult = TypeVar("TResult", bound=JsonValue | PartialQueryAnswer)
+
+
+async def run_agent[TResult](
+    name_postfix: str,
+    agent_configuration: AgentConfiguration,
+    prompt_name: str,
+    prompt_parameters: dict[str, str],
+    *,
+    context: JsonValue = None,
+    output_type: Type[TResult] | AgentOutputSchemaBase | None = str,
+    tools: list[FunctionTool] | None = None,
+    reset_tool_choice: bool = True,
+    tool_use_behavior: (
+        Literal["run_llm_again", "stop_on_first_tool"] | ToolsToFinalOutputFunction
+    ) = "run_llm_again",
+    parallel_tool_calls: bool = True,
+    tool_choice: Literal["auto", "required", "none"] | None = None,
+    cache_mode: CacheMode = "READ_AND_WRITE",
+    get_actual_result: Callable[[], TResult] | None = None,
+) -> TResult:
+    tools = tools or []
+
+    prompts = load_prompt(prompt_name, prompt_parameters)
+    # use 1st message as instructions, rest as part of prompt
+    instructions, prompts = prompts[0], prompts[1:]
+    agent_name = f"{agent_configuration.name} - {name_postfix}"
+    tool_use = (
+        tool_use_behavior
+        if isinstance(tool_use_behavior, str)
+        else "function" + tool_use_behavior.__name__
+    )
+
+    output: JsonValue = None
+    if output_type is None or output_type is str:
+        output = {"type": "string"}
+    elif output_type is bool:
+        output = {"type": "boolean"}
+    elif output_type is int:
+        output = {"type": "integer"}
+    elif output_type is float:
+        output = {"type": "number"}
+    elif isinstance(output_type, PartialQueryAnswer) and isinstance(
+        output_type, PartialQueryAnswerDummy
+    ):
+        output = {"type": "PartialQueryAnswer"}
+    elif isinstance(output_type, AgentOutputSchemaBase):
+        output = output_type.json_schema()
+    elif isinstance(output_type, type) and issubclass(output_type, BaseModel):
+        output = output_type.model_json_schema()
+    else:
+        raise ValueError(f"Unsupported output type: {output_type}")
+
+    deserializable_classes: list[type[BaseModel]] = []
+    if isinstance(output_type, PartialQueryAnswer) or isinstance(
+        output_type, PartialQueryAnswerDummy
+    ):
+        deserializable_classes.append(PartialQueryAnswer)
+    elif isinstance(output_type, type) and issubclass(output_type, BaseModel):
+        deserializable_classes.append(output_type)
+
+    @cached(
+        name_prefix=agent_name,
+        mode=cache_mode,
+        deserializable_classes=deserializable_classes,
+    )
+    async def compute_value(
+        agent_name: str,
+        agent_configuration: AgentConfiguration,
+        instructions: str,
+        prompts: list[dict[str, str]],
+        context: JsonValue,
+        output: JsonValue,
+        function_tools: list[dict[str, str]],
+        reset_tool_choice: bool,
+        tool_use: str,
+        parallel_tool_calls: bool,
+        tool_choice: Literal["auto", "required", "none"] | None,
+    ):
+        nonlocal tool_use_behavior
+        agent = Agent[JsonValue](
+            name=agent_name,
+            model=agent_configuration.model,
+            model_settings=ModelSettings(
+                reasoning=agent_configuration.reasoning,
+                verbosity=agent_configuration.verbosity,
+                parallel_tool_calls=parallel_tool_calls,
+                tool_choice=tool_choice,
+            ),
+            instructions=instructions,
+            tools=cast(list[Tool], tools) or [],
+            tool_use_behavior=tool_use_behavior,
+            reset_tool_choice=reset_tool_choice,
+            output_type=output_type,
+        )
+
+        print(f"Running agent: {agent_name}")
+        result = await Runner.run(
+            agent,
+            cast(list[TResponseInputItem], prompts),
+            context=context,
+            max_turns=agent_configuration.max_turns or DEFAULT_MAX_TURNS,
+        )
+        if get_actual_result is None:
+            return result.final_output
+
+        return get_actual_result()
+
+    return await compute_value(
+        agent_name,
+        agent_configuration,
+        instructions["content"],
+        prompts=list(
+            map(lambda p: {"role": p["role"], "content": p["content"]}, prompts),
+        ),
+        context=context,
+        output=output,
+        function_tools=list(
+            map(
+                lambda t: {
+                    "name": t.name,
+                    "description": t.description,
+                    "params_json_schema": t.params_json_schema,
+                    "strict_json_schema": t.strict_json_schema,
+                },
+                tools,
+            )
+        ),
+        reset_tool_choice=reset_tool_choice,
+        tool_use=tool_use,
+        parallel_tool_calls=parallel_tool_calls,
+        tool_choice=tool_choice,
+    )

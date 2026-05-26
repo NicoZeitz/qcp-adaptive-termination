@@ -10,8 +10,7 @@ import uuid
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
 
-from data_agent.data_agent import DataAgent
-from data_agent.sql_data_agent.sql_data_agent import SqlDataAgent
+from qtypes.data_agent import DataAgent
 
 
 @event.listens_for(Engine, "connect")
@@ -832,12 +831,12 @@ def create_agents(
     # 5. return data agents
     data_agents: list[DataAgent] = []
     for data_agent_config in data_agents_config:
-        data_agent = SqlDataAgent(
+        data_agent = DataAgent(
+            type="sql",
             name=data_agent_config.agent_name,
-            db_engine=create_engine(
-                f"sqlite:///{os.path.abspath(data_agent_config.db_file)}"
-            ),
+            path=data_agent_config.db_file,
         )
+
         data_agents.append(data_agent)
         print(
             f"{data_agent.name}: 'sqlite:///{os.path.abspath(data_agent_config.db_file)}'"

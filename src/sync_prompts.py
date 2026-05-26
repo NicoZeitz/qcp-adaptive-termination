@@ -1,9 +1,10 @@
 import os
 from typing import cast
 
+from langfuse import get_client
 from langfuse.model import ChatMessageWithPlaceholdersDict_Message
 
-from utils.initialization import initialize, langfuse
+from stages.utils.initialization import initialize
 
 
 def get_prompts():
@@ -41,6 +42,7 @@ def compare_prompts(prompt, parts):
 
 
 def up():
+    langfuse = get_client()
     for name, parts in get_prompts().items():
         same_prompt = True
         try:
@@ -76,6 +78,7 @@ def get_parts(name: str):
 
 
 def down():
+    langfuse = get_client()
     response = langfuse.api.prompts.list(label="latest", limit=100)
     if response.meta.limit < response.meta.total_items:
         print("Error: Limit is less that total Items, please change code")

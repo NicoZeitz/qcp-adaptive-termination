@@ -19,42 +19,6 @@
             "cwd": "${workspaceFolder}/src",
             "program": "${workspaceFolder}/src/main.py",
             "console": "integratedTerminal"
-        },
-        {
-            "name": "Python Debugger: stages.py - Stage 1",
-            "type": "debugpy",
-            "request": "launch",
-            "cwd": "${workspaceFolder}/src",
-            "program": "${workspaceFolder}/src/stages.py",
-            "args": ["--stage", "1"],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python Debugger: stages.py - Stage 2",
-            "type": "debugpy",
-            "request": "launch",
-            "cwd": "${workspaceFolder}/src",
-            "program": "${workspaceFolder}/src/stages.py",
-            "args": ["--stage", "2"],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python Debugger: stages.py - Stage 3",
-            "type": "debugpy",
-            "request": "launch",
-            "cwd": "${workspaceFolder}/src",
-            "program": "${workspaceFolder}/src/stages.py",
-            "args": ["--stage", "3"],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python Debugger: stages.py - Stage 0",
-            "type": "debugpy",
-            "request": "launch",
-            "cwd": "${workspaceFolder}/src",
-            "program": "${workspaceFolder}/src/stages.py",
-            "args": ["--stage", "0"],
-            "console": "integratedTerminal"
         }
     ]
 }
