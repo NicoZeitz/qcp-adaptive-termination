@@ -23,6 +23,7 @@ def initialize(
     log_dir: Path = Path("../.logs"),
     cache_dir: Path = Path("../.cache"),
     provider: Literal["University", "Work"] = "University",
+    throw_on_cache_miss: bool = False,
 ):
     # Load env
     load_dotenv()
@@ -30,6 +31,10 @@ def initialize(
     # Set up cache
     cache_dir.mkdir(parents=True, exist_ok=True)
     Cache.instance().set_cache_folder(cache_dir)
+    if throw_on_cache_miss:
+        Cache.instance().set_mode("READ_AND_WRITE_THROW_ON_MISS")
+    else:
+        Cache.instance().set_mode("READ_AND_WRITE")
 
     # Set up logging
     log_dir.mkdir(parents=True, exist_ok=True)
