@@ -37,7 +37,7 @@ async def run_agent[TResult](
     ) = "run_llm_again",
     parallel_tool_calls: bool = True,
     tool_choice: Literal["auto", "required", "none"] | None = None,
-    cache_mode: CacheMode = "READ_AND_WRITE",
+    cache_mode: CacheMode | None = None,
     get_actual_result: Callable[[], TResult] | None = None,
 ) -> TResult:
     tools = tools or []

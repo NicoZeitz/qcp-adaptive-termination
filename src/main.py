@@ -33,6 +33,7 @@ async def main(
     start_stage: int,
     end_stage: int,
     provider: Literal["University", "Work"],
+    throw_on_cache_miss: bool = False,
 ):
     if start_stage > end_stage:
         raise Exception
@@ -40,7 +41,7 @@ async def main(
     user = "NZ" if os.getlogin() == "I550817" else "FW"
     log_filename = f"Stage {start_stage}-{end_stage} - {datetime.now().strftime('%Y-%m-%d %H-%M-%S')}"
 
-    initialize(log_filename, log_dir, cache_dir, provider)
+    initialize(log_filename, log_dir, cache_dir, provider, throw_on_cache_miss)
     logging.info(
         f"{user}: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for cache path {cache_dir / cache_filename} with provider {provider}"
     )
@@ -95,7 +96,7 @@ if __name__ == "__main__":
     import asyncio
 
     parser = argparse.ArgumentParser(prog="Collaborative Query Answering")
-    # TODO: continue running later stages + exit on cache miss
+    parser.add_argument("--throw-on-cache-miss", action="store_true", help="Whether to throw an error if cache miss occurs")
     parser.add_argument("--start_stage", type=int, choices=[1, 2, 3, 4], default=1)
     parser.add_argument("--end_stage", type=int, choices=[1, 2, 3, 4], default=3)
     parser.add_argument("--name", type=str, default="cache.json")
@@ -114,5 +115,6 @@ if __name__ == "__main__":
             args.start_stage,
             args.end_stage,
             args.provider,
+            args.throw_on_cache_miss,
         )
     )

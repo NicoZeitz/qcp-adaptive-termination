@@ -219,9 +219,25 @@ __marimo__/
 .DS_Store
 
 # Dataset files
-/IMDB/
-/data/
-A Vision for Autonomous Data Agent Collaboration From Query-by-Integration to Query-by-Collaboration CIDR2026_QCPDB.pdf
+*.db
+*.sqlite
 
+# IMDB
+data/imdb/**/*.png
+data/imdb/**/*.svg
+data/imdb/text/*.txt
+data/imdb/**/config.txt
+data/imdb/**/*.tsv.gz
+
+# BIRD
+data/bird/**/metadata.json
+data/bird/dev/
+
+# WikiDBs
+data/wikidbs/
+
+
+# Other generated files
+A Vision for Autonomous Data Agent Collaboration From Query-by-Integration to Query-by-Collaboration CIDR2026_QCPDB.pdf
 .logs/
 .cache/
