@@ -4,6 +4,7 @@ from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResu
 from attr import dataclass
 import pandas as pd
 from pydantic import JsonValue
+from sqlalchemy import text
 
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.additional_information import AdditionalInformation
@@ -54,6 +55,7 @@ async def answer_step_data_agent(
     additional_variables = {}
     additional_tools = {}
     additional_span_data = None
+    cleanup: Callable[[], None] | None = None
 
     if responsible_data_agent.type == "text":
         summary = await data_agent_data_description(responsible_data_agent)
@@ -65,6 +67,36 @@ async def answer_step_data_agent(
         additional_variables["summary"] = summary
     elif responsible_data_agent.type == "sql":
         db_engine = get_db_engine(responsible_data_agent)
+
+        # add additional information as new db
+        with db_engine.connect() as connection:
+            connection.execute(text("ATTACH DATABASE ':memory:' AS additional_information"))
+            connection.execute(text("PRAGMA additional_information.journal_mode=WAL;"))
+            connection.execute(text("PRAGMA additional_information.foreign_keys=OFF;"))
+            connection.execute(text("PRAGMA additional_information.journal_mode=MEMORY;"))
+            connection.execute(text("PRAGMA additional_information.temp_store=MEMORY;"))
+            connection.execute(text("PRAGMA additional_information.synchronous=OFF;"))
+            connection.execute(text("PRAGMA additional_information.query_only = ON;"))
+
+            # write the additional information to a table in the attached db
+            connection.execute(text("CREATE TABLE additional_information.info (dependency TEXT, table_name TEXT)"))
+            for index, information in enumerate(additional_information):
+                dependency = information.dependency
+                table_name = f"info_{index}"
+                connection.execute(
+                    text("INSERT INTO additional_information.info (dependency, table_name) VALUES (:dependency, :table_name)"),
+                    {"dependency": dependency, "table_name": table_name},
+                )
+
+            for index, information in enumerate(additional_information):
+                information.data.to_sql(name=f"additional_information.info_{index}", con=connection, if_exists="replace", index=False)
+            connection.commit()
+
+        def cleanup_func():
+            with db_engine.connect() as connection:
+                connection.execute(text("DETACH DATABASE additional_information"))
+                connection.commit()
+
         sql_queries: list[SqlQuery] = []
 
         def query_sql(query: str) -> pd.DataFrame:
@@ -87,13 +119,14 @@ async def answer_step_data_agent(
                 "sql_queries": [sql_query.to_span_data() for sql_query in sql_queries]
             }
 
+        m_schema = await data_agent_data_description(responsible_data_agent)
+
         prompt_name = "SQL Data Agent/Code"
-        prompt_parameters["summary"] = await data_agent_data_description(
-            responsible_data_agent
-        )
+        prompt_parameters["m_schema"] = m_schema
         prompt_parameters["query"] = query
         additional_tools["query_sql"] = query_sql
         additional_span_data = additional_span_data_func
+        cleanup = cleanup_func
     else:
         raise ValueError(f"Unsupported data agent type: {responsible_data_agent.type}")
 
@@ -106,6 +139,7 @@ async def answer_step_data_agent(
         additional_variables=additional_variables,
         additional_tools=additional_tools,
         additional_span_data=additional_span_data,
+        cleanup=cleanup,
     )
 
 
@@ -118,6 +152,7 @@ async def answer_query(
     additional_variables: dict[str, Any],
     additional_tools: dict[str, Any],
     additional_span_data: Callable[[], dict[str, Any]] | None = None,
+    cleanup: Callable[[], None] | None = None,
 ) -> PartialQueryAnswer:
 
     with own_custom_span(
@@ -173,6 +208,9 @@ async def answer_query(
                 get_actual_result=lambda: partial_answer,
             ),
         )
+
+        if cleanup is not None:
+            cleanup()
 
         append_to_span_output(
             {
