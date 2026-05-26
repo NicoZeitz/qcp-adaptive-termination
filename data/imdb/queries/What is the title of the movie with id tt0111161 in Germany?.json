@@ -1,0 +1,73 @@
+{
+    "extra": {
+        "sql_query": "SELECT title FROM akas WHERE title_id = 'tt0111161' AND region = 'DE'",
+        "answer": [
+            {
+                "title": "Die Verurteilten"
+            }
+        ],
+        "relevant_data_agents": [
+            "A5"
+        ],
+        "query_plan": {
+            "query": "What is the title of the movie with id tt0111161 in Germany?",
+            "steps": [
+                {
+                    "id": "s1",
+                    "query": "What is the official title used in Germany (country code DE) for the movie with IMDb ID tt0111161? If multiple German titles exist, provide the primary theatrical release title. Return only the title.",
+                    "to_agent": "A5",
+                    "dependencies": [],
+                    "answer": null
+                },
+                {
+                    "id": "s2",
+                    "query": "Using the retrieved result, provide the title of the movie with id tt0111161 in Germany as the final answer.",
+                    "to_agent": "Coordinator",
+                    "dependencies": [
+                        {
+                            "step_id": "s1",
+                            "dependency": "Title used in Germany (DE) for the movie with IMDb ID tt0111161"
+                        }
+                    ],
+                    "answer": null
+                }
+            ]
+        }
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "What is the title of the movie with id tt0111161 in Germany?",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/imdb/handmade/A1.db"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/imdb/handmade/A2.db"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/imdb/handmade/A3.db"
+            },
+            {
+                "type": "sql",
+                "name": "A4",
+                "path": "../data/imdb/handmade/A4.db"
+            },
+            {
+                "type": "sql",
+                "name": "A5",
+                "path": "../data/imdb/handmade/A5.db"
+            },
+            {
+                "type": "text",
+                "name": "T1",
+                "path": "../data/imdb/text/T1.txt"
+            }
+        ]
+    }
+}

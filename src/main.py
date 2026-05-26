@@ -27,7 +27,7 @@ stages_mapping = {
 
 
 async def main(
-    cache_filename: str,
+    cache_file: Path,
     cache_dir: Path,
     log_dir: Path,
     start_stage: int,
@@ -43,11 +43,11 @@ async def main(
 
     initialize(log_filename, log_dir, cache_dir, provider, throw_on_cache_miss)
     logging.info(
-        f"{user}: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for cache path {cache_dir / cache_filename} with provider {provider}"
+        f"{user}: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for cache path {cache_file} with provider {provider}"
     )
 
     data: Any = load_cache_file(
-        cache_dir / cache_filename,
+        cache_file,
         deserializable_classes=[
             CollaborativeQueryAnswering,
             FilteredRelevantAgents,
@@ -97,19 +97,19 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(prog="Collaborative Query Answering")
     parser.add_argument("--throw-on-cache-miss", action="store_true", help="Whether to throw an error if cache miss occurs")
-    parser.add_argument("--start_stage", type=int, choices=[1, 2, 3, 4], default=1)
-    parser.add_argument("--end_stage", type=int, choices=[1, 2, 3, 4], default=3)
-    parser.add_argument("--name", type=str, default="cache.json")
-    parser.add_argument("--cache_dir", type=str, default="../.cache")
-    parser.add_argument("--log_dir", type=str, default="../.logs")
+    parser.add_argument("--start_stage", type=int, choices=[1, 2, 3], default=1, help="Stage to start execution from (default: 1)")
+    parser.add_argument("--end_stage", type=int, choices=[1, 2, 3], default=3, help="Stage after which to end execution (default: 3)")
+    parser.add_argument("--name", type=str, default="../data/imdb/queries/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json", help="Name of the input file")
+    parser.add_argument("--cache_dir", type=str, default="../.cache", help="Directory for cache files (default: ../.cache)")
+    parser.add_argument("--log_dir", type=str, default="../.logs", help="Directory for log files (default: ../.logs)")
     parser.add_argument(
-        "--provider", type=str, choices=["University", "Work"], default="University"
+        "--provider", type=str, choices=["University", "Work"], default="University", help="Provider to use for the agents (default: University)"
     )
     args = parser.parse_args()
 
     asyncio.run(
         main(
-            args.name,
+            Path(args.name),
             Path(args.cache_dir),
             Path(args.log_dir),
             args.start_stage,

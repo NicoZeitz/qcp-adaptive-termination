@@ -1,0 +1,75 @@
+{
+    "extra": {
+        "question_id": 1411,
+        "db_id": "student_club",
+        "question": "State what kind of expenses that Sacha Harrison incurred?",
+        "evidence": "kind of expenses refers to expense_description; Sacha Harrison is the full name; full name refers to first_name, last_name;",
+        "question_with_evidence": "State what kind of expenses that Sacha Harrison incurred? Hint: kind of expenses refers to expense_description; Sacha Harrison is the full name; full name refers to first_name, last_name;",
+        "SQL": "SELECT T2.expense_description FROM member AS T1 INNER JOIN expense AS T2 ON T1.member_id = T2.link_to_member WHERE T1.first_name = 'Sacha' AND T1.last_name = 'Harrison'",
+        "difficulty": "simple",
+        "answer": [
+            [
+                "Post Cards, Posters"
+            ],
+            [
+                "Posters"
+            ],
+            [
+                "Water, chips, cookies"
+            ],
+            [
+                "Posters"
+            ],
+            [
+                "Water, chips, cookies"
+            ],
+            [
+                "Pizza"
+            ],
+            [
+                "Water, chips, cookies"
+            ],
+            [
+                "Travel Mug"
+            ],
+            [
+                "Alumni Glass"
+            ],
+            [
+                "Posters"
+            ],
+            [
+                "Travel Mug"
+            ],
+            [
+                "Bakery - Donuts, muffins"
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "State what kind of expenses that Sacha Harrison incurred? Hint: kind of expenses refers to expense_description; Sacha Harrison is the full name; full name refers to first_name, last_name;",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset_vertical/student_club/q1411/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset_vertical/student_club/q1411/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset_vertical/student_club/q1411/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset_vertical/student_club/q1411/agent3.sqlite"
+            }
+        ]
+    }
+}

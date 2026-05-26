@@ -1,0 +1,69 @@
+{
+    "extra": {
+        "question_id": 1413,
+        "db_id": "student_club",
+        "question": "Mention the zip code of member who incurred less than 50USD.",
+        "evidence": "incurred less than 50USD refers to cost < 50",
+        "question_with_evidence": "Mention the zip code of member who incurred less than 50USD. Hint: incurred less than 50USD refers to cost < 50",
+        "SQL": "SELECT T1.zip FROM member AS T1 INNER JOIN expense AS T2 ON T1.member_id = T2.link_to_member WHERE T2.cost < 50",
+        "difficulty": "simple",
+        "answer": [
+            [
+                21784
+            ],
+            [
+                21784
+            ],
+            [
+                21784
+            ],
+            [
+                21784
+            ],
+            [
+                7080
+            ],
+            [
+                7080
+            ],
+            [
+                21784
+            ],
+            [
+                7080
+            ],
+            [
+                1020
+            ],
+            [
+                21784
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "Mention the zip code of member who incurred less than 50USD. Hint: incurred less than 50USD refers to cost < 50",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset_vertical/student_club/q1413/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset_vertical/student_club/q1413/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset_vertical/student_club/q1413/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset_vertical/student_club/q1413/agent3.sqlite"
+            }
+        ]
+    }
+}

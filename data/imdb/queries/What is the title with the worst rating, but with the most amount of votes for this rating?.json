@@ -1,0 +1,99 @@
+{
+    "extra": {
+        "answer": "Reis",
+        "sql_query": "SELECT t.original_title FROM titles t JOIN ratings r ON r.title_id = t.title_id ORDER BY r.rating ASC, r.votes DESC LIMIT 1",
+        "relevant_data_agents": [
+            "A3",
+            "A4",
+            "A5"
+        ],
+        "query_plan": {
+            "query": "What is the title with the worst rating, but with the most amount of votes for this rating?",
+            "steps": [
+                {
+                    "id": "s1",
+                    "query": "Find the title_id of the title with the lowest rating, breaking ties by the highest number of votes",
+                    "to_agent": "A3",
+                    "dependencies": [],
+                    "answer": null
+                },
+                {
+                    "id": "s2",
+                    "query": "Find the original_title for the given title_id",
+                    "to_agent": "A4",
+                    "dependencies": [
+                        {
+                            "step_id": "s1",
+                            "dependency": "The title_id of the title with the lowest rating and highest votes among that rating"
+                        }
+                    ],
+                    "answer": null
+                },
+                {
+                    "id": "s3",
+                    "query": "Find the original_title for the given title_id",
+                    "to_agent": "A5",
+                    "dependencies": [
+                        {
+                            "step_id": "s1",
+                            "dependency": "The title_id of the title with the lowest rating and highest votes among that rating"
+                        }
+                    ],
+                    "answer": null
+                },
+                {
+                    "id": "s4",
+                    "query": "What is the title with the worst rating, but with the most amount of votes for this rating?",
+                    "to_agent": "Coordinator",
+                    "dependencies": [
+                        {
+                            "step_id": "s2",
+                            "dependency": "The original title from A4"
+                        },
+                        {
+                            "step_id": "s3",
+                            "dependency": "The original title from A5"
+                        }
+                    ],
+                    "answer": null
+                }
+            ]
+        }
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "What is the title with the worst rating, but with the most amount of votes for this rating?",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/imdb/handmade/A1.db"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/imdb/handmade/A2.db"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/imdb/handmade/A3.db"
+            },
+            {
+                "type": "sql",
+                "name": "A4",
+                "path": "../data/imdb/handmade/A4.db"
+            },
+            {
+                "type": "sql",
+                "name": "A5",
+                "path": "../data/imdb/handmade/A5.db"
+            },
+            {
+                "type": "text",
+                "name": "T1",
+                "path": "../data/imdb/text/T1.txt"
+            }
+        ]
+    }
+}

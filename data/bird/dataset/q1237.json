@@ -1,0 +1,231 @@
+{
+    "extra": {
+        "question_id": 1237,
+        "db_id": "thrombosis_prediction",
+        "question": "Among all outpatients, list out those have low hemoglobin level. State the different IDs and their sex.",
+        "evidence": "outpatients refers to Admission = '-'; low hemoglobin level refers to HBG < 10;",
+        "question_with_evidence": "Among all outpatients, list out those have low hemoglobin level. State the different IDs and their sex. Hint: outpatients refers to Admission = '-'; low hemoglobin level refers to HBG < 10;",
+        "SQL": "SELECT DISTINCT T1.ID, T1.SEX FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.HGB < 10 AND T1.Admission = '-'",
+        "difficulty": "simple",
+        "answer": [
+            [
+                30609,
+                "F"
+            ],
+            [
+                58139,
+                "F"
+            ],
+            [
+                71417,
+                "F"
+            ],
+            [
+                128012,
+                "F"
+            ],
+            [
+                128041,
+                "F"
+            ],
+            [
+                287122,
+                "F"
+            ],
+            [
+                528900,
+                "F"
+            ],
+            [
+                585659,
+                "F"
+            ],
+            [
+                1043570,
+                "F"
+            ],
+            [
+                1124385,
+                "F"
+            ],
+            [
+                1557464,
+                ""
+            ],
+            [
+                1610433,
+                "F"
+            ],
+            [
+                1614305,
+                "F"
+            ],
+            [
+                1682700,
+                "F"
+            ],
+            [
+                1711181,
+                "F"
+            ],
+            [
+                1755350,
+                "F"
+            ],
+            [
+                1792502,
+                "F"
+            ],
+            [
+                2256652,
+                "F"
+            ],
+            [
+                2275169,
+                "F"
+            ],
+            [
+                2276582,
+                "F"
+            ],
+            [
+                2307640,
+                "M"
+            ],
+            [
+                2352510,
+                "F"
+            ],
+            [
+                2355809,
+                "F"
+            ],
+            [
+                2931207,
+                "F"
+            ],
+            [
+                2941804,
+                "F"
+            ],
+            [
+                2956679,
+                "F"
+            ],
+            [
+                3150681,
+                "F"
+            ],
+            [
+                3182521,
+                "M"
+            ],
+            [
+                3362815,
+                "M"
+            ],
+            [
+                3545964,
+                "F"
+            ],
+            [
+                4416959,
+                "F"
+            ],
+            [
+                4417978,
+                "F"
+            ],
+            [
+                4471732,
+                "F"
+            ],
+            [
+                4621629,
+                "F"
+            ],
+            [
+                4632519,
+                "F"
+            ],
+            [
+                4641445,
+                "F"
+            ],
+            [
+                4648912,
+                "F"
+            ],
+            [
+                4826981,
+                "F"
+            ],
+            [
+                4840422,
+                "F"
+            ],
+            [
+                4862013,
+                "F"
+            ],
+            [
+                4892768,
+                "F"
+            ],
+            [
+                4915498,
+                "F"
+            ],
+            [
+                4927828,
+                "F"
+            ],
+            [
+                5063068,
+                "F"
+            ],
+            [
+                5117606,
+                "F"
+            ],
+            [
+                5122312,
+                "F"
+            ],
+            [
+                5176234,
+                "F"
+            ],
+            [
+                5179581,
+                "F"
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "Among all outpatients, list out those have low hemoglobin level. State the different IDs and their sex. Hint: outpatients refers to Admission = '-'; low hemoglobin level refers to HBG < 10;",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset/thrombosis_prediction/q1237/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset/thrombosis_prediction/q1237/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset/thrombosis_prediction/q1237/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset/thrombosis_prediction/q1237/agent3.sqlite"
+            }
+        ]
+    }
+}

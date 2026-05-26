@@ -1,0 +1,235 @@
+{
+    "extra": {
+        "question_id": 389,
+        "db_id": "card_games",
+        "question": "List down the name of cards with original types of Creature - Elf and the date of rulings for these cards.",
+        "evidence": "Creature - Elf is the originalType;",
+        "question_with_evidence": "List down the name of cards with original types of Creature - Elf and the date of rulings for these cards. Hint: Creature - Elf is the originalType;",
+        "SQL": "SELECT T1.id, T2.date FROM cards AS T1 INNER JOIN rulings AS T2 ON T1.uuid = T2.uuid WHERE T1.originalType = 'Creature - Elf'",
+        "difficulty": "simple",
+        "answer": [
+            [
+                240,
+                "2007-05-01"
+            ],
+            [
+                242,
+                "2004-10-04"
+            ],
+            [
+                242,
+                "2005-08-01"
+            ],
+            [
+                247,
+                "2004-10-04"
+            ],
+            [
+                258,
+                "2004-10-04"
+            ],
+            [
+                258,
+                "2007-07-15"
+            ],
+            [
+                434,
+                "2007-05-01"
+            ],
+            [
+                3108,
+                "2007-05-01"
+            ],
+            [
+                3478,
+                "2007-05-01"
+            ],
+            [
+                3478,
+                "2009-10-01"
+            ],
+            [
+                3504,
+                "2004-10-04"
+            ],
+            [
+                3520,
+                "2004-10-04"
+            ],
+            [
+                3835,
+                "2007-05-01"
+            ],
+            [
+                3835,
+                "2009-10-01"
+            ],
+            [
+                3843,
+                "2004-10-04"
+            ],
+            [
+                3880,
+                "2004-10-04"
+            ],
+            [
+                7903,
+                "2004-10-04"
+            ],
+            [
+                7903,
+                "2004-10-04"
+            ],
+            [
+                7965,
+                "2004-10-04"
+            ],
+            [
+                14440,
+                "2008-08-01"
+            ],
+            [
+                14445,
+                "2008-10-01"
+            ],
+            [
+                14445,
+                "2008-10-01"
+            ],
+            [
+                14445,
+                "2008-10-01"
+            ],
+            [
+                14445,
+                "2008-10-01"
+            ],
+            [
+                14452,
+                "2016-06-08"
+            ],
+            [
+                14453,
+                "2004-10-04"
+            ],
+            [
+                14453,
+                "2004-10-04"
+            ],
+            [
+                23473,
+                "2008-08-01"
+            ],
+            [
+                23473,
+                "2009-10-01"
+            ],
+            [
+                23474,
+                "2004-10-04"
+            ],
+            [
+                23474,
+                "2004-10-04"
+            ],
+            [
+                27368,
+                "2008-10-01"
+            ],
+            [
+                27368,
+                "2008-10-01"
+            ],
+            [
+                27368,
+                "2008-10-01"
+            ],
+            [
+                27368,
+                "2008-10-01"
+            ],
+            [
+                27375,
+                "2004-10-04"
+            ],
+            [
+                27381,
+                "2016-06-08"
+            ],
+            [
+                36686,
+                "2004-10-04"
+            ],
+            [
+                36686,
+                "2004-10-04"
+            ],
+            [
+                36692,
+                "2007-05-01"
+            ],
+            [
+                36697,
+                "2016-06-08"
+            ],
+            [
+                36700,
+                "2004-10-04"
+            ],
+            [
+                37367,
+                "2013-09-20"
+            ],
+            [
+                40407,
+                "2004-10-04"
+            ],
+            [
+                40417,
+                "2008-08-01"
+            ],
+            [
+                47757,
+                "2004-10-04"
+            ],
+            [
+                47888,
+                "2008-08-01"
+            ],
+            [
+                47896,
+                "2020-06-23"
+            ],
+            [
+                47907,
+                "2007-05-01"
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "List down the name of cards with original types of Creature - Elf and the date of rulings for these cards. Hint: Creature - Elf is the originalType;",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset/card_games/q389/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset/card_games/q389/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset/card_games/q389/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset/card_games/q389/agent3.sqlite"
+            }
+        ]
+    }
+}

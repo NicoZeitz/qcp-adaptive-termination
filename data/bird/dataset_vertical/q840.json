@@ -1,0 +1,57 @@
+{
+    "extra": {
+        "question_id": 840,
+        "db_id": "superhero",
+        "question": "List the attribute value of the superhero named Aquababy.",
+        "evidence": "",
+        "question_with_evidence": "List the attribute value of the superhero named Aquababy.",
+        "SQL": "SELECT T2.attribute_value FROM superhero AS T1 INNER JOIN hero_attribute AS T2 ON T1.id = T2.hero_id WHERE T1.superhero_name = 'Aquababy'",
+        "difficulty": "simple",
+        "answer": [
+            [
+                60
+            ],
+            [
+                20
+            ],
+            [
+                15
+            ],
+            [
+                15
+            ],
+            [
+                15
+            ],
+            [
+                15
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "List the attribute value of the superhero named Aquababy.",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset_vertical/superhero/q840/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset_vertical/superhero/q840/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset_vertical/superhero/q840/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset_vertical/superhero/q840/agent3.sqlite"
+            }
+        ]
+    }
+}

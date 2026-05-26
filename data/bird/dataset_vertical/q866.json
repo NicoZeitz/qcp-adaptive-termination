@@ -1,0 +1,84 @@
+{
+    "extra": {
+        "question_id": 866,
+        "db_id": "formula_1",
+        "question": "Who was the player that got the lap time of 0:01:27 in the race No. 161? Show his introduction website.",
+        "evidence": "player and driver are synonyms; the lap time of 0:0M:SS refers to lapTime.time LIKE 'M:SS%';race number refers to raceId; introduction website of the drivers refers to url;",
+        "question_with_evidence": "Who was the player that got the lap time of 0:01:27 in the race No. 161? Show his introduction website. Hint: player and driver are synonyms; the lap time of 0:0M:SS refers to lapTime.time LIKE 'M:SS%';race number refers to raceId; introduction website of the drivers refers to url;",
+        "SQL": "SELECT DISTINCT T2.forename, T2.surname, T2.url FROM lapTimes AS T1 INNER JOIN drivers AS T2 ON T2.driverId = T1.driverId WHERE T1.raceId = 161 AND T1.time LIKE '1:27%'",
+        "difficulty": "moderate",
+        "answer": [
+            [
+                "David",
+                "Coulthard",
+                "http://en.wikipedia.org/wiki/David_Coulthard"
+            ],
+            [
+                "Jarno",
+                "Trulli",
+                "http://en.wikipedia.org/wiki/Jarno_Trulli"
+            ],
+            [
+                "Jenson",
+                "Button",
+                "http://en.wikipedia.org/wiki/Jenson_Button"
+            ],
+            [
+                "Rubens",
+                "Barrichello",
+                "http://en.wikipedia.org/wiki/Rubens_Barrichello"
+            ],
+            [
+                "Ralf",
+                "Schumacher",
+                "http://en.wikipedia.org/wiki/Ralf_Schumacher"
+            ],
+            [
+                "Michael",
+                "Schumacher",
+                "http://en.wikipedia.org/wiki/Michael_Schumacher"
+            ],
+            [
+                "Ricardo",
+                "Zonta",
+                "http://en.wikipedia.org/wiki/Ricardo_Zonta"
+            ],
+            [
+                "Heinz-Harald",
+                "Frentzen",
+                "http://en.wikipedia.org/wiki/Heinz-Harald_Frentzen"
+            ],
+            [
+                "Mika",
+                "Häkkinen",
+                "http://en.wikipedia.org/wiki/Mika_H%C3%A4kkinen"
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "Who was the player that got the lap time of 0:01:27 in the race No. 161? Show his introduction website. Hint: player and driver are synonyms; the lap time of 0:0M:SS refers to lapTime.time LIKE 'M:SS%';race number refers to raceId; introduction website of the drivers refers to url;",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset_vertical/formula_1/q866/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset_vertical/formula_1/q866/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset_vertical/formula_1/q866/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset_vertical/formula_1/q866/agent3.sqlite"
+            }
+        ]
+    }
+}
