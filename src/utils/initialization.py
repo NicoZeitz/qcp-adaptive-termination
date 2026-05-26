@@ -2,8 +2,9 @@ from datetime import datetime
 import os
 from pathlib import Path
 import logging
-from typing import Literal, cast
-from agents import set_default_openai_client, set_tracing_export_api_key
+from typing import Literal
+from agents import set_default_openai_client, set_trace_processors
+from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
 import nest_asyncio
 import sys
@@ -16,6 +17,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from utils.cache import Cache
 from utils.file_span_exporter import FileSpanExporter
 from utils.load_prompt import LangfuseProcessor
+from utils.openai_tracing import TruncatingBackendSpanExporter
 
 
 def initialize(
@@ -60,7 +62,19 @@ def initialize(
         else AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     )
     set_default_openai_client(custom_client)
-    set_tracing_export_api_key(api_key=cast(str, os.getenv("OPENAI_API_KEY")))
+
+    # Keep OpenAI trace export enabled, but trim payload fields before upload.
+    # Langfuse and file exporters below still receive full, untruncated spans.
+    tracing_api_key = os.getenv("OPENAI_API_KEY")
+    if tracing_api_key:
+        max_field_bytes = int(os.getenv("OPENAI_TRACING_MAX_FIELD_BYTES", "9500"))
+        openai_exporter = TruncatingBackendSpanExporter(
+            api_key=tracing_api_key,
+            max_field_bytes=max_field_bytes,
+        )
+        set_trace_processors([BatchTraceProcessor(exporter=openai_exporter)])
+    else:
+        logging.warning("No OpenAI tracing API key found; OpenAI trace export is disabled.")
 
     # Set up tracing
     tracing_log_file = log_dir / f"{log_name}_traces.jsonl"
