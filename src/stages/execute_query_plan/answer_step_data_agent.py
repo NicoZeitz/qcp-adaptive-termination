@@ -1,27 +1,33 @@
-from typing import Any, Callable, cast
+from typing import Any, Callable, Optional, cast
 
 from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
 from attr import dataclass
 import pandas as pd
 from pydantic import JsonValue
-from sqlalchemy import text
 
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.additional_information import AdditionalInformation
 from qtypes.data_agent import DataAgent
 from qtypes.need import try_parse_value_to_need_type
 from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDummy
-from qtypes.query_plan_step import QueryPlanStep
 from qtypes.result import try_parse_value_to_result_type
 from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.data_description import data_agent_data_description
-from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
+from stages.common.data_agent.sql_data_agent.get_db_connection import get_db_engine
 from stages.common.data_agent.text_data_agent.get_text import get_text
-from stages.common.mschema.schema_engine import SchemaEngine
 from utils.serialize_value import serialize_value
 from utils.preview import preview_dataframe
 from utils.run_agent import run_agent
 from utils.span import append_to_span_output, own_custom_span
+
+
+@dataclass
+class Parameters:
+    prompt_name: str
+    prompt_parameters: dict[str, Any] = {}
+    additional_variables: dict[str, str] = {}
+    additional_tools: dict[str, Any] = {}
+    additional_span_data: Optional[Callable[[], dict[str, Any]]] = None
 
 
 @dataclass
@@ -41,113 +47,105 @@ class SqlQuery:
         return span_data
 
 
+async def get_text_data_agent_parameters(
+    data_agent: DataAgent, query: str
+) -> Parameters:
+    summary = await data_agent_data_description(data_agent)
+    return Parameters(
+        prompt_name="Text Data Agent/Code",
+        prompt_parameters={"summary": summary, "query": query},
+        additional_variables={
+            "text": get_text(data_agent),
+            "summary": summary,
+        },
+    )
+
+
+async def get_sql_data_agent_parameters(
+    data_agent: DataAgent,
+    query: str,
+    additional_information: list[AdditionalInformation],
+) -> Parameters:
+    db_engine = get_db_engine(data_agent)
+
+    sql_queries: list[SqlQuery] = []
+
+    def query_sql(query: str) -> pd.DataFrame:
+        sql_query = SqlQuery(query=query)
+
+        try:
+            result = pd.read_sql_query(query, db_engine, dtype_backend="numpy_nullable")
+            sql_query.result = result
+            return result
+        except Exception as e:
+            sql_query.error = e
+            raise
+        finally:
+            sql_queries.append(sql_query)
+
+    def additional_span_data_func() -> dict[str, Any]:
+        return {"sql_queries": [sql_query.to_span_data() for sql_query in sql_queries]}
+
+    m_schema = await data_agent_data_description(data_agent)
+
+    return Parameters(
+        prompt_name="SQL Data Agent/Code",
+        prompt_parameters={"m_schema": m_schema, "query": query},
+        additional_tools={"query_sql": query_sql},
+        additional_span_data=additional_span_data_func,
+    )
+
+
 async def answer_step_data_agent(
     data_agents: list[DataAgent],
-    query_plan_step: QueryPlanStep,
+    query: str,
+    to_agent: str,
     additional_information: list[AdditionalInformation],
 ) -> PartialQueryAnswer:
     responsible_data_agent = next(
-        (agent for agent in data_agents if agent.name == query_plan_step.to_agent)
+        (agent for agent in data_agents if agent.name == to_agent)
     )
 
-    query = query_plan_step.query
-
-    prompt_parameters = {}
-    additional_variables = {}
-    additional_tools = {}
-    additional_span_data = None
-    cleanup: Callable[[], None] | None = None
+    # TODO:
+    additional_information = [
+        AdditionalInformation(
+            dependency="Test",
+            data=pd.DataFrame({"column1": [1, 2], "column2": ["A", "B"]}),
+        ),
+        AdditionalInformation(
+            dependency="Test2",
+            data=pd.DataFrame({"column3": [3, 4], "column4": ["C", "D"]}),
+        ),
+        AdditionalInformation(
+            dependency="Test3",
+            data=pd.DataFrame({"column5": [5, 6], "column6": ["E", "F"]}),
+        ),
+    ]
 
     if responsible_data_agent.type == "text":
-        summary = await data_agent_data_description(responsible_data_agent)
-
-        prompt_name = "Text Data Agent/Code"
-        prompt_parameters["summary"] = summary
-        prompt_parameters["query"] = query
-        additional_variables["text"] = get_text(responsible_data_agent)
-        additional_variables["summary"] = summary
+        parameters = await get_text_data_agent_parameters(responsible_data_agent, query)
     elif responsible_data_agent.type == "sql":
-        db_engine = get_db_engine(responsible_data_agent)
-
-        # add additional information as new db
-        with db_engine.connect() as connection:
-            connection.execute(text("PRAGMA query_only = OFF;"))
-            connection.execute(text("ATTACH DATABASE ':memory:' AS additional_information"))
-            connection.execute(text("PRAGMA additional_information.journal_mode=WAL;"))
-            connection.execute(text("PRAGMA additional_information.foreign_keys=OFF;"))
-            connection.execute(text("PRAGMA additional_information.journal_mode=MEMORY;"))
-            connection.execute(text("PRAGMA additional_information.temp_store=MEMORY;"))
-            connection.execute(text("PRAGMA additional_information.synchronous=OFF;"))
-
-            # write the additional information to a table in the attached db
-            connection.execute(text("CREATE TABLE additional_information.info (dependency TEXT, table_name TEXT)"))
-            for index, information in enumerate(additional_information):
-                dependency = information.dependency
-                table_name = f"info_{index}"
-                connection.execute(
-                    text("INSERT INTO additional_information.info (dependency, table_name) VALUES (:dependency, :table_name)"),
-                    {"dependency": dependency, "table_name": table_name},
-                )
-
-            for index, information in enumerate(additional_information):
-                information.data.to_sql(name=f"additional_information.info_{index}", con=connection, if_exists="replace", index=False)
-
-            connection.execute(text("PRAGMA query_only = ON;"))
-            connection.execute(text("PRAGMA additional_information.query_only = ON;"))
-            connection.commit()
-
-        def cleanup_func():
-            with db_engine.connect() as connection:
-                connection.execute(text("DETACH DATABASE additional_information"))
-                connection.commit()
-
-        sql_queries: list[SqlQuery] = []
-
-        def query_sql(query: str) -> pd.DataFrame:
-            sql_query = SqlQuery(query=query)
-
-            try:
-                result = pd.read_sql_query(
-                    query, db_engine, dtype_backend="numpy_nullable"
-                )
-                sql_query.result = result
-                return result
-            except Exception as e:
-                sql_query.error = e
-                raise
-            finally:
-                sql_queries.append(sql_query)
-
-        def additional_span_data_func() -> dict[str, Any]:
-            return {
-                "sql_queries": [sql_query.to_span_data() for sql_query in sql_queries]
-            }
-
-        m_schema = await data_agent_data_description(responsible_data_agent)
-
-        if len(additional_information) > 0:
-            schema_engine = SchemaEngine(db_engine, db_name="Additional Information", include_tables=[f"additional_information.info_{i}" for i in range(len(additional_information))] + ["additional_information.info"])
-            m_schema += "\n" + schema_engine.mschema.to_mschema()
-
-        prompt_name = "SQL Data Agent/Code"
-        prompt_parameters["m_schema"] = m_schema
-        prompt_parameters["query"] = query
-        additional_tools["query_sql"] = query_sql
-        additional_span_data = additional_span_data_func
-        cleanup = cleanup_func
+        parameters = await get_sql_data_agent_parameters(
+            responsible_data_agent, query, additional_information
+        )
     else:
         raise ValueError(f"Unsupported data agent type: {responsible_data_agent.type}")
+
+    # TODO:
+    import sys
+
+    sys.exit(1)
 
     return await answer_query(
         data_agent=responsible_data_agent,
         query=query,
         additional_information=additional_information,
-        prompt_name=prompt_name,
-        prompt_parameters=prompt_parameters,
-        additional_variables=additional_variables,
-        additional_tools=additional_tools,
-        additional_span_data=additional_span_data,
-        cleanup=cleanup,
+        prompt_name=parameters.prompt_name,
+        prompt_parameters=parameters.prompt_parameters,
+        additional_variables=parameters.additional_variables,
+        additional_tools=parameters.additional_tools,
+        additional_span_data=parameters.additional_span_data,
+        cleanup=parameters.cleanup,
     )
 
 
@@ -160,7 +158,6 @@ async def answer_query(
     additional_variables: dict[str, Any],
     additional_tools: dict[str, Any],
     additional_span_data: Callable[[], dict[str, Any]] | None = None,
-    cleanup: Callable[[], None] | None = None,
 ) -> PartialQueryAnswer:
 
     with own_custom_span(
@@ -216,9 +213,6 @@ async def answer_query(
                 get_actual_result=lambda: partial_answer,
             ),
         )
-
-        if cleanup is not None:
-            cleanup()
 
         append_to_span_output(
             {

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, create_model, Field
 
 from stages.common.agent_configuration import get_data_agent_agent_configuration
-from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
+from stages.common.data_agent.sql_data_agent.get_db_connection import get_db_engine
 from utils.run_agent import run_agent
 from qtypes.data_agent import DataAgent
 from stages.common.mschema.schema_engine import SchemaEngine
