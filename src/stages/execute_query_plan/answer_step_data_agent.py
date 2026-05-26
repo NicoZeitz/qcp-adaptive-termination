@@ -17,6 +17,7 @@ from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.data_description import data_agent_data_description
 from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
 from stages.common.data_agent.text_data_agent.get_text import get_text
+from stages.common.mschema.schema_engine import SchemaEngine
 from utils.serialize_value import serialize_value
 from utils.preview import preview_dataframe
 from utils.run_agent import run_agent
@@ -120,6 +121,10 @@ async def answer_step_data_agent(
             }
 
         m_schema = await data_agent_data_description(responsible_data_agent)
+
+        if len(additional_information) > 0:
+            schema_engine = SchemaEngine(db_engine, db_name="Additional Information", include_tables=[f"additional_information.info_{i}" for i in range(len(additional_information))] + ["additional_information.info"])
+            m_schema += "\n" + schema_engine.mschema.to_mschema()
 
         prompt_name = "SQL Data Agent/Code"
         prompt_parameters["m_schema"] = m_schema
