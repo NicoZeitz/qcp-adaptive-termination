@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Literal, cast
 from datetime import datetime
 
 from agents import trace
@@ -57,13 +57,12 @@ async def main(
     )
 
     logging.info(f"{user}: Successfully loaded input file. Starting execution.")
-    logging.info(f"Extra entries in cache_file:")
+    logging.info("Extra entries in cache_file:")
     if extra:
         for k, v in extra.items():
             logging.info(f"  {k}: {v}")
     else:
         logging.info("  No extra entries found.")
-
 
     with trace(
         f"{user}: Collaborative Query Answering", metadata={"provider": provider}
@@ -121,14 +120,49 @@ if __name__ == "__main__":
     import asyncio
 
     parser = argparse.ArgumentParser(prog="Collaborative Query Answering")
-    parser.add_argument("--throw-on-cache-miss", action="store_true", help="Whether to throw an error if cache miss occurs")
-    parser.add_argument("--start_stage", type=int, choices=[1, 2, 3], default=1, help="Stage to start execution from (default: 1)")
-    parser.add_argument("--end_stage", type=int, choices=[1, 2, 3], default=3, help="Stage after which to end execution (default: 3)")
-    parser.add_argument("--input", type=str, default="../data/imdb/queries/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json", help="Name of the input file")
-    parser.add_argument("--cache_dir", type=str, default="../.cache", help="Directory for cache files (default: ../.cache)")
-    parser.add_argument("--log_dir", type=str, default="../.logs", help="Directory for log files (default: ../.logs)")
     parser.add_argument(
-        "--provider", type=str, choices=["University", "Work"], default="University", help="Provider to use for the agents (default: University)"
+        "--throw-on-cache-miss",
+        action="store_true",
+        help="Whether to throw an error if cache miss occurs",
+    )
+    parser.add_argument(
+        "--start_stage",
+        type=int,
+        choices=[1, 2, 3],
+        default=1,
+        help="Stage to start execution from (default: 1)",
+    )
+    parser.add_argument(
+        "--end_stage",
+        type=int,
+        choices=[1, 2, 3],
+        default=3,
+        help="Stage after which to end execution (default: 3)",
+    )
+    parser.add_argument(
+        "--input",
+        type=str,
+        default="../data/imdb/queries/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json",
+        help="Name of the input file",
+    )
+    parser.add_argument(
+        "--cache_dir",
+        type=str,
+        default="../.cache",
+        help="Directory for cache files (default: ../.cache)",
+    )
+    parser.add_argument(
+        "--log_dir",
+        type=str,
+        default="../.logs",
+        help="Directory for log files (default: ../.logs)",
+    )
+    parser.add_argument(
+        "--provider",
+        type=str,
+        choices=["University", "Work"],
+        default="University",
+        help="Provider to use for the agents (default: University)",
     )
     args = parser.parse_args()
 
