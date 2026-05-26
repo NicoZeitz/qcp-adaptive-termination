@@ -153,19 +153,19 @@ def _deserialize_value(
 
 def load_cache_file(
     cache_file: Path, deserializable_classes: Sequence[type[BaseModel]] | None = None
-) -> Any:
+) -> tuple[Any, dict[str, Any] | None]:
     if not cache_file.exists():
         raise FileNotFoundError(f"Cache file not found: {cache_file}")
 
     with cache_file.open("r") as f:
         payload = json.load(f)
         value = payload.get("value")
+        extra = payload.get("extra")
 
         if deserializable_classes:
-            return _deserialize_value(value, deserializable_classes)
+            return _deserialize_value(value, deserializable_classes), extra
 
-        return value
-
+        return value, extra
 
 Param = ParamSpec("Param")
 RetType = TypeVar("RetType")

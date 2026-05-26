@@ -27,7 +27,7 @@ stages_mapping = {
 
 
 async def main(
-    cache_file: Path,
+    input_file: Path,
     cache_dir: Path,
     log_dir: Path,
     start_stage: int,
@@ -43,11 +43,11 @@ async def main(
 
     initialize(log_filename, log_dir, cache_dir, provider, throw_on_cache_miss)
     logging.info(
-        f"{user}: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for cache path {cache_file} with provider {provider}"
+        f"{user}: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for input path {input_file} with provider {provider}"
     )
 
-    data: Any = load_cache_file(
-        cache_file,
+    data, extra = load_cache_file(
+        input_file,
         deserializable_classes=[
             CollaborativeQueryAnswering,
             FilteredRelevantAgents,
@@ -56,30 +56,54 @@ async def main(
         ],
     )
 
+    logging.info(f"{user}: Successfully loaded input file. Starting execution.")
+    logging.info(f"Extra entries in cache_file:")
+    if extra:
+        for k, v in extra.items():
+            logging.info(f"  {k}: {v}")
+    else:
+        logging.info("  No extra entries found.")
+
+
     with trace(
         f"{user}: Collaborative Query Answering", metadata={"provider": provider}
     ):
         if start_stage == 1:
+            logging.info(f"{user}: Starting stage 1: Filter Relevant Agents")
+            logging.info(f"Data: {data}")
+
             data = cast(CollaborativeQueryAnswering, data)
             data = await filter_relevant_agents(data.query, data.data_agents)
             data = cast(FilteredRelevantAgents, data)
+
+            logging.info(f"{user}: Finished stage 1")
+            logging.info(f"Result: {data}")
 
             start_stage += 1
             if end_stage < start_stage:
                 return
 
         if start_stage == 2:
+            logging.info(f"{user}: Starting stage 2: Draft Query Plan")
+            logging.info(f"Data: {data}")
+
             data = cast(FilteredRelevantAgents, data)
             data = await draft_query_plan(
                 data.query, data.data_agents, data.relevant_data_agents
             )
             data = cast(DraftedQueryPlan, data)
 
+            logging.info(f"{user}: Finished stage 2")
+            logging.info(f"Result: {data}")
+
             start_stage += 1
             if end_stage < start_stage:
                 return
 
         if start_stage == 3:
+            logging.info(f"{user}: Starting stage 3: Execute Query Plan")
+            logging.info(f"Data: {data}")
+
             data = cast(DraftedQueryPlan, data)
             data = await execute_query_plan(
                 data.query_plan,
@@ -88,7 +112,8 @@ async def main(
             )
             data = cast(CollaborativeQueryAnsweringResult, data)
 
-            logging.info(data)
+            logging.info(f"{user}: Finished stage 3")
+            logging.info(f"Result: {data}")
 
 
 if __name__ == "__main__":
