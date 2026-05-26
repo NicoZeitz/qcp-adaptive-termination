@@ -99,7 +99,7 @@ if __name__ == "__main__":
     parser.add_argument("--throw-on-cache-miss", action="store_true", help="Whether to throw an error if cache miss occurs")
     parser.add_argument("--start_stage", type=int, choices=[1, 2, 3], default=1, help="Stage to start execution from (default: 1)")
     parser.add_argument("--end_stage", type=int, choices=[1, 2, 3], default=3, help="Stage after which to end execution (default: 3)")
-    parser.add_argument("--name", type=str, default="../data/imdb/queries/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json", help="Name of the input file")
+    parser.add_argument("--input", type=str, default="../data/imdb/queries/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json", help="Name of the input file")
     parser.add_argument("--cache_dir", type=str, default="../.cache", help="Directory for cache files (default: ../.cache)")
     parser.add_argument("--log_dir", type=str, default="../.logs", help="Directory for log files (default: ../.logs)")
     parser.add_argument(
@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     asyncio.run(
         main(
-            Path(args.name),
+            Path(args.input),
             Path(args.cache_dir),
             Path(args.log_dir),
             args.start_stage,
