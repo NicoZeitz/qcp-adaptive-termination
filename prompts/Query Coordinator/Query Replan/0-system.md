@@ -13,6 +13,18 @@ A query plan is a list of steps that need to be executed in order to answer the 
 - If a query can possibly be answered by multiple agents, include a step for each of the agents.
 - Queries should be instructed in natural language instead of a technical language like SQL
 
+## Important consideration regarding split data
+
+Always assume that data that belongs together is split in the worst way possible between different agents: This has an important impact on your query planning! 
+
+### Example for a potential failure case:
+-Agent A holds table category[ID, type] with (4, mammal), (3, reptile) and holds table inventory[catID, species, amount] with (4, kangaroo, 1), (5, squirrel, 3), (2, robin, 42). Agent B has the same two tables, but only with the entries (1, fish), (2, bird), (5, mammal) and (1, tuna, 20), (5, beaver, 3)
+- With the query "How many different mammals are in the inventory?" the most forward way to complete it is to first ask Agent A and then Agent B how many mammals do they count. The answer in this case: Agent A would return (kangaroo, 1) and Agent B would return (beaver, 3). This answer is incorrect, because it is not complete. This happens when each agents joins their category and inventory tables separately. Underlying problem here: Agent B has category information, that would be needed be Agent A to answer the query completely.
+- Potential plan to get correct answer is: First ask both agents for their category and then combining those two, afterwards querying the two agents again for the mammal amounts with the combined category table. This returns the additional correct (squirrel, 3).
+
+- Therefore it is important to plan joins and other operations that filter out data, that might bee needed by other agents, as late in the query plan as possible!
+- You must prefer creating more steps to handle these kind of problems by letting agents return unfiltered data and combining them then afterwards.
+
 ## Important Rules regarding Replanning
 
 - Try to keep the same ids for steps from the old query plan that are still relevant. This is even more important for steps, that already have answers, as the ids are used to keep track of them and map answers to the answered query.
