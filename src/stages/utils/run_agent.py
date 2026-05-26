@@ -1,3 +1,4 @@
+import logging
 from typing import Callable, Literal, Type, TypeVar, cast
 
 from agents import (
@@ -52,6 +53,8 @@ async def run_agent[TResult](
     )
 
     output: JsonValue = None
+    deserializable_classes: list[type[BaseModel]] = []
+
     if output_type is None or output_type is str:
         output = {"type": "string"}
     elif output_type is bool:
@@ -60,24 +63,19 @@ async def run_agent[TResult](
         output = {"type": "integer"}
     elif output_type is float:
         output = {"type": "number"}
-    elif isinstance(output_type, PartialQueryAnswer) and isinstance(
-        output_type, PartialQueryAnswerDummy
+    elif isinstance(output_type, type) and (
+        issubclass(output_type, PartialQueryAnswer)
+        or issubclass(output_type, PartialQueryAnswerDummy)
     ):
         output = {"type": "PartialQueryAnswer"}
+        deserializable_classes.append(PartialQueryAnswer)
     elif isinstance(output_type, AgentOutputSchemaBase):
         output = output_type.json_schema()
     elif isinstance(output_type, type) and issubclass(output_type, BaseModel):
         output = output_type.model_json_schema()
+        deserializable_classes.append(output_type)
     else:
         raise ValueError(f"Unsupported output type: {output_type}")
-
-    deserializable_classes: list[type[BaseModel]] = []
-    if isinstance(output_type, PartialQueryAnswer) or isinstance(
-        output_type, PartialQueryAnswerDummy
-    ):
-        deserializable_classes.append(PartialQueryAnswer)
-    elif isinstance(output_type, type) and issubclass(output_type, BaseModel):
-        deserializable_classes.append(output_type)
 
     @cached(
         name_prefix=agent_name,
@@ -114,7 +112,7 @@ async def run_agent[TResult](
             output_type=output_type,
         )
 
-        print(f"Running agent: {agent_name}")
+        logging.info(f"Running agent: {agent_name}")
         result = await Runner.run(
             agent,
             cast(list[TResponseInputItem], prompts),

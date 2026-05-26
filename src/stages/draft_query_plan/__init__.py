@@ -93,9 +93,9 @@ async def draft_query_plan(
         },
     ):
         agent_registry = await build_agent_registry(
-            data_agents, agent_registry_type=AgentRegistryType.TECHNICAL
+            relevant_data_agents, agent_registry_type=AgentRegistryType.TECHNICAL
         )
-        QueryPlanModel = create_draft_query_plan_model(data_agents)
+        QueryPlanModel = create_draft_query_plan_model(relevant_data_agents)
 
         result = await run_agent(
             name_postfix="Draft Query Plan",
