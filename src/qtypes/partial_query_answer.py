@@ -1,16 +1,18 @@
-from dataclasses import dataclass
+from typing import Any
 
-from pydantic import JsonValue, BaseModel
+from pydantic import BaseModel, ConfigDict, JsonValue, field_serializer, field_validator
 
-from qtypes.query_plan.need import NeedType, needs_to_span_data
-from qtypes.query_plan.result import ResultType, result_to_span_data
+from qtypes.need import NeedType, deserialize_need, serialize_need
+from qtypes.result import ResultType, deserialize_result, serialize_result
 
 
 class PartialQueryAnswerDummy(BaseModel):
     pass
 
 
-class PartialQueryAnswer:
+class PartialQueryAnswer(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
     answer: ResultType | None = None
     has_answer: bool = False
     needs: list[NeedType] = []
@@ -19,21 +21,37 @@ class PartialQueryAnswer:
         self.answer = answer
         self.has_answer = True
 
-    def add_needs(self, needs: set[NeedType]):
+    def add_needs(self, needs: set[NeedType] | list[NeedType]):
         self.needs = list(set(self.needs).union(needs))
-
-    @property
-    def is_final(self) -> bool:
-        return self.answer is not None or len(self.needs) > 0
 
     @property
     def has_needs(self) -> bool:
         return len(self.needs) > 0
 
-    def to_span_data(self) -> JsonValue:
-        return {
-            "answer": result_to_span_data(self.answer)
-            if self.answer is not None
-            else None,
-            "needs": needs_to_span_data(self.needs),
-        }
+    @property
+    def is_final(self) -> bool:
+        return self.has_answer or self.has_needs
+
+    @field_serializer("answer")
+    def serialize_answer(self, answer: ResultType | None) -> JsonValue:
+        if answer is None:
+            return None
+        return serialize_result(answer)
+
+    @field_validator("answer", mode="before")
+    @classmethod
+    def validate_answer(cls: type["PartialQueryAnswer"], value: Any) -> ResultType:
+        if isinstance(value, dict):
+            return deserialize_result(value)
+        return value
+
+    @field_serializer("needs")
+    def serialize_needs(self, needs: list[NeedType]) -> list[str]:
+        return [serialize_need(need) for need in needs]
+
+    @field_validator("needs", mode="before")
+    @classmethod
+    def validate_needs(cls: type["PartialQueryAnswer"], value: Any) -> list[NeedType]:
+        if isinstance(value, list):
+            return [deserialize_need(need) for need in value]
+        raise ValueError(f"Needs must be a list, got {type(value)}: {value}")

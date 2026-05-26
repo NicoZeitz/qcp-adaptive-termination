@@ -15,10 +15,8 @@ from agents import FunctionTool, RunContextWrapper, function_tool
 from pydantic import JsonValue
 
 from code_execution.builtins import _SAFE_BUILTINS, _UNSAFE_BUILTINS
-from utils.serialize_value import (
-    serialize_value,
-)
-from utils.preview import CHAR_LIMIT_LLM, CHAR_LIMIT_SPAN, preview_text
+from stages.utils.preview import CHAR_LIMIT_LLM, preview_text
+from stages.utils.serialize_value import serialize_value
 
 
 @dataclass
@@ -130,9 +128,9 @@ class CodeExecutionEnvironment:
     def to_span_data(self) -> JsonValue:
         return [
             {
-                "code": preview_text(code_execution.code, CHAR_LIMIT_SPAN),
-                "stdout": preview_text(code_execution.stdout, CHAR_LIMIT_SPAN),
-                "stderr": preview_text(code_execution.stderr, CHAR_LIMIT_SPAN),
+                "code": code_execution.code,
+                "stdout": code_execution.stdout,
+                "stderr": code_execution.stderr,
                 "exception": serialize_value(code_execution.exception),
                 "locals": [
                     f"{k}: {type(v).__name__}"

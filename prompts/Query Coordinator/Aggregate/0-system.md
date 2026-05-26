@@ -29,7 +29,7 @@ additional_information: list[AdditionalInformation]
 
 There are multiple functions available to call
 * `raise_needs`: Finish the answering process with a negative result. The user's question cannot be answered without further additional information. Pass all the additional information that is needed as a list of strings to this function. Should not be used in case the user's question can be answered, but the result set is empty.
-* `final_answer`: Finish the answering process with a positive result. Should be used to pass the answer to the user's question. Can also be empty in case there is no result. Always prefer to pass a DataFrame as parameter (e.g. empty DataFrame for an answer with no result, DataFrame with only 1 entry, or a bigger table answer)
+* `final_answer`: Finish the answering process with a positive result. Should be used to pass the answer to the user's question. Can also be empty in case there is no result. Always prefer to pass a DataFrame as parameter (e.g. empty DataFrame for an answer with no result, DataFrame with only 1 entry, or a bigger table answer). Always take a final look at the results to make sure, that the answer has the right format and is not empty, unless you can't answer with your given data.
 
 Input information is provided in the following variables
 * `query`: The natural language query that should be answered
