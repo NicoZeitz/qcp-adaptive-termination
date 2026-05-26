@@ -74,7 +74,9 @@ def initialize(
         )
         set_trace_processors([BatchTraceProcessor(exporter=openai_exporter)])
     else:
-        logging.warning("No OpenAI tracing API key found; OpenAI trace export is disabled.")
+        logging.warning(
+            "No OpenAI tracing API key found; OpenAI trace export is disabled."
+        )
 
     # Set up tracing
     tracing_log_file = log_dir / f"{log_name}_traces.jsonl"

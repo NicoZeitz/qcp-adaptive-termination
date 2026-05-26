@@ -18,7 +18,9 @@ class TruncatingBackendSpanExporter(BackendSpanExporter):
         # Use a stricter per-field cap for OpenAI ingestion to avoid 400 payload-too-large.
         self._OPENAI_TRACING_MAX_FIELD_BYTES = max_field_bytes
 
-    def _sanitize_for_openai_tracing_api(self, payload_item: dict[str, Any]) -> dict[str, Any]:
+    def _sanitize_for_openai_tracing_api(
+        self, payload_item: dict[str, Any]
+    ) -> dict[str, Any]:
         sanitized = super()._sanitize_for_openai_tracing_api(payload_item)
 
         span_data = sanitized.get("span_data")
