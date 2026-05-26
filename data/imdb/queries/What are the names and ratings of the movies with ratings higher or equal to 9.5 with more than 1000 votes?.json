@@ -1,0 +1,152 @@
+{
+    "extra": {
+        "answer": [
+            {
+                "original_title": "Bambukat 2",
+                "rating": 9.5
+            },
+            {
+                "original_title": "Rabb Da Radio 3",
+                "rating": 9.9
+            },
+            {
+                "original_title": "Mannu Kya Karegga",
+                "rating": 9.5
+            },
+            {
+                "original_title": "Laggam Time",
+                "rating": 9.7
+            },
+            {
+                "original_title": "Madham",
+                "rating": 9.9
+            },
+            {
+                "original_title": "Gopi Galla Goa Trip (3GT)",
+                "rating": 9.6
+            },
+            {
+                "original_title": "Itlu Me Yedava",
+                "rating": 9.6
+            },
+            {
+                "original_title": "Kannagi Nagar",
+                "rating": 9.8
+            },
+            {
+                "original_title": "Paisawala",
+                "rating": 9.6
+            },
+            {
+                "original_title": "Ranapati Shivray Swari Agra",
+                "rating": 9.5
+            },
+            {
+                "original_title": "Vinara O Vema",
+                "rating": 9.7
+            },
+            {
+                "original_title": "One/4",
+                "rating": 9.7
+            }
+        ],
+        "sql_query": "SELECT t.original_title , r.rating FROM titles t INNER JOIN ratings r ON r.title_id = t.title_id WHERE r.rating >= 9.5 AND r.votes > 1000 AND t.\"type\" = 'movie'",
+        "relevant_data_agents": [
+            "A3",
+            "A4",
+            "A5"
+        ],
+        "query_plan": {
+            "query": "What are the names and ratings of the movies with ratings higher or equal to 9.5 with more than 1000 votes?",
+            "steps": [
+                {
+                    "id": "s1",
+                    "query": "Find the title_id values with rating at least 9.5 and more than 1000 votes together with their ratings",
+                    "to_agent": "A3",
+                    "dependencies": [],
+                    "answer": null
+                },
+                {
+                    "id": "s2",
+                    "query": "Find the original_title and type for the given title_id values",
+                    "to_agent": "A4",
+                    "dependencies": [
+                        {
+                            "step_id": "s1",
+                            "dependency": "The title_id values with rating at least 9.5 and more than 1000 votes together with their ratings"
+                        }
+                    ],
+                    "answer": null
+                },
+                {
+                    "id": "s3",
+                    "query": "Find the original_title and type for the given title_id values",
+                    "to_agent": "A5",
+                    "dependencies": [
+                        {
+                            "step_id": "s1",
+                            "dependency": "The title_id values with rating at least 9.5 and more than 1000 votes together with their ratings"
+                        }
+                    ],
+                    "answer": null
+                },
+                {
+                    "id": "s4",
+                    "query": "What are the names and ratings of the movies with ratings higher or equal to 9.5 with more than 1000 votes?",
+                    "to_agent": "Coordinator",
+                    "dependencies": [
+                        {
+                            "step_id": "s1",
+                            "dependency": "The title_id values and ratings that satisfy the rating and vote filters"
+                        },
+                        {
+                            "step_id": "s2",
+                            "dependency": "The original titles and types for those title_id values from A4"
+                        },
+                        {
+                            "step_id": "s3",
+                            "dependency": "The original titles and types for those title_id values from A5"
+                        }
+                    ],
+                    "answer": null
+                }
+            ]
+        }
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "What are the names and ratings of the movies with ratings higher or equal to 9.5 with more than 1000 votes?",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/imdb/handmade/A1.db"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/imdb/handmade/A2.db"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/imdb/handmade/A3.db"
+            },
+            {
+                "type": "sql",
+                "name": "A4",
+                "path": "../data/imdb/handmade/A4.db"
+            },
+            {
+                "type": "sql",
+                "name": "A5",
+                "path": "../data/imdb/handmade/A5.db"
+            },
+            {
+                "type": "text",
+                "name": "T1",
+                "path": "../data/imdb/text/T1.txt"
+            }
+        ]
+    }
+}

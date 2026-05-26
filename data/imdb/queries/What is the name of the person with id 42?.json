@@ -1,0 +1,69 @@
+{
+    "extra": {
+        "answer": "Alan Ladd",
+        "sql_query": "SELECT name FROM people WHERE person_id = 'nm0000042'",
+        "relevant_data_agents": [
+            "A1"
+        ],
+        "query_plan": {
+            "query": "What is the name of the person with id 42?",
+            "steps": [
+                {
+                    "id": "s1",
+                    "query": "Find the name of the person with person_id 'nm0000042'",
+                    "to_agent": "A1",
+                    "dependencies": [],
+                    "answer": null
+                },
+                {
+                    "id": "s2",
+                    "query": "What is the name of the person with id 42?",
+                    "to_agent": "Coordinator",
+                    "dependencies": [
+                        {
+                            "step_id": "s1",
+                            "dependency": "The name of the person with person_id 'nm0000042'"
+                        }
+                    ],
+                    "answer": null
+                }
+            ]
+        }
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "What is the name of the person with id 42?",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/imdb/handmade/A1.db"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/imdb/handmade/A2.db"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/imdb/handmade/A3.db"
+            },
+            {
+                "type": "sql",
+                "name": "A4",
+                "path": "../data/imdb/handmade/A4.db"
+            },
+            {
+                "type": "sql",
+                "name": "A5",
+                "path": "../data/imdb/handmade/A5.db"
+            },
+            {
+                "type": "text",
+                "name": "T1",
+                "path": "../data/imdb/text/T1.txt"
+            }
+        ]
+    }
+}

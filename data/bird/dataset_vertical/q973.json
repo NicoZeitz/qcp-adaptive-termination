@@ -1,0 +1,69 @@
+{
+    "extra": {
+        "question_id": 973,
+        "db_id": "formula_1",
+        "question": "List out top 10 Spanish drivers who were born before 1982 and have the latest lap time.",
+        "evidence": "born before 1982 refers to year(dob) < 1982; latest lap time refers to Max(time);",
+        "question_with_evidence": "List out top 10 Spanish drivers who were born before 1982 and have the latest lap time. Hint: born before 1982 refers to year(dob) < 1982; latest lap time refers to Max(time);",
+        "SQL": "SELECT T2.driverId FROM pitStops AS T1 INNER JOIN drivers AS T2 on T1.driverId = T2.driverId WHERE T2.nationality = 'Spanish' AND STRFTIME('%Y', T2.dob) < '1982' ORDER BY T1.time DESC LIMIT 10",
+        "difficulty": "moderate",
+        "answer": [
+            [
+                4
+            ],
+            [
+                37
+            ],
+            [
+                4
+            ],
+            [
+                37
+            ],
+            [
+                4
+            ],
+            [
+                4
+            ],
+            [
+                4
+            ],
+            [
+                4
+            ],
+            [
+                4
+            ],
+            [
+                37
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "List out top 10 Spanish drivers who were born before 1982 and have the latest lap time. Hint: born before 1982 refers to year(dob) < 1982; latest lap time refers to Max(time);",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset_vertical/formula_1/q973/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset_vertical/formula_1/q973/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset_vertical/formula_1/q973/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset_vertical/formula_1/q973/agent3.sqlite"
+            }
+        ]
+    }
+}

@@ -1,0 +1,81 @@
+{
+    "extra": {
+        "answer": 743214,
+        "sql_query": "SELECT COUNT(*) FROM titles WHERE type = 'movie'",
+        "relevant_data_agents": [
+            "A4",
+            "A5"
+        ],
+        "query_plan": {
+            "query": "How many movies are there in total?",
+            "steps": [
+                {
+                    "id": "s1",
+                    "query": "Find the count of records in the titles table where the type is 'movie'",
+                    "to_agent": "A4",
+                    "dependencies": [],
+                    "answer": null
+                },
+                {
+                    "id": "s2",
+                    "query": "Find the count of records in the titles table where the type is 'movie'",
+                    "to_agent": "A5",
+                    "dependencies": [],
+                    "answer": null
+                },
+                {
+                    "id": "s3",
+                    "query": "How many movies are there in total?",
+                    "to_agent": "Coordinator",
+                    "dependencies": [
+                        {
+                            "step_id": "s1",
+                            "dependency": "The count of records in the titles table where the type is 'movie' from A4"
+                        },
+                        {
+                            "step_id": "s2",
+                            "dependency": "The count of records in the titles table where the type is 'movie' from A5"
+                        }
+                    ],
+                    "answer": null
+                }
+            ]
+        }
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "How many movies are there in total?",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/imdb/handmade/A1.db"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/imdb/handmade/A2.db"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/imdb/handmade/A3.db"
+            },
+            {
+                "type": "sql",
+                "name": "A4",
+                "path": "../data/imdb/handmade/A4.db"
+            },
+            {
+                "type": "sql",
+                "name": "A5",
+                "path": "../data/imdb/handmade/A5.db"
+            },
+            {
+                "type": "text",
+                "name": "T1",
+                "path": "../data/imdb/text/T1.txt"
+            }
+        ]
+    }
+}

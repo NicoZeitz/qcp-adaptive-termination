@@ -1,0 +1,81 @@
+{
+    "extra": {
+        "question_id": 1399,
+        "db_id": "student_club",
+        "question": "Did Maya Mclean attend the 'Women's Soccer' event?",
+        "evidence": "Maya Mclean is the full name; full name refers to first_name, last_name; 'Women's Soccer' is an event_name",
+        "question_with_evidence": "Did Maya Mclean attend the 'Women's Soccer' event? Hint: Maya Mclean is the full name; full name refers to first_name, last_name; 'Women's Soccer' is an event_name",
+        "SQL": "SELECT CASE WHEN T3.event_name = 'Women''s Soccer' THEN 'YES' END AS result FROM member AS T1 INNER JOIN attendance AS T2 ON T1.member_id = T2.link_to_member INNER JOIN event AS T3 ON T2.link_to_event = T3.event_id WHERE T1.first_name = 'Maya' AND T1.last_name = 'Mclean'",
+        "difficulty": "moderate",
+        "answer": [
+            [
+                "YES"
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ],
+            [
+                null
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "Did Maya Mclean attend the 'Women's Soccer' event? Hint: Maya Mclean is the full name; full name refers to first_name, last_name; 'Women's Soccer' is an event_name",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset_vertical/student_club/q1399/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset_vertical/student_club/q1399/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset_vertical/student_club/q1399/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset_vertical/student_club/q1399/agent3.sqlite"
+            }
+        ]
+    }
+}

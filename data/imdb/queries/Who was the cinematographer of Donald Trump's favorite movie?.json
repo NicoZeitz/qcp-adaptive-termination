@@ -1,0 +1,125 @@
+{
+    "extra": {
+        "answer": "Gregg Toland",
+        "sql_query": "SELECT name FROM titles INNER JOIN crew ON crew.title_id  = titles.title_id INNER JOIN people ON people.person_id  = crew.person_id WHERE original_title = 'Citizen Kane' AND type = \"movie\" AND category = \"cinematographer\"",
+        "relevant_data_agents": [
+            "T1",
+            "A1",
+            "A2",
+            "A4",
+            "A5"
+        ],
+        "query_plan": {
+            "query": "Who was the cinematographer of Donald Trump's favorite movie?",
+            "steps": [
+                {
+                    "id": "s1",
+                    "query": "Find Donald Trump's favorite movie title from the text",
+                    "to_agent": "T1",
+                    "dependencies": [],
+                    "answer": null
+                },
+                {
+                    "id": "s2",
+                    "query": "Find the title_id of the movie with the given original title",
+                    "to_agent": "A4",
+                    "dependencies": [
+                        {
+                            "step_id": "s1",
+                            "dependency": "Donald Trump's favorite movie title"
+                        }
+                    ],
+                    "answer": null
+                },
+                {
+                    "id": "s3",
+                    "query": "Find the title_id of the movie with the given original title",
+                    "to_agent": "A5",
+                    "dependencies": [
+                        {
+                            "step_id": "s1",
+                            "dependency": "Donald Trump's favorite movie title"
+                        }
+                    ],
+                    "answer": null
+                },
+                {
+                    "id": "s4",
+                    "query": "Find the person_id of the cinematographer for the movie with the given title_id",
+                    "to_agent": "A2",
+                    "dependencies": [
+                        {
+                            "step_id": "s2",
+                            "dependency": "The title_id of Donald Trump's favorite movie from A4"
+                        },
+                        {
+                            "step_id": "s3",
+                            "dependency": "The title_id of Donald Trump's favorite movie from A5"
+                        }
+                    ],
+                    "answer": null
+                },
+                {
+                    "id": "s5",
+                    "query": "Find the name of the person with the given person_id",
+                    "to_agent": "A1",
+                    "dependencies": [
+                        {
+                            "step_id": "s4",
+                            "dependency": "The person_id of the cinematographer of Donald Trump's favorite movie"
+                        }
+                    ],
+                    "answer": null
+                },
+                {
+                    "id": "s6",
+                    "query": "Who was the cinematographer of Donald Trump's favorite movie?",
+                    "to_agent": "Coordinator",
+                    "dependencies": [
+                        {
+                            "step_id": "s5",
+                            "dependency": "The name of the cinematographer of Donald Trump's favorite movie"
+                        }
+                    ],
+                    "answer": null
+                }
+            ]
+        }
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "Who was the cinematographer of Donald Trump's favorite movie?",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/imdb/handmade/A1.db"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/imdb/handmade/A2.db"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/imdb/handmade/A3.db"
+            },
+            {
+                "type": "sql",
+                "name": "A4",
+                "path": "../data/imdb/handmade/A4.db"
+            },
+            {
+                "type": "sql",
+                "name": "A5",
+                "path": "../data/imdb/handmade/A5.db"
+            },
+            {
+                "type": "text",
+                "name": "T1",
+                "path": "../data/imdb/text/T1.txt"
+            }
+        ]
+    }
+}

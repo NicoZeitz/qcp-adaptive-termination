@@ -1,0 +1,75 @@
+{
+    "extra": {
+        "question_id": 575,
+        "db_id": "codebase_community",
+        "question": "What is the badge name that user 'SilentGhost' obtained?",
+        "evidence": "\"SilentGhost\" is the DisplayName of user;",
+        "question_with_evidence": "What is the badge name that user 'SilentGhost' obtained? Hint: \"SilentGhost\" is the DisplayName of user;",
+        "SQL": "SELECT T2.Name FROM users AS T1 INNER JOIN badges AS T2 ON T1.Id = T2.UserId WHERE T1.DisplayName = 'SilentGhost'",
+        "difficulty": "simple",
+        "answer": [
+            [
+                "Editor"
+            ],
+            [
+                "Student"
+            ],
+            [
+                "Cleanup"
+            ],
+            [
+                "Supporter"
+            ],
+            [
+                "Nice Question"
+            ],
+            [
+                "Popular Question"
+            ],
+            [
+                "Taxonomist"
+            ],
+            [
+                "Favorite Question"
+            ],
+            [
+                "Good Question"
+            ],
+            [
+                "Notable Question"
+            ],
+            [
+                "Nice Question"
+            ],
+            [
+                "Famous Question"
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "What is the badge name that user 'SilentGhost' obtained? Hint: \"SilentGhost\" is the DisplayName of user;",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset/codebase_community/q575/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset/codebase_community/q575/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset/codebase_community/q575/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset/codebase_community/q575/agent3.sqlite"
+            }
+        ]
+    }
+}

@@ -1,0 +1,84 @@
+{
+    "extra": {
+        "question_id": 753,
+        "db_id": "superhero",
+        "question": "Among the superheroes with height from 170 to 190, list the names of the superheroes with no eye color.",
+        "evidence": "height from 170 to 190 refers to height_cm BETWEEN 170 AND 190; no eye color refers to colour = 'No Colour'",
+        "question_with_evidence": "Among the superheroes with height from 170 to 190, list the names of the superheroes with no eye color. Hint: height from 170 to 190 refers to height_cm BETWEEN 170 AND 190; no eye color refers to colour = 'No Colour'",
+        "SQL": "SELECT DISTINCT T1.superhero_name FROM superhero AS T1 INNER JOIN colour AS T2 ON T1.eye_colour_id = T2.id WHERE T1.height_cm BETWEEN 170 AND 190 AND T2.colour = 'No Colour'",
+        "difficulty": "moderate",
+        "answer": [
+            [
+                "Chuck Norris"
+            ],
+            [
+                "Destroyer"
+            ],
+            [
+                "Flash III"
+            ],
+            [
+                "Goku"
+            ],
+            [
+                "Green Goblin III"
+            ],
+            [
+                "Indiana Jones"
+            ],
+            [
+                "Judge Dredd"
+            ],
+            [
+                "Mister Freeze"
+            ],
+            [
+                "One Punch Man"
+            ],
+            [
+                "Paul Blart"
+            ],
+            [
+                "Robocop"
+            ],
+            [
+                "Space Ghost"
+            ],
+            [
+                "Stormtrooper"
+            ],
+            [
+                "T-1000"
+            ],
+            [
+                "Two-Face"
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "Among the superheroes with height from 170 to 190, list the names of the superheroes with no eye color. Hint: height from 170 to 190 refers to height_cm BETWEEN 170 AND 190; no eye color refers to colour = 'No Colour'",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset_vertical/superhero/q753/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset_vertical/superhero/q753/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset_vertical/superhero/q753/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset_vertical/superhero/q753/agent3.sqlite"
+            }
+        ]
+    }
+}

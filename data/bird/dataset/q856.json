@@ -1,0 +1,54 @@
+{
+    "extra": {
+        "question_id": 856,
+        "db_id": "formula_1",
+        "question": "Please list the time of the races held on Sepang International Circuit.",
+        "evidence": "",
+        "question_with_evidence": "Please list the time of the races held on Sepang International Circuit.",
+        "SQL": "SELECT DISTINCT T2.time FROM circuits AS T1 INNER JOIN races AS T2 ON T2.circuitID = T1.circuitId WHERE T1.name = 'Sepang International Circuit'",
+        "difficulty": "simple",
+        "answer": [
+            [
+                "09:00:00"
+            ],
+            [
+                "07:00:00"
+            ],
+            [
+                "15:00:00"
+            ],
+            [
+                null
+            ],
+            [
+                "08:00:00"
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "Please list the time of the races held on Sepang International Circuit.",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset/formula_1/q856/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset/formula_1/q856/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset/formula_1/q856/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset/formula_1/q856/agent3.sqlite"
+            }
+        ]
+    }
+}

@@ -1,0 +1,87 @@
+{
+    "extra": {
+        "question_id": 652,
+        "db_id": "codebase_community",
+        "question": "List the post IDs and badge names of the user Samuel in 2013.",
+        "evidence": "Samuel refers to UserDisplayName; YEAR(CreationDate) = 2013 relates to PostId; YEAR(Date) = 2013 relates to the badge;",
+        "question_with_evidence": "List the post IDs and badge names of the user Samuel in 2013. Hint: Samuel refers to UserDisplayName; YEAR(CreationDate) = 2013 relates to PostId; YEAR(Date) = 2013 relates to the badge;",
+        "SQL": "SELECT T1.PostId, T2.Name FROM postHistory AS T1 INNER JOIN badges AS T2 ON T1.UserId = T2.UserId WHERE T1.UserDisplayName = 'Samuel' AND STRFTIME('%Y', T1.CreationDate) = '2013' AND STRFTIME('%Y', T2.Date) = '2013'",
+        "difficulty": "moderate",
+        "answer": [
+            [
+                58539,
+                "Custodian"
+            ],
+            [
+                58539,
+                "Editor"
+            ],
+            [
+                58539,
+                "Student"
+            ],
+            [
+                58539,
+                "Supporter"
+            ],
+            [
+                58539,
+                "Custodian"
+            ],
+            [
+                58539,
+                "Editor"
+            ],
+            [
+                58539,
+                "Student"
+            ],
+            [
+                58539,
+                "Supporter"
+            ],
+            [
+                58539,
+                "Custodian"
+            ],
+            [
+                58539,
+                "Editor"
+            ],
+            [
+                58539,
+                "Student"
+            ],
+            [
+                58539,
+                "Supporter"
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "List the post IDs and badge names of the user Samuel in 2013. Hint: Samuel refers to UserDisplayName; YEAR(CreationDate) = 2013 relates to PostId; YEAR(Date) = 2013 relates to the badge;",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset_vertical/codebase_community/q652/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset_vertical/codebase_community/q652/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset_vertical/codebase_community/q652/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset_vertical/codebase_community/q652/agent3.sqlite"
+            }
+        ]
+    }
+}
