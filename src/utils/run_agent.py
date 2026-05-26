@@ -16,8 +16,8 @@ from pydantic import BaseModel, JsonValue
 
 from qtypes.agent_configuration import AgentConfiguration
 from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDummy
-from stages.utils.cache import CacheMode, cached
-from stages.utils.load_prompt import load_prompt
+from utils.cache import CacheMode, cached
+from utils.load_prompt import load_prompt
 
 TResult = TypeVar("TResult", bound=JsonValue | PartialQueryAnswer)
 

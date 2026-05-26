@@ -9,14 +9,14 @@ from stages.filter_relevant_agents.filter_with_reasoning import (
     filter_coordinator_with_reasoning,
     filter_data_agent_with_reasoning,
 )
-from stages.utils.span import (
+from utils.span import (
     append_to_span_input,
     append_to_span_output,
     own_custom_span,
 )
 from qtypes.filtered_relevant_agents import FilteredRelevantAgents
 from qtypes.data_agent import DataAgent
-from stages.utils.cache import cached
+from utils.cache import cached
 
 
 class FilterType(Enum):

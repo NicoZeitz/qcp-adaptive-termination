@@ -16,7 +16,7 @@ from qtypes.query_plan_step_execution_result import (
 from qtypes.result import ResultType
 from stages.execute_query_plan.answer_step_data_agent import answer_step_data_agent
 from stages.execute_query_plan.answer_step_coordinator import answer_step_coordinator
-from stages.utils.span import append_to_span_output, own_custom_span
+from utils.span import append_to_span_output, own_custom_span
 
 
 async def execute_query_plan_next_step(

@@ -3,7 +3,7 @@ from typing import Any
 from pandas import DataFrame
 from pydantic import JsonValue
 
-from stages.utils.preview import preview_dataframe
+from utils.preview import preview_dataframe
 
 
 ResultType = DataFrame

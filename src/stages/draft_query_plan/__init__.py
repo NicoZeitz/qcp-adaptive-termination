@@ -12,9 +12,9 @@ from stages.common.data_agent.agent_registry import (
     AgentRegistryType,
     build_agent_registry,
 )
-from stages.utils.cache import cached
-from stages.utils.run_agent import run_agent
-from stages.utils.span import append_to_span_output, own_custom_span
+from utils.cache import cached
+from utils.run_agent import run_agent
+from utils.span import append_to_span_output, own_custom_span
 
 
 def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
