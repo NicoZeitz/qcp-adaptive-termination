@@ -71,13 +71,13 @@ async def answer_step_data_agent(
 
         # add additional information as new db
         with db_engine.connect() as connection:
+            connection.execute(text("PRAGMA query_only = OFF;"))
             connection.execute(text("ATTACH DATABASE ':memory:' AS additional_information"))
             connection.execute(text("PRAGMA additional_information.journal_mode=WAL;"))
             connection.execute(text("PRAGMA additional_information.foreign_keys=OFF;"))
             connection.execute(text("PRAGMA additional_information.journal_mode=MEMORY;"))
             connection.execute(text("PRAGMA additional_information.temp_store=MEMORY;"))
             connection.execute(text("PRAGMA additional_information.synchronous=OFF;"))
-            connection.execute(text("PRAGMA additional_information.query_only = ON;"))
 
             # write the additional information to a table in the attached db
             connection.execute(text("CREATE TABLE additional_information.info (dependency TEXT, table_name TEXT)"))
@@ -91,6 +91,9 @@ async def answer_step_data_agent(
 
             for index, information in enumerate(additional_information):
                 information.data.to_sql(name=f"additional_information.info_{index}", con=connection, if_exists="replace", index=False)
+
+            connection.execute(text("PRAGMA query_only = ON;"))
+            connection.execute(text("PRAGMA additional_information.query_only = ON;"))
             connection.commit()
 
         def cleanup_func():
