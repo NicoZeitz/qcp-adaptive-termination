@@ -167,6 +167,7 @@ def load_cache_file(
 
         return value, extra
 
+
 Param = ParamSpec("Param")
 RetType = TypeVar("RetType")
 ModelClass = TypeVar("ModelClass", bound=BaseModel)

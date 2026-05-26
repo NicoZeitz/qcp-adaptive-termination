@@ -48,6 +48,7 @@ from pathlib import Path
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def load_dev_index(dev_json: Path) -> dict[int, dict]:
     """Return a mapping question_id -> dev entry."""
     with dev_json.open(encoding="utf-8") as f:
@@ -131,7 +132,10 @@ def process_dataset(
 
         dev_entry = dev_index.get(question_id)
         if dev_entry is None:
-            print(f"  Skipping {folder_name}: question_id {question_id} not found in dev.json", file=sys.stderr)
+            print(
+                f"  Skipping {folder_name}: question_id {question_id} not found in dev.json",
+                file=sys.stderr,
+            )
             skipped += 1
             continue
 
@@ -148,7 +152,10 @@ def process_dataset(
         # Build data agents list from the split folder
         data_agents = build_data_agents(q_folder, src_dir)
         if not data_agents:
-            print(f"  Warning: no agent*.sqlite files found in {q_folder}", file=sys.stderr)
+            print(
+                f"  Warning: no agent*.sqlite files found in {q_folder}",
+                file=sys.stderr,
+            )
 
         extra: dict = {
             "question_id": question_id,
@@ -185,6 +192,7 @@ def process_dataset(
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     # Script now lives in src/, so project root is one level up.
