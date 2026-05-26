@@ -140,7 +140,9 @@ def _deserialize_value(
                 if cls.__name__ == value_type:
                     return cls.model_validate(value_content)
 
-        raise Exception(f"Cannot deserialize value: {value}")
+        raise Exception(
+            f"Cannot deserialize value: {value}, no matching type found in deserializable_classes: {deserializable_classes}"
+        )
     if isinstance(value, list):
         return [_deserialize_value(item, deserializable_classes) for item in value]
     if isinstance(value, (str, int, float, bool)) or value is None:

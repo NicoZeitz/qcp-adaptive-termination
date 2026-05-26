@@ -44,6 +44,9 @@ async def answer_step_data_agent(
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
 ) -> PartialQueryAnswer:
+    print(data_agents)
+    print(query_plan_step.to_agent)
+
     responsible_data_agent = next(
         (agent for agent in data_agents if agent.name == query_plan_step.to_agent)
     )

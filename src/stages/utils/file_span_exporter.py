@@ -21,7 +21,7 @@ class FileSpanExporter(SpanExporter):
         with self._lock:
             if not self._file:
                 if isinstance(self.file_path, Path):
-                    self._file = self.file_path.open("a")
+                    self._file = self.file_path.open("a+")
 
             for span in spans:
                 span_dict = {
