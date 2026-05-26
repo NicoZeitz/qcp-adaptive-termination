@@ -15,8 +15,8 @@ from qtypes.collaborative_query_answering_result import (
 from stages.filter_relevant_agents import filter_relevant_agents
 from qtypes.collaborative_query_answering import CollaborativeQueryAnswering
 from qtypes.filtered_relevant_agents import FilteredRelevantAgents
-from stages.utils.cache import load_cache_file
-from stages.utils.initialization import initialize
+from utils.cache import load_cache_file
+from utils.initialization import initialize
 
 
 stages_mapping = {

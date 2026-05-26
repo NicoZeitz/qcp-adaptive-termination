@@ -13,8 +13,8 @@ from stages.execute_query_plan.replan_query_plan import replan_query_plan
 from stages.execute_query_plan.execute_query_plan_next_step import (
     execute_query_plan_next_step,
 )
-from stages.utils.cache import cached
-from stages.utils.span import append_to_span_output, own_custom_span
+from utils.cache import cached
+from utils.span import append_to_span_output, own_custom_span
 
 
 async def execute_query_plan_attempt(

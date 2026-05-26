@@ -16,10 +16,10 @@ from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.data_description import data_agent_data_description
 from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
 from stages.common.data_agent.text_data_agent.get_text import get_text
-from stages.utils.serialize_value import serialize_value
-from stages.utils.preview import preview_dataframe
-from stages.utils.run_agent import run_agent
-from stages.utils.span import append_to_span_output, own_custom_span
+from utils.serialize_value import serialize_value
+from utils.preview import preview_dataframe
+from utils.run_agent import run_agent
+from utils.span import append_to_span_output, own_custom_span
 
 
 @dataclass

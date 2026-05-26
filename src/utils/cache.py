@@ -10,7 +10,7 @@ from typing import Any, Awaitable, Callable, Literal, ParamSpec, Sequence, TypeV
 
 from pydantic import BaseModel, JsonValue
 
-from stages.utils.span import own_custom_span
+from utils.span import own_custom_span
 
 CacheMode = Literal[
     "READ_AND_WRITE",

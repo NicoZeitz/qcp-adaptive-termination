@@ -13,9 +13,9 @@ from langfuse import get_client
 from opentelemetry import trace
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from stages.utils.cache import Cache
-from stages.utils.file_span_exporter import FileSpanExporter
-from stages.utils.load_prompt import LangfuseProcessor
+from utils.cache import Cache
+from utils.file_span_exporter import FileSpanExporter
+from utils.load_prompt import LangfuseProcessor
 
 
 def initialize(

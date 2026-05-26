@@ -16,7 +16,7 @@ from stages.draft_query_plan import (
     create_draft_query_plan_model,
     map_query_plan_model_to_query_plan,
 )
-from stages.utils.run_agent import run_agent
+from utils.run_agent import run_agent
 
 
 def create_answer_map_from_query_plan(query_plan: QueryPlan) -> dict[str, ResultType]:

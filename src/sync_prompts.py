@@ -4,7 +4,7 @@ from typing import cast
 from langfuse import get_client
 from langfuse.model import ChatMessageWithPlaceholdersDict_Message
 
-from stages.utils.initialization import initialize
+from utils.initialization import initialize
 
 
 def get_prompts():

@@ -2,7 +2,7 @@ from qtypes.data_agent import DataAgent
 from qtypes.need import NeedType, serialize_need
 from stages.common.data_agent.agent_registry import AgentRegistryType
 from stages.filter_relevant_agents import FilterType, filter_relevant_agents_internal
-from stages.utils.span import (
+from utils.span import (
     append_to_span_input,
     append_to_span_output,
     own_custom_span,
