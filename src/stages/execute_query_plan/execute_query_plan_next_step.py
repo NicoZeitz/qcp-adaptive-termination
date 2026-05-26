@@ -102,7 +102,10 @@ async def execute_query_plan_step(
             )
         else:
             result = await answer_step_data_agent(
-                data_agents, query_plan_step, additional_information
+                data_agents,
+                query_plan_step.query,
+                query_plan_step.to_agent,
+                additional_information,
             )
 
         append_to_span_output({"partial_answer": result})
