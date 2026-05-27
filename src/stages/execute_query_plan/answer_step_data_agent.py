@@ -140,7 +140,6 @@ async def answer_step_data_agent(
         additional_variables=parameters.additional_variables,
         additional_tools=parameters.additional_tools,
         additional_span_data=parameters.additional_span_data,
-        cleanup=parameters.cleanup,
     )
 
 
