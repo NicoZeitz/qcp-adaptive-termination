@@ -58,16 +58,12 @@ class Cache:
             return None, False
 
         cache_file = self.cache_file_for_key(key, name_prefix)
-        if not cache_file.exists():
-            self._throw_on_miss(key)
-            return None, False
-
         try:
-            with cache_file.open("r") as f:
+            with cache_file.open("r", encoding="utf-8") as f:
                 payload = json.load(f)
                 logging.debug(f"Cache: HIT ({cache_file})")
                 return payload.get("value"), True
-        except Exception:
+        except (FileNotFoundError, Exception):
             self._throw_on_miss(key)
             return None, False
 
@@ -80,14 +76,15 @@ class Cache:
         payload = {"key": key, "value": value}
 
         temporary_file = cache_file.with_suffix(".tmp")
-        with temporary_file.open("w") as f:
-            json.dump(payload, f, indent=4, sort_keys=True)
+        with temporary_file.open("w", encoding="utf-8") as f:
+            # keep indent for readability, but remove extra spaces for smaller file size
+            json.dump(payload, f, separators=(",", ":"), ensure_ascii=False, indent=2)
         logging.debug(f"Cache: STORE ({cache_file})")
         temporary_file.replace(cache_file)
 
     def cache_file_for_key(self, key: JsonValue, name_prefix: str = "") -> Path:
         hash = hashlib.sha256(
-            json.dumps(key, sort_keys=True).encode("utf-8")
+            json.dumps(key, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
         ).hexdigest()
         filename = f"{name_prefix}_{hash}.json" if name_prefix else f"{hash}.json"
         return self._cache_folder / filename
@@ -154,23 +151,22 @@ def _deserialize_value(
 def load_cache_file(
     cache_file: Path, deserializable_classes: Sequence[type[BaseModel]] | None = None
 ) -> tuple[Any, dict[str, Any] | None]:
-    if not cache_file.exists():
-        raise FileNotFoundError(f"Cache file not found: {cache_file}")
+    try:
+        with cache_file.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+            value = payload.get("value")
+            extra = payload.get("extra")
 
-    with cache_file.open("r") as f:
-        payload = json.load(f)
-        value = payload.get("value")
-        extra = payload.get("extra")
+            if deserializable_classes:
+                return _deserialize_value(value, deserializable_classes), extra
 
-        if deserializable_classes:
-            return _deserialize_value(value, deserializable_classes), extra
-
-        return value, extra
+            return value, extra
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Cache file not found: {cache_file}") from exc
 
 
 Param = ParamSpec("Param")
 RetType = TypeVar("RetType")
-ModelClass = TypeVar("ModelClass", bound=BaseModel)
 
 
 def cached(
