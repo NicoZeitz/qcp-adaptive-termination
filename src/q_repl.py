@@ -55,6 +55,14 @@ def _load_result_df(final_result_file: Path) -> pd.DataFrame:
     return df
 
 
+def _load_result_raw(final_result_file: Path) -> dict[str, Any]:
+    payload = json.loads(final_result_file.read_text(encoding="utf-8"))
+    result = payload.get("result", {})
+    if not isinstance(result, dict):
+        raise ValueError(f"Unexpected result format in {final_result_file}")
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Open interactive REPL with answer + result loaded for a Bird q-id"
@@ -93,6 +101,7 @@ def main() -> int:
     final_result_file = _latest_final_result(run_dir)
     answer = _load_answer(question_file)
     query = _load_query(question_file)
+    result_raw = _load_result_raw(final_result_file)
     result = _load_result_df(final_result_file)
 
     if args.no_repl:
@@ -102,6 +111,7 @@ def main() -> int:
         print(f"query={query}")
         print(f"answer_rows={len(answer) if isinstance(answer, list) else 'n/a'}")
         print(f"result_shape={result.shape}")
+        print(f"result_columns={list(result.columns)}")
         return 0
 
     banner = (
@@ -111,13 +121,14 @@ def main() -> int:
         f"- question_file: {question_file}\n"
         f"- final_result_file: {final_result_file}\n\n"
         "Variables available:\n"
-        "  query, answer, result, qid, question_file, final_result_file, pd\n"
+        "  query, answer, result, result_raw, qid, question_file, final_result_file, pd\n"
     )
 
     local_vars = {
         "query": query,
         "answer": answer,
         "result": result,
+        "result_raw": result_raw,
         "qid": qid,
         "question_file": question_file,
         "final_result_file": final_result_file,
