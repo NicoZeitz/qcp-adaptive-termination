@@ -283,8 +283,8 @@ def main() -> int:
     }
 
     print(banner)
-    print(f"===================== query =====================\n  {query}\n")
-    print(f"===================== sql =====================\n  {sql}\n")
+    print(f"===================== query =====================\n\"{query}\"\n")
+    print(f"===================== sql =====================\n\"{sql}\"\n")
     print(f"===================== answer =====================\n{answer}\n")
     print(f"===================== result =====================\n{result}\n")
     code.interact(banner="", local=local_vars)
