@@ -35,6 +35,15 @@ def _load_query(question_file: Path) -> str | None:
     return str(query)
 
 
+def _load_sql(question_file: Path) -> str | None:
+    payload = json.loads(question_file.read_text(encoding="utf-8"))
+    extra = payload.get("extra", {})
+    sql = extra.get("SQL")
+    if sql is None:
+        return None
+    return str(sql)
+
+
 def _load_result_df(final_result_file: Path) -> pd.DataFrame:
     payload = json.loads(final_result_file.read_text(encoding="utf-8"))
     result = payload.get("result", {})
@@ -101,6 +110,7 @@ def main() -> int:
     final_result_file = _latest_final_result(run_dir)
     answer = _load_answer(question_file)
     query = _load_query(question_file)
+    sql = _load_sql(question_file)
     result_raw = _load_result_raw(final_result_file)
     result = _load_result_df(final_result_file)
 
@@ -109,6 +119,7 @@ def main() -> int:
         print(f"question_file={question_file}")
         print(f"final_result_file={final_result_file}")
         print(f"query={query}")
+        print(f"sql={sql}")
         print(f"answer_rows={len(answer) if isinstance(answer, list) else 'n/a'}")
         print(f"result_shape={result.shape}")
         print(f"result_columns={list(result.columns)}")
@@ -121,11 +132,12 @@ def main() -> int:
         f"- question_file: {question_file}\n"
         f"- final_result_file: {final_result_file}\n\n"
         "Variables available:\n"
-        "  query, answer, result, result_raw, qid, question_file, final_result_file, pd\n"
+        "  query, sql, answer, result, result_raw, qid, question_file, final_result_file, pd\n"
     )
 
     local_vars = {
         "query": query,
+        "sql": sql,
         "answer": answer,
         "result": result,
         "result_raw": result_raw,
