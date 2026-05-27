@@ -84,7 +84,9 @@ class Cache:
 
     def cache_file_for_key(self, key: JsonValue, name_prefix: str = "") -> Path:
         hash = hashlib.sha256(
-            json.dumps(key, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+            json.dumps(
+                key, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+            ).encode("utf-8")
         ).hexdigest()
         filename = f"{name_prefix}_{hash}.json" if name_prefix else f"{hash}.json"
         return self._cache_folder / filename

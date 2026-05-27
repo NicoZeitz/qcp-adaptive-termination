@@ -69,7 +69,6 @@ async def main(
         else:
             logging.info("  No extra entries found.")
 
-
         if start_stage == 1:
             logging.info(f"{user}: Starting stage 1: Filter Relevant Agents")
             logging.info(f"Data: {data}")
