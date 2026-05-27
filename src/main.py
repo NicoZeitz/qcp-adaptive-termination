@@ -41,32 +41,35 @@ async def main(
     user = "NZ" if os.getlogin() == "I550817" else "FW"
     log_filename = f"Stage {start_stage}-{end_stage} - {datetime.now().strftime('%Y-%m-%d %H-%M-%S')}"
 
-    initialize(log_filename, log_dir, cache_dir, provider, throw_on_cache_miss)
-    logging.info(
-        f"{user}: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for input path {input_file} with provider {provider}"
-    )
-
-    data, extra = load_cache_file(
-        input_file,
-        deserializable_classes=[
-            CollaborativeQueryAnswering,
-            FilteredRelevantAgents,
-            DraftedQueryPlan,
-            CollaborativeQueryAnsweringResult,
-        ],
-    )
-
-    logging.info(f"{user}: Successfully loaded input file. Starting execution.")
-    logging.info("Extra entries in cache_file:")
-    if extra:
-        for k, v in extra.items():
-            logging.info(f"  {k}: {v}")
-    else:
-        logging.info("  No extra entries found.")
-
     with trace(
         f"{user}: Collaborative Query Answering", metadata={"provider": provider}
-    ):
+    ) as trace_ctx:
+        initialize(log_filename, log_dir, cache_dir, provider, throw_on_cache_miss)
+
+        logging.info(f"Trace ID: {trace_ctx.trace_id}")
+        logging.info(
+            f"{user}: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for input path {input_file} with provider {provider}"
+        )
+
+        data, extra = load_cache_file(
+            input_file,
+            deserializable_classes=[
+                CollaborativeQueryAnswering,
+                FilteredRelevantAgents,
+                DraftedQueryPlan,
+                CollaborativeQueryAnsweringResult,
+            ],
+        )
+
+        logging.info(f"{user}: Successfully loaded input file. Starting execution.")
+        logging.info("Extra entries in cache_file:")
+        if extra:
+            for k, v in extra.items():
+                logging.info(f"  {k}: {v}")
+        else:
+            logging.info("  No extra entries found.")
+
+
         if start_stage == 1:
             logging.info(f"{user}: Starting stage 1: Filter Relevant Agents")
             logging.info(f"Data: {data}")

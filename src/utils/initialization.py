@@ -47,6 +47,8 @@ def initialize(
     fileHandler = logging.FileHandler(log_file)
     rootLogger.addHandler(fileHandler)
 
+    logging.info(f"Logging initialized. Log file: {log_file}")
+
     # Set up langfuse
     langfuse = get_client()
     if not langfuse.auth_check():
@@ -86,3 +88,4 @@ def initialize(
         BatchSpanProcessor(FileSpanExporter(tracing_log_file))
     )
     OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
+    logging.info(f"Tracing initialized. Trace file: {tracing_log_file}")
