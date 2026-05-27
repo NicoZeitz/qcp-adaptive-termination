@@ -2,6 +2,7 @@ import argparse
 import code
 import json
 import re
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,28 @@ def _load_sql(question_file: Path) -> str | None:
     if sql is None:
         return None
     return str(sql)
+
+
+def _load_db_id(question_file: Path) -> str | None:
+    payload = json.loads(question_file.read_text(encoding="utf-8"))
+    db_id = payload.get("extra", {}).get("db_id")
+    if db_id is None:
+        return None
+    return str(db_id)
+
+
+def _open_db(repo_root: Path, db_id: str | None) -> sqlite3.Connection | None:
+    if not db_id:
+        return None
+    db_path = repo_root / "data" / "bird" / "dev" / "dev_databases" / db_id / f"{db_id}.sqlite"
+    if not db_path.exists():
+        return None
+    return sqlite3.connect(str(db_path))
+
+
+def run_sql(conn: sqlite3.Connection, query: str) -> pd.DataFrame:
+    """Execute a SQL query against the database connection and return a DataFrame."""
+    return pd.read_sql_query(query, conn)
 
 
 def _split_top_level_csv(text: str) -> list[str]:
@@ -205,12 +228,14 @@ def main() -> int:
         raise FileNotFoundError(f"Run directory not found: {run_dir}")
 
     final_result_file = _latest_final_result(run_dir)
-    answer = _load_answer(question_file)
+    answer_raw = _load_answer(question_file)
     query = _load_query(question_file)
     sql = _load_sql(question_file)
-    answer_df = _answer_to_df(answer, sql)
+    db_id = _load_db_id(question_file)
+    answer = _answer_to_df(answer_raw, sql)
     result_raw = _load_result_raw(final_result_file)
     result = _load_result_df(final_result_file)
+    db = _open_db(repo_root, db_id)
 
     if args.no_repl:
         print(f"qid={qid}")
@@ -218,37 +243,51 @@ def main() -> int:
         print(f"final_result_file={final_result_file}")
         print(f"query={query}")
         print(f"sql={sql}")
-        print(f"answer_rows={len(answer) if isinstance(answer, list) else 'n/a'}")
-        print(f"answer_df_shape={answer_df.shape}")
-        print(f"answer_df_columns={list(answer_df.columns)}")
+        print(f"db_id={db_id}  db={'connected' if db else 'not found'}")
+        print(f"answer_raw_rows={len(answer_raw) if isinstance(answer_raw, list) else 'n/a'}")
+        print(f"answer_shape={answer.shape}")
+        print(f"answer_columns={list(answer.columns)}")
         print(f"result_shape={result.shape}")
         print(f"result_columns={list(result.columns)}")
         return 0
 
+    db_status = f"connected ({db_id})" if db else f"not found ({db_id})"
     banner = (
         f"Loaded qid={qid}\n"
-        f"- answer: python object from extra.answer\n"
-        f"- result: pandas DataFrame from final_result.json\n"
+        f"- answer:     DataFrame from extra.answer (SQL column names)\n"
+        f"- answer_raw: raw python list from extra.answer\n"
+        f"- result:     DataFrame from final_result.json\n"
+        f"- result_raw: raw JSON dict from final_result.json\n"
+        f"- db:         sqlite3 connection — {db_status}\n"
+        f"              use run_sql(db, sql) to execute queries\n"
         f"- question_file: {question_file}\n"
         f"- final_result_file: {final_result_file}\n\n"
         "Variables available:\n"
-        "  query, sql, answer, answer_df, result, result_raw, qid, question_file, final_result_file, pd\n"
+        "  query, sql, answer, answer_raw, result, result_raw, db, db_id, run_sql, qid, pd\n"
     )
 
     local_vars = {
         "query": query,
         "sql": sql,
         "answer": answer,
-        "answer_df": answer_df,
+        "answer_raw": answer_raw,
         "result": result,
         "result_raw": result_raw,
+        "db": db,
+        "db_id": db_id,
+        "run_sql": run_sql,
         "qid": qid,
         "question_file": question_file,
         "final_result_file": final_result_file,
         "pd": pd,
     }
 
-    code.interact(banner=banner, local=local_vars)
+    print(banner)
+    print(f"===================== query =====================\n  {query}\n")
+    print(f"===================== sql =====================\n  {sql}\n")
+    print(f"===================== answer =====================\n{answer}\n")
+    print(f"===================== result =====================\n{result}\n")
+    code.interact(banner="", local=local_vars)
     return 0
 
 
