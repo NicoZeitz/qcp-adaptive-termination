@@ -236,6 +236,9 @@ data/bird/dev/
 # WikiDBs
 data/wikidbs/
 
+# Runs
+data/runs/
+
 
 # Other generated files
 A Vision for Autonomous Data Agent Collaboration From Query-by-Integration to Query-by-Collaboration CIDR2026_QCPDB.pdf
