@@ -6,6 +6,7 @@ from datetime import datetime
 
 from agents import trace
 
+from qtypes.result import result_to_json_preview
 from stages.draft_query_plan import draft_query_plan
 from qtypes.drafted_query_plan import DraftedQueryPlan
 from stages.execute_query_plan import execute_query_plan
@@ -121,6 +122,7 @@ async def main(
 
             logging.info(f"{user}: Finished stage 3")
             logging.info(f"Result: {data}")
+            logging.info(result_to_json_preview(data.result))
             output_path = log_dir / f"{log_filename} - final_result.json"
             with open(output_path, "w") as f:
                 f.write(data.model_dump_json(indent=4, ensure_ascii=False))
