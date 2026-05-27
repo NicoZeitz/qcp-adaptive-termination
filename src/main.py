@@ -27,6 +27,7 @@ stages_mapping = {
 
 
 async def main(
+    name: str,
     input_file: Path,
     cache_dir: Path,
     log_dir: Path,
@@ -38,11 +39,16 @@ async def main(
     if start_stage > end_stage:
         raise Exception
 
+    max_trace_label_len = 50
     user = "NZ" if os.getlogin() == "I550817" else "FW"
+
     log_filename = f"Stage {start_stage}-{end_stage} - {datetime.now().strftime('%Y-%m-%d %H-%M-%S')}"
 
+    name_prefix = f"{name.strip()[:max_trace_label_len]} - " if name else ""
+    input_file_prefix = input_file.stem[:max_trace_label_len]
+
     with trace(
-        f"{user}: Collaborative Query Answering", metadata={"provider": provider}
+        f"[{user}] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}", metadata={"provider": provider}
     ) as trace_ctx:
         initialize(log_filename, log_dir, cache_dir, provider, throw_on_cache_miss)
 
@@ -123,23 +129,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(prog="Collaborative Query Answering")
     parser.add_argument(
-        "--throw-on-cache-miss",
-        action="store_true",
-        help="Whether to throw an error if cache miss occurs",
-    )
-    parser.add_argument(
-        "--start_stage",
-        type=int,
-        choices=[1, 2, 3],
-        default=1,
-        help="Stage to start execution from (default: 1)",
-    )
-    parser.add_argument(
-        "--end_stage",
-        type=int,
-        choices=[1, 2, 3],
-        default=3,
-        help="Stage after which to end execution (default: 3)",
+        "--name",
+        type=str,
+        default="",
+        help="Name of the execution (default: empty string)",
     )
     parser.add_argument(
         "--input",
@@ -160,16 +153,36 @@ if __name__ == "__main__":
         help="Directory for log files (default: ../.logs)",
     )
     parser.add_argument(
+        "--start_stage",
+        type=int,
+        choices=[1, 2, 3],
+        default=1,
+        help="Stage to start execution from (default: 1)",
+    )
+    parser.add_argument(
+        "--end_stage",
+        type=int,
+        choices=[1, 2, 3],
+        default=3,
+        help="Stage after which to end execution (default: 3)",
+    )
+    parser.add_argument(
         "--provider",
         type=str,
         choices=["University", "Work"],
         default="University",
         help="Provider to use for the agents (default: University)",
     )
+    parser.add_argument(
+        "--throw-on-cache-miss",
+        action="store_true",
+        help="Whether to throw an error if cache miss occurs",
+    )
     args = parser.parse_args()
 
     asyncio.run(
         main(
+            args.name,
             Path(args.input),
             Path(args.cache_dir),
             Path(args.log_dir),
