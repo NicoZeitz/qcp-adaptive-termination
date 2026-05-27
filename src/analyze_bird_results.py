@@ -215,6 +215,19 @@ def _compare(expected_rows: list[list[Any]], produced_columns: list[str], produc
             exact_match=True,
         )
 
+    if len(produced_rows) == 0 and len(expected_rows) > 0:
+        return ComparisonResult(
+            status="empty_result",
+            failure_reason="produced no rows",
+            match_mode=None,
+            expected_rows=len(expected_rows),
+            produced_rows=0,
+            expected_width=expected_width,
+            produced_width=produced_width,
+            projection_columns=None,
+            exact_match=False,
+        )
+
     expected_counter = _counter_from_rows(expected_rows)
 
     exact = False
