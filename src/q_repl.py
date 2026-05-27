@@ -285,8 +285,8 @@ def main() -> int:
     print(banner)
     print(f"===================== query =====================\n\"{query}\"\n")
     print(f"===================== sql =====================\n\"{sql}\"\n")
-    print(f"===================== answer =====================\n{answer}\n")
-    print(f"===================== result =====================\n{result}\n")
+    print(f"===================== answer (expected) (len: {len(answer)}) =====================\n{answer}\n")
+    print(f"===================== result (actual from agent) (len: {len(result)}) =====================\n{result}\n")
     code.interact(banner="", local=local_vars)
     return 0
 
