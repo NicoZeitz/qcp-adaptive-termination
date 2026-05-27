@@ -106,22 +106,6 @@ async def answer_step_data_agent(
         (agent for agent in data_agents if agent.name == to_agent)
     )
 
-    # TODO:
-    additional_information = [
-        AdditionalInformation(
-            dependency="Test",
-            data=pd.DataFrame({"column1": [1, 2], "column2": ["A", "B"]}),
-        ),
-        AdditionalInformation(
-            dependency="Test2",
-            data=pd.DataFrame({"column3": [3, 4], "column4": ["C", "D"]}),
-        ),
-        AdditionalInformation(
-            dependency="Test3",
-            data=pd.DataFrame({"column5": [5, 6], "column6": ["E", "F"]}),
-        ),
-    ]
-
     if responsible_data_agent.type == "text":
         parameters = await get_text_data_agent_parameters(responsible_data_agent, query)
     elif responsible_data_agent.type == "sql":
