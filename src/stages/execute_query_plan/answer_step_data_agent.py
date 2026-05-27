@@ -131,11 +131,6 @@ async def answer_step_data_agent(
     else:
         raise ValueError(f"Unsupported data agent type: {responsible_data_agent.type}")
 
-    # TODO:
-    import sys
-
-    sys.exit(1)
-
     return await answer_query(
         data_agent=responsible_data_agent,
         query=query,
