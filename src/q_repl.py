@@ -17,7 +17,9 @@ def _normalize_qid(qid: str) -> str:
 
 
 def _latest_final_result(run_dir: Path) -> Path:
-    candidates = sorted(run_dir.glob("*final_result.json"), key=lambda p: p.stat().st_mtime)
+    candidates = sorted(
+        run_dir.glob("*final_result.json"), key=lambda p: p.stat().st_mtime
+    )
     if not candidates:
         raise FileNotFoundError(f"No final_result.json found in {run_dir}")
     return candidates[-1]
@@ -57,7 +59,15 @@ def _load_db_id(question_file: Path) -> str | None:
 def _open_db(repo_root: Path, db_id: str | None) -> sqlite3.Connection | None:
     if not db_id:
         return None
-    db_path = repo_root / "data" / "bird" / "dev" / "dev_databases" / db_id / f"{db_id}.sqlite"
+    db_path = (
+        repo_root
+        / "data"
+        / "bird"
+        / "dev"
+        / "dev_databases"
+        / db_id
+        / f"{db_id}.sqlite"
+    )
     if not db_path.exists():
         return None
     return sqlite3.connect(str(db_path))
@@ -113,7 +123,9 @@ def _split_top_level_csv(text: str) -> list[str]:
 
 
 def _column_name_from_expr(expr: str) -> str:
-    alias_match = re.search(r"\bAS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$", expr, flags=re.IGNORECASE)
+    alias_match = re.search(
+        r"\bAS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$", expr, flags=re.IGNORECASE
+    )
     if alias_match:
         return alias_match.group(1)
 
@@ -131,13 +143,17 @@ def _infer_answer_columns_from_sql(sql: str | None, width: int) -> list[str]:
     if not sql or width <= 0:
         return [f"col_{i + 1}" for i in range(width)]
 
-    select_match = re.search(r"\bSELECT\b(.*?)\bFROM\b", sql, flags=re.IGNORECASE | re.DOTALL)
+    select_match = re.search(
+        r"\bSELECT\b(.*?)\bFROM\b", sql, flags=re.IGNORECASE | re.DOTALL
+    )
     if not select_match:
         return [f"col_{i + 1}" for i in range(width)]
 
     select_expr = select_match.group(1).strip()
     select_expr = re.sub(r"^DISTINCT\s+", "", select_expr, flags=re.IGNORECASE)
-    columns = [_column_name_from_expr(part) for part in _split_top_level_csv(select_expr)]
+    columns = [
+        _column_name_from_expr(part) for part in _split_top_level_csv(select_expr)
+    ]
 
     if len(columns) != width:
         return [f"col_{i + 1}" for i in range(width)]
@@ -244,7 +260,9 @@ def main() -> int:
         print(f"query={query}")
         print(f"sql={sql}")
         print(f"db_id={db_id}  db={'connected' if db else 'not found'}")
-        print(f"answer_raw_rows={len(answer_raw) if isinstance(answer_raw, list) else 'n/a'}")
+        print(
+            f"answer_raw_rows={len(answer_raw) if isinstance(answer_raw, list) else 'n/a'}"
+        )
         print(f"answer_shape={answer.shape}")
         print(f"answer_columns={list(answer.columns)}")
         print(f"result_shape={result.shape}")
@@ -283,10 +301,14 @@ def main() -> int:
     }
 
     print(banner)
-    print(f"===================== query =====================\n\"{query}\"\n")
-    print(f"===================== sql =====================\n\"{sql}\"\n")
-    print(f"===================== answer (expected) (len: {len(answer)}) =====================\n{answer}\n")
-    print(f"===================== result (actual from agent) (len: {len(result)}) =====================\n{result}\n")
+    print(f'===================== query =====================\n"{query}"\n')
+    print(f'===================== sql =====================\n"{sql}"\n')
+    print(
+        f"===================== answer (expected) (len: {len(answer)}) =====================\n{answer}\n"
+    )
+    print(
+        f"===================== result (actual from agent) (len: {len(result)}) =====================\n{result}\n"
+    )
     code.interact(banner="", local=local_vars)
     return 0
 

@@ -1,10 +1,11 @@
 import os
+import sys
 from typing import cast
 
+from dotenv import load_dotenv
 from langfuse import get_client
 from langfuse.model import ChatMessageWithPlaceholdersDict_Message
 
-from utils.initialization import initialize
 
 
 def get_prompts():
@@ -124,7 +125,14 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    initialize()
+    # Load env
+    load_dotenv()
+    # Set up langfuse
+    langfuse = get_client()
+    if not langfuse.auth_check():
+        print("Langfuse Authentication failed. Please check your credentials and host.")
+        sys.exit(1)
+
     if args.type == "down":
         down()
         print("✓ Synced all changes from Langfuse to local")

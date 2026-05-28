@@ -64,7 +64,10 @@ def _find_projection_match(
         return False, None
 
     for index_combo in itertools.combinations(range(produced_width), expected_width):
-        projected_rows = [[row[i] if i < len(row) else None for i in index_combo] for row in produced_rows]
+        projected_rows = [
+            [row[i] if i < len(row) else None for i in index_combo]
+            for row in produced_rows
+        ]
         projected_counter = _counter_from_rows(projected_rows)
 
         if projected_counter == expected_counter:
@@ -93,13 +96,19 @@ def _find_packed_list_match(
             if isinstance(cell, list):
                 list_counter = Counter(_normalize_value(item) for item in cell)
                 if list_counter == expected_counter:
-                    col_name = produced_columns[col_idx] if col_idx < len(produced_columns) else f"col_{col_idx}"
+                    col_name = (
+                        produced_columns[col_idx]
+                        if col_idx < len(produced_columns)
+                        else f"col_{col_idx}"
+                    )
                     return True, [col_name]
 
     return False, None
 
 
-def _detect_complete_failure(produced_columns: list[str], produced_rows: list[list[Any]]) -> str | None:
+def _detect_complete_failure(
+    produced_columns: list[str], produced_rows: list[list[Any]]
+) -> str | None:
     if not produced_rows:
         return None
 
@@ -149,7 +158,9 @@ def _parse_expected_answer(question_file: Path) -> list[list[Any]]:
     return rows
 
 
-def _parse_produced_result(final_result_file: Path) -> tuple[list[str], list[list[Any]]]:
+def _parse_produced_result(
+    final_result_file: Path,
+) -> tuple[list[str], list[list[Any]]]:
     with final_result_file.open("r", encoding="utf-8") as f:
         payload = json.load(f)
 
@@ -173,13 +184,19 @@ def _parse_produced_result(final_result_file: Path) -> tuple[list[str], list[lis
 
 
 def _latest_final_result(run_dir: Path) -> Path | None:
-    candidates = sorted(run_dir.glob("*final_result.json"), key=lambda p: p.stat().st_mtime)
+    candidates = sorted(
+        run_dir.glob("*final_result.json"), key=lambda p: p.stat().st_mtime
+    )
     if not candidates:
         return None
     return candidates[-1]
 
 
-def _compare(expected_rows: list[list[Any]], produced_columns: list[str], produced_rows: list[list[Any]]) -> ComparisonResult:
+def _compare(
+    expected_rows: list[list[Any]],
+    produced_columns: list[str],
+    produced_rows: list[list[Any]],
+) -> ComparisonResult:
     expected_width = len(expected_rows[0]) if expected_rows else 0
     produced_width = len(produced_columns)
 
@@ -193,7 +210,9 @@ def _compare(expected_rows: list[list[Any]], produced_columns: list[str], produc
             produced_rows=len(produced_rows),
             expected_width=expected_width,
             produced_width=produced_width,
-            projection_columns=produced_columns if expected_width == produced_width else None,
+            projection_columns=produced_columns
+            if expected_width == produced_width
+            else None,
             exact_match=False,
         )
 
@@ -380,7 +399,9 @@ def run_all() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Analyze Bird run outputs against expected answers")
+    parser = argparse.ArgumentParser(
+        description="Analyze Bird run outputs against expected answers"
+    )
     parser.add_argument(
         "--dataset",
         choices=["dataset", "dataset_vertical", "all"],
