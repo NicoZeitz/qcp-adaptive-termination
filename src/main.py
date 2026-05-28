@@ -49,7 +49,8 @@ async def main(
     input_file_prefix = input_file.stem[:max_trace_label_len]
 
     with trace(
-        f"[{user}] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}", metadata={"provider": provider}
+        f"[{user}] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}",
+        metadata={"provider": provider},
     ) as trace_ctx:
         initialize(log_filename, log_dir, cache_dir, provider, throw_on_cache_miss)
 
@@ -126,7 +127,6 @@ async def main(
             output_path = log_dir / f"{log_filename} - final_result.json"
             with open(output_path, "w") as f:
                 f.write(data.model_dump_json(indent=4, ensure_ascii=False))
-
 
 
 if __name__ == "__main__":
