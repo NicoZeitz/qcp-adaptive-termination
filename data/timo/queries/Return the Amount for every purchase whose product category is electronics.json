@@ -1,7 +1,7 @@
 {
     "extra": {
         "answer": "50 & 150",
-        "sql_query": "TODO:FW",
+        "sql_query": "SELECT Amount FROM Purchases JOIN (SELECT ProdID FROM Products WHERE LOWER(Category) = 'electronics') P ON Purchases.ProdID = P.ProdID;",
         "relevant_data_agents": [
             "alpha",
             "beta"
