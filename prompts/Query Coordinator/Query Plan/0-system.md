@@ -13,21 +13,53 @@ A query plan is a list of steps that need to be executed in order to answer the 
 - If a query can possibly be answered by multiple agents, include a step for each of the agents.
 - Queries should be instructed in natural language instead of a technical language like SQL
 
-## Important consideration regarding split data
+## Rules for Joins and Data Distribution
 
-Always assume that data that belongs together is split in the worst way possible between different agents: This has an important impact on your query planning!
+Critical: Avoid premature local joins that can cause incorrect results
 
-### Example for a potential failure case:
--Agent A holds table category[ID, type] with (4, mammal), (3, reptile) and holds table inventory[catID, species, amount] with (4, kangaroo, 1), (5, squirrel, 3), (2, robin, 42). Agent B has the same two tables, but only with the entries (1, fish), (2, bird), (5, mammal) and (1, tuna, 20), (5, beaver, 3)
-- With the query "How many different mammals are in the inventory?" the most forward way to complete it is to first ask Agent A and then Agent B how many mammals do they count. The answer in this case: Agent A would return (kangaroo, 1) and Agent B would return (beaver, 3). This answer is incorrect, because it is not complete. This happens when each agents joins their category and inventory tables separately. Underlying problem here: Agent B has category information, that would be needed be Agent A to answer the query completely.
-- Potential plan to get correct answer is: First ask both agents for their category and then combining those two, afterwards querying the two agents again for the mammal amounts with the combined category table. This returns the additional correct (squirrel, 3).
+When data is distributed across multiple agents, local joins within a single agent can lead to globally incorrect results if:
+- Tables are horizontally partitioned (rows split across agents)
+- Tables are vertically partitioned (columns split across agents)
+- Foreign key relationships span multiple agents
+- Join conditions would filter out valid rows that exist on other agents
 
-- Therefore it is important to plan joins and other operations that filter out data, that might bee needed by other agents, as late in the query plan as possible!
-- You must prefer creating more steps to handle these kind of problems by letting agents return unfiltered data and combining them then afterwards.
+### When to avoid local joins in agent queries:
+
+1. Horizontal partitioning detected: If the same table appears in multiple agents' schemas, assume it is horizontally partitioned unless explicitly stated otherwise. Each agent only has a subset of the rows.
+2. Vertical partitioning detected: If a table with the same name appears in multiple agents but with different columns, it is vertically partitioned. Each agent only has a subset of the columns.
+3. Cross-agent foreign keys: If a join requires matching keys between tables that exist on different agents, DO NOT ask a single agent to perform the join.
+4. Filtering before aggregation: If filtering based on joined data, first collect all relevant rows from all agents, then filter globally via the Coordinator.
+
+### Safe approach for distributed joins:
+
+Instead of: Asking Agent A to "join table X with table Y and filter by condition Z"
+
+Do this:
+1. Ask each relevant agent for their portion of table X rows (with any local filters that don't require joins)
+2. Ask each relevant agent for their portion of table Y rows (with any local filters that don't require joins)
+3. Use Coordinator to combine all results from step 1 and 2
+4. Use Coordinator to perform the join and filtering on the globally complete dataset, OR
+5. After global aggregation by Coordinator, distribute the filtered/joined results back to agents for further processing
+
+### When local joins ARE safe:
+
+Local joins within an agent are only safe when:
+- All required tables for the join exist ONLY in that single agent's schema (no other agent has these tables)
+- The tables are NOT partitioned across multiple agents
+- You can verify with 100% certainty that the complete dataset for the join exists within that single agent
+
+Default assumption: If in doubt, assume tables are distributed and avoid local joins. It is safer to over-decompose the query than to risk incorrect results from premature local joins.
+
+### Key principle:
+
+**Think globally, query locally, aggregate globally**
+1. Each agent provides their local portion of the data
+2. Coordinator aggregates to create a complete global view
+3. Only after global aggregation, use the complete information for further queries
 
 ## Example Plan
 
-Here is a example of a query plan. Please use this as a reference on how to draft a query plan for your available agents and query. The query for the example query plan is the question "Who played Rocket in the movie called 'Guardians of the Galaxy' and when was he born? Also return the title id of the movie.".
+Here is an example of a query plan. Please use this as a reference on how to draft a query plan for your available agents and query. The query for the example query plan is the question "Who played Rocket in the movie called 'Guardians of the Galaxy' and when was he born? Also return the title id of the movie.".
 
 The dataset is split between six different agents:
 ```
@@ -80,10 +112,10 @@ The dataset is split between six different agents:
 [(title_id:VARCHAR),(rating:REAL),(votes:INTEGER)]
 ```
 
-Drafted query plan:+
+Drafted query plan:
 ```json
-{{
-  "steps": [
+{
+  "steps": [
     {
       "id": "s1",
       "query": "What is the title_id of 'Guardians of the Galaxy' if it exists",
@@ -109,16 +141,16 @@ Drafted query plan:+
       "dependencies": [
         {
           "step_id": "s1",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'",
+          "dependency": "The title_ids of 'Guardians of the Galaxy'"
         },
         {
           "step_id": "s2",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'",
+          "dependency": "The title_ids of 'Guardians of the Galaxy'"
         },
         {
           "step_id": "s3",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'",
-        },
+          "dependency": "The title_ids of 'Guardians of the Galaxy'"
+        }
       ]
     },
     {
@@ -128,16 +160,16 @@ Drafted query plan:+
       "dependencies": [
         {
           "step_id": "s1",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'",
+          "dependency": "The title_ids of 'Guardians of the Galaxy'"
         },
         {
           "step_id": "s2",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'",
+          "dependency": "The title_ids of 'Guardians of the Galaxy'"
         },
         {
           "step_id": "s3",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'",
-        },
+          "dependency": "The title_ids of 'Guardians of the Galaxy'"
+        }
       ]
     },
     {
@@ -147,12 +179,12 @@ Drafted query plan:+
       "dependencies": [
         {
           "step_id": "s4",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie",
+          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
         },
         {
           "step_id": "s5",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie",
-        },
+          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
+        }
       ]
     },
     {
@@ -162,7 +194,7 @@ Drafted query plan:+
       "dependencies": [
         {
           "step_id": "s6",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie",
+          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
         }
       ]
     },
@@ -173,7 +205,7 @@ Drafted query plan:+
       "dependencies": [
         {
           "step_id": "s6",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie",
+          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
         }
       ]
     },
@@ -184,7 +216,7 @@ Drafted query plan:+
       "dependencies": [
         {
           "step_id": "s6",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie",
+          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
         }
       ]
     },
@@ -195,15 +227,15 @@ Drafted query plan:+
       "dependencies": [
         {
           "step_id": "s7",
-          "dependency": "The person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'",
+          "dependency": "The person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
         },
         {
           "step_id": "s8",
-          "dependency": "The person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'",
+          "dependency": "The person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
         },
         {
           "step_id": "s9",
-          "dependency": "The person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'",
+          "dependency": "The person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
         }
       ]
     },
@@ -214,7 +246,7 @@ Drafted query plan:+
       "dependencies": [
         {
           "step_id": "s10",
-          "dependency": "The unique person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'",
+          "dependency": "The unique person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
         }
       ]
     },
@@ -225,7 +257,7 @@ Drafted query plan:+
       "dependencies": [
         {
           "step_id": "s10",
-          "dependency": "The unique person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'",
+          "dependency": "The unique person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
         }
       ]
     },
@@ -236,7 +268,7 @@ Drafted query plan:+
       "dependencies": [
         {
           "step_id": "s6",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie",
+          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
         },
         {
           "step_id": "s11",
@@ -247,22 +279,33 @@ Drafted query plan:+
           "dependency": "The birth date of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
         }
       ]
-    },
+    }
   ]
 }
 ```
 
-Notes about the drafted query plan, which you should also follow when creating your query plan:
-1. In this case all agents are relevant to answer the question. This is the case most of the time, but not necessarily always.
-2. The data is split across all agents. It is not possible to assume, that tables can be locally joined within an agent to answer the question. Therefore we have to ask multiple agents for the same information and combine it afterwards. The data can be horizontally and vertically split.
-3. We first have to find the title_id of 'Guardians of the Galaxy' from agents A3, A4 and A5, because we don't know which agent has the relevant information.
-4. Then with the title_ids returned from those three agents we have to ask agents A3 and A6 for the type of those title_ids, because we need to filter them to only include movies. Since we don't know which agent has the relevant type information for the movie, we can not do this filtering in the step before
-5. Then all the information is aggregated by the coordinator
-6. Only then all the aggregated information is given to A3, A4, A5 to find the relevant crew members. We can only do this after the global aggregation, since we cannot assume, that agents have all the relevant information locally. You should also not assume that agents can directly locally join information, when you create you plan
-7. Then the crew information is aggregated again and A1, A2 are asked for the person information (name and birth date respectively)
-8. At the end there should always be a final coordinator step which aggregates all information and returns the final answer. Since the user wants multiple information here
-   - The title_id is pulled from a step that is older
-   - The person information is pulled from the previous two steps
+### Notes about the Example Plan:
+
+1. All agents are queried when relevant: In this case all agents are relevant to answer the question. This is the case sometimes, but not always.
+2. Data is distributed - no assumptions about local completeness: The data is split across all agents. It is not possible to assume that tables can be locally joined within an agent to answer the question. Therefore we have to ask multiple agents for the same information and combine it afterwards. The data can be horizontally and vertically split.
+3. Step s1-s3: Query all agents with titles table: We first have to find the title_id of 'Guardians of the Galaxy' from agents A3, A4 and A5, because we don't know which agent has the relevant information. The titles table appears in all three agents, indicating horizontal partitioning.
+4. Step s4-s5: Query all agents with type information: With the title_ids returned from those three agents we have to ask agents A3 and A6 for the type of those title_ids, because we need to filter them to only include movies. Since we don't know which agent has the relevant type information for the movie, we cannot do this filtering in the previous step. Note that A3 has the `type` column in the `titles` table, while A6 has a separate `title_types` table - this is vertical partitioning.
+5. Step s6: Global aggregation by Coordinator: All the information is aggregated by the coordinator to create a complete, deduplicated list of movie title_ids.
+6. Step s7-s9: NO local joins with titles table: We do NOT ask A3 to "join crew with titles and filter by primary_title and character name", even though A3 has both tables locally. This is because:
+   - The `crew` table appears in A3, A4, and A5 (horizontal partitioning)
+   - Crew rows for the same title_id might be distributed across all three agents
+   - A local join in A3 would only see A3's portion of crew data and miss rows stored in A4 or A5
+   - This would lead to incomplete and incorrect results
+   Instead, we provide the globally aggregated title_ids from step s6 to each agent, and each agent returns their portion of matching crew records.
+7. Step s10: Global aggregation of crew data: The crew information is aggregated again by the Coordinator to ensure we have a complete view of all person_ids.
+8. Step s11-s12: Query for person details: Only after global aggregation, we query A1 and A2 for person information (name and birth date respectively). Note that the `people` table is vertically partitioned: A1 has `name`, A2 has `born` and `died`.
+9. Step s13: Final aggregation: There should always be a final coordinator step which aggregates all information and returns the final answer. In this case:
+   - The title_id is pulled from step s6 (earlier global aggregation)
+   - The person name is pulled from step s11
+   - The person birth date is pulled from step s12
+   - All information is combined to answer the complete question
+
+The pattern "collect locally → aggregate globally → distribute globally aggregated results → collect locally → aggregate globally" ensures correctness when data is partitioned. Never assume an agent has complete local data for joins when the same tables appear in multiple agents schemas.
 
 # Overview of Available Agents
 

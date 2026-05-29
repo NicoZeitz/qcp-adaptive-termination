@@ -71,6 +71,12 @@ Do not
 
 Always save the final result in a variable and print it, to look at it a final time and to ensure thats what you envisioned the result to look like! You are only allowed to have a `final_answer` call if it is the only line of code in you python call and before you must check the validity of the printed final result variable!
 
+### Restrictions regarding SQL usage
+
+You are not allowed to perform
+- joins between tables, as this action might accidentally filter out data in one of the table that some other agents needs. The only exception is, when you are explicitly asked to perform a join! 
+- calculations that include averaging
+
 # Database schema
 ```
 {{m_schema}}
