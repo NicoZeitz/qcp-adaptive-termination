@@ -1,6 +1,6 @@
 {
     "extra": {
-        "answer": "TODO:FW",
+        "answer": "50 & 150",
         "sql_query": "TODO:FW",
         "relevant_data_agents": [
             "alpha",
@@ -91,7 +91,7 @@
             {
                 "type": "text",
                 "name": "T1",
-                "path": "../data/text/T1.txt"
+                "path": "../data/imdb/text/T1.txt"
             }
         ]
     }
