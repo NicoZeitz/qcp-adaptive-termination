@@ -12,7 +12,7 @@ coordinator_reasoning_mapping: dict[str, Reasoning] = {
 
 data_agent_reasoning_mapping: dict[str, Reasoning] = {
     "Schema Description": Reasoning(effort="minimal"),
-    "Relevance": Reasoning(effort="low", generate_summary="concise"),
+    "Relevance": Reasoning(effort="low", summary="concise"),
     "Summary": Reasoning(effort="low"),
     "Code": Reasoning(effort="medium"),
 }
