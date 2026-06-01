@@ -35,6 +35,11 @@ def create_query_plan_prompt_context(query_plan: QueryPlan) -> str:
                     "id": step.id,
                     "query": step.query,
                     "to_agent": step.to_agent,
+                    **(
+                        {"merge_task": step.merge_task}
+                        if hasattr(step, "merge_task")
+                        else {}
+                    ),
                     "dependencies": [
                         {
                             "step_id": dependency.step_id,

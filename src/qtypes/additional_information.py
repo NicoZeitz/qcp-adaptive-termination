@@ -8,6 +8,7 @@ from qtypes.result import ResultType, deserialize_result, serialize_result
 class AdditionalInformation(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
+    step_id: str
     dependency: str
     data: ResultType
 

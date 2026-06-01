@@ -19,7 +19,10 @@ class FieldDefinitions:
     )
     step_query = Field(description="The query to be executed in this step.")
     step_to_agents = Field(
-        description="The agent to which the query is directed. Normally this is the name of a specific agent. However, it can also be 'Coordinator', which indicates that the query should be executed by the coordinator itself. This can be used for steps that involve reasoning or other operations that do not require access to a specific data source, instead only combining dependencies. The last step should always be directed to the Coordinator, as it is responsible to merge results and produce the final answer to the user query."
+        description="The agent or agents to which the query is directed. This can either be a single agent or multiple agents. Agent names can be specific data agents or 'Coordinator' in case multiple dependencies should be aggregated in a way."
+    )
+    step_merge_task = Field(
+        description="A natural language instruction for merging the outputs of multiple agents in this step."
     )
     step_dependencies = Field(
         description="List of dependencies for this step that are required before this step can be executed."

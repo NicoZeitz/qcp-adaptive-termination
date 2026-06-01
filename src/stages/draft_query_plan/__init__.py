@@ -1,12 +1,16 @@
 from typing import Literal
 
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from qtypes.drafted_query_plan import DraftedQueryPlan
 from qtypes.data_agent import DataAgent
 from qtypes.query_dependency import QueryDependency
 from qtypes.query_plan import FieldDefinitions, QueryPlan
-from qtypes.query_plan_step import QueryPlanStep
+from qtypes.query_plan_step import (
+    MultiAgentQueryPlanStep,
+    QueryPlanStep,
+    SingleAgentQueryPlanStep,
+)
 from stages.common.agent_configuration import get_coordinator_agent_configuration
 from stages.common.data_agent.agent_registry import (
     AgentRegistryType,
@@ -19,6 +23,8 @@ from utils.span import append_to_span_output, own_custom_span
 
 def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
     data_agent_names = [agent.name for agent in data_agents]
+    AgentName = Literal["Coordinator", *data_agent_names]
+    StrictModelConfig = ConfigDict(extra="forbid")
 
     QueryDependency = create_model(
         "QueryDependency",
@@ -26,19 +32,38 @@ def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseMode
         dependency=(str, FieldDefinitions.dependency_description),
     )
 
-    QueryPlanStep = create_model(
-        "QueryPlanStep",
+    SingleAgentQueryPlanStepModel = create_model(
+        "SingleAgentQueryPlanStep",
+        id=(str, FieldDefinitions.step_id),
+        query=(str, FieldDefinitions.step_query),
+        to_agent=(AgentName, FieldDefinitions.step_to_agents),
+        dependencies=(list[QueryDependency], FieldDefinitions.step_dependencies),
+        __config__=StrictModelConfig,
+    )
+
+    MultiAgentQueryPlanStepModel = create_model(
+        "MultiAgentQueryPlanStep",
         id=(str, FieldDefinitions.step_id),
         query=(str, FieldDefinitions.step_query),
         to_agent=(
-            Literal["Coordinator", *data_agent_names],
-            FieldDefinitions.step_to_agents,
+            list[AgentName],
+            Field(
+                description=FieldDefinitions.step_to_agents.description,
+                min_length=2,
+            ),
         ),
+        merge_task=(str, FieldDefinitions.step_merge_task),
         dependencies=(list[QueryDependency], FieldDefinitions.step_dependencies),
+        __config__=StrictModelConfig,
     )
 
     QueryPlan = create_model(
-        "QueryPlan", steps=(list[QueryPlanStep], FieldDefinitions.plan_steps)
+        "QueryPlan",
+        steps=(
+            list[SingleAgentQueryPlanStepModel | MultiAgentQueryPlanStepModel],
+            FieldDefinitions.plan_steps,
+        ),
+        __config__=StrictModelConfig,
     )
     return QueryPlan
 
@@ -65,13 +90,24 @@ def map_query_plan_model_to_query_plan(
                 )
             )
 
-        query_plan_step = QueryPlanStep(
-            id=step_model.id,
-            query=step_model.query,
-            to_agent=step_model.to_agent,
-            dependencies=dependencies,
-            answer=None,
-        )
+        to_agent = step_model.to_agent
+        if isinstance(to_agent, list):
+            query_plan_step = MultiAgentQueryPlanStep(
+                id=step_model.id,
+                query=step_model.query,
+                to_agent=to_agent,
+                merge_task=step_model.merge_task,
+                dependencies=dependencies,
+                answer=None,
+            )
+        else:
+            query_plan_step = SingleAgentQueryPlanStep(
+                id=step_model.id,
+                query=step_model.query,
+                to_agent=to_agent,
+                dependencies=dependencies,
+                answer=None,
+            )
 
         step_mapping[step_model.id] = query_plan_step
         steps.append(query_plan_step)
