@@ -16,7 +16,7 @@ from utils.span import (
 )
 from qtypes.filtered_relevant_agents import FilteredRelevantAgents
 from qtypes.data_agent import DataAgent
-from utils.cache import cached, CacheMode
+from utils.cache import cached
 
 
 class FilterType(Enum):

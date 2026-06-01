@@ -12,8 +12,7 @@ async def text_data_agent_query_capabilities(data_agent: DataAgent) -> list[str]
 async def text_data_and_nl_description(data_agent: DataAgent) -> tuple[str, str]:
     text = get_text(data_agent)
     result = await run_agent(
-        name_postfix="Summary",
-        agent_configuration=get_data_agent_agent_configuration(data_agent),
+        agent_configuration=get_data_agent_agent_configuration(data_agent, "Summary"),
         prompt_name="Text Data Agent/Summary",
         prompt_parameters={
             "preview": preview_text(text, CHAR_LIMIT_LONG_LLM),

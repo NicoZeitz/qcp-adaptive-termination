@@ -7,7 +7,6 @@ from langfuse import get_client
 from langfuse.model import ChatMessageWithPlaceholdersDict_Message
 
 
-
 def get_prompts():
     prompts = dict()
 

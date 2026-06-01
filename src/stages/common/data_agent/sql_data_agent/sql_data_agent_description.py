@@ -34,8 +34,9 @@ async def sql_data_and_nl_description(data_agent: DataAgent) -> tuple[str, str]:
     DatabaseDescriptionModel = create_database_description_model(schema_engine)
 
     result = await run_agent(
-        name_postfix="Schema Description",
-        agent_configuration=get_data_agent_agent_configuration(data_agent),
+        agent_configuration=get_data_agent_agent_configuration(
+            data_agent, "Schema Description"
+        ),
         prompt_name="SQL Data Agent/Schema Description",
         prompt_parameters={
             "m_schema_without_comments": m_schema_without_comments,

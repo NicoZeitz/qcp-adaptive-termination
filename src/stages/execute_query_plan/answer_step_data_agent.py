@@ -178,8 +178,9 @@ async def answer_query(
         result = cast(
             PartialQueryAnswer,
             await run_agent(
-                name_postfix="Code",
-                agent_configuration=get_data_agent_agent_configuration(data_agent),
+                agent_configuration=get_data_agent_agent_configuration(
+                    data_agent, "Code"
+                ),
                 prompt_name=prompt_name,
                 prompt_parameters=prompt_parameters,
                 tools=[code_environment.as_function_tool()],

@@ -23,7 +23,6 @@ TResult = TypeVar("TResult", bound=JsonValue | PartialQueryAnswer)
 
 
 async def run_agent[TResult](
-    name_postfix: str,
     agent_configuration: AgentConfiguration,
     prompt_name: str,
     prompt_parameters: dict[str, str],
@@ -45,7 +44,7 @@ async def run_agent[TResult](
     prompts = load_prompt(prompt_name, prompt_parameters)
     # use 1st message as instructions, rest as part of prompt
     instructions, prompts = prompts[0], prompts[1:]
-    agent_name = f"{agent_configuration.name} - {name_postfix}"
+    agent_name = agent_configuration.name
     tool_use = (
         tool_use_behavior
         if isinstance(tool_use_behavior, str)
