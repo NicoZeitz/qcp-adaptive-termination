@@ -1,0 +1,35 @@
+【DB_ID】 agent2
+【Schema】
+# Table: main.frpm
+[
+(CDSCode:TEXT, Primary Key, Examples: [01100170109835, 01100170112607, 01100170118489]),
+(District Code:INTEGER, Examples: [10017, 31609, 31617]),
+(School Name:TEXT, Examples: [FAME Public Charter]),
+(NSLP Provision Status:TEXT, Examples: [Breakfast Provision 2]),
+(IRC:INTEGER, Examples: [1, 0]),
+(Free Meal Count (K-12):REAL, Examples: [565.0, 186.0, 134.0]),
+(Enrollment (Ages 5-17):REAL, Examples: [1070.0, 376.0, 230.0]),
+(Percent (%) Eligible FRPM (Ages 5-17):REAL, Examples: [0.65607476635514, 0.484042553191489, 0.730434782608696])
+]
+# Table: main.satscores
+[
+(cds:TEXT, Primary Key, Examples: [10101080000000, 10101080109991, 10101080111682]),
+(dname:TEXT, Examples: [Alameda County Office of Education]),
+(AvgScrRead:INTEGER, Examples: [418, 503, 397])
+]
+# Table: main.schools
+[
+(CDSCode:TEXT, Primary Key, Examples: [01100170000000, 01100170109835, 01100170112607]),
+(StatusType:TEXT, Examples: [Active, Closed, Merged]),
+(Street:TEXT, Examples: [313 West Winton Avenue]),
+(State:TEXT, Examples: [CA]),
+(MailZip:TEXT, Examples: [94544-1136, 94560-5359, 94612]),
+(Website:TEXT, Examples: [www.acoe.org]),
+(CharterNum:TEXT, Examples: [0728, 0811, 1049]),
+(SOC:TEXT, Examples: [65, 66, 60]),
+(EILCode:TEXT, Examples: [ELEMHIGH, HS, ELEM]),
+(Virtual:TEXT, Examples: [P, N, F]),
+(AdmFName1:TEXT, Examples: [L Karen, Laura, Clifford]),
+(AdmLName2:TEXT, Examples: [Tsang, Koelling, Moore]),
+(AdmEmail3:TEXT)
+]

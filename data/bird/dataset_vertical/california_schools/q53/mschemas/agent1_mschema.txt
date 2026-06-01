@@ -1,0 +1,36 @@
+【DB_ID】 agent1
+【Schema】
+# Table: main.frpm
+[
+(CDSCode:TEXT, Primary Key, Examples: [01100170109835, 01100170112607, 01100170118489]),
+(County Code:TEXT, Examples: [01, 02, 03]),
+(District Name:TEXT),
+(Educational Option Type:TEXT, Examples: [Traditional]),
+(Charter Funding Type:TEXT, Examples: [Directly funded]),
+(Enrollment (K-12):REAL, Examples: [1087.0, 395.0, 244.0]),
+(Percent (%) Eligible FRPM (K-12):REAL, Examples: [0.657773689052438, 0.470886075949367, 0.717213114754098]),
+(FRPM Count (Ages 5-17):REAL, Examples: [702.0, 182.0, 168.0])
+]
+# Table: main.satscores
+[
+(cds:TEXT, Primary Key, Examples: [10101080000000, 10101080109991, 10101080111682]),
+(sname:TEXT, Examples: [FAME Public Charter]),
+(TestTakersNum:INTEGER, Examples: [88, 17, 71]),
+(NumGE1500:INTEGER, Examples: [14, 9, 5])
+]
+# Table: main.schools
+[
+(CDSCode:TEXT, Primary Key, Examples: [01100170000000, 01100170109835, 01100170112607]),
+(NCESSchool:TEXT, Examples: [10546, 10947, 12283]),
+(School:TEXT, Examples: [FAME Public Charter]),
+(Zip:TEXT, Examples: [94544-1136, 94560-5359, 94612-3355]),
+(MailCity:TEXT, Examples: [Hayward, Newark, Oakland]),
+(Ext:TEXT, Examples: [130, 1240, 1200]),
+(Charter:INTEGER, Examples: [1, 0]),
+(DOCType:TEXT, Examples: [County Office of Education (COE)]),
+(EdOpsName:TEXT, Examples: [Traditional]),
+(GSserved:TEXT, Examples: [K-12, 9-12, K-7]),
+(Longitude:REAL, Examples: [-122.09713, -121.99391, -122.26815]),
+(AdmFName2:TEXT, Examples: [Sau-Lim (Lance), Jennifer, Annalisa]),
+(AdmLName3:TEXT, Examples: [Sarratore, Munoz, Chang])
+]
