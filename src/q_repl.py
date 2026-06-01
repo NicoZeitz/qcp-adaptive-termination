@@ -212,7 +212,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Open interactive REPL with answer + result loaded for a Bird q-id"
     )
-    parser.add_argument("qid", nargs="?", default=None, help="Question id, e.g. q53 or 53")
+    parser.add_argument(
+        "qid", nargs="?", default=None, help="Question id, e.g. q53 or 53"
+    )
     parser.add_argument(
         "--input",
         type=Path,
@@ -251,7 +253,11 @@ def main() -> int:
         question_file = args.input.resolve()
         if not question_file.exists():
             raise FileNotFoundError(f"Question file not found: {question_file}")
-        qid = _normalize_qid(question_file.stem) if args.qid is None else _normalize_qid(args.qid)
+        qid = (
+            _normalize_qid(question_file.stem)
+            if args.qid is None
+            else _normalize_qid(args.qid)
+        )
     elif args.qid is not None:
         qid = _normalize_qid(args.qid)
         question_file = repo_root / "data" / "bird" / args.dataset / f"{qid}.json"

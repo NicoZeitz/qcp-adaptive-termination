@@ -98,8 +98,7 @@ async def draft_query_plan(
         QueryPlanModel = create_draft_query_plan_model(relevant_data_agents)
 
         result = await run_agent(
-            name_postfix="Draft Query Plan",
-            agent_configuration=get_coordinator_agent_configuration(),
+            agent_configuration=get_coordinator_agent_configuration("Draft Query Plan"),
             prompt_name="Query Coordinator/Query Plan",
             prompt_parameters={
                 "agent_registry": agent_registry,

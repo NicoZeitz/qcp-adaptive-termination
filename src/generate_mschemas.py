@@ -14,17 +14,14 @@ from stages.common.mschema.schema_engine import SchemaEngine
 def setup_logging(verbose: bool = False):
     """Set up logging configuration."""
     level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="[%(levelname)s] %(message)s"
-    )
+    logging.basicConfig(level=level, format="[%(levelname)s] %(message)s")
 
 
 def generate_mschema_from_sqlite(
     db_path: Path,
     output_dir: Path,
     example_num: int = 3,
-    show_type_detail: bool = False
+    show_type_detail: bool = False,
 ):
     """Generate m-schema for a SQLite database file."""
     db_name = db_path.stem
@@ -36,15 +33,12 @@ def generate_mschema_from_sqlite(
 
         # Create SchemaEngine instance
         schema_engine = SchemaEngine(
-            engine=engine,
-            db_name=db_name,
-            sample_rows_in_table_info=example_num
+            engine=engine, db_name=db_name, sample_rows_in_table_info=example_num
         )
 
         # Generate m-schema string
         mschema_str = schema_engine.mschema.to_mschema(
-            example_num=example_num,
-            show_type_detail=show_type_detail
+            example_num=example_num, show_type_detail=show_type_detail
         )
 
         # Save m-schema as text file
@@ -71,7 +65,7 @@ def generate_mschemas_for_folder(
     extensions: list[str] = [".db", ".sqlite"],
     example_num: int = 3,
     show_type_detail: bool = False,
-    recursive: bool = False
+    recursive: bool = False,
 ):
     """Generate m-schemas for all database files in a folder."""
 
@@ -111,38 +105,37 @@ def generate_mschemas_for_folder(
     success_count = 0
     for db_file in sorted(db_files):
         if generate_mschema_from_sqlite(
-            db_file,
-            output_dir,
-            example_num,
-            show_type_detail
+            db_file, output_dir, example_num, show_type_detail
         ):
             success_count += 1
         logging.info("")
 
     # Summary
     logging.info("=" * 60)
-    logging.info(f"Summary: {success_count}/{len(db_files)} databases processed successfully")
+    logging.info(
+        f"Summary: {success_count}/{len(db_files)} databases processed successfully"
+    )
     logging.info(f"Output directory: {output_dir}")
 
 
 def main():
     parser = argparse.ArgumentParser(
         prog="Generate M-Schemas",
-        description="Generate m-schemas for all database files in a specified folder"
+        description="Generate m-schemas for all database files in a specified folder",
     )
 
     parser.add_argument(
         "--folder",
         type=str,
         required=True,
-        help="Path to folder containing database files"
+        help="Path to folder containing database files",
     )
 
     parser.add_argument(
         "--output",
         type=str,
         default=None,
-        help="Output directory for m-schema files (default: <folder>/mschemas)"
+        help="Output directory for m-schema files (default: <folder>/mschemas)",
     )
 
     parser.add_argument(
@@ -150,34 +143,31 @@ def main():
         type=str,
         nargs="+",
         default=[".db", ".sqlite"],
-        help="Database file extensions to process (default: .db .sqlite)"
+        help="Database file extensions to process (default: .db .sqlite)",
     )
 
     parser.add_argument(
         "--example-num",
         type=int,
         default=3,
-        help="Number of example values to include per column (default: 3)"
+        help="Number of example values to include per column (default: 3)",
     )
 
     parser.add_argument(
         "--show-type-detail",
         action="store_true",
-        help="Show detailed type information (e.g., VARCHAR(255) instead of VARCHAR)"
+        help="Show detailed type information (e.g., VARCHAR(255) instead of VARCHAR)",
     )
 
     parser.add_argument(
         "--recursive",
         "-r",
         action="store_true",
-        help="Search for database files recursively in subdirectories"
+        help="Search for database files recursively in subdirectories",
     )
 
     parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        help="Enable verbose logging"
+        "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
 
     args = parser.parse_args()
@@ -193,7 +183,7 @@ def main():
         extensions=args.extensions,
         example_num=args.example_num,
         show_type_detail=args.show_type_detail,
-        recursive=args.recursive
+        recursive=args.recursive,
     )
 
 

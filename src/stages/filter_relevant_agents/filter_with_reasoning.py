@@ -42,8 +42,7 @@ async def filter_coordinator_with_reasoning(
     RelevanceModel = build_relevance_model(data_agents)
 
     relevances = await run_agent(
-        name_postfix="Relevance",
-        agent_configuration=get_coordinator_agent_configuration(),
+        agent_configuration=get_coordinator_agent_configuration("Relevance"),
         prompt_name="Query Coordinator/Relevance",
         prompt_parameters={"agent_registry": agent_registry, "query": query},
         output_type=RelevanceModel,
@@ -89,12 +88,11 @@ async def filter_data_agent_with_reasoning(
         raise ValueError(f"Unsupported agent type: {data_agent.type}")
 
     is_relevant = await run_agent(
-        name_postfix="Relevance",
-        agent_configuration=get_data_agent_agent_configuration(data_agent),
+        agent_configuration=get_data_agent_agent_configuration(data_agent, "Relevance"),
         prompt_name=prompt_name,
         prompt_parameters=prompt_parameters,
         output_type=bool,
     )
 
-    append_to_span_output({ f"{data_agent.name}_relevant": is_relevant })
+    append_to_span_output({f"{data_agent.name}_relevant": is_relevant})
     return data_agent if is_relevant else None

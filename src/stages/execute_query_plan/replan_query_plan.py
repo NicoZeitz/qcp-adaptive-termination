@@ -98,8 +98,7 @@ async def replan_query_plan(
     QueryReplanModel = create_query_replan_model(relevant_data_agents)
 
     result = await run_agent(
-        name_postfix="Draft Query Plan",
-        agent_configuration=get_coordinator_agent_configuration(),
+        agent_configuration=get_coordinator_agent_configuration("Replan Query Plan"),
         prompt_name="Query Coordinator/Query Replan",
         prompt_parameters={
             "agent_registry": agent_registry,
