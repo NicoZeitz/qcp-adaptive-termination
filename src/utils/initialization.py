@@ -26,19 +26,12 @@ def initialize(
     cache_dir: Path = Path("../.cache"),
     provider: Literal["University", "Work"] = "University",
     throw_on_cache_miss: bool = False,
+    disable_cache: bool = False,
 ):
     # Load env
     load_dotenv()
 
-    # Set up cache
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    Cache.instance().set_cache_folder(cache_dir)
-    if throw_on_cache_miss:
-        Cache.instance().set_mode("READ_AND_WRITE_THROW_ON_MISS")
-    else:
-        Cache.instance().set_mode("READ_AND_WRITE")
-
-    # Set up logging
+    # Set up logging FIRST (before any logging.info() calls)
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / f"{log_name}.log"
     logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
@@ -48,6 +41,17 @@ def initialize(
     rootLogger.addHandler(fileHandler)
 
     logging.info(f"Logging initialized. Log file: {log_file}")
+
+    # Set up cache
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    Cache.instance().set_cache_folder(cache_dir)
+    if disable_cache:
+        Cache.instance().set_mode("DISABLED")
+        logging.info("Cache completely disabled")
+    elif throw_on_cache_miss:
+        Cache.instance().set_mode("READ_AND_WRITE_THROW_ON_MISS")
+    else:
+        Cache.instance().set_mode("READ_AND_WRITE")
 
     # Set up langfuse
     langfuse = get_client()

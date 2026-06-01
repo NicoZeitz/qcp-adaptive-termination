@@ -1,0 +1,36 @@
+【DB_ID】 agent0
+【Schema】
+# Table: main.frpm
+[
+(CDSCode:TEXT, Primary Key, Examples: [01100170109835, 01100170112607, 01100170118489]),
+(Academic Year:TEXT, Examples: [2014-2015]),
+(County Name:TEXT, Examples: [Alameda, Alpine, Amador]),
+(School Type:TEXT, Examples: [K-12 Schools (Public)]),
+(Charter School Number:TEXT, Examples: [0728, 0811, 1049]),
+(High Grade:TEXT, Examples: [12, 8, 5]),
+(FRPM Count (K-12):REAL, Examples: [715.0, 186.0, 175.0]),
+(Percent (%) Eligible Free (Ages 5-17):REAL, Examples: [0.516822429906542, 0.484042553191489, 0.556521739130435])
+]
+# Table: main.satscores
+[
+(cds:TEXT, Primary Key, Examples: [10101080000000, 10101080109991, 10101080111682]),
+(rtype:TEXT, Examples: [D, S]),
+(enroll12:INTEGER, Examples: [398, 62, 75]),
+(AvgScrWrite:INTEGER, Examples: [417, 505, 395])
+]
+# Table: main.schools
+[
+(CDSCode:TEXT, Primary Key, Examples: [01100170000000, 01100170109835, 01100170112607]),
+(NCESDist:TEXT, Examples: [0691051, 0600002, 0600003]),
+(District:TEXT),
+(Mail_Town:TEXT, Examples: [Hayward, Newark, Oakland]),
+(MailStrAbr:TEXT, Examples: [313 West Winton Ave.]),
+(Phone:TEXT, Examples: [(510) 887-0152, (510) 596-8901, (510) 686-4131]),
+(ClosedDate:DATE, Examples: [2015-07-31]),
+(DOC:TEXT, Examples: [00, 31, 34]),
+(EdOpsCode:TEXT, Examples: [TRAD, JUV, COMM]),
+(GSoffered:TEXT, Examples: [K-12, 9-12, K-8]),
+(Latitude:REAL, Examples: [37.658212, 37.521436, 37.80452]),
+(AdmEmail1:TEXT),
+(AdmFName3:TEXT, Examples: [Drew, Irma, Vickie])
+]

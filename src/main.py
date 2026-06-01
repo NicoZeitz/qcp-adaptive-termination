@@ -36,6 +36,7 @@ async def main(
     end_stage: int,
     provider: Literal["University", "Work"],
     throw_on_cache_miss: bool = False,
+    disable_cache: bool = False,
 ):
     if start_stage > end_stage:
         raise Exception
@@ -52,7 +53,7 @@ async def main(
         f"[{user}] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}",
         metadata={"provider": provider},
     ) as trace_ctx:
-        initialize(log_filename, log_dir, cache_dir, provider, throw_on_cache_miss)
+        initialize(log_filename, log_dir, cache_dir, provider, throw_on_cache_miss, disable_cache)
 
         logging.info(f"Trace ID: {trace_ctx.trace_id}")
         logging.info(
@@ -184,6 +185,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Whether to throw an error if cache miss occurs",
     )
+    parser.add_argument(
+        "--disable-cache",
+        action="store_true",
+        help="Disable caching completely (WRITE_ONLY mode)",
+    )
     args = parser.parse_args()
 
     asyncio.run(
@@ -196,5 +202,6 @@ if __name__ == "__main__":
             args.end_stage,
             args.provider,
             args.throw_on_cache_miss,
+            args.disable_cache,
         )
     )

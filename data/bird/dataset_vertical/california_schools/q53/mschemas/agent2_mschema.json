@@ -1,0 +1,361 @@
+{
+  "db_id": "agent2",
+  "schema": null,
+  "tables": {
+    "main.frpm": {
+      "fields": {
+        "CDSCode": {
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "01100170109835",
+            "01100170112607",
+            "01100170118489",
+            "01100170123968",
+            "01100170124172"
+          ]
+        },
+        "District Code": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "10017",
+            "31609",
+            "31617",
+            "61119",
+            "61127"
+          ]
+        },
+        "School Name": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "FAME Public Charter",
+            "Envision Academy for Arts & Technology",
+            "Aspire California College Preparatory Academy",
+            "Community School for Creative Education",
+            "Yu Ming Charter"
+          ]
+        },
+        "NSLP Provision Status": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Breakfast Provision 2",
+            "Provision 2",
+            "CEP",
+            "Lunch Provision 2"
+          ]
+        },
+        "IRC": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "1",
+            "0"
+          ]
+        },
+        "Free Meal Count (K-12)": {
+          "type": "REAL",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "565.0",
+            "186.0",
+            "134.0",
+            "113.0",
+            "14.0"
+          ]
+        },
+        "Enrollment (Ages 5-17)": {
+          "type": "REAL",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "1070.0",
+            "376.0",
+            "230.0",
+            "190.0",
+            "257.0"
+          ]
+        },
+        "Percent (%) Eligible FRPM (Ages 5-17)": {
+          "type": "REAL",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "0.65607476635514",
+            "0.484042553191489",
+            "0.730434782608696",
+            "0.731578947368421",
+            "0.0817120622568093"
+          ]
+        }
+      },
+      "examples": [],
+      "comment": ""
+    },
+    "main.satscores": {
+      "fields": {
+        "cds": {
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "10101080000000",
+            "10101080109991",
+            "10101080111682",
+            "10101080119628",
+            "10621170000000"
+          ]
+        },
+        "dname": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Alameda County Office of Education",
+            "Alameda Unified",
+            "Albany City Unified",
+            "Berkeley Unified",
+            "Castro Valley Unified"
+          ]
+        },
+        "AvgScrRead": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "418",
+            "503",
+            "397",
+            "521"
+          ]
+        }
+      },
+      "examples": [],
+      "comment": ""
+    },
+    "main.schools": {
+      "fields": {
+        "CDSCode": {
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "01100170000000",
+            "01100170109835",
+            "01100170112607",
+            "01100170118489",
+            "01100170123968"
+          ]
+        },
+        "StatusType": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Active",
+            "Closed",
+            "Merged",
+            "Pending"
+          ]
+        },
+        "Street": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "313 West Winton Avenue",
+            "39899 Balentine Drive, Suite 335",
+            "1515 Webster Street",
+            "2125 Jefferson Avenue",
+            "2111 International Boulevard"
+          ]
+        },
+        "State": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "CA"
+          ]
+        },
+        "MailZip": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "94544-1136",
+            "94560-5359",
+            "94612",
+            "94606",
+            "94606-4903"
+          ]
+        },
+        "Website": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "www.acoe.org",
+            "www.envisionacademy.org/",
+            "www.aspirepublicschools.org",
+            "www.communityschoolforcreativeeducation.org"
+          ]
+        },
+        "CharterNum": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "0728",
+            "0811",
+            "1049",
+            "1284"
+          ]
+        },
+        "SOC": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "65",
+            "66",
+            "60",
+            "10"
+          ]
+        },
+        "EILCode": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "ELEMHIGH",
+            "HS",
+            "ELEM",
+            "UG"
+          ]
+        },
+        "Virtual": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "P",
+            "N",
+            "F"
+          ]
+        },
+        "AdmFName1": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "L Karen",
+            "Laura",
+            "Clifford",
+            "Sue"
+          ]
+        },
+        "AdmLName2": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Tsang",
+            "Koelling",
+            "Moore",
+            "Williams"
+          ]
+        },
+        "AdmEmail3": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": []
+        }
+      },
+      "examples": [],
+      "comment": ""
+    }
+  },
+  "foreign_keys": []
+}

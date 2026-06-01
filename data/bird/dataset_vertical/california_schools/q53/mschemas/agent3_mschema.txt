@@ -1,0 +1,35 @@
+【DB_ID】 agent3
+【Schema】
+# Table: main.frpm
+[
+(CDSCode:TEXT, Primary Key, Examples: [01100170109835, 01100170112607, 01100170118489]),
+(School Code:TEXT, Examples: [0109835, 0112607, 0118489]),
+(District Type:TEXT, Examples: [County Office of Education (COE)]),
+(Charter School (Y/N):INTEGER, Examples: [1, 0]),
+(Low Grade:TEXT, Examples: [K, 9, 1]),
+(Percent (%) Eligible Free (K-12):REAL, Examples: [0.519779208831647, 0.470886075949367, 0.549180327868853]),
+(Free Meal Count (Ages 5-17):REAL, Examples: [553.0, 182.0, 128.0]),
+(2013-14 CALPADS Fall 1 Certification Status:INTEGER, Examples: [1])
+]
+# Table: main.satscores
+[
+(cds:TEXT, Primary Key, Examples: [10101080000000, 10101080109991, 10101080111682]),
+(cname:TEXT, Examples: [Alameda, Amador, Butte]),
+(AvgScrMath:INTEGER, Examples: [418, 546, 387])
+]
+# Table: main.schools
+[
+(CDSCode:TEXT, Primary Key, Examples: [01100170000000, 01100170109835, 01100170112607]),
+(County:TEXT, Examples: [lAameda, lApine, mAador]),
+(StreetAbr:TEXT, Examples: [313 West Winton Ave.]),
+(MailStreet:TEXT, Examples: [313 West Winton Avenue]),
+(MailState:TEXT, Examples: [CA]),
+(OpenDate:DATE, Examples: [2005-08-29]),
+(FundingType:TEXT, Examples: [Directly funded]),
+(SOCType:TEXT, Examples: [K-12 Schools (Public)]),
+(EILName:TEXT, Examples: [Elementary-High Combination]),
+(Magnet:INTEGER, Examples: [0, 1]),
+(AdmLName1:TEXT, Examples: [Monroe, Robell, Thompson]),
+(AdmEmail2:TEXT),
+(LastUpdate:DATE, Examples: [2015-06-23])
+]
