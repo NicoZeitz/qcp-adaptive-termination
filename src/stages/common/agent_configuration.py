@@ -34,7 +34,7 @@ def get_data_agent_agent_configuration(
     reasoning = data_agent_reasoning_mapping.get(name_postfix, Reasoning(effort="medium"))
 
     return AgentConfiguration(
-        name=data_agent.name,
+        name=f"{data_agent.name} - {name_postfix}",
         model="gpt-5",
         reasoning=reasoning,
     )
