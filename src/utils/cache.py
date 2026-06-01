@@ -229,11 +229,11 @@ def cached(
 
                     return _deserialize_value(result, deserializable_values)
 
-                result = await func(*args, **kwargs)
-                cache.store(
-                    key=key, value=_serialize_value(result), name_prefix=name_prefix
-                )
-                return result
+            result = await func(*args, **kwargs)
+            cache.store(
+                key=key, value=_serialize_value(result), name_prefix=name_prefix
+            )
+            return result
 
         return wrapper
 

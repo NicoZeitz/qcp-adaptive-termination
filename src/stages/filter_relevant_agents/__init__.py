@@ -16,7 +16,7 @@ from utils.span import (
 )
 from qtypes.filtered_relevant_agents import FilteredRelevantAgents
 from qtypes.data_agent import DataAgent
-from utils.cache import cached
+from utils.cache import cached, CacheMode
 
 
 class FilterType(Enum):
@@ -26,7 +26,7 @@ class FilterType(Enum):
 STAGE_NAME = "Stage 1: Filter Relevant Agents"
 
 
-@cached(name_prefix=STAGE_NAME)
+@cached(name_prefix=STAGE_NAME, mode="DISABLED")
 async def filter_relevant_agents(
     query: str, data_agents: list[DataAgent]
 ) -> FilteredRelevantAgents:
