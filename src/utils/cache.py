@@ -61,7 +61,7 @@ class Cache:
         try:
             with cache_file.open("r", encoding="utf-8") as f:
                 payload = json.load(f)
-                logging.debug(f"Cache: HIT ({cache_file})")
+                logging.info(f"Cache: HIT ({cache_file})")
                 return payload.get("value"), True
         except (FileNotFoundError, Exception):
             self._throw_on_miss(key)
@@ -79,7 +79,7 @@ class Cache:
         with temporary_file.open("w", encoding="utf-8") as f:
             # keep indent for readability, but remove extra spaces for smaller file size
             json.dump(payload, f, separators=(",", ":"), ensure_ascii=False, indent=2)
-        logging.debug(f"Cache: STORE ({cache_file})")
+        logging.info(f"Cache: STORE ({cache_file})")
         temporary_file.replace(cache_file)
 
     def cache_file_for_key(self, key: JsonValue, name_prefix: str = "") -> Path:

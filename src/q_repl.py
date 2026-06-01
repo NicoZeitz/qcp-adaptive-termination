@@ -212,7 +212,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Open interactive REPL with answer + result loaded for a Bird q-id"
     )
-    parser.add_argument("qid", help="Question id, e.g. q53 or 53")
+    parser.add_argument("qid", nargs="?", default=None, help="Question id, e.g. q53 or 53")
+    parser.add_argument(
+        "--input",
+        type=Path,
+        default=None,
+        help="Path to the original question JSON file (overrides qid-based lookup)",
+    )
+    parser.add_argument(
+        "--final-result",
+        type=Path,
+        default=None,
+        help="Path to the final_result JSON file (overrides qid-based lookup)",
+    )
     parser.add_argument(
         "--dataset",
         choices=["dataset", "dataset_vertical"],
@@ -232,18 +244,32 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    qid = _normalize_qid(args.qid)
     repo_root = args.repo_root.resolve()
 
-    question_file = repo_root / "data" / "bird" / args.dataset / f"{qid}.json"
-    run_dir = repo_root / "data" / "runs" / "bird" / args.dataset / qid
+    # Resolve question file
+    if args.input:
+        question_file = args.input.resolve()
+        if not question_file.exists():
+            raise FileNotFoundError(f"Question file not found: {question_file}")
+        qid = _normalize_qid(question_file.stem) if args.qid is None else _normalize_qid(args.qid)
+    elif args.qid is not None:
+        qid = _normalize_qid(args.qid)
+        question_file = repo_root / "data" / "bird" / args.dataset / f"{qid}.json"
+        if not question_file.exists():
+            raise FileNotFoundError(f"Question file not found: {question_file}")
+    else:
+        parser.error("Either qid or --input must be provided")
 
-    if not question_file.exists():
-        raise FileNotFoundError(f"Question file not found: {question_file}")
-    if not run_dir.exists():
-        raise FileNotFoundError(f"Run directory not found: {run_dir}")
-
-    final_result_file = _latest_final_result(run_dir)
+    # Resolve final result file
+    if args.final_result:
+        final_result_file = args.final_result.resolve()
+        if not final_result_file.exists():
+            raise FileNotFoundError(f"Final result file not found: {final_result_file}")
+    else:
+        run_dir = repo_root / "data" / "runs" / "bird" / args.dataset / qid
+        if not run_dir.exists():
+            raise FileNotFoundError(f"Run directory not found: {run_dir}")
+        final_result_file = _latest_final_result(run_dir)
     answer_raw = _load_answer(question_file)
     query = _load_query(question_file)
     sql = _load_sql(question_file)
