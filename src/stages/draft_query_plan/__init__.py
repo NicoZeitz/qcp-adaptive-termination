@@ -80,7 +80,7 @@ def map_query_plan_model_to_query_plan(
     return query_plan
 
 
-@cached(name_prefix="Stage 2: Draft Query Plan")
+@cached(name_prefix="Stage 2: Draft Query Plan", mode="DISABLED")
 async def draft_query_plan(
     query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
 ) -> DraftedQueryPlan:
