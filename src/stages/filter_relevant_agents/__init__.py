@@ -26,7 +26,7 @@ class FilterType(Enum):
 STAGE_NAME = "Stage 1: Filter Relevant Agents"
 
 
-@cached(name_prefix=STAGE_NAME, mode="DISABLED")
+@cached(name_prefix=STAGE_NAME, mode="WRITE_ONLY")
 async def filter_relevant_agents(
     query: str, data_agents: list[DataAgent]
 ) -> FilteredRelevantAgents:

@@ -90,7 +90,7 @@ async def replan(
         return updated_data_agents, new_query_plan
 
 
-@cached(name_prefix="Stage 3: Execute Query Plan", mode="DISABLED")
+@cached(name_prefix="Stage 3: Execute Query Plan", mode="WRITE_ONLY")
 async def execute_query_plan(
     query_plan: QueryPlan,
     relevant_data_agents: list[DataAgent],
