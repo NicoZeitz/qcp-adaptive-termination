@@ -96,4 +96,5 @@ async def filter_data_agent_with_reasoning(
         output_type=bool,
     )
 
+    append_to_span_output({ f"{data_agent.name}_relevant": is_relevant })
     return data_agent if is_relevant else None
