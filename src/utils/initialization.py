@@ -29,7 +29,7 @@ def initialize(
     disable_cache: bool = False,
 ):
     # Load env
-    load_dotenv()
+    load_dotenv(override=True)
 
     # Set up logging FIRST (before any logging.info() calls)
     log_dir.mkdir(parents=True, exist_ok=True)
