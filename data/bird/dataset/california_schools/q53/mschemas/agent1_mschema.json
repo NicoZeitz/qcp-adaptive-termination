@@ -1,0 +1,488 @@
+{
+  "db_id": "agent1",
+  "schema": null,
+  "tables": {
+    "main.educational_institutions": {
+      "fields": {
+        "CDSCode": {
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "01100170000000",
+            "01100170109835",
+            "01100170112607",
+            "01100170118489",
+            "01100170123968"
+          ]
+        },
+        "NCESSchool": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "10546",
+            "10947",
+            "12283",
+            "12844"
+          ]
+        },
+        "School": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "FAME Public Charter",
+            "Envision Academy for Arts & Technology",
+            "Aspire California College Preparatory Academy",
+            "Community School for Creative Education"
+          ]
+        },
+        "Zip": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "94544-1136",
+            "94560-5359",
+            "94612-3355",
+            "94703-1414",
+            "94606-4903"
+          ]
+        },
+        "MailCity": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Hayward",
+            "Newark",
+            "Oakland",
+            "San Leandro"
+          ]
+        },
+        "Ext": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "130",
+            "1240",
+            "1200",
+            "1311"
+          ]
+        },
+        "Charter": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "1",
+            "0"
+          ]
+        },
+        "DOCType": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "County Office of Education (COE)",
+            "State Special Schools",
+            "Non-School Locations",
+            "Joint Powers Authority (JPA)",
+            "Unified School District"
+          ]
+        },
+        "EdOpsName": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Traditional",
+            "Juvenile Court School",
+            "County Community School",
+            "Opportunity School"
+          ]
+        },
+        "GSserved": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "K-12",
+            "9-12",
+            "K-7",
+            "K-5"
+          ]
+        },
+        "Longitude": {
+          "type": "REAL",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "-122.09713",
+            "-121.99391",
+            "-122.26815",
+            "-122.27844",
+            "-122.23863"
+          ]
+        },
+        "AdmLName3": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Sarratore",
+            "Munoz",
+            "Chang",
+            "Mandelbaum"
+          ]
+        },
+        "AdmFName1": {
+          "type": "VARCHAR(255)",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": []
+        }
+      },
+      "examples": [],
+      "comment": ""
+    },
+    "main.frpm": {
+      "fields": {
+        "CDSCode": {
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "01100170109835",
+            "01100170112607",
+            "01100170118489",
+            "01100170123968",
+            "01100170124172"
+          ]
+        },
+        "County Code": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "01",
+            "02",
+            "03",
+            "04",
+            "05"
+          ]
+        },
+        "District Name": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Alameda County Office of Education",
+            "CA School for the Blind (State Special Schl)",
+            "CA School for the Deaf-Fremont (State Special Schl)",
+            "Alameda Unified",
+            "Albany City Unified"
+          ]
+        },
+        "Educational Option Type": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Traditional",
+            "Juvenile Court School",
+            "County Community School",
+            "State Special School",
+            "Alternative School of Choice"
+          ]
+        },
+        "Charter Funding Type": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Directly funded",
+            "Locally funded",
+            "Not in CS funding model"
+          ]
+        },
+        "Enrollment (K-12)": {
+          "type": "REAL",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "1087.0",
+            "395.0",
+            "244.0",
+            "191.0",
+            "257.0"
+          ]
+        },
+        "Percent (%) Eligible FRPM (K-12)": {
+          "type": "REAL",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "0.657773689052438",
+            "0.470886075949367",
+            "0.717213114754098",
+            "0.727748691099476",
+            "0.0817120622568093"
+          ]
+        },
+        "FRPM Count (Ages 5-17)": {
+          "type": "REAL",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "702.0",
+            "182.0",
+            "168.0",
+            "139.0",
+            "21.0"
+          ]
+        }
+      },
+      "examples": [],
+      "comment": ""
+    },
+    "main.test_performance_data": {
+      "fields": {
+        "cds": {
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "10621171030469",
+            "10621171030501",
+            "10621171031053",
+            "10621660114553",
+            "10621661031897"
+          ]
+        },
+        "rtype": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "S"
+          ]
+        },
+        "school_name": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Aspire California College Preparatory Academy",
+            "Alameda Science and Technology Institute",
+            "Alameda High",
+            "Alameda Community Learning Center",
+            "Alternatives in Action"
+          ]
+        },
+        "dname": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Alameda County Office of Education",
+            "Alameda Unified",
+            "Berkeley Unified",
+            "Castro Valley Unified",
+            "Fremont Unified"
+          ]
+        },
+        "cname": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Alameda",
+            "Amador",
+            "Butte",
+            "Calaveras",
+            "Contra Costa"
+          ]
+        },
+        "enroll12": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "61",
+            "36",
+            "465",
+            "26",
+            "41"
+          ]
+        },
+        "Test_Takers": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "0",
+            "36",
+            "325",
+            "20",
+            "23"
+          ]
+        },
+        "AvgScrRead": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "562",
+            "543",
+            "575",
+            "352"
+          ]
+        },
+        "AvgScrMath": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "590",
+            "573",
+            "593",
+            "350"
+          ]
+        },
+        "AvgScrWrite": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "555",
+            "543",
+            "581",
+            "343"
+          ]
+        },
+        "NumAbove1500": {
+          "type": "VARCHAR(10)",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "$",
+            "$29",
+            "$229",
+            "$16",
+            "$1"
+          ]
+        }
+      },
+      "examples": [],
+      "comment": ""
+    }
+  },
+  "foreign_keys": [
+    [
+      "main.test_performance_data",
+      "cds",
+      "main",
+      "educational_institutions",
+      "CDSCode"
+    ]
+  ]
+}

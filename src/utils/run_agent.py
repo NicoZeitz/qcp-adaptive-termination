@@ -102,8 +102,7 @@ async def run_agent[TResult](
                 reasoning=agent_configuration.reasoning,
                 verbosity=agent_configuration.verbosity,
                 parallel_tool_calls=parallel_tool_calls,
-                tool_choice=tool_choice,
-                temperature=0.0
+                tool_choice=tool_choice
             ),
             instructions=instructions,
             tools=cast(list[Tool], tools) or [],
