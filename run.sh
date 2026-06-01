@@ -114,18 +114,17 @@ mkdir -p "$run_dir"
 		2>"$run_dir/stderr.txt"
 )
 
-final_result_file="$run_dir/${final_result_glob_prefix} - final_result.json"
-
-if [[ ! -f "$final_result_file" ]]; then
-	final_result_file="$(find "$run_dir" -maxdepth 1 -name '*final_result.json' -type f | sort | tail -n 1)"
-fi
-
-if [[ -z "$final_result_file" || ! -f "$final_result_file" ]]; then
-	echo "Could not locate final result file in: $run_dir" >&2
-	exit 1
-fi
-
 if [[ "$end_stage" -ge 3 ]]; then
+    final_result_file="$run_dir/${final_result_glob_prefix} - final_result.json"
+
+    if [[ ! -f "$final_result_file" ]]; then
+        final_result_file="$(find "$run_dir" -maxdepth 1 -name '*final_result.json' -type f | sort | tail -n 1)"
+    fi
+    if [[ -z "$final_result_file" || ! -f "$final_result_file" ]]; then
+        echo "Could not locate final result file in: $run_dir" >&2
+        exit 1
+    fi
+
 	cd "$ROOT_DIR/src" || exit 1
 	uv run q_repl.py "$qid" \
 		--input "../data/bird/dataset/${qid}.json" \
