@@ -119,163 +119,71 @@ Drafted query plan:
     {
       "id": "s1",
       "query": "What is the title_id of 'Guardians of the Galaxy' if it exists",
-      "to_agent": "A3",
+      "to_agent": ["A3", "A4", "A5"],
+      "merge_task": "Merge all the titles, deduplicate by title_id",
       "dependencies": []
     },
     {
-      "id": "s2",
-      "query": "What is the title_id of 'Guardians of the Galaxy' if it exists",
-      "to_agent": "A4",
-      "dependencies": []
+        "id": "s2",
+        "query": "Given the title ids from step s1 filter only the titles with type movie",
+        "to_agent": ["A3", "A6"],
+        "merge_task": "Merge all the titles, deduplicate by title_id",
+        "dependencies": [
+            {
+                "step_id": "s1",
+                "dependency": "The title_ids of 'Guardians of the Galaxy'"
+            }
+        ]
     },
     {
       "id": "s3",
-      "query": "What is the title_id of 'Guardians of the Galaxy' if it exists",
-      "to_agent": "A5",
-      "dependencies": []
+      "query": "Find the person_id of the actor that played Rocket in the movie with the title_id returned from step s2",
+      "to_agent": ["A3", "A4", "A5"],
+      "merge_task": "Return only the unique person_id of the actor that played Rocket in the movie",
+      "dependencies": [
+        {
+          "step_id": "s2",
+          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
+        }
+      ]
     },
     {
       "id": "s4",
-      "query": "Given multiple lists of titles filter only the titles with type movie",
-      "to_agent": "A3",
+      "query": "Return the name of the person with the person_id returned from step s3",
+      "to_agent": "A1",
       "dependencies": [
         {
-          "step_id": "s1",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'"
-        },
-        {
-          "step_id": "s2",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'"
-        },
-        {
           "step_id": "s3",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'"
+          "dependency": "The unique person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
         }
       ]
     },
     {
       "id": "s5",
-      "query": "Given multiple lists of titles filter only the titles with type movie",
-      "to_agent": "A6",
+      "query": "Return the birth date of the person with the person_id returned from step s10",
+      "to_agent": "A2",
       "dependencies": [
         {
-          "step_id": "s1",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'"
-        },
-        {
-          "step_id": "s2",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'"
-        },
-        {
           "step_id": "s3",
-          "dependency": "The title_ids of 'Guardians of the Galaxy'"
+          "dependency": "The unique person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
         }
       ]
     },
     {
       "id": "s6",
-      "query": "Given multiple lists of titles return only the unique entries",
-      "to_agent": "Coordinator",
-      "dependencies": [
-        {
-          "step_id": "s4",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
-        },
-        {
-          "step_id": "s5",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
-        }
-      ]
-    },
-    {
-      "id": "s7",
-      "query": "Find the person_id of the actor that played Rocket in the movie with the title_id returned from step s6",
-      "to_agent": "A3",
-      "dependencies": [
-        {
-          "step_id": "s6",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
-        }
-      ]
-    },
-    {
-      "id": "s8",
-      "query": "Find the person_id of the actor that played Rocket in the movie with the title_id returned from step s6",
-      "to_agent": "A4",
-      "dependencies": [
-        {
-          "step_id": "s6",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
-        }
-      ]
-    },
-    {
-      "id": "s9",
-      "query": "Find the person_id of the actor that played Rocket in the movie with the title_id returned from step s6",
-      "to_agent": "A5",
-      "dependencies": [
-        {
-          "step_id": "s6",
-          "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
-        }
-      ]
-    },
-    {
-      "id": "s10",
-      "query": "Return only the unique person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'",
-      "to_agent": "Coordinator",
-      "dependencies": [
-        {
-          "step_id": "s7",
-          "dependency": "The person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
-        },
-        {
-          "step_id": "s8",
-          "dependency": "The person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
-        },
-        {
-          "step_id": "s9",
-          "dependency": "The person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
-        }
-      ]
-    },
-    {
-      "id": "s11",
-      "query": "Return the name of the person with the person_id returned from step s10",
-      "to_agent": "A1",
-      "dependencies": [
-        {
-          "step_id": "s10",
-          "dependency": "The unique person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
-        }
-      ]
-    },
-    {
-      "id": "s12",
-      "query": "Return the birth date of the person with the person_id returned from step s10",
-      "to_agent": "A2",
-      "dependencies": [
-        {
-          "step_id": "s10",
-          "dependency": "The unique person_id of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
-        }
-      ]
-    },
-    {
-      "id": "s13",
       "query": "Who played Rocket in the movie called 'Guardians of the Galaxy' and when was he born? Also return the title id of the movie.",
       "to_agent": "Coordinator",
       "dependencies": [
         {
-          "step_id": "s6",
+          "step_id": "s2",
           "dependency": "The title_ids of 'Guardians of the Galaxy' with type movie"
         },
         {
-          "step_id": "s11",
+          "step_id": "s4",
           "dependency": "The name of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
         },
         {
-          "step_id": "s12",
+          "step_id": "s5",
           "dependency": "The birth date of the actor that played Rocket in the movie 'Guardians of the Galaxy'"
         }
       ]

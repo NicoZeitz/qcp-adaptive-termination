@@ -12,8 +12,9 @@ Your python environment is preconfigured with the following code:
 import pandas as pd
 
 class AdditionalInformation:
-    dependency: str
-    data: pd.DataFrame
+  step_id: str
+  dependency: str
+  data: pd.DataFrame
 
 # Additional available functions to call
 def raise_needs(needs: list[str]) -> None:
@@ -38,7 +39,7 @@ There are multiple functions available to call
 
 Input information is provided in the following variables
 * `query`: The natural language query that should be answered
-* `additional_information`: Contains additional external information that can and should be used to answer the users question. Keys are natural language descriptions of the information and the values are the resolved values for the key description
+* `additional_information`: Contains additional external information that can and should be used to answer the users question. Each entry contains the originating `step_id`, a natural language `dependency` description, and the resolved `data` as a pandas DataFrame.
 
 After each call to execute code, you will see a output similar to this:
 
@@ -74,7 +75,7 @@ Always save the final result in a variable and print it, to look at it a final t
 ### Restrictions regarding SQL usage
 
 You are not allowed to perform
-- joins between tables, as this action might accidentally filter out data in one of the table that some other agents needs. The only exception is, when you are explicitly asked to perform a join! 
+- joins between tables, as this action might accidentally filter out data in one of the table that some other agents needs. The only exception is, when you are explicitly asked to perform a join!
 - calculations that include averaging
 
 # Database schema
