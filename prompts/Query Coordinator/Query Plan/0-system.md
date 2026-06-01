@@ -25,10 +25,10 @@ When data is distributed across multiple agents, local joins within a single age
 
 ### When to avoid local joins in agent queries:
 
-1. Horizontal partitioning detected: If the same table appears in multiple agents' schemas, assume it is horizontally partitioned unless explicitly stated otherwise. Each agent only has a subset of the rows.
-2. Vertical partitioning detected: If a table with the same name appears in multiple agents but with different columns, it is vertically partitioned. Each agent only has a subset of the columns.
+1. Horizontal partitioning detected: If a table with similar data appears in multiple agents' schemas, assume it is horizontally partitioned unless explicitly stated otherwise. Each agent only has a subset of the rows.
+2. Vertical partitioning detected: If a table with similar data appears in multiple agents but with different columns, it is vertically partitioned. Each agent only has a subset of the columns.
 3. Cross-agent foreign keys: If a join requires matching keys between tables that exist on different agents, DO NOT ask a single agent to perform the join.
-4. Filtering before aggregation: If filtering based on joined data, first collect all relevant rows from all agents, then filter globally via the Coordinator.
+4. Filtering before aggregation: If filtering based on joined data, first collect all relevant rows from all agents (e.g. all keys), then filter globally via the Coordinator.
 
 ### Safe approach for distributed joins:
 
@@ -53,9 +53,9 @@ Default assumption: If in doubt, assume tables are distributed and avoid local j
 ### Key principle:
 
 **Think globally, query locally, aggregate globally**
-1. Each agent provides their local portion of the data
+1. Each agent provides their local portion of the data (without filtering)
 2. Coordinator aggregates to create a complete global view
-3. Only after global aggregation, use the complete information for further queries
+3. Only after global aggregation, use the complete information for further queries in the agents
 
 ## Example Plan
 

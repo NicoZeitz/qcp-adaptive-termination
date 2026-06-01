@@ -1,0 +1,45 @@
+【DB_ID】 agent2
+【Schema】
+# Table: main.frpm
+[
+(CDSCode:TEXT, Primary Key, Examples: [01100170109835, 01100170112607, 01100170118489]),
+(District Code:INTEGER, Examples: [10017, 31609, 31617]),
+(School Name:TEXT, Examples: [FAME Commnity Chater]),
+(NSLP Provision Status:TEXT, Examples: [Breakfast Provision 2]),
+(IRC:INTEGER, Examples: [1, 0]),
+(Free Meal Count (K-12):REAL, Examples: [565.0, 186.0, 134.0]),
+(Enrollment (Ages 5-17):REAL, Examples: [1070.0, 376.0, 230.0]),
+(Percent (%) Eligible FRPM (Ages 5-17):REAL, Examples: [0.65607476635514, 0.484042553191489, 0.730434782608696])
+]
+# Table: main.school_data
+[
+(CDSCode:TEXT, Primary Key, Examples: [01100170000000, 01100170109835, 01100170112607]),
+(StatusType:TEXT, Examples: [Active, Closed, Merged]),
+(Street:TEXT, Examples: [313 West Winton Ave.]),
+(State:TEXT, Examples: [CA]),
+(MailZip:TEXT, Examples: [94544-1136, 94560-5359, 94612]),
+(Website:TEXT, Examples: [www.acoe.org]),
+(CharterNum:TEXT, Examples: [0728, 0811, 1049]),
+(SOC:TEXT, Examples: [65, 66, 60]),
+(EILCode:TEXT, Examples: [ELEMHIGH, HS, ELEM]),
+(Virtual:TEXT, Examples: [P, N, F]),
+(AdmLName2:TEXT, Examples: [Tsang, Koelling, Moore]),
+(AdmEmail3:TEXT),
+(first_name:VARCHAR),
+(middle_name:VARCHAR)
+]
+# Table: main.student_test_scores
+[
+(cds:TEXT, Primary Key, Examples: [10101080111682, 10621170118018, 10621581032150]),
+(rtype:TEXT, Examples: [S]),
+(learner_name:TEXT, Examples: [Nea Community Learning Center]),
+(dname:TEXT, Examples: [Alameda Unified, Albany City Unified, Emery Unified]),
+(cname:TEXT, Examples: [Alameda, Amador, Butte]),
+(enroll12:INTEGER, Examples: [12, 238, 273]),
+(NumTstTakr:INTEGER, Examples: [6, 132, 178]),
+(AvgScrRead:INTEGER, Examples: [483, 572, 420]),
+(AvgScrMath:INTEGER, Examples: [504, 599, 433]),
+(AvgScrWrite:INTEGER, Examples: [476, 574, 441]),
+(NumGE1500:INTEGER, Examples: [56, 136, 6])
+]
+【Foreign keys】

@@ -1,0 +1,493 @@
+{
+  "db_id": "agent3",
+  "schema": null,
+  "tables": {
+    "main.education_institutions": {
+      "fields": {
+        "CDSCode": {
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "01100170000000",
+            "01100170109835",
+            "01100170112607",
+            "01100170118489",
+            "01100170123968"
+          ]
+        },
+        "County": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Alameda",
+            "Alpine",
+            "Amador",
+            "Butte",
+            "Calaveras"
+          ]
+        },
+        "StreetAbr": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "313 West Winton Ave.",
+            "39899 Balentine Dr., Ste. 335",
+            "1515 Webster St.",
+            "2125 Jefferson Ave.",
+            "2111 International Blvd."
+          ]
+        },
+        "MailState": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "CA"
+          ]
+        },
+        "OpenDate": {
+          "type": "DATE",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "2005-08-29"
+          ]
+        },
+        "FundingType": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Directly funded",
+            "Locally funded",
+            "Not in CS funding model"
+          ]
+        },
+        "SOCType": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "K-12 Schools (Public)",
+            "High Schools (Public)",
+            "Elementary Schools (Public)",
+            "County Community"
+          ]
+        },
+        "EILName": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Elementary-High Combination",
+            "High School",
+            "Elementary",
+            "Ungraded"
+          ]
+        },
+        "Magnet": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "0",
+            "1"
+          ]
+        },
+        "AdmLName1": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Monroe",
+            "Robell",
+            "Thompson",
+            "Park"
+          ]
+        },
+        "AdmEmail2": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": []
+        },
+        "LastUpdate": {
+          "type": "DATE",
+          "primary_key": false,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "2015-06-23"
+          ]
+        },
+        "StreetNumber": {
+          "type": "VARCHAR(10)",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": []
+        },
+        "street_type": {
+          "type": "VARCHAR(50)",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "St.",
+            "Avenue"
+          ]
+        },
+        "street_name": {
+          "type": "VARCHAR(100)",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "313 West Winton Ave.",
+            "39899 Balentine Dr., e. 335",
+            "1515 Webster .",
+            "2125 Jefferson .",
+            "2111 International Blvd."
+          ]
+        }
+      },
+      "examples": [],
+      "comment": ""
+    },
+    "main.frpm": {
+      "fields": {
+        "CDSCode": {
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "01100170109835",
+            "01100170112607",
+            "01100170118489",
+            "01100170123968",
+            "01100170124172"
+          ]
+        },
+        "Institution_Code": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "0109835",
+            "0112607",
+            "0118489",
+            "0123968",
+            "0124172"
+          ]
+        },
+        "District Type": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "County Office of Education (COE)",
+            "State Special Schools",
+            "Unified School District",
+            "Elementary School District",
+            "High School District"
+          ]
+        },
+        "Charter School (Y/N)": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "1",
+            "0"
+          ]
+        },
+        "Low Grade": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "K",
+            "9",
+            "1",
+            "P",
+            "6"
+          ]
+        },
+        "Percent (%) Eligible Free (K-12)": {
+          "type": "REAL",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "0.519779208831647",
+            "0.470886075949367",
+            "0.549180327868853",
+            "0.591623036649215",
+            "0.0544747081712062"
+          ]
+        },
+        "Free Meal Count (Ages 5-17)": {
+          "type": "REAL",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "553.0",
+            "182.0",
+            "128.0",
+            "113.0",
+            "14.0"
+          ]
+        },
+        "2013-14 CALPADS Fall 1 Certification Status": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "1"
+          ]
+        }
+      },
+      "examples": [],
+      "comment": ""
+    },
+    "main.test_performance": {
+      "fields": {
+        "cds": {
+          "type": "TEXT",
+          "primary_key": true,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "10101080109991",
+            "10621170113555",
+            "10621171030683",
+            "10621660108555",
+            "10621660114355"
+          ]
+        },
+        "rtype": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "S"
+          ]
+        },
+        "sname": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "FAME Public Charter",
+            "Envision Academy for Arts & Technology",
+            "Vista Alternative",
+            "Mt. Eden High",
+            "Tennyson High"
+          ]
+        },
+        "dname": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Alameda County Office of Education",
+            "Fremont Unified",
+            "Hayward Unified",
+            "New Haven Unified",
+            "Oakland Unified"
+          ]
+        },
+        "cname": {
+          "type": "TEXT",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "Alameda",
+            "Amador",
+            "Butte",
+            "Calaveras",
+            "Colusa"
+          ]
+        },
+        "enroll12": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "62",
+            "75",
+            "23",
+            "441",
+            "325"
+          ]
+        },
+        "NumTestTakers": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": false,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "17",
+            "71",
+            "0",
+            "214",
+            "114"
+          ]
+        },
+        "AvgScrRead": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "503",
+            "397",
+            "451",
+            "424"
+          ]
+        },
+        "AvgScrMath": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "546",
+            "387",
+            "471",
+            "425"
+          ]
+        },
+        "AvgScrWrite": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "505",
+            "395",
+            "449",
+            "427"
+          ]
+        },
+        "NumGE1500": {
+          "type": "INTEGER",
+          "primary_key": false,
+          "nullable": true,
+          "default": null,
+          "autoincrement": false,
+          "comment": "",
+          "examples": [
+            "9",
+            "5",
+            "69",
+            "17"
+          ]
+        }
+      },
+      "examples": [],
+      "comment": ""
+    }
+  },
+  "foreign_keys": [
+    [
+      "main.test_performance",
+      "cds",
+      "main",
+      "education_institutions",
+      "CDSCode"
+    ]
+  ]
+}
