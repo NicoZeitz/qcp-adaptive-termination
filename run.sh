@@ -125,10 +125,14 @@ if [[ -z "$final_result_file" || ! -f "$final_result_file" ]]; then
 	exit 1
 fi
 
-cd "$ROOT_DIR/src" || exit 1
-uv run q_repl.py "$qid" \
-	--input "../data/bird/dataset/${qid}.json" \
-	--final-result "${final_result_file}" \
-	--repo-root "$ROOT_DIR" \
-	> >(tee "$run_dir/q_repl_stdout.txt") \
-	2> >(tee "$run_dir/q_repl_stderr.txt" >&2)
+if [[ "$end_stage" -ge 3 ]]; then
+	cd "$ROOT_DIR/src" || exit 1
+	uv run q_repl.py "$qid" \
+		--input "../data/bird/dataset/${qid}.json" \
+		--final-result "${final_result_file}" \
+		--repo-root "$ROOT_DIR" \
+		> >(tee "$run_dir/q_repl_stdout.txt") \
+		2> >(tee "$run_dir/q_repl_stderr.txt" >&2)
+else
+	echo "Skipping q_repl: end_stage is $end_stage (requires 3)"
+fi
