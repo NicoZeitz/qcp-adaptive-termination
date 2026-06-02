@@ -3,8 +3,8 @@
         "question_id": 53,
         "db_id": "california_schools",
         "question": "How many test takers are there at the school/s whose mailing city address is in Fresno?",
-        "evidence": "",
-        "question_with_evidence": "How many test takers are there at the school/s whose mailing city address is in Fresno?",
+        "evidence": "Fresno might be misspelled as 'Frensno'",
+        "question_with_evidence": "How many test takers are there at the school/s whose mailing city address is in Fresno? Hint: Fresno might be misspelled as 'Frensno'",
         "SQL": "SELECT T1.NumTstTakr FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.MailCity = 'Fresno'",
         "difficulty": "simple",
         "answer": [
@@ -108,7 +108,7 @@
     },
     "value": {
         "__type__": "CollaborativeQueryAnswering",
-        "query": "How many test takers are there at the school/s whose mailing city address is in Fresno?",
+        "query": "How many test takers are there at the school/s whose mailing city address is in Fresno? Hint: Fresno might be misspelled as 'Frensno'",
         "data_agents": [
             {
                 "type": "sql",
