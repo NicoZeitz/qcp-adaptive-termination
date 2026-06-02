@@ -51,7 +51,15 @@ async def main(
 
     with trace(
         f"[{user}] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}",
-        metadata={"provider": provider},
+        metadata={
+            "provider": provider,
+            "start_stage": start_stage,
+            "end_stage": end_stage,
+            "name": name,
+            "input_file": str(input_file),
+            "cache_dir": str(cache_dir),
+            "log_dir": str(log_dir),
+        },
     ) as trace_ctx:
         initialize(
             log_filename,

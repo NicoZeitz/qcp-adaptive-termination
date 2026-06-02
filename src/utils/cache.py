@@ -79,11 +79,16 @@ class Cache:
         try:
             with temporary_file.open("w", encoding="utf-8") as f:
                 # keep indent for readability, but remove extra spaces for smaller file size
-                json.dump(payload, f, separators=(",", ":"), ensure_ascii=False, indent=2)
+                json.dump(
+                    payload, f, separators=(",", ":"), ensure_ascii=False, indent=2
+                )
             indented_logging(f"Cache: STORE ({cache_file})")
             temporary_file.replace(cache_file)
         except Exception as exc:
-            indented_logging(f"Cache: ERROR storing cache file {cache_file}: {exc}", log_level=logging.ERROR)
+            indented_logging(
+                f"Cache: ERROR storing cache file {cache_file}: {exc}",
+                log_level=logging.ERROR,
+            )
             if temporary_file.exists():
                 temporary_file.unlink()
 
