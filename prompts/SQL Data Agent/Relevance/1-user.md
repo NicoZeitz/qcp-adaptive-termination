@@ -1,13 +1,13 @@
-The Coordinator thinks you are for this query.
+The Coordinator thinks you are relevant for this query.
 
-【Query for whole network】
+【Query for network】
 {{query}}
 
-【Coordinator reasoning】
+【Coordinator reasoning for your relevance】
 {{reasoning}}
 
 **Your Task:**
-Evaluate whether you can help answer this query including the coordinator reasoning with your data. You are relevant if any part of the query or reasoning could be answered using your data, even in a partial, indirect, or abstract way. Even loose or inferred connections count.
+Evaluate whether you can help answer this query including the coordinator reasoning with your data. You are relevant, if any part of the query or reasoning could be answered using your data, even in a partial, indirect, or abstract way. Even loose or inferred connections that the reasoning explains make you relevant.
 
 **Return True if:**
 - Your schema contains the specific data the coordinator asks for
@@ -17,7 +17,7 @@ Evaluate whether you can help answer this query including the coordinator reason
 - You have some confidence you can help with the task
 
 If you think there is absolutely no connection between the query and your data or your data is not useful in any possible way to answer the query:
-- Look one more time at the reasoning of the coordinator and even if you can only answer a single or small part of his request / reasoning: you are relevant
+- Look one more time at the reasoning of the coordinator and even if you can only answer a single or small part of his request / reasoning: You are relevant!
 - Rethink your answer again with the additional reasoning
 - If the answer is still no (and only in this case), then return False
 
