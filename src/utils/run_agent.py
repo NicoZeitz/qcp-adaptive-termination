@@ -1,4 +1,3 @@
-import logging
 from typing import Callable, Literal, Type, TypeVar, cast
 
 from agents import (

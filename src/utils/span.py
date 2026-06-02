@@ -43,6 +43,7 @@ def append_to_span_output(
 _span_by_id: dict[str | None, int] = {}
 span_context_var = ContextVar[Span[CustomSpanData] | None]("current_span", default=None)
 
+
 def indented_logging(message: str, log_level: int = logging.INFO):
     span = span_context_var.get()
     if span is not None:
@@ -50,6 +51,7 @@ def indented_logging(message: str, log_level: int = logging.INFO):
         logging.log(log_level, "  " * (parent_depth + 1) + message)
     else:
         logging.log(log_level, message)
+
 
 @contextmanager
 def own_custom_span(
