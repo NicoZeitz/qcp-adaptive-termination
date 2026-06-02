@@ -7,23 +7,31 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  ./run_bird_parallel.sh [--test] <dataset|dataset_vertical|data/bird/dataset|data/bird/dataset_vertical|/data/bird/dataset|/data/bird/dataset_vertical>
+  ./run_bird_parallel.sh [--test] [--sample] <dataset|dataset_vertical|dataset_own|data/bird/dataset|data/bird/dataset_vertical|data/bird/dataset_own|/data/bird/dataset|/data/bird/dataset_vertical|/data/bird/dataset_own>
 
 Examples:
   ./run_bird_parallel.sh dataset
   ./run_bird_parallel.sh --test dataset
+  ./run_bird_parallel.sh --sample dataset_own
   ./run_bird_parallel.sh dataset_vertical
+  ./run_bird_parallel.sh dataset_own
   ./run_bird_parallel.sh /data/bird/dataset
 EOF
 }
 
 test_mode=false
+sample_mode=false
 input_arg=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --test|-t)
       test_mode=true
+      shift
+      ;;
+    --sample|-s)
+      echo "Sample mode is not implemented yet." >&2
+      sample_mode=true
       shift
       ;;
     -h|--help)
@@ -56,6 +64,10 @@ case "$input_arg" in
     dataset_name="dataset_vertical"
     run_name="Bird Vertical"
     ;;
+  dataset_own|data/bird/dataset_own|/data/bird/dataset_own)
+    dataset_name="dataset_own"
+    run_name="Bird Own"
+    ;;
   *)
     echo "Unsupported dataset argument: $input_arg" >&2
     usage
@@ -84,6 +96,32 @@ if [[ "$test_mode" == true ]]; then
   json_files=("${json_files[0]}")
   echo "Test mode enabled: only running ${json_files[0]}"
 fi
+
+if [[ "$sample_mode" == true ]]; then
+  # list of 10 questions to sample here
+  questions=(
+    "q992.json"
+    "q752.json"
+    "q694.json"
+    "q1413.json"
+    "q1447.json"
+    "q1533.json"
+    "q1220.json"
+    "q1221.json"
+    "q1375.json"
+    "q1237.json"
+  )
+  json_files=()
+  for q in "${questions[@]}"; do
+    if [[ -f "$input_dir/$q" ]]; then
+      json_files+=("$input_dir/$q")
+    else
+      echo "Warning: Sample question file not found: $input_dir/$q" >&2
+    fi
+  done
+fi
+
+echo "Found ${#json_files[@]} JSON files to process in: $input_dir"
 
 mkdir -p "$run_base_dir"
 

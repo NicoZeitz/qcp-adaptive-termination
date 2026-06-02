@@ -25,6 +25,36 @@ def _latest_final_result(run_dir: Path) -> Path:
     return candidates[-1]
 
 
+def _resolve_question_file(repo_root: Path, dataset: str, qid: str) -> Path:
+    candidates = [repo_root / "data" / "bird" / dataset / f"{qid}.json"]
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+
+    raise FileNotFoundError(
+        "Question file not found in any supported location: "
+        + ", ".join(str(candidate) for candidate in candidates)
+    )
+
+
+def _resolve_final_result_file(repo_root: Path, dataset: str, qid: str) -> Path:
+    dataset_run_dir = repo_root / "data" / "runs" / "bird" / dataset / qid
+    if dataset_run_dir.exists():
+        return _latest_final_result(dataset_run_dir)
+
+    generic_run_candidates = sorted(
+        (repo_root / "data" / "runs" / "run").glob(f"{qid}_*/*final_result.json"),
+        key=lambda p: p.stat().st_mtime,
+    )
+    if generic_run_candidates:
+        return generic_run_candidates[-1]
+
+    raise FileNotFoundError(
+        f"No final_result.json found for {qid} in {dataset_run_dir} or data/runs/run"
+    )
+
+
 def _load_answer(question_file: Path) -> Any:
     payload = json.loads(question_file.read_text(encoding="utf-8"))
     return payload.get("extra", {}).get("answer")
@@ -229,7 +259,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--dataset",
-        choices=["dataset", "dataset_vertical"],
+        choices=["dataset", "dataset_own", "dataset_vertical"],
         default="dataset",
         help="Bird split to use (default: dataset)",
     )
@@ -260,9 +290,7 @@ def main() -> int:
         )
     elif args.qid is not None:
         qid = _normalize_qid(args.qid)
-        question_file = repo_root / "data" / "bird" / args.dataset / f"{qid}.json"
-        if not question_file.exists():
-            raise FileNotFoundError(f"Question file not found: {question_file}")
+        question_file = _resolve_question_file(repo_root, args.dataset, qid)
     else:
         parser.error("Either qid or --input must be provided")
 
@@ -272,10 +300,7 @@ def main() -> int:
         if not final_result_file.exists():
             raise FileNotFoundError(f"Final result file not found: {final_result_file}")
     else:
-        run_dir = repo_root / "data" / "runs" / "bird" / args.dataset / qid
-        if not run_dir.exists():
-            raise FileNotFoundError(f"Run directory not found: {run_dir}")
-        final_result_file = _latest_final_result(run_dir)
+        final_result_file = _resolve_final_result_file(repo_root, args.dataset, qid)
     answer_raw = _load_answer(question_file)
     query = _load_query(question_file)
     sql = _load_sql(question_file)
