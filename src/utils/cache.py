@@ -76,11 +76,16 @@ class Cache:
         payload = {"key": key, "value": value}
 
         temporary_file = cache_file.with_suffix(".tmp")
-        with temporary_file.open("w", encoding="utf-8") as f:
-            # keep indent for readability, but remove extra spaces for smaller file size
-            json.dump(payload, f, separators=(",", ":"), ensure_ascii=False, indent=2)
-        logging.info(f"Cache: STORE ({cache_file})")
-        temporary_file.replace(cache_file)
+        try:
+            with temporary_file.open("w", encoding="utf-8") as f:
+                # keep indent for readability, but remove extra spaces for smaller file size
+                json.dump(payload, f, separators=(",", ":"), ensure_ascii=False, indent=2)
+            logging.info(f"Cache: STORE ({cache_file})")
+            temporary_file.replace(cache_file)
+        except Exception as exc:
+            logging.error(f"Cache: ERROR storing cache file {cache_file}: {exc}")
+            if temporary_file.exists():
+                temporary_file.unlink()
 
     def cache_file_for_key(self, key: JsonValue, name_prefix: str = "") -> Path:
         hash = hashlib.sha256(
