@@ -30,7 +30,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --sample|-s)
-      echo "Sample mode is not implemented yet." >&2
       sample_mode=true
       shift
       ;;
