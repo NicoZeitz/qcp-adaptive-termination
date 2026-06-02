@@ -10,52 +10,12 @@ A query plan is a list of steps that need to be executed in order to answer the 
 - Always try to address questions to the agents instead of the 'Coordinator', as invoking the coordinator is more costly than invoking agents.
 - Use the 'Coordinator' agent if results from multiple agents need to be aggregated or compared.
 - Both agents and the coordinator should depend on all steps that provide necessary information to answer their question, and should include the dependencies in the plan.
+- **CRITICAL RULE - Query ALL agents that could have relevant data:**
+  - When multiple agents have tables/columns that could contain the information you need, you MUST query ALL of them, not just one.
+  - This applies even if the tables have different names or structures - what matters is whether they could contain relevant data.
+  - **Never assume one agent has all the data.** The data is distributed and you must collect from all possible sources to get complete results.
 - If a query can possibly be answered by multiple agents, include a step for each of the agents.
 - Queries should be instructed in natural language instead of a technical language like SQL
-
-## Rules for Joins and Data Distribution
-
-Critical: Avoid premature local joins that can cause incorrect results
-
-When data is distributed across multiple agents, local joins within a single agent can lead to globally incorrect results if:
-- Tables are horizontally partitioned (rows split across agents)
-- Tables are vertically partitioned (columns split across agents)
-- Foreign key relationships span multiple agents
-- Join conditions would filter out valid rows that exist on other agents
-
-### When to avoid local joins in agent queries:
-
-1. Horizontal partitioning detected: If a table with similar data appears in multiple agents' schemas, assume it is horizontally partitioned unless explicitly stated otherwise. Each agent only has a subset of the rows.
-2. Vertical partitioning detected: If a table with similar data appears in multiple agents but with different columns, it is vertically partitioned. Each agent only has a subset of the columns.
-3. Cross-agent foreign keys: If a join requires matching keys between tables that exist on different agents, DO NOT ask a single agent to perform the join.
-4. Filtering before aggregation: If filtering based on joined data, first collect all relevant rows from all agents (e.g. all keys), then filter globally via the Coordinator.
-
-### Safe approach for distributed joins:
-
-Instead of: Asking Agent A to "join table X with table Y and filter by condition Z"
-
-Do this:
-1. Ask each relevant agent for their portion of table X rows (with any local filters that don't require joins)
-2. Ask each relevant agent for their portion of table Y rows (with any local filters that don't require joins)
-3. Use Coordinator to combine all results from step 1 and 2
-4. Use Coordinator to perform the join and filtering on the globally complete dataset, OR
-5. After global aggregation by Coordinator, distribute the filtered/joined results back to agents for further processing
-
-### When local joins ARE safe:
-
-Local joins within an agent are only safe when:
-- All required tables for the join exist ONLY in that single agent's schema (no other agent has these tables)
-- The tables are NOT partitioned across multiple agents
-- You can verify with 100% certainty that the complete dataset for the join exists within that single agent
-
-Default assumption: If in doubt, assume tables are distributed and avoid local joins. It is safer to over-decompose the query than to risk incorrect results from premature local joins.
-
-### Key principle:
-
-**Think globally, query locally, aggregate globally**
-1. Each agent provides their local portion of the data (without filtering)
-2. Coordinator aggregates to create a complete global view
-3. Only after global aggregation, use the complete information for further queries in the agents
 
 ## Example Plan
 
@@ -214,6 +174,13 @@ Drafted query plan:
    - All information is combined to answer the complete question
 
 The pattern "collect locally → aggregate globally → distribute globally aggregated results → collect locally → aggregate globally" ensures correctness when data is partitioned. Never assume an agent has complete local data for joins when the same tables appear in multiple agents schemas.
+
+## Key approach:
+
+**Think globally, query locally, aggregate globally, ...**
+1. Each agent provides their local portion of the data (without filtering)
+2. Coordinator aggregates to create a complete global view
+3. Only after global aggregation, use the complete information for further potential queries in the agents
 
 # Overview of Available Agents
 
