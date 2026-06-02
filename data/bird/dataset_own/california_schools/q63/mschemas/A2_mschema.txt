@@ -1,0 +1,12 @@
+【DB_ID】 A2
+【Schema】
+# Table: main.satscores
+[
+(cds:TEXT, Examples: [1100170000000, 1100170109835, 1100170112607]),
+(rtype:TEXT, Examples: [D, S]),
+(sname:TEXT, Examples: [FAME Public Charter]),
+(dname:TEXT, Examples: [Alameda County Office of Education]),
+(cname:TEXT, Examples: [Alameda]),
+(enroll12:INTEGER, Examples: [398, 62, 75]),
+(NumTstTakr:INTEGER, Examples: [88, 17, 71])
+]

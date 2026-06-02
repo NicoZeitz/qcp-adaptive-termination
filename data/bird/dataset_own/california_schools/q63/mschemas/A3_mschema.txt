@@ -1,0 +1,12 @@
+【DB_ID】 A3
+【Schema】
+# Table: main.satscores
+[
+(cds:TEXT, Examples: [1611760130534, 1611760134270, 1611760134452]),
+(rtype:TEXT, Examples: [S, D]),
+(sname:TEXT, Examples: [Circle of Independent Learning]),
+(dname:TEXT, Examples: [Fremont Unified]),
+(cname:TEXT, Examples: [Alameda, Amador, Butte]),
+(enroll12:INTEGER, Examples: [44, 500, 368]),
+(NumTstTakr:INTEGER, Examples: [5, 364, 179])
+]

@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="3204" viewBox="0 0 1480 3204">
+<defs>
+<linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#F8FAFC"/>
+<stop offset="100%" stop-color="#EEF2FF"/>
+</linearGradient>
+</defs>
+<rect x="0" y="0" width="1480" height="3204" fill="url(#backgroundGradient)"/>
+<rect x="16" y="18" width="1000" height="3158" rx="26" ry="26" fill="#FFFFFF" fill-opacity="0.28" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="1"/>
+<rect x="1024" y="18" width="440" height="3158" rx="26" ry="26" fill="#FFFFFF" fill-opacity="0.28" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="1"/>
+<text x="26" y="60" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">Split overview</text>
+<text x="26" y="84" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" fill="#6B7280">Tables on the left, agent assignments on the right.</text>
+<rect x="26" y="110" width="980" height="240" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="140" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table alignment</text>
+<text x="44" y="162" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">1 split produced from 4 rows and 2 columns</text>
+<rect x="44" y="188" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="44" y="188" width="8" height="140" rx="4" ry="4" fill="#4E79A7"/>
+<text x="62" y="212" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">alignment</text>
+<text x="62" y="230" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..3 (4)</text>
+<text x="62" y="248" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="62" y="286" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, alignment</text>
+<rect x="26" y="368" width="980" height="392" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="398" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table attribute</text>
+<text x="44" y="420" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 splits produced from 6 rows and 2 columns</text>
+<rect x="44" y="446" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="44" y="446" width="8" height="140" rx="4" ry="4" fill="#F28E2B"/>
+<text x="62" y="470" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">attribute</text>
+<text x="62" y="488" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..0 (1)</text>
+<text x="62" y="506" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="62" y="544" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, attribute_name</text>
+<rect x="523" y="446" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#E15759" stroke-width="2"/>
+<rect x="523" y="446" width="8" height="140" rx="4" ry="4" fill="#E15759"/>
+<text x="541" y="470" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">attribute</text>
+<text x="541" y="488" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 1..2 (2)</text>
+<text x="541" y="506" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A3</text>
+<text x="541" y="544" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, attribute_name</text>
+<rect x="44" y="598" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="44" y="598" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="62" y="622" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">attribute</text>
+<text x="62" y="640" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 3..5 (3)</text>
+<text x="62" y="658" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="62" y="696" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, attribute_name</text>
+<rect x="26" y="778" width="980" height="240" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="808" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table colour</text>
+<text x="44" y="830" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 splits produced from 35 rows and 2 columns</text>
+<rect x="44" y="856" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="44" y="856" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="62" y="880" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">colour</text>
+<text x="62" y="898" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..25 (26)</text>
+<text x="62" y="916" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="62" y="954" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, colour</text>
+<rect x="523" y="856" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="523" y="856" width="8" height="140" rx="4" ry="4" fill="#4E79A7"/>
+<text x="541" y="880" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">colour</text>
+<text x="541" y="898" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 26..34 (9)</text>
+<text x="541" y="916" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="541" y="954" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, colour</text>
+<rect x="26" y="1036" width="980" height="240" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="1066" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table gender</text>
+<text x="44" y="1088" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 splits produced from 3 rows and 2 columns</text>
+<rect x="44" y="1114" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="44" y="1114" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="62" y="1138" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">gender</text>
+<text x="62" y="1156" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..1 (2)</text>
+<text x="62" y="1174" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="62" y="1212" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, gender</text>
+<rect x="523" y="1114" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="523" y="1114" width="8" height="140" rx="4" ry="4" fill="#F28E2B"/>
+<text x="541" y="1138" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">gender</text>
+<text x="541" y="1156" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 2..2 (1)</text>
+<text x="541" y="1174" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="541" y="1212" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, gender</text>
+<rect x="26" y="1294" width="980" height="392" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="1324" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table hero_attribute</text>
+<text x="44" y="1346" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 splits produced from 3738 rows and 3 columns</text>
+<rect x="44" y="1372" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="44" y="1372" width="8" height="140" rx="4" ry="4" fill="#4E79A7"/>
+<text x="62" y="1396" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">hero_attribute</text>
+<text x="62" y="1414" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..3290 (3291)</text>
+<text x="62" y="1432" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="62" y="1470" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: hero_id, attribute_id, attribute_value</text>
+<rect x="523" y="1372" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="523" y="1372" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="541" y="1396" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">hero_attribute</text>
+<text x="541" y="1414" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 3291..3372 (82)</text>
+<text x="541" y="1432" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="541" y="1470" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: hero_id, attribute_id, attribute_value</text>
+<rect x="44" y="1524" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#E15759" stroke-width="2"/>
+<rect x="44" y="1524" width="8" height="140" rx="4" ry="4" fill="#E15759"/>
+<text x="62" y="1548" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">hero_attribute</text>
+<text x="62" y="1566" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 3373..3737 (365)</text>
+<text x="62" y="1584" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A3</text>
+<text x="62" y="1622" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: hero_id, attribute_id, attribute_value</text>
+<rect x="26" y="1704" width="980" height="240" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="1734" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table hero_power</text>
+<text x="44" y="1756" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">1 split produced from 5825 rows and 2 columns</text>
+<rect x="44" y="1782" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="44" y="1782" width="8" height="140" rx="4" ry="4" fill="#F28E2B"/>
+<text x="62" y="1806" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">hero_power</text>
+<text x="62" y="1824" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..5824 (5825)</text>
+<text x="62" y="1842" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="62" y="1880" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: hero_id, power_id</text>
+<rect x="26" y="1962" width="980" height="240" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="1992" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table publisher</text>
+<text x="44" y="2014" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">1 split produced from 25 rows and 2 columns</text>
+<rect x="44" y="2040" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="44" y="2040" width="8" height="140" rx="4" ry="4" fill="#F28E2B"/>
+<text x="62" y="2064" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">publisher</text>
+<text x="62" y="2082" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..24 (25)</text>
+<text x="62" y="2100" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="62" y="2138" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, publisher_name</text>
+<rect x="26" y="2220" width="980" height="240" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="2250" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table race</text>
+<text x="44" y="2272" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 splits produced from 61 rows and 2 columns</text>
+<rect x="44" y="2298" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="44" y="2298" width="8" height="140" rx="4" ry="4" fill="#F28E2B"/>
+<text x="62" y="2322" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">race</text>
+<text x="62" y="2340" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..1 (2)</text>
+<text x="62" y="2358" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="62" y="2396" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, race</text>
+<rect x="523" y="2298" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="523" y="2298" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="541" y="2322" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">race</text>
+<text x="541" y="2340" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 2..60 (59)</text>
+<text x="541" y="2358" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="541" y="2396" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, race</text>
+<rect x="26" y="2478" width="980" height="272" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="2508" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table superhero</text>
+<text x="44" y="2530" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 splits produced from 750 rows and 12 columns</text>
+<rect x="44" y="2556" width="465" height="172" rx="14" ry="14" fill="#F8FAFC" stroke="#E15759" stroke-width="2"/>
+<rect x="44" y="2556" width="8" height="172" rx="4" ry="4" fill="#E15759"/>
+<text x="62" y="2580" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">superhero</text>
+<text x="62" y="2598" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..749 (750)</text>
+<text x="62" y="2616" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A3</text>
+<text x="62" y="2654" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, superhero_name, full_name, gender_id,</text>
+<text x="62" y="2669" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">eye_colour_id, hair_colour_id, skin_colour_id, race_id,</text>
+<text x="62" y="2684" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">publisher_id, alignment_id</text>
+<rect x="523" y="2556" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="523" y="2556" width="8" height="140" rx="4" ry="4" fill="#4E79A7"/>
+<text x="541" y="2580" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">superhero</text>
+<text x="541" y="2598" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..749 (750)</text>
+<text x="541" y="2616" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="541" y="2654" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, height_cm, weight_kg</text>
+<rect x="26" y="2768" width="980" height="392" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="2798" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table superpower</text>
+<text x="44" y="2820" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 splits produced from 167 rows and 2 columns</text>
+<rect x="44" y="2846" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="44" y="2846" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="62" y="2870" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">superpower</text>
+<text x="62" y="2888" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..41 (42)</text>
+<text x="62" y="2906" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="62" y="2944" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, power_name</text>
+<rect x="523" y="2846" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="523" y="2846" width="8" height="140" rx="4" ry="4" fill="#F28E2B"/>
+<text x="541" y="2870" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">superpower</text>
+<text x="541" y="2888" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 42..114 (73)</text>
+<text x="541" y="2906" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="541" y="2944" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, power_name</text>
+<rect x="44" y="2998" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#E15759" stroke-width="2"/>
+<rect x="44" y="2998" width="8" height="140" rx="4" ry="4" fill="#E15759"/>
+<text x="62" y="3022" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">superpower</text>
+<text x="62" y="3040" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 115..166 (52)</text>
+<text x="62" y="3058" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A3</text>
+<text x="62" y="3096" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, power_name</text>
+<text x="1034" y="60" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">Agent assignments</text>
+<text x="1034" y="84" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" fill="#6B7280">Each agent gets a color; matching table splits use the same accent.</text>
+<rect x="1034" y="110" width="420" height="420" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="110" width="10" height="420" rx="18" ry="18" fill="#4E79A7"/>
+<text x="1052" y="136" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A1</text>
+<text x="1052" y="158" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">4 assigned splits</text>
+<rect x="1048" y="178" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="178" width="10" height="92" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="200" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">alignment • rows: 0..3 (4)</text>
+<text x="1066" y="222" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="235" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..3 (4) | cols: id, alignment</text>
+<rect x="1048" y="282" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="282" width="10" height="92" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="304" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">colour • rows: 26..34 (9)</text>
+<text x="1066" y="326" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="339" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 26..34 (9) | cols: id, colour</text>
+<rect x="1048" y="386" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="386" width="10" height="92" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="408" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">hero_attribute • rows: 0..3290 (3291)</text>
+<text x="1066" y="430" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="443" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..3290 (3291) | cols: hero_id, attribute_id,</text>
+<text x="1066" y="456" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">attribute_value</text>
+<rect x="1048" y="490" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="490" width="10" height="92" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="512" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">superhero • rows: 0..749 (750)</text>
+<text x="1066" y="534" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="547" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..749 (750) | cols: id, height_cm, weight_kg</text>
+<rect x="1034" y="600" width="420" height="628" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="600" width="10" height="628" rx="18" ry="18" fill="#F28E2B"/>
+<text x="1052" y="626" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A2</text>
+<text x="1052" y="648" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">6 assigned splits</text>
+<rect x="1048" y="668" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="668" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="690" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">attribute • rows: 0..0 (1)</text>
+<text x="1066" y="712" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="725" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..0 (1) | cols: id, attribute_name</text>
+<rect x="1048" y="772" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="772" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="794" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">gender • rows: 2..2 (1)</text>
+<text x="1066" y="816" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="829" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 2..2 (1) | cols: id, gender</text>
+<rect x="1048" y="876" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="876" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="898" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">hero_power • rows: 0..5824 (5825)</text>
+<text x="1066" y="920" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="933" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..5824 (5825) | cols: hero_id, power_id</text>
+<rect x="1048" y="980" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="980" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="1002" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">publisher • rows: 0..24 (25)</text>
+<text x="1066" y="1024" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="1037" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..24 (25) | cols: id, publisher_name</text>
+<rect x="1048" y="1084" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="1084" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="1106" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">race • rows: 0..1 (2)</text>
+<text x="1066" y="1128" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="1141" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..1 (2) | cols: id, race</text>
+<rect x="1048" y="1188" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="1188" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="1210" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">superpower • rows: 42..114 (73)</text>
+<text x="1066" y="1232" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="1245" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 42..114 (73) | cols: id, power_name</text>
+<rect x="1034" y="1298" width="420" height="420" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="1298" width="10" height="420" rx="18" ry="18" fill="#E15759"/>
+<text x="1052" y="1324" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A3</text>
+<text x="1052" y="1346" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">4 assigned splits</text>
+<rect x="1048" y="1366" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#E15759" stroke-width="2"/>
+<rect x="1048" y="1366" width="10" height="92" rx="12" ry="12" fill="#E15759"/>
+<text x="1066" y="1388" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">attribute • rows: 1..2 (2)</text>
+<text x="1066" y="1410" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A3</text>
+<text x="1066" y="1423" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 1..2 (2) | cols: id, attribute_name</text>
+<rect x="1048" y="1470" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#E15759" stroke-width="2"/>
+<rect x="1048" y="1470" width="10" height="92" rx="12" ry="12" fill="#E15759"/>
+<text x="1066" y="1492" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">hero_attribute • rows: 3373..3737 (365)</text>
+<text x="1066" y="1514" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A3</text>
+<text x="1066" y="1527" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 3373..3737 (365) | cols: hero_id, attribute_id,</text>
+<text x="1066" y="1540" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">attribute_value</text>
+<rect x="1048" y="1574" width="392" height="96" rx="12" ry="12" fill="#FFFFFF" stroke="#E15759" stroke-width="2"/>
+<rect x="1048" y="1574" width="10" height="96" rx="12" ry="12" fill="#E15759"/>
+<text x="1066" y="1596" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">superhero • rows: 0..749 (750)</text>
+<text x="1066" y="1618" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A3</text>
+<text x="1066" y="1631" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..749 (750) | cols: id, superhero_name, full_name,</text>
+<text x="1066" y="1644" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">gender_id, eye_colour_id, hair_colour_id, skin_colour_id, race_id,</text>
+<text x="1066" y="1657" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">publisher_id, alignment_id</text>
+<rect x="1048" y="1682" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#E15759" stroke-width="2"/>
+<rect x="1048" y="1682" width="10" height="92" rx="12" ry="12" fill="#E15759"/>
+<text x="1066" y="1704" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">superpower • rows: 115..166 (52)</text>
+<text x="1066" y="1726" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A3</text>
+<text x="1066" y="1739" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 115..166 (52) | cols: id, power_name</text>
+<rect x="1034" y="1792" width="420" height="628" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="1792" width="10" height="628" rx="18" ry="18" fill="#76B7B2"/>
+<text x="1052" y="1818" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A4</text>
+<text x="1052" y="1840" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">6 assigned splits</text>
+<rect x="1048" y="1860" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="1860" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="1882" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">attribute • rows: 3..5 (3)</text>
+<text x="1066" y="1904" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="1917" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 3..5 (3) | cols: id, attribute_name</text>
+<rect x="1048" y="1964" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="1964" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="1986" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">colour • rows: 0..25 (26)</text>
+<text x="1066" y="2008" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="2021" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..25 (26) | cols: id, colour</text>
+<rect x="1048" y="2068" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="2068" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="2090" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">gender • rows: 0..1 (2)</text>
+<text x="1066" y="2112" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="2125" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..1 (2) | cols: id, gender</text>
+<rect x="1048" y="2172" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="2172" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="2194" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">hero_attribute • rows: 3291..3372 (82)</text>
+<text x="1066" y="2216" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="2229" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 3291..3372 (82) | cols: hero_id, attribute_id,</text>
+<text x="1066" y="2242" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">attribute_value</text>
+<rect x="1048" y="2276" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="2276" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="2298" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">race • rows: 2..60 (59)</text>
+<text x="1066" y="2320" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="2333" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 2..60 (59) | cols: id, race</text>
+<rect x="1048" y="2380" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="2380" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="2402" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">superpower • rows: 0..41 (42)</text>
+<text x="1066" y="2424" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="2437" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..41 (42) | cols: id, power_name</text>
+</svg>

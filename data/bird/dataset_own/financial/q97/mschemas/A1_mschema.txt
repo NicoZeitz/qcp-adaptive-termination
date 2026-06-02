@@ -1,0 +1,49 @@
+【DB_ID】 A1
+【Schema】
+# Table: main.account
+[
+(account_id:INTEGER, Examples: [1, 2, 3]),
+(district_id:INTEGER, Examples: [18, 1, 5]),
+(frequency:TEXT, Examples: [POPLATEK MESICNE, POPLATEK TYDNE, POPLATEK PO OBRATU]),
+(date:DATE, Examples: [1995-03-24])
+]
+# Table: main.client
+[
+(client_id:INTEGER, Examples: [3495, 3496, 3497]),
+(gender:TEXT, Examples: [F, M]),
+(birth_date:DATE, Examples: [1941-05-10]),
+(district_id:INTEGER, Examples: [64, 39, 77])
+]
+# Table: main.district
+[
+(district_id:INTEGER, Examples: [49, 50, 51]),
+(A2:TEXT, Examples: [Semily, Svitavy, Trutnov]),
+(A3:TEXT, Examples: [east Bohemia, south Moravia, north Moravia])
+]
+# Table: main.loan
+[
+(loan_id:INTEGER, Examples: [4959, 4961, 4962]),
+(account_id:INTEGER, Examples: [2, 19, 25]),
+(date:DATE, Examples: [1994-01-05]),
+(amount:INTEGER, Examples: [80952, 30276, 318480])
+]
+# Table: main.order
+[
+(order_id:INTEGER, Examples: [29401, 29402, 29403]),
+(account_id:INTEGER, Examples: [1, 2, 3]),
+(bank_to:TEXT, Examples: [YZ, ST, QR]),
+(account_to:INTEGER, Examples: [87144583, 89597016, 13943797]),
+(amount:REAL, Examples: [2452.0, 3372.7, 7266.0]),
+(k_symbol:TEXT, Examples: [SIPO, UVER, POJISTNE])
+]
+# Table: main.trans
+[
+(trans_id:INTEGER, Examples: [1, 5, 6]),
+(account_id:INTEGER, Examples: [1, 2, 3]),
+(date:DATE, Examples: [1995-03-24]),
+(type:TEXT, Examples: [PRIJEM, VYDAJ, VYBER]),
+(operation:TEXT, Examples: [VKLAD, PREVOD Z UCTU, PREVOD NA UCET]),
+(amount:INTEGER, Examples: [1000, 3679, 2452]),
+(balance:INTEGER, Examples: [1000, 4679, 20977]),
+(k_symbol:TEXT, Examples: [SIPO, SLUZBY, UVER])
+]

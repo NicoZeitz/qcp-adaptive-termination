@@ -1,0 +1,25 @@
+【DB_ID】 A2
+【Schema】
+# Table: main.foreign_data
+[
+(id:INTEGER, Examples: [1, 2, 3]),
+(flavorText:TEXT),
+(language:TEXT, Examples: [German, Spanish, French]),
+(multiverseid:INTEGER, Examples: [148411, 150317, 149934]),
+(name:TEXT, Examples: [Ausgewählter der Ahnfrau]),
+(text:TEXT),
+(type:TEXT, Examples: [Kreatur — Mensch, Kleriker])
+]
+# Table: main.rulings
+[
+(id:INTEGER, Examples: [1, 2, 3]),
+(text:TEXT),
+(uuid:TEXT, Examples: [6d268c95-c176-5766-9a46-c14f739aba1c])
+]
+# Table: main.set_translations
+[
+(id:INTEGER, Examples: [1, 2, 3]),
+(language:TEXT, Examples: [Chinese Simplified, Chinese Traditional, French]),
+(setCode:TEXT, Examples: [10E, 4ED, 5DN]),
+(translation:TEXT, Examples: [核心系列第十版])
+]

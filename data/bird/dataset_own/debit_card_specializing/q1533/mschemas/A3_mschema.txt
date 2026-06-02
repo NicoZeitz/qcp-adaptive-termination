@@ -1,0 +1,14 @@
+【DB_ID】 A3
+【Schema】
+# Table: main.gasstations
+[
+(GasStationID:INTEGER, Examples: [96, 97, 98]),
+(ChainID:INTEGER, Examples: [1, 2, 3]),
+(Country:TEXT, Examples: [CZE, SVK])
+]
+# Table: main.yearmonth
+[
+(CustomerID:INTEGER, Examples: [5, 6, 7]),
+(Date:TEXT, Examples: [201207, 201302, 201303]),
+(Consumption:REAL, Examples: [528.3, 1598.28, 1931.36])
+]

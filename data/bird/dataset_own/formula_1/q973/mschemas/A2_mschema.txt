@@ -1,0 +1,84 @@
+【DB_ID】 A2
+【Schema】
+# Table: main.constructorResults
+[
+(constructorResultsId:INTEGER, Examples: [1, 2, 3]),
+(raceId:INTEGER, Examples: [18, 19, 20]),
+(constructorId:INTEGER, Examples: [1, 2, 3]),
+(points:REAL, Examples: [14.0, 8.0, 9.0])
+]
+# Table: main.constructors
+[
+(constructorId:INTEGER, Examples: [1, 2, 3]),
+(name:TEXT, Examples: [McLaren, BMW Sauber, Williams]),
+(nationality:TEXT, Examples: [British, German, French]),
+(url:TEXT)
+]
+# Table: main.driverStandings
+[
+(driverStandingsId:INTEGER, Examples: [1, 2, 3]),
+(raceId:INTEGER, Examples: [18, 19, 20]),
+(driverId:INTEGER, Examples: [1, 2, 3]),
+(points:REAL, Examples: [10.0, 8.0, 6.0]),
+(position:INTEGER, Examples: [1, 2, 3]),
+(positionText:TEXT, Examples: [1, 2, 3]),
+(wins:INTEGER, Examples: [1, 0, 2])
+]
+# Table: main.drivers
+[
+(driverId:INTEGER, Examples: [1, 2, 3]),
+(surname:TEXT, Examples: [Hamilton, Heidfeld, Rosberg]),
+(dob:DATE, Examples: [1985-01-07]),
+(nationality:TEXT, Examples: [British, German, Spanish]),
+(url:TEXT)
+]
+# Table: main.lapTimes
+[
+(raceId:INTEGER, Examples: [1, 2, 3]),
+(driverId:INTEGER, Examples: [1, 2, 3]),
+(lap:INTEGER, Examples: [1, 2, 3]),
+(position:INTEGER, Examples: [13, 12, 11])
+]
+# Table: main.qualifying
+[
+(qualifyId:INTEGER, Examples: [4411, 4412, 4413]),
+(number:INTEGER, Examples: [11, 14, 5]),
+(position:INTEGER, Examples: [11, 12, 13]),
+(q1:TEXT, Examples: [1:11.571, 1:11.665, 1:11.750]),
+(q2:TEXT, Examples: [1:28.289, 1:29.159, 1:28.279]),
+(q3:TEXT, Examples: [1:23.529, 1:24.307, 1:24.395])
+]
+# Table: main.races
+[
+(raceId:INTEGER, Examples: [17, 18, 19]),
+(name:TEXT, Examples: [Abu Dhabi Grand Prix]),
+(date:DATE, Examples: [2009-11-01]),
+(time:TEXT, Examples: [11:00:00, 04:30:00, 07:00:00]),
+(url:TEXT)
+]
+# Table: main.results
+[
+(resultId:INTEGER, Examples: [1, 2, 3]),
+(raceId:INTEGER, Examples: [18, 19, 20]),
+(driverId:INTEGER, Examples: [1, 2, 3]),
+(constructorId:INTEGER, Examples: [1, 2, 3]),
+(number:INTEGER, Examples: [22, 3, 7]),
+(grid:INTEGER, Examples: [1, 5, 7]),
+(position:INTEGER, Examples: [1, 2, 3]),
+(positionText:TEXT, Examples: [1, 2, 3]),
+(positionOrder:INTEGER, Examples: [1, 2, 3]),
+(points:REAL, Examples: [10.0, 8.0, 6.0]),
+(laps:INTEGER, Examples: [58, 57, 55]),
+(time:TEXT, Examples: [1:34:50.616, +5.478, +8.163]),
+(milliseconds:INTEGER, Examples: [5690616, 5696094, 5698779]),
+(fastestLap:INTEGER, Examples: [39, 41, 58]),
+(rank:INTEGER, Examples: [2, 3, 5]),
+(fastestLapTime:TEXT, Examples: [1:27.452, 1:27.739, 1:28.090]),
+(fastestLapSpeed:TEXT, Examples: [218.300, 217.586, 216.719]),
+(statusId:INTEGER, Examples: [1, 11, 5])
+]
+# Table: main.seasons
+[
+(year:INTEGER, Examples: [1950, 1951, 1952]),
+(url:TEXT)
+]

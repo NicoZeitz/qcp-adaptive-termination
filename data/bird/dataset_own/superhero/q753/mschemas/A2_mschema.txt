@@ -1,0 +1,32 @@
+【DB_ID】 A2
+【Schema】
+# Table: main.attribute
+[
+(id:INTEGER, Examples: [1]),
+(attribute_name:TEXT, Examples: [Intelligence])
+]
+# Table: main.gender
+[
+(id:INTEGER, Examples: [3]),
+(gender:TEXT, Examples: [N/A])
+]
+# Table: main.hero_power
+[
+(hero_id:INTEGER, Examples: [1, 2, 3]),
+(power_id:INTEGER, Examples: [1, 18, 26])
+]
+# Table: main.publisher
+[
+(id:INTEGER, Examples: [1, 2, 3]),
+(publisher_name:TEXT, Examples: [ABC Studios, Dark Horse Comics, DC Comics])
+]
+# Table: main.race
+[
+(id:INTEGER, Examples: [1, 2]),
+(race:TEXT, Examples: [-, Alien])
+]
+# Table: main.superpower
+[
+(id:INTEGER, Examples: [43, 44, 45]),
+(power_name:TEXT, Examples: [Hyperkinesis, Jump, Clairvoyance])
+]

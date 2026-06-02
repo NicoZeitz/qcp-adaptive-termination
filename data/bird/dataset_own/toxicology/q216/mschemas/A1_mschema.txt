@@ -1,0 +1,14 @@
+【DB_ID】 A1
+【Schema】
+# Table: main.atom
+[
+(atom_id:TEXT, Examples: [TR000_1, TR000_2, TR000_3]),
+(molecule_id:TEXT, Examples: [TR000, TR001, TR002]),
+(element:TEXT, Examples: [cl, c, h])
+]
+# Table: main.connected
+[
+(atom_id:TEXT, Examples: [TR266_4, TR266_8, TR266_9]),
+(atom_id2:TEXT, Examples: [TR266_8, TR266_4, TR266_9]),
+(bond_id:TEXT, Examples: [TR266_4_8, TR266_4_9, TR266_6_10])
+]

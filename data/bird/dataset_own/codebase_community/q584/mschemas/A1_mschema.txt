@@ -1,0 +1,57 @@
+【DB_ID】 A1
+【Schema】
+# Table: main.badges
+[
+(Id:INTEGER, Examples: [1, 2, 3]),
+(UserId:INTEGER, Examples: [5, 6, 8]),
+(Name:TEXT, Examples: [Teacher, Student, Editor]),
+(Date:DATETIME, Examples: [2010-07-19 19:39:07])
+]
+# Table: main.postHistory
+[
+(Id:INTEGER, Examples: [266692, 266694, 266698]),
+(PostHistoryTypeId:INTEGER, Examples: [5, 2, 1]),
+(PostId:INTEGER, Examples: [79910, 79911, 79913]),
+(RevisionGUID:TEXT, Examples: [871a6bed-2b77-484e-ae43-54cc3adf59bd]),
+(CreationDate:DATETIME, Examples: [2013-12-17 11:54:04]),
+(UserId:INTEGER, Examples: [16765, 1124, 36313]),
+(Text:TEXT),
+(Comment:TEXT),
+(UserDisplayName:TEXT, Examples: [Andre Manoel, user4995, user3121752])
+]
+# Table: main.posts
+[
+(Id:INTEGER, Examples: [59676, 59677, 59678]),
+(PostTypeId:INTEGER, Examples: [2, 1, 5]),
+(AcceptedAnswerId:INTEGER, Examples: [59698, 60501, 60351]),
+(CreaionDate:DATETIME, Examples: [2013-05-21 21:09:20]),
+(Score:INTEGER, Examples: [0, 1, 2])
+]
+# Table: main.tags
+[
+(Id:INTEGER, Examples: [1, 2, 3]),
+(TagName:TEXT, Examples: [bayesian, prior, elicitation]),
+(Count:INTEGER, Examples: [1342, 168, 6])
+]
+# Table: main.users
+[
+(Id:INTEGER, Examples: [-1, 2, 3]),
+(Reputation:INTEGER, Examples: [1, 101, 6792]),
+(CreationDate:DATETIME, Examples: [2010-07-19 06:55:26]),
+(DisplayName:TEXT, Examples: [Community, Geoff Dalgas, Jarrod Dixon]),
+(LastAccessDate:DATETIME, Examples: [2010-07-19 06:55:26]),
+(WebsiteUrl:TEXT),
+(Location:TEXT, Examples: [on the server farm, Corvallis, OR, New York, NY]),
+(AboutMe:TEXT),
+(Views:INTEGER, Examples: [0, 25, 22]),
+(UpVotes:INTEGER, Examples: [5007, 3, 19]),
+(DownVotes:INTEGER, Examples: [1920, 0, 5]),
+(AccountId:INTEGER, Examples: [-1, 2, 3]),
+(Age:INTEGER, Examples: [37, 35, 28]),
+(ProfileImageUrl:TEXT)
+]
+# Table: main.votes
+[
+(Id:INTEGER, Examples: [1, 2, 3]),
+(BountyAmount:INTEGER, Examples: [50, 25, 0])
+]

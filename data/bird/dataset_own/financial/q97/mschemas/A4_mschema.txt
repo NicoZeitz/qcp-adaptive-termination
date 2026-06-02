@@ -1,0 +1,40 @@
+【DB_ID】 A4
+【Schema】
+# Table: main.card
+[
+(card_id:INTEGER, Examples: [1, 2, 3]),
+(issued:DATE, Examples: [1998-10-16])
+]
+# Table: main.client
+[
+(client_id:INTEGER, Examples: [1, 2, 3]),
+(gender:TEXT, Examples: [F, M]),
+(birth_date:DATE, Examples: [1970-12-13]),
+(district_id:INTEGER, Examples: [18, 1, 5])
+]
+# Table: main.disp
+[
+(disp_id:INTEGER, Examples: [1, 2, 3]),
+(client_id:INTEGER, Examples: [1, 2, 3]),
+(account_id:INTEGER, Examples: [1, 2, 3])
+]
+# Table: main.loan
+[
+(loan_id:INTEGER, Examples: [4959, 4961, 4962]),
+(duration:INTEGER, Examples: [24, 12, 60]),
+(payments:REAL, Examples: [3373.0, 2523.0, 5308.0]),
+(status:TEXT, Examples: [A, B, D])
+]
+# Table: main.trans
+[
+(trans_id:INTEGER, Examples: [795510, 795511, 795512]),
+(account_id:INTEGER, Examples: [2710, 2711, 2712]),
+(date:DATE, Examples: [1997-04-08]),
+(type:TEXT, Examples: [PRIJEM, VYDAJ, VYBER]),
+(operation:TEXT, Examples: [VKLAD, VYBER, PREVOD NA UCET]),
+(amount:INTEGER, Examples: [100, 5900, 3900]),
+(balance:INTEGER, Examples: [25049, 30565, 24820]),
+(k_symbol:TEXT, Examples: [SIPO, SLUZBY, DUCHOD]),
+(bank:TEXT, Examples: [MN, YZ, EF]),
+(account:INTEGER, Examples: [40865373, 16008741, 14783954])
+]

@@ -1,0 +1,19 @@
+【DB_ID】 A1
+【Schema】
+# Table: main.customers
+[
+(CustomerID:INTEGER, Examples: [3, 5, 6]),
+(Segment:TEXT, Examples: [SME, LAM, KAM]),
+(Currency:TEXT, Examples: [EUR, CZK])
+]
+# Table: main.products
+[
+(ProductID:INTEGER, Examples: [418, 419, 420]),
+(Description:TEXT, Examples: [Nafta])
+]
+# Table: main.yearmonth
+[
+(CustomerID:INTEGER, Examples: [26395, 26396, 26397]),
+(Date:TEXT, Examples: [201308, 201309, 201310]),
+(Consumption:REAL, Examples: [6175.25, 4988.9, 3719.99])
+]

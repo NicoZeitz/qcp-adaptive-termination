@@ -1,0 +1,59 @@
+{
+    "extra": {
+        "question_id": 1375,
+        "db_id": "student_club",
+        "question": "List all the members of the \"School of Applied Sciences, Technology and Education\" department.",
+        "evidence": "list all members means to list all the full name; full name refers to first_name, last_name;",
+        "question_with_evidence": "List all the members of the \"School of Applied Sciences, Technology and Education\" department. Hint: list all members means to list all the full name; full name refers to first_name, last_name;",
+        "SQL": "SELECT T1.first_name, T1.last_name FROM member AS T1 INNER JOIN major AS T2 ON T1.link_to_major = T2.major_id WHERE T2.department = 'School of Applied Sciences, Technology and Education'",
+        "difficulty": "moderate",
+        "answer": [
+            [
+                "Angela",
+                "Sanders"
+            ],
+            [
+                "Dean",
+                "O'Reilly"
+            ],
+            [
+                "Edwardo",
+                "Ing"
+            ],
+            [
+                "Mccauley",
+                "Nash"
+            ],
+            [
+                "Brent",
+                "Thomason"
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "List all the members of the \"School of Applied Sciences, Technology and Education\" department. Hint: list all members means to list all the full name; full name refers to first_name, last_name;",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset/student_club/q1375/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset/student_club/q1375/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset/student_club/q1375/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset/student_club/q1375/agent3.sqlite"
+            }
+        ]
+    }
+}

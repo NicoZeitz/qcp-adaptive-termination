@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="1374" viewBox="0 0 1480 1374">
+<defs>
+<linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#F8FAFC"/>
+<stop offset="100%" stop-color="#EEF2FF"/>
+</linearGradient>
+</defs>
+<rect x="0" y="0" width="1480" height="1374" fill="url(#backgroundGradient)"/>
+<rect x="16" y="18" width="1000" height="1328" rx="26" ry="26" fill="#FFFFFF" fill-opacity="0.28" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="1"/>
+<rect x="1024" y="18" width="440" height="1328" rx="26" ry="26" fill="#FFFFFF" fill-opacity="0.28" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="1"/>
+<text x="26" y="60" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">Split overview</text>
+<text x="26" y="84" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" fill="#6B7280">Tables on the left, agent assignments on the right.</text>
+<rect x="26" y="110" width="980" height="400" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="140" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table frpm</text>
+<text x="44" y="162" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">1 split produced from 9986 rows and 29 columns</text>
+<rect x="44" y="188" width="465" height="300" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="44" y="188" width="8" height="300" rx="4" ry="4" fill="#4E79A7"/>
+<text x="62" y="212" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">frpm</text>
+<text x="62" y="230" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..9985 (9986)</text>
+<text x="62" y="248" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="62" y="286" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: CDSCode, Academic Year, County Code, District Code,</text>
+<text x="62" y="301" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">School Code, County Name, District Name, School Name,</text>
+<text x="62" y="316" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">District Type, School Type, Educational Option Type, NSLP</text>
+<text x="62" y="331" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">Provision Status, Charter School (Y/N), Charter School</text>
+<text x="62" y="346" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">Number, Charter Funding Type, IRC, Low Grade, High Grade,</text>
+<text x="62" y="361" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">Enrollment (K-12), Free Meal Count (K-12), Percent (%)</text>
+<text x="62" y="376" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">Eligible Free (K-12), FRPM Count (K-12), Percent (%)</text>
+<text x="62" y="391" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">Eligible FRPM (K-12), Enrollment (Ages 5-17), Free Meal</text>
+<text x="62" y="406" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">Count (Ages 5-17), Percent (%) Eligible Free (Ages 5-17),</text>
+<text x="62" y="421" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">FRPM Count (Ages 5-17), Percent (%) Eligible FRPM (Ages</text>
+<text x="62" y="436" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">5-17), 2013-14 CALPADS Fall 1 Certification Status</text>
+<rect x="26" y="528" width="980" height="408" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="558" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table satscores</text>
+<text x="44" y="580" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 splits produced from 2269 rows and 11 columns</text>
+<rect x="44" y="606" width="465" height="156" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="44" y="606" width="8" height="156" rx="4" ry="4" fill="#F28E2B"/>
+<text x="62" y="630" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">satscores</text>
+<text x="62" y="648" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..25 (26)</text>
+<text x="62" y="666" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="62" y="704" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: cds, rtype, sname, dname, cname, enroll12,</text>
+<text x="62" y="719" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">NumTstTakr</text>
+<rect x="523" y="606" width="465" height="156" rx="14" ry="14" fill="#F8FAFC" stroke="#E15759" stroke-width="2"/>
+<rect x="523" y="606" width="8" height="156" rx="4" ry="4" fill="#E15759"/>
+<text x="541" y="630" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">satscores</text>
+<text x="541" y="648" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 26..2268 (2243)</text>
+<text x="541" y="666" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A3</text>
+<text x="541" y="704" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: cds, rtype, sname, dname, cname, enroll12,</text>
+<text x="541" y="719" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">NumTstTakr</text>
+<rect x="44" y="774" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="44" y="774" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="62" y="798" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">satscores</text>
+<text x="62" y="816" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..2268 (2269)</text>
+<text x="62" y="834" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="62" y="872" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: cds, AvgScrRead, AvgScrMath, AvgScrWrite, NumGE1500</text>
+<rect x="26" y="954" width="980" height="368" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="984" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table schools</text>
+<text x="44" y="1006" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 splits produced from 17686 rows and 49 columns</text>
+<rect x="44" y="1032" width="465" height="268" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="44" y="1032" width="8" height="268" rx="4" ry="4" fill="#76B7B2"/>
+<text x="62" y="1056" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">schools</text>
+<text x="62" y="1074" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..13237 (13238)</text>
+<text x="62" y="1092" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="62" y="1130" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: CDSCode, NCESDist, NCESSchool, StatusType, County,</text>
+<text x="62" y="1145" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">District, School, Street, StreetAbr, City, Zip, State,</text>
+<text x="62" y="1160" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">MailStreet, MailStrAbr, MailCity, MailZip, MailState,</text>
+<text x="62" y="1175" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">Phone, Ext, Website, OpenDate, ClosedDate, Charter,</text>
+<text x="62" y="1190" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">CharterNum, FundingType, DOC, DOCType, SOC, SOCType,</text>
+<text x="62" y="1205" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">EdOpsCode, EdOpsName, EILCode, EILName, GSoffered,</text>
+<text x="62" y="1220" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">GSserved, Virtual, Magnet, Latitude, Longitude, AdmFName1,</text>
+<text x="62" y="1235" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">AdmLName1, AdmEmail1, AdmFName2, AdmLName2, AdmEmail2,</text>
+<text x="62" y="1250" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">AdmFName3, AdmLName3, AdmEmail3, LastUpdate</text>
+<rect x="523" y="1032" width="465" height="268" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="523" y="1032" width="8" height="268" rx="4" ry="4" fill="#4E79A7"/>
+<text x="541" y="1056" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">schools</text>
+<text x="541" y="1074" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 13238..17685 (4448)</text>
+<text x="541" y="1092" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="541" y="1130" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: CDSCode, NCESDist, NCESSchool, StatusType, County,</text>
+<text x="541" y="1145" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">District, School, Street, StreetAbr, City, Zip, State,</text>
+<text x="541" y="1160" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">MailStreet, MailStrAbr, MailCity, MailZip, MailState,</text>
+<text x="541" y="1175" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">Phone, Ext, Website, OpenDate, ClosedDate, Charter,</text>
+<text x="541" y="1190" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">CharterNum, FundingType, DOC, DOCType, SOC, SOCType,</text>
+<text x="541" y="1205" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">EdOpsCode, EdOpsName, EILCode, EILName, GSoffered,</text>
+<text x="541" y="1220" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">GSserved, Virtual, Magnet, Latitude, Longitude, AdmFName1,</text>
+<text x="541" y="1235" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">AdmLName1, AdmEmail1, AdmFName2, AdmLName2, AdmEmail2,</text>
+<text x="541" y="1250" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">AdmFName3, AdmLName3, AdmEmail3, LastUpdate</text>
+<text x="1034" y="60" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">Agent assignments</text>
+<text x="1034" y="84" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" fill="#6B7280">Each agent gets a color; matching table splits use the same accent.</text>
+<rect x="1034" y="110" width="420" height="212" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="110" width="10" height="212" rx="18" ry="18" fill="#4E79A7"/>
+<text x="1052" y="136" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A1</text>
+<text x="1052" y="158" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 assigned splits</text>
+<rect x="1048" y="178" width="392" height="222" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="178" width="10" height="222" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="200" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">frpm • rows: 0..9985 (9986)</text>
+<text x="1066" y="222" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="235" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..9985 (9986) | cols: CDSCode, Academic Year, County Code,</text>
+<text x="1066" y="248" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">District Code, School Code, County Name, District Name, School</text>
+<text x="1066" y="261" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Name, District Type, School Type, Educational Option Type, NSLP</text>
+<text x="1066" y="274" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Provision Status, Charter School (Y/N), Charter School Number,</text>
+<text x="1066" y="287" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Charter Funding Type, IRC, Low Grade, High Grade, Enrollment</text>
+<text x="1066" y="300" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">(K-12), Free Meal Count (K-12), Percent (%) Eligible Free (K-12),</text>
+<text x="1066" y="313" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">FRPM Count (K-12), Percent (%) Eligible FRPM (K-12), Enrollment</text>
+<text x="1066" y="326" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">(Ages 5-17), Free Meal Count (Ages 5-17), Percent (%) Eligible</text>
+<text x="1066" y="339" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Free (Ages 5-17), FRPM Count (Ages 5-17), Percent (%) Eligible</text>
+<text x="1066" y="352" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">FRPM (Ages 5-17), 2013-14 CALPADS Fall 1 Certification Status</text>
+<rect x="1048" y="412" width="392" height="186" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="412" width="10" height="186" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="434" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">schools • rows: 13238..17685 (4448)</text>
+<text x="1066" y="456" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="469" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 13238..17685 (4448) | cols: CDSCode, NCESDist, NCESSchool,</text>
+<text x="1066" y="482" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">StatusType, County, District, School, Street, StreetAbr, City,</text>
+<text x="1066" y="495" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Zip, State, MailStreet, MailStrAbr, MailCity, MailZip, MailState,</text>
+<text x="1066" y="508" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Phone, Ext, Website, OpenDate, ClosedDate, Charter, CharterNum,</text>
+<text x="1066" y="521" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">FundingType, DOC, DOCType, SOC, SOCType, EdOpsCode, EdOpsName,</text>
+<text x="1066" y="534" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">EILCode, EILName, GSoffered, GSserved, Virtual, Magnet, Latitude,</text>
+<text x="1066" y="547" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Longitude, AdmFName1, AdmLName1, AdmEmail1, AdmFName2, AdmLName2,</text>
+<text x="1066" y="560" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">AdmEmail2, AdmFName3, AdmLName3, AdmEmail3, LastUpdate</text>
+<rect x="1034" y="616" width="420" height="108" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="616" width="10" height="108" rx="18" ry="18" fill="#F28E2B"/>
+<text x="1052" y="642" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A2</text>
+<text x="1052" y="664" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">1 assigned split</text>
+<rect x="1048" y="684" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="684" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="706" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">satscores • rows: 0..25 (26)</text>
+<text x="1066" y="728" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="741" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..25 (26) | cols: cds, rtype, sname, dname, cname,</text>
+<text x="1066" y="754" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">enroll12, NumTstTakr</text>
+<rect x="1034" y="794" width="420" height="108" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="794" width="10" height="108" rx="18" ry="18" fill="#E15759"/>
+<text x="1052" y="820" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A3</text>
+<text x="1052" y="842" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">1 assigned split</text>
+<rect x="1048" y="862" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#E15759" stroke-width="2"/>
+<rect x="1048" y="862" width="10" height="92" rx="12" ry="12" fill="#E15759"/>
+<text x="1066" y="884" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">satscores • rows: 26..2268 (2243)</text>
+<text x="1066" y="906" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A3</text>
+<text x="1066" y="919" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 26..2268 (2243) | cols: cds, rtype, sname, dname, cname,</text>
+<text x="1066" y="932" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">enroll12, NumTstTakr</text>
+<rect x="1034" y="972" width="420" height="212" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="972" width="10" height="212" rx="18" ry="18" fill="#76B7B2"/>
+<text x="1052" y="998" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A4</text>
+<text x="1052" y="1020" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 assigned splits</text>
+<rect x="1048" y="1040" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="1040" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="1062" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">satscores • rows: 0..2268 (2269)</text>
+<text x="1066" y="1084" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="1097" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..2268 (2269) | cols: cds, AvgScrRead, AvgScrMath,</text>
+<text x="1066" y="1110" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">AvgScrWrite, NumGE1500</text>
+<rect x="1048" y="1144" width="392" height="186" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="1144" width="10" height="186" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="1166" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">schools • rows: 0..13237 (13238)</text>
+<text x="1066" y="1188" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="1201" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..13237 (13238) | cols: CDSCode, NCESDist, NCESSchool,</text>
+<text x="1066" y="1214" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">StatusType, County, District, School, Street, StreetAbr, City,</text>
+<text x="1066" y="1227" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Zip, State, MailStreet, MailStrAbr, MailCity, MailZip, MailState,</text>
+<text x="1066" y="1240" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Phone, Ext, Website, OpenDate, ClosedDate, Charter, CharterNum,</text>
+<text x="1066" y="1253" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">FundingType, DOC, DOCType, SOC, SOCType, EdOpsCode, EdOpsName,</text>
+<text x="1066" y="1266" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">EILCode, EILName, GSoffered, GSserved, Virtual, Magnet, Latitude,</text>
+<text x="1066" y="1279" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Longitude, AdmFName1, AdmLName1, AdmEmail1, AdmFName2, AdmLName2,</text>
+<text x="1066" y="1292" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">AdmEmail2, AdmFName3, AdmLName3, AdmEmail3, LastUpdate</text>
+</svg>

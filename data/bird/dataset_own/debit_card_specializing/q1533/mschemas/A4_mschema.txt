@@ -1,0 +1,20 @@
+【DB_ID】 A4
+【Schema】
+# Table: main.gasstations
+[
+(GasStationID:INTEGER, Examples: [44, 45, 46]),
+(Segment:TEXT, Examples: [Value for money, Premium, Other])
+]
+# Table: main.products
+[
+(ProductID:INTEGER, Examples: [1, 2, 3]),
+(Description:TEXT, Examples: [Rucní zadání, Nafta, Special])
+]
+# Table: main.transactions_1k
+[
+(TransactionID:INTEGER, Examples: [1, 2, 3]),
+(Date:DATE, Examples: [2012-08-24]),
+(Time:TEXT, Examples: [09:41:00, 10:03:00, 13:53:00]),
+(CustomerID:INTEGER, Examples: [31543, 46707, 7654]),
+(CardID:INTEGER, Examples: [486621, 550134, 684220])
+]

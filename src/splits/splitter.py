@@ -16,10 +16,8 @@ from qtypes.data_agent import DataAgent
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, _connection_record):
     cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL;")
-    cursor.execute("PRAGMA foreign_keys=OFF;")
-    cursor.execute("PRAGMA journal_mode=MEMORY;")
     cursor.execute("PRAGMA temp_store=MEMORY;")
+    cursor.execute("PRAGMA foreign_keys=OFF;")
     cursor.execute("PRAGMA synchronous=OFF;")
     cursor.close()
 
@@ -207,7 +205,7 @@ def create_split_tree_for_table(
 ) -> SplitTree:
     with input_db_engine.connect() as conn:
         row_count = cast(
-            int, conn.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
+            int, conn.execute(text(f'SELECT COUNT(*) FROM "{table}"')).scalar()
         )
         print(f"Table {table}: {row_count} rows")
 
@@ -216,10 +214,12 @@ def create_split_tree_for_table(
     ]
     if len(always_included_columns) == 0:
         always_included_columns = always_included_columns_mapping.get(table, [])
-        # with input_db_engine.connect() as conn:
-        #     query = text(f"""SELECT COUNT(*) - COUNT(DISTINCT ({" || '-' || ".join(always_included_columns)})) FROM {table}""")
-        #     result = conn.execute(query).scalar()
-        #     print(result, query)
+
+    if len(always_included_columns) == 0:
+        fk_cols = list(
+            {col for fk in input_db_engine_inspector.get_foreign_keys(table) for col in fk["constrained_columns"]}
+        )
+        always_included_columns = fk_cols
 
     if len(always_included_columns) == 0:
         raise Exception(
@@ -257,7 +257,7 @@ def get_splits_for_table(
     )
 
     min_splits = 1 + int(force_splits)
-    max_splits = min(split_tree.amount_splits_possible(split_type), agent_amount)
+    max_splits = min(split_tree.amount_splits_possible(split_type) + 1, agent_amount)
     if max_splits_per_table is not None:
         max_splits = min(max_splits, max_splits_per_table)
 
@@ -686,8 +686,6 @@ def create_agents(
 
     random.seed(seed)
 
-    date = datetime.datetime.now().strftime("%Y-%m-%d")
-    output_path = f"{output_path}/{date}-{uuid.uuid4()}"
     os.makedirs(output_path, exist_ok=True)
 
     # write config file config.txt in output dir
@@ -759,6 +757,9 @@ def create_agents(
         output_file=f"{output_path}/splits_visualization.svg",
     )
 
+    # Fully close all pooled connections to the source DB before creating agent DBs
+    input_db_engine.dispose()
+
     # 3. create new db's with tables for each agent
     print(
         "================================================== CREATING AGENT DATABASES =================================================="
@@ -784,10 +785,10 @@ def create_agents(
                     if column["name"] in split.columns
                 ]
                 columns_definition = ", ".join(
-                    [f"{col['name']} {col['type']}" for col in columns]
+                    [f'"{col["name"]}" {col["type"]}' for col in columns]
                 )
                 create_table_query = (
-                    f"CREATE TABLE {split.table_name} ({columns_definition})"
+                    f'CREATE TABLE "{split.table_name}" ({columns_definition})'
                 )
                 print("    " + create_table_query)
                 conn.execute(text(create_table_query))
@@ -815,11 +816,11 @@ def create_agents(
             # from main.(table_name)
             # LIMIT (split.rows[1] - split.rows[0]) OFFSET split.rows[0]
             for split in data_agent_config.splits:
-                columns_str = ", ".join(split.columns)
+                columns_str = ", ".join(f'"{c}"' for c in split.columns)
                 query = f"""
-                    INSERT INTO {attach_alias}.{split.table_name} ({columns_str})
+                    INSERT INTO {attach_alias}."{split.table_name}" ({columns_str})
                     SELECT {columns_str}
-                    FROM main.{split.table_name}
+                    FROM main."{split.table_name}"
                     LIMIT {split.rows[1] - split.rows[0]} OFFSET {split.rows[0]}
                 """
                 print(f"    Inserting data for split {split} with query: {query}")
@@ -827,6 +828,7 @@ def create_agents(
 
             conn.commit()  # SQLite requires no active write transaction when detaching a database.
             conn.exec_driver_sql(f"DETACH DATABASE {attach_alias};")
+            conn.close()
 
     # 5. return data agents
     data_agents: list[DataAgent] = []
