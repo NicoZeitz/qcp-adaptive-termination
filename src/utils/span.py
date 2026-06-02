@@ -47,7 +47,7 @@ def indented_logging(message: str, log_level: int = logging.INFO):
     span = span_context_var.get()
     if span is not None:
         parent_depth = _span_by_id.get(span.parent_id, 0)
-        logging.log(log_level, "  " * parent_depth + message)
+        logging.log(log_level, "  " * (parent_depth + 1) + message)
     else:
         logging.log(log_level, message)
 
