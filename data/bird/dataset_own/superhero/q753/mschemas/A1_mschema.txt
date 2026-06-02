@@ -1,0 +1,24 @@
+【DB_ID】 A1
+【Schema】
+# Table: main.alignment
+[
+(id:INTEGER, Examples: [1, 2, 3]),
+(alignment:TEXT, Examples: [Good, Bad, Neutral])
+]
+# Table: main.colour
+[
+(id:INTEGER, Examples: [27, 28, 29]),
+(colour:TEXT, Examples: [Red/White, Silver, Strawberry Blond])
+]
+# Table: main.hero_attribute
+[
+(hero_id:INTEGER, Examples: [1, 2, 3]),
+(attribute_id:INTEGER, Examples: [1, 2, 3]),
+(attribute_value:INTEGER, Examples: [80, 75, 95])
+]
+# Table: main.superhero
+[
+(id:INTEGER, Examples: [1, 2, 3]),
+(height_cm:INTEGER, Examples: [188, 203, 191]),
+(weight_kg:INTEGER, Examples: [90, 441, 65])
+]

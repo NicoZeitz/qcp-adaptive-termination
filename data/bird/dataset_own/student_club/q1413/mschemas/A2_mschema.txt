@@ -1,0 +1,28 @@
+【DB_ID】 A2
+【Schema】
+# Table: main.budget
+[
+(budget_id:TEXT, Examples: [rec0QmEc3cSQFQ6V2]),
+(category:TEXT, Examples: [Advertisement]),
+(spent:REAL, Examples: [67.81]),
+(remaining:REAL, Examples: [7.19])
+]
+# Table: main.expense
+[
+(expense_id:TEXT, Examples: [rec017x6R3hQqkLAo, rec1nIjoZKTYayqZ6, rec1oMgNFt7Y0G40x]),
+(link_to_member:TEXT, Examples: [rec4BLdZHS2Blfp4v, recro8T1MPMwRadVH, recD078PnS3x2doBe]),
+(link_to_budget:TEXT, Examples: [recvKTAWAFKkVNnXQ, recy8KY5bUdzF81vv, recwXIiKoBMjXJsGZ])
+]
+# Table: main.income
+[
+(income_id:TEXT, Examples: [recmJAim3kpGlGDgp, recmUxQVGCGs6NLV4, recms6rgtCkMIYg1A]),
+(amount:INTEGER, Examples: [50, 1000]),
+(source:TEXT, Examples: [Dues, Sponsorship]),
+(notes:TEXT),
+(link_to_member:TEXT, Examples: [rec75vvFxgYtHmqxY, rec280Sk7o31iG0Tx, recD078PnS3x2doBe])
+]
+# Table: main.zip_code
+[
+(zip_code:INTEGER, Examples: [501, 544, 601]),
+(short_state:TEXT, Examples: [NY, PR, MA])
+]

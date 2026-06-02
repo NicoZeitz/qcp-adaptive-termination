@@ -1,0 +1,22 @@
+【DB_ID】 A2
+【Schema】
+# Table: main.gasstations
+[
+(GasStationID:INTEGER, Examples: [44, 45, 46]),
+(ChainID:INTEGER, Examples: [13, 6, 23]),
+(Country:TEXT, Examples: [CZE])
+]
+# Table: main.transactions_1k
+[
+(TransactionID:INTEGER, Examples: [1, 2, 3]),
+(GasStationID:INTEGER, Examples: [3704, 656, 741]),
+(ProductID:INTEGER, Examples: [2, 23, 5]),
+(Amount:INTEGER, Examples: [28, 18, 1]),
+(Price:REAL, Examples: [672.64, 430.72, 121.99])
+]
+# Table: main.yearmonth
+[
+(CustomerID:INTEGER, Examples: [30065, 30066, 30067]),
+(Date:TEXT, Examples: [201303, 201304, 201305]),
+(Consumption:REAL, Examples: [3712.29, 6652.6, 5670.86])
+]

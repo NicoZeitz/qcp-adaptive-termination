@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="2476" viewBox="0 0 1480 2476">
+<defs>
+<linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#F8FAFC"/>
+<stop offset="100%" stop-color="#EEF2FF"/>
+</linearGradient>
+</defs>
+<rect x="0" y="0" width="1480" height="2476" fill="url(#backgroundGradient)"/>
+<rect x="16" y="18" width="1000" height="2430" rx="26" ry="26" fill="#FFFFFF" fill-opacity="0.28" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="1"/>
+<rect x="1024" y="18" width="440" height="2430" rx="26" ry="26" fill="#FFFFFF" fill-opacity="0.28" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="1"/>
+<text x="26" y="60" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">Split overview</text>
+<text x="26" y="84" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" fill="#6B7280">Tables on the left, agent assignments on the right.</text>
+<rect x="26" y="110" width="980" height="496" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="140" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table cards</text>
+<text x="44" y="162" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">1 split produced from 56822 rows and 74 columns</text>
+<rect x="44" y="188" width="465" height="396" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="44" y="188" width="8" height="396" rx="4" ry="4" fill="#4E79A7"/>
+<text x="62" y="212" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">cards</text>
+<text x="62" y="230" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..56821 (56822)</text>
+<text x="62" y="248" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="62" y="286" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, artist, asciiName, availability, borderColor,</text>
+<text x="62" y="301" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cardKingdomFoilId, cardKingdomId, colorIdentity,</text>
+<text x="62" y="316" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">colorIndicator, colors, convertedManaCost, duelDeck,</text>
+<text x="62" y="331" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">edhrecRank, faceConvertedManaCost, faceName, flavorName,</text>
+<text x="62" y="346" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">flavorText, frameEffects, frameVersion, hand,</text>
+<text x="62" y="361" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">hasAlternativeDeckLimit, hasContentWarning, hasFoil,</text>
+<text x="62" y="376" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">hasNonFoil, isAlternative, isFullArt, isOnlineOnly,</text>
+<text x="62" y="391" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">isOversized, isPromo, isReprint, isReserved, isStarter,</text>
+<text x="62" y="406" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">isStorySpotlight, isTextless, isTimeshifted, keywords,</text>
+<text x="62" y="421" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">layout, leadershipSkills, life, loyalty, manaCost, mcmId,</text>
+<text x="62" y="436" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">mcmMetaId, mtgArenaId, mtgjsonV4Id, mtgoFoilId, mtgoId,</text>
+<text x="62" y="451" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">multiverseId, name, number, originalReleaseDate,</text>
+<text x="62" y="466" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">originalText, originalType, otherFaceIds, power,</text>
+<text x="62" y="481" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">printings, promoTypes, purchaseUrls, rarity, scryfallId,</text>
+<text x="62" y="496" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">scryfallIllustrationId, scryfallOracleId, setCode, side,</text>
+<text x="62" y="511" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">subtypes, supertypes, tcgplayerProductId, text, toughness,</text>
+<text x="62" y="526" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">type, types, uuid, variations, watermark</text>
+<rect x="26" y="624" width="980" height="408" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="654" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table foreign_data</text>
+<text x="44" y="676" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 splits produced from 229186 rows and 8 columns</text>
+<rect x="44" y="702" width="465" height="156" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="44" y="702" width="8" height="156" rx="4" ry="4" fill="#F28E2B"/>
+<text x="62" y="726" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">foreign_data</text>
+<text x="62" y="744" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..229185 (229186)</text>
+<text x="62" y="762" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="62" y="800" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, flavorText, language, multiverseid, name, text,</text>
+<text x="62" y="815" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">type</text>
+<rect x="523" y="702" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#E15759" stroke-width="2"/>
+<rect x="523" y="702" width="8" height="140" rx="4" ry="4" fill="#E15759"/>
+<text x="541" y="726" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">foreign_data</text>
+<text x="541" y="744" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..160736 (160737)</text>
+<text x="541" y="762" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A3</text>
+<text x="541" y="800" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, uuid</text>
+<rect x="44" y="870" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="44" y="870" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="62" y="894" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">foreign_data</text>
+<text x="62" y="912" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 160737..229185 (68449)</text>
+<text x="62" y="930" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="62" y="968" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, uuid</text>
+<rect x="26" y="1050" width="980" height="392" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="1080" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table legalities</text>
+<text x="44" y="1102" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 splits produced from 427907 rows and 4 columns</text>
+<rect x="44" y="1128" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="44" y="1128" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="62" y="1152" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">legalities</text>
+<text x="62" y="1170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..427906 (427907)</text>
+<text x="62" y="1188" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="62" y="1226" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, format</text>
+<rect x="523" y="1128" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#E15759" stroke-width="2"/>
+<rect x="523" y="1128" width="8" height="140" rx="4" ry="4" fill="#E15759"/>
+<text x="541" y="1152" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">legalities</text>
+<text x="541" y="1170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..321115 (321116)</text>
+<text x="541" y="1188" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A3</text>
+<text x="541" y="1226" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, status, uuid</text>
+<rect x="44" y="1280" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="44" y="1280" width="8" height="140" rx="4" ry="4" fill="#4E79A7"/>
+<text x="62" y="1304" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">legalities</text>
+<text x="62" y="1322" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 321116..427906 (106791)</text>
+<text x="62" y="1340" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="62" y="1378" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, status, uuid</text>
+<rect x="26" y="1460" width="980" height="392" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="1490" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table rulings</text>
+<text x="44" y="1512" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 splits produced from 87769 rows and 4 columns</text>
+<rect x="44" y="1538" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="44" y="1538" width="8" height="140" rx="4" ry="4" fill="#4E79A7"/>
+<text x="62" y="1562" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rulings</text>
+<text x="62" y="1580" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..87768 (87769)</text>
+<text x="62" y="1598" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="62" y="1636" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, date</text>
+<rect x="523" y="1538" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="523" y="1538" width="8" height="140" rx="4" ry="4" fill="#F28E2B"/>
+<text x="541" y="1562" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rulings</text>
+<text x="541" y="1580" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..85676 (85677)</text>
+<text x="541" y="1598" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="541" y="1636" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, text, uuid</text>
+<rect x="44" y="1690" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="44" y="1690" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="62" y="1714" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rulings</text>
+<text x="62" y="1732" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 85677..87768 (2092)</text>
+<text x="62" y="1750" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="62" y="1788" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, text, uuid</text>
+<rect x="26" y="1870" width="980" height="240" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="1900" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table set_translations</text>
+<text x="44" y="1922" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 splits produced from 1210 rows and 4 columns</text>
+<rect x="44" y="1948" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="44" y="1948" width="8" height="140" rx="4" ry="4" fill="#F28E2B"/>
+<text x="62" y="1972" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">set_translations</text>
+<text x="62" y="1990" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..259 (260)</text>
+<text x="62" y="2008" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="62" y="2046" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, language, setCode, translation</text>
+<rect x="523" y="1948" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#E15759" stroke-width="2"/>
+<rect x="523" y="1948" width="8" height="140" rx="4" ry="4" fill="#E15759"/>
+<text x="541" y="1972" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">set_translations</text>
+<text x="541" y="1990" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 260..1209 (950)</text>
+<text x="541" y="2008" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A3</text>
+<text x="541" y="2046" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, language, setCode, translation</text>
+<rect x="26" y="2128" width="980" height="304" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="2158" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table sets</text>
+<text x="44" y="2180" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">1 split produced from 551 rows and 21 columns</text>
+<rect x="44" y="2206" width="465" height="204" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="44" y="2206" width="8" height="204" rx="4" ry="4" fill="#4E79A7"/>
+<text x="62" y="2230" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">sets</text>
+<text x="62" y="2248" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..550 (551)</text>
+<text x="62" y="2266" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="62" y="2304" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: id, baseSetSize, block, booster, code, isFoilOnly,</text>
+<text x="62" y="2319" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">isForeignOnly, isNonFoilOnly, isOnlineOnly,</text>
+<text x="62" y="2334" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">isPartialPreview, keyruneCode, mcmId, mcmIdExtras,</text>
+<text x="62" y="2349" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">mcmName, mtgoCode, name, parentCode, releaseDate,</text>
+<text x="62" y="2364" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">tcgplayerGroupId, totalSetSize, type</text>
+<text x="1034" y="60" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">Agent assignments</text>
+<text x="1034" y="84" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" fill="#6B7280">Each agent gets a color; matching table splits use the same accent.</text>
+<rect x="1034" y="110" width="420" height="420" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="110" width="10" height="420" rx="18" ry="18" fill="#4E79A7"/>
+<text x="1052" y="136" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A1</text>
+<text x="1052" y="158" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">4 assigned splits</text>
+<rect x="1048" y="178" width="392" height="330" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="178" width="10" height="330" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="200" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">cards • rows: 0..56821 (56822)</text>
+<text x="1066" y="222" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="235" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..56821 (56822) | cols: id, artist, asciiName,</text>
+<text x="1066" y="248" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">availability, borderColor, cardKingdomFoilId, cardKingdomId,</text>
+<text x="1066" y="261" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">colorIdentity, colorIndicator, colors, convertedManaCost,</text>
+<text x="1066" y="274" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">duelDeck, edhrecRank, faceConvertedManaCost, faceName, flavorName,</text>
+<text x="1066" y="287" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">flavorText, frameEffects, frameVersion, hand,</text>
+<text x="1066" y="300" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">hasAlternativeDeckLimit, hasContentWarning, hasFoil, hasNonFoil,</text>
+<text x="1066" y="313" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">isAlternative, isFullArt, isOnlineOnly, isOversized, isPromo,</text>
+<text x="1066" y="326" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">isReprint, isReserved, isStarter, isStorySpotlight, isTextless,</text>
+<text x="1066" y="339" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">isTimeshifted, keywords, layout, leadershipSkills, life, loyalty,</text>
+<text x="1066" y="352" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">manaCost, mcmId, mcmMetaId, mtgArenaId, mtgjsonV4Id, mtgoFoilId,</text>
+<text x="1066" y="365" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">mtgoId, multiverseId, name, number, originalReleaseDate,</text>
+<text x="1066" y="378" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">originalText, originalType, otherFaceIds, power, printings,</text>
+<text x="1066" y="391" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">promoTypes, purchaseUrls, rarity, scryfallId,</text>
+<text x="1066" y="404" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">scryfallIllustrationId, scryfallOracleId, setCode, side, subtypes,</text>
+<text x="1066" y="417" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">supertypes, tcgplayerProductId, text, toughness, type, types,</text>
+<text x="1066" y="430" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">uuid, variations, watermark</text>
+<rect x="1048" y="520" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="520" width="10" height="92" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="542" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">legalities • rows: 321116..427906 (106791)</text>
+<text x="1066" y="564" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="577" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 321116..427906 (106791) | cols: id, status, uuid</text>
+<rect x="1048" y="624" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="624" width="10" height="92" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="646" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">rulings • rows: 0..87768 (87769)</text>
+<text x="1066" y="668" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="681" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..87768 (87769) | cols: id, date</text>
+<rect x="1048" y="728" width="392" height="132" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="728" width="10" height="132" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="750" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">sets • rows: 0..550 (551)</text>
+<text x="1066" y="772" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="785" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..550 (551) | cols: id, baseSetSize, block, booster, code,</text>
+<text x="1066" y="798" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly,</text>
+<text x="1066" y="811" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">isPartialPreview, keyruneCode, mcmId, mcmIdExtras, mcmName,</text>
+<text x="1066" y="824" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">mtgoCode, name, parentCode, releaseDate, tcgplayerGroupId,</text>
+<text x="1066" y="837" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">totalSetSize, type</text>
+<rect x="1034" y="878" width="420" height="316" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="878" width="10" height="316" rx="18" ry="18" fill="#F28E2B"/>
+<text x="1052" y="904" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A2</text>
+<text x="1052" y="926" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 assigned splits</text>
+<rect x="1048" y="946" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="946" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="968" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">foreign_data • rows: 0..229185 (229186)</text>
+<text x="1066" y="990" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="1003" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..229185 (229186) | cols: id, flavorText, language,</text>
+<text x="1066" y="1016" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">multiverseid, name, text, type</text>
+<rect x="1048" y="1050" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="1050" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="1072" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">rulings • rows: 0..85676 (85677)</text>
+<text x="1066" y="1094" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="1107" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..85676 (85677) | cols: id, text, uuid</text>
+<rect x="1048" y="1154" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="1154" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="1176" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">set_translations • rows: 0..259 (260)</text>
+<text x="1066" y="1198" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="1211" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..259 (260) | cols: id, language, setCode, translation</text>
+<rect x="1034" y="1264" width="420" height="316" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="1264" width="10" height="316" rx="18" ry="18" fill="#E15759"/>
+<text x="1052" y="1290" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A3</text>
+<text x="1052" y="1312" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 assigned splits</text>
+<rect x="1048" y="1332" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#E15759" stroke-width="2"/>
+<rect x="1048" y="1332" width="10" height="92" rx="12" ry="12" fill="#E15759"/>
+<text x="1066" y="1354" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">foreign_data • rows: 0..160736 (160737)</text>
+<text x="1066" y="1376" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A3</text>
+<text x="1066" y="1389" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..160736 (160737) | cols: id, uuid</text>
+<rect x="1048" y="1436" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#E15759" stroke-width="2"/>
+<rect x="1048" y="1436" width="10" height="92" rx="12" ry="12" fill="#E15759"/>
+<text x="1066" y="1458" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">legalities • rows: 0..321115 (321116)</text>
+<text x="1066" y="1480" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A3</text>
+<text x="1066" y="1493" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..321115 (321116) | cols: id, status, uuid</text>
+<rect x="1048" y="1540" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#E15759" stroke-width="2"/>
+<rect x="1048" y="1540" width="10" height="92" rx="12" ry="12" fill="#E15759"/>
+<text x="1066" y="1562" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">set_translations • rows: 260..1209 (950)</text>
+<text x="1066" y="1584" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A3</text>
+<text x="1066" y="1597" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 260..1209 (950) | cols: id, language, setCode, translation</text>
+<rect x="1034" y="1650" width="420" height="316" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="1650" width="10" height="316" rx="18" ry="18" fill="#76B7B2"/>
+<text x="1052" y="1676" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A4</text>
+<text x="1052" y="1698" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 assigned splits</text>
+<rect x="1048" y="1718" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="1718" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="1740" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">foreign_data • rows: 160737..229185 (68449)</text>
+<text x="1066" y="1762" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="1775" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 160737..229185 (68449) | cols: id, uuid</text>
+<rect x="1048" y="1822" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="1822" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="1844" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">legalities • rows: 0..427906 (427907)</text>
+<text x="1066" y="1866" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="1879" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..427906 (427907) | cols: id, format</text>
+<rect x="1048" y="1926" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="1926" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="1948" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">rulings • rows: 85677..87768 (2092)</text>
+<text x="1066" y="1970" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="1983" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 85677..87768 (2092) | cols: id, text, uuid</text>
+</svg>

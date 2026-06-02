@@ -1,0 +1,27 @@
+【DB_ID】 A3
+【Schema】
+# Table: main.budget
+[
+(budget_id:TEXT, Examples: [rec1bG6HSft7XIvTP, rec1z6ISJU2HdIsVm, rec33PFqxLtnp80RJ]),
+(category:TEXT, Examples: [Food, Speaker Gifts, Parking]),
+(spent:REAL, Examples: [121.14, 20.2, 0.0]),
+(remaining:REAL, Examples: [28.86, -0.199999999999999, 25.0])
+]
+# Table: main.income
+[
+(income_id:TEXT, Examples: [rec0s9ZrO15zhzUeE, rec7f5XMQZexgtQJo, rec8BUJa8GXUjiglg]),
+(date_received:TEXT, Examples: [2019-10-17, 2019-09-04, 2019-10-08]),
+(amount:INTEGER, Examples: [50, 200, 3000]),
+(source:TEXT, Examples: [Dues, Fundraising, School Appropration]),
+(notes:TEXT, Examples: [Secured donations to help pay for speaker gifts.]),
+(link_to_member:TEXT, Examples: [reccW7q1KkhSKZsea, recTjHY5xXhvkCdVT, recUdRhbhcEO1Hk5r])
+]
+# Table: main.zip_code
+[
+(zip_code:INTEGER, Examples: [22210, 22211, 22212]),
+(type:TEXT, Examples: [PO Box, Standard, Unique]),
+(city:TEXT, Examples: [Arlington, Fort Myer, Alexandria]),
+(county:TEXT, Examples: [Arlington County, Alexandria city, Fairfax County]),
+(state:TEXT, Examples: [Virginia, West Virginia, North Carolina]),
+(short_state:TEXT, Examples: [VA, WV, NC])
+]

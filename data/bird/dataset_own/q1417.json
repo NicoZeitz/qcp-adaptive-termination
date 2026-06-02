@@ -1,0 +1,90 @@
+{
+    "extra": {
+        "question_id": 1417,
+        "db_id": "student_club",
+        "question": "List out the type of events which have remaining budget more than 30 USD.",
+        "evidence": "remaining budget more than 30 USD refers to remaining > 30",
+        "question_with_evidence": "List out the type of events which have remaining budget more than 30 USD. Hint: remaining budget more than 30 USD refers to remaining > 30",
+        "SQL": "SELECT T1.type FROM event AS T1 INNER JOIN budget AS T2 ON T1.event_id = T2.link_to_event WHERE T2.remaining > 30",
+        "difficulty": "simple",
+        "answer": [
+            [
+                "Guest Speaker"
+            ],
+            [
+                "Meeting"
+            ],
+            [
+                "Guest Speaker"
+            ],
+            [
+                "Meeting"
+            ],
+            [
+                "Meeting"
+            ],
+            [
+                "Guest Speaker"
+            ],
+            [
+                "Guest Speaker"
+            ],
+            [
+                "Meeting"
+            ],
+            [
+                "Guest Speaker"
+            ],
+            [
+                "Guest Speaker"
+            ],
+            [
+                "Guest Speaker"
+            ],
+            [
+                "Meeting"
+            ],
+            [
+                "Meeting"
+            ],
+            [
+                "Meeting"
+            ],
+            [
+                "Meeting"
+            ],
+            [
+                "Guest Speaker"
+            ],
+            [
+                "Meeting"
+            ]
+        ]
+    },
+    "value": {
+        "__type__": "CollaborativeQueryAnswering",
+        "query": "List out the type of events which have remaining budget more than 30 USD. Hint: remaining budget more than 30 USD refers to remaining > 30",
+        "data_agents": [
+            {
+                "type": "sql",
+                "name": "A0",
+                "path": "../data/bird/dataset/student_club/q1417/agent0.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A1",
+                "path": "../data/bird/dataset/student_club/q1417/agent1.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A2",
+                "path": "../data/bird/dataset/student_club/q1417/agent2.sqlite"
+            },
+            {
+                "type": "sql",
+                "name": "A3",
+                "path": "../data/bird/dataset/student_club/q1417/agent3.sqlite"
+            }
+        ]
+    }
+}

@@ -1,0 +1,7 @@
+output_path: ../data/bird/dataset_own/student_club/q1417
+database_url: sqlite:////Users/I550817/SAPDevelop/Lectures/qcp-prototype/data/bird/dev/dev_databases/student_club/student_club.sqlite
+agent_amount: 4
+split_type: mixed
+noise_type: none
+force_splits: False
+seed: 42

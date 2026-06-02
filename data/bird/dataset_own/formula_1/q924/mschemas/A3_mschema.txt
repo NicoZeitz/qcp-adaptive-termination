@@ -1,0 +1,57 @@
+【DB_ID】 A3
+【Schema】
+# Table: main.constructorResults
+[
+(constructorResultsId:INTEGER, Examples: [1, 2, 3]),
+(status:TEXT, Examples: [D])
+]
+# Table: main.constructorStandings
+[
+(constructorStandingsId:INTEGER, Examples: [1, 2, 3]),
+(points:REAL, Examples: [14.0, 8.0, 9.0]),
+(position:INTEGER, Examples: [1, 3, 2]),
+(positionText:TEXT, Examples: [1, 3, 2]),
+(wins:INTEGER, Examples: [1, 0, 2])
+]
+# Table: main.drivers
+[
+(driverId:INTEGER, Examples: [1, 2, 3]),
+(driverRef:TEXT, Examples: [hamilton, heidfeld, rosberg]),
+(number:INTEGER, Examples: [44, 6, 14]),
+(code:TEXT, Examples: [HAM, HEI, ROS]),
+(forename:TEXT, Examples: [Lewis, Nick, Nico])
+]
+# Table: main.lapTimes
+[
+(raceId:INTEGER, Examples: [938, 939, 940]),
+(driverId:INTEGER, Examples: [1, 3, 4]),
+(lap:INTEGER, Examples: [12, 13, 14]),
+(position:INTEGER, Examples: [1, 6, 5])
+]
+# Table: main.pitStops
+[
+(raceId:INTEGER, Examples: [975, 976, 977]),
+(driverId:INTEGER, Examples: [839, 840, 1]),
+(stop:INTEGER, Examples: [1, 2, 3]),
+(lap:INTEGER, Examples: [32, 25, 12]),
+(time:TEXT, Examples: [14:47:42, 14:39:14, 17:25:22]),
+(duration:TEXT, Examples: [23.409, 22.790, 20.418]),
+(milliseconds:INTEGER, Examples: [23409, 22790, 20418])
+]
+# Table: main.qualifying
+[
+(qualifyId:INTEGER, Examples: [4411, 4412, 4413]),
+(raceId:INTEGER, Examples: [107, 71, 72]),
+(driverId:INTEGER, Examples: [21, 17, 14]),
+(constructorId:INTEGER, Examples: [15, 19, 1])
+]
+# Table: main.races
+[
+(raceId:INTEGER, Examples: [17, 18, 19]),
+(circuitId:INTEGER, Examples: [24, 1, 2])
+]
+# Table: main.status
+[
+(statusId:INTEGER, Examples: [1, 2, 3]),
+(status:TEXT, Examples: [Finished, Disqualified, Accident])
+]

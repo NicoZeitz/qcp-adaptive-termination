@@ -1,0 +1,18 @@
+【DB_ID】 A4
+【Schema】
+# Table: main.foreign_data
+[
+(id:INTEGER, Examples: [160756, 160757, 160758]),
+(uuid:TEXT, Examples: [2fd7bbaf-9eff-5ac3-b6f9-76880f38e7c4])
+]
+# Table: main.legalities
+[
+(id:INTEGER, Examples: [1, 2, 3]),
+(format:TEXT, Examples: [commander, duel, legacy])
+]
+# Table: main.rulings
+[
+(id:INTEGER, Examples: [85678, 85679, 85680]),
+(text:TEXT),
+(uuid:TEXT, Examples: [080da8f4-975c-5298-aba8-ae17babfd401])
+]

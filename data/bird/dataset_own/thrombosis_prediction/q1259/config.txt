@@ -1,0 +1,7 @@
+output_path: ../data/bird/dataset_own/thrombosis_prediction/q1259
+database_url: sqlite:////Users/I550817/SAPDevelop/Lectures/qcp-prototype/data/bird/dev/dev_databases/thrombosis_prediction/thrombosis_prediction.sqlite
+agent_amount: 4
+split_type: mixed
+noise_type: none
+force_splits: False
+seed: 42

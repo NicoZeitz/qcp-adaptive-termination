@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="1294" viewBox="0 0 1480 1294">
+<defs>
+<linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#F8FAFC"/>
+<stop offset="100%" stop-color="#EEF2FF"/>
+</linearGradient>
+</defs>
+<rect x="0" y="0" width="1480" height="1294" fill="url(#backgroundGradient)"/>
+<rect x="16" y="18" width="1000" height="1248" rx="26" ry="26" fill="#FFFFFF" fill-opacity="0.28" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="1"/>
+<rect x="1024" y="18" width="440" height="1248" rx="26" ry="26" fill="#FFFFFF" fill-opacity="0.28" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="1"/>
+<text x="26" y="60" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">Split overview</text>
+<text x="26" y="84" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" fill="#6B7280">Tables on the left, agent assignments on the right.</text>
+<rect x="26" y="110" width="980" height="272" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="140" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table Examination</text>
+<text x="44" y="162" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">1 split produced from 806 rows and 13 columns</text>
+<rect x="44" y="188" width="465" height="172" rx="14" ry="14" fill="#F8FAFC" stroke="#4E79A7" stroke-width="2"/>
+<rect x="44" y="188" width="8" height="172" rx="4" ry="4" fill="#4E79A7"/>
+<text x="62" y="212" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">Examination</text>
+<text x="62" y="230" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..805 (806)</text>
+<text x="62" y="248" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A1</text>
+<text x="62" y="286" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: ID, Examination Date, aCL IgG, aCL IgM, ANA, ANA</text>
+<text x="62" y="301" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">Pattern, aCL IgA, Diagnosis, KCT, RVVT, LAC, Symptoms,</text>
+<text x="62" y="316" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">Thrombosis</text>
+<rect x="26" y="400" width="980" height="440" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="430" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table Laboratory</text>
+<text x="44" y="452" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 splits produced from 13908 rows and 44 columns</text>
+<rect x="44" y="478" width="465" height="188" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="44" y="478" width="8" height="188" rx="4" ry="4" fill="#F28E2B"/>
+<text x="62" y="502" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">Laboratory</text>
+<text x="62" y="520" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..13907 (13908)</text>
+<text x="62" y="538" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="62" y="576" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: ID, Date, GOT, GPT, LDH, ALP, TP, ALB, UA, UN, CRE,</text>
+<text x="62" y="591" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">T-BIL, T-CHO, TG, CPK, GLU, WBC, RBC, HGB, HCT, PLT, PT,</text>
+<text x="62" y="606" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">APTT, FG, PIC, TAT, TAT2, U-PRO, IGG, IGA, IGM, CRP, RA,</text>
+<text x="62" y="621" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">RF, C3, C4, RNP, SM, SC170, SSA, SSB, CENTROMEA, DNA</text>
+<rect x="523" y="478" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#E15759" stroke-width="2"/>
+<rect x="523" y="478" width="8" height="140" rx="4" ry="4" fill="#E15759"/>
+<text x="541" y="502" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">Laboratory</text>
+<text x="541" y="520" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..10046 (10047)</text>
+<text x="541" y="538" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A3</text>
+<text x="541" y="576" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: ID, Date, DNA-II</text>
+<rect x="44" y="678" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="44" y="678" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="62" y="702" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">Laboratory</text>
+<text x="62" y="720" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 10047..13907 (3861)</text>
+<text x="62" y="738" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="62" y="776" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: ID, Date, DNA-II</text>
+<rect x="26" y="858" width="980" height="392" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<text x="44" y="888" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Table Patient</text>
+<text x="44" y="910" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">3 splits produced from 1238 rows and 7 columns</text>
+<rect x="44" y="936" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#F28E2B" stroke-width="2"/>
+<rect x="44" y="936" width="8" height="140" rx="4" ry="4" fill="#F28E2B"/>
+<text x="62" y="960" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">Patient</text>
+<text x="62" y="978" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..1237 (1238)</text>
+<text x="62" y="996" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A2</text>
+<text x="62" y="1034" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: ID, SEX, Birthday</text>
+<rect x="523" y="936" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#76B7B2" stroke-width="2"/>
+<rect x="523" y="936" width="8" height="140" rx="4" ry="4" fill="#76B7B2"/>
+<text x="541" y="960" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">Patient</text>
+<text x="541" y="978" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 0..1003 (1004)</text>
+<text x="541" y="996" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A4</text>
+<text x="541" y="1034" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: ID, Description, First Date, Admission, Diagnosis</text>
+<rect x="44" y="1088" width="465" height="140" rx="14" ry="14" fill="#F8FAFC" stroke="#E15759" stroke-width="2"/>
+<rect x="44" y="1088" width="8" height="140" rx="4" ry="4" fill="#E15759"/>
+<text x="62" y="1112" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">Patient</text>
+<text x="62" y="1130" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">rows: 1004..1237 (234)</text>
+<text x="62" y="1148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#111827">assigned to A3</text>
+<text x="62" y="1186" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="normal" fill="#4B5563">cols: ID, Description, First Date, Admission, Diagnosis</text>
+<text x="1034" y="60" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">Agent assignments</text>
+<text x="1034" y="84" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" fill="#6B7280">Each agent gets a color; matching table splits use the same accent.</text>
+<rect x="1034" y="110" width="420" height="108" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="110" width="10" height="108" rx="18" ry="18" fill="#4E79A7"/>
+<text x="1052" y="136" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A1</text>
+<text x="1052" y="158" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">1 assigned split</text>
+<rect x="1048" y="178" width="392" height="96" rx="12" ry="12" fill="#FFFFFF" stroke="#4E79A7" stroke-width="2"/>
+<rect x="1048" y="178" width="10" height="96" rx="12" ry="12" fill="#4E79A7"/>
+<text x="1066" y="200" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">Examination • rows: 0..805 (806)</text>
+<text x="1066" y="222" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A1</text>
+<text x="1066" y="235" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..805 (806) | cols: ID, Examination Date, aCL IgG, aCL IgM,</text>
+<text x="1066" y="248" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">ANA, ANA Pattern, aCL IgA, Diagnosis, KCT, RVVT, LAC, Symptoms,</text>
+<text x="1066" y="261" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Thrombosis</text>
+<rect x="1034" y="292" width="420" height="212" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="292" width="10" height="212" rx="18" ry="18" fill="#F28E2B"/>
+<text x="1052" y="318" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A2</text>
+<text x="1052" y="340" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 assigned splits</text>
+<rect x="1048" y="360" width="392" height="114" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="360" width="10" height="114" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="382" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">Laboratory • rows: 0..13907 (13908)</text>
+<text x="1066" y="404" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="417" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..13907 (13908) | cols: ID, Date, GOT, GPT, LDH, ALP, TP,</text>
+<text x="1066" y="430" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">ALB, UA, UN, CRE, T-BIL, T-CHO, TG, CPK, GLU, WBC, RBC, HGB, HCT,</text>
+<text x="1066" y="443" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">PLT, PT, APTT, FG, PIC, TAT, TAT2, U-PRO, IGG, IGA, IGM, CRP, RA,</text>
+<text x="1066" y="456" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">RF, C3, C4, RNP, SM, SC170, SSA, SSB, CENTROMEA, DNA</text>
+<rect x="1048" y="486" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#F28E2B" stroke-width="2"/>
+<rect x="1048" y="486" width="10" height="92" rx="12" ry="12" fill="#F28E2B"/>
+<text x="1066" y="508" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">Patient • rows: 0..1237 (1238)</text>
+<text x="1066" y="530" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A2</text>
+<text x="1066" y="543" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..1237 (1238) | cols: ID, SEX, Birthday</text>
+<rect x="1034" y="596" width="420" height="212" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="596" width="10" height="212" rx="18" ry="18" fill="#E15759"/>
+<text x="1052" y="622" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A3</text>
+<text x="1052" y="644" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 assigned splits</text>
+<rect x="1048" y="664" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#E15759" stroke-width="2"/>
+<rect x="1048" y="664" width="10" height="92" rx="12" ry="12" fill="#E15759"/>
+<text x="1066" y="686" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">Laboratory • rows: 0..10046 (10047)</text>
+<text x="1066" y="708" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A3</text>
+<text x="1066" y="721" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..10046 (10047) | cols: ID, Date, DNA-II</text>
+<rect x="1048" y="768" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#E15759" stroke-width="2"/>
+<rect x="1048" y="768" width="10" height="92" rx="12" ry="12" fill="#E15759"/>
+<text x="1066" y="790" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">Patient • rows: 1004..1237 (234)</text>
+<text x="1066" y="812" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A3</text>
+<text x="1066" y="825" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 1004..1237 (234) | cols: ID, Description, First Date,</text>
+<text x="1066" y="838" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Admission, Diagnosis</text>
+<rect x="1034" y="878" width="420" height="212" rx="18" ry="18" fill="#FFFFFF" stroke="#D6DAE3" stroke-width="1.5"/>
+<rect x="1034" y="878" width="10" height="212" rx="18" ry="18" fill="#76B7B2"/>
+<text x="1052" y="904" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">A4</text>
+<text x="1052" y="926" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6B7280">2 assigned splits</text>
+<rect x="1048" y="946" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="946" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="968" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">Laboratory • rows: 10047..13907 (3861)</text>
+<text x="1066" y="990" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="1003" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 10047..13907 (3861) | cols: ID, Date, DNA-II</text>
+<rect x="1048" y="1050" width="392" height="92" rx="12" ry="12" fill="#FFFFFF" stroke="#76B7B2" stroke-width="2"/>
+<rect x="1048" y="1050" width="10" height="92" rx="12" ry="12" fill="#76B7B2"/>
+<text x="1066" y="1072" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">Patient • rows: 0..1003 (1004)</text>
+<text x="1066" y="1094" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">A4</text>
+<text x="1066" y="1107" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">rows: 0..1003 (1004) | cols: ID, Description, First Date,</text>
+<text x="1066" y="1120" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="normal" fill="#4B5563">Admission, Diagnosis</text>
+</svg>

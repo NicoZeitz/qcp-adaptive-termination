@@ -1,0 +1,31 @@
+【DB_ID】 A3
+【Schema】
+# Table: main.attribute
+[
+(id:INTEGER, Examples: [2, 3]),
+(attribute_name:TEXT, Examples: [Strength, Speed])
+]
+# Table: main.hero_attribute
+[
+(hero_id:INTEGER, Examples: [313, 316, 317]),
+(attribute_id:INTEGER, Examples: [6]),
+(attribute_value:INTEGER, Examples: [65, 20, 70])
+]
+# Table: main.superhero
+[
+(id:INTEGER, Examples: [1, 2, 3]),
+(superhero_name:TEXT, Examples: [3-D Man, A-Bomb, Abe Sapien]),
+(full_name:TEXT, Examples: [Charles Chandler]),
+(gender_id:INTEGER, Examples: [1, 2, 3]),
+(eye_colour_id:INTEGER, Examples: [9, 33, 7]),
+(hair_colour_id:INTEGER, Examples: [13, 1, 4]),
+(skin_colour_id:INTEGER, Examples: [1, 7, 23]),
+(race_id:INTEGER, Examples: [1, 24, 33]),
+(publisher_id:INTEGER, Examples: [13, 3, 4]),
+(alignment_id:INTEGER, Examples: [1, 2, 3])
+]
+# Table: main.superpower
+[
+(id:INTEGER, Examples: [116, 117, 118]),
+(power_name:TEXT, Examples: [Biokinesis, Water Control, Radiation Immunity])
+]

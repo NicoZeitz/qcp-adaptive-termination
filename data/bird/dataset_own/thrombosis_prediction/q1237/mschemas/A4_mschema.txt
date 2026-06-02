@@ -1,0 +1,16 @@
+【DB_ID】 A4
+【Schema】
+# Table: main.Laboratory
+[
+(ID:INTEGER, Examples: [4790235, 4791049, 4792459]),
+(Date:DATE, Examples: [1994-11-04]),
+(DNA-II:INTEGER)
+]
+# Table: main.Patient
+[
+(ID:INTEGER, Examples: [2110, 11408, 12052]),
+(Description:DATE, Examples: [1994-02-14]),
+(First Date:DATE, Examples: [1993-02-10]),
+(Admission:TEXT, Examples: [+, -]),
+(Diagnosis:TEXT, Examples: [RA susp., PSS, SLE])
+]
