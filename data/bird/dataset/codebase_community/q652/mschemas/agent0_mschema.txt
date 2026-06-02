@@ -1,0 +1,76 @@
+【DB_ID】 agent0
+【Schema】
+# Table: main.badges
+[
+(Id:INTEGER, Primary Key, Examples: [4, 8, 12]),
+(UserId:INTEGER, Examples: [23, 55, 18]),
+(Name:TEXT, Examples: [Profesor, Student, Editor]),
+(Date:DATETIME)
+]
+# Table: main.comments
+[
+(Id:INTEGER, Primary Key, Examples: [4, 12, 16]),
+(PostId:INTEGER, Examples: [5, 38, 8]),
+(Score:INTEGER, Examples: [11, 0, 2]),
+(Comment_Text:TEXT),
+(CreationDate:DATETIME),
+(UserId:INTEGER, Examples: [37, 54, 13]),
+(FirstName:TEXT, Examples: [Pierre, Joseph, Fred]),
+(LastName:TEXT, Examples: [303, Rickert, Vars]),
+(first_name:TEXT, Examples: [Pierre, Joseph, Fred]),
+(last_name:TEXT, Examples: [user28, jjgibaja, anonymous])
+]
+# Table: main.content_entries
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(PostTypeId:INTEGER, Examples: [1, 2, 7]),
+(ViewCount:INTEGER, Examples: [1278, 8198, 3613]),
+(OwnerUserId:INTEGER, Examples: [8, 24, 18]),
+(Tags:TEXT, Examples: [<bayesian><prior><elicitation>]),
+(LastEditorUserId:INTEGER, Examples: [88, 183, 23]),
+(LastEditDate:DATETIME, Examples: [2010-08-07 17:56:44]),
+(ParentId:INTEGER, Examples: [3, 7, 6]),
+(LastEditorDisplayName:TEXT, Examples: [user28, user10525, sjcockell])
+]
+# Table: main.postHistory
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(PostHistoryTypeId:INTEGER, Examples: [2, 1, 3]),
+(PostId:INTEGER, Examples: [1, 2, 3]),
+(UserId:INTEGER, Examples: [8, 24, 18]),
+(Comment:TEXT)
+]
+# Table: main.postLinks
+[
+(Id:INTEGER, Primary Key, Examples: [108, 264, 272]),
+(CreationDate:DATETIME, Examples: [2010-07-21 14:47:33]),
+(PostId:INTEGER, Examples: [395, 769, 790]),
+(RelatedPostId:INTEGER, Examples: [173, 6, 298]),
+(LinkTypeId:INTEGER, Examples: [1, 3])
+]
+# Table: main.tags
+[
+(Id:INTEGER, Primary Key, Examples: [4, 12, 16]),
+(TagName:TEXT, Examples: [normality, population, scales]),
+(Count:INTEGER, Examples: [191, 120, 157]),
+(ExcerptPostId:INTEGER, Examples: [67815, 69287, 40912]),
+(WikiPostId:INTEGER, Examples: [67814, 69286, 40911])
+]
+# Table: main.user_profiles
+[
+(Id:INTEGER, Primary Key, Examples: [-1, 2, 3]),
+(Reputation:INTEGER, Examples: [1, 101, 6792]),
+(WebsiteUrl:TEXT),
+(UpVotes:INTEGER, Examples: [5007, 3, 19]),
+(ProfileImageUrl:TEXT)
+]
+# Table: main.votes
+[
+(Id:INTEGER, Primary Key, Examples: [4, 12, 16]),
+(PostId:INTEGER, Examples: [5, 6, 2]),
+(VoteTypeId:INTEGER, Examples: [2, 3, 5]),
+(CreationDate:DATE),
+(UserId:INTEGER, Examples: [22, 87, 24]),
+(BountyAmount:INTEGER, Examples: [25, 50, 100])
+]
+【Foreign keys】

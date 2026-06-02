@@ -1,0 +1,72 @@
+【DB_ID】 agent0
+【Schema】
+# Table: main.attendance
+[
+(link_to_event:TEXT, Primary Key, Examples: [rec2N69DMcrqN9PJC, rec5XDvJLyxDsGZWc, recEVTik3MlqbvLFi]),
+(link_to_member:TEXT, Primary Key, Examples: [recD078PnS3x2doBe, recZ4PkGERzl9ziHO, recT92PyyZCGq1R68])
+]
+# Table: main.cost_records
+[
+(expense_id:TEXT, Primary Key, Examples: [rec017x6R3hQqkLAo, rec1nIjoZKTYayqZ6, recILV3eykJuWc489]),
+(expense_date:TEXT, Examples: [2019-08-20, 2019-10-08, 2019-11-19]),
+(cost:REAL, Examples: [122.06, 20.2, 62.6]),
+(approved:TEXT, Examples: [true]),
+(link_to_member:TEXT, Examples: [rec4BLdZHS2Blfp4v, recro8T1MPMwRadVH, recD078PnS3x2doBe]),
+(link_to_budget:TEXT, Examples: [recvKTAWAFKkVNnXQ, recy8KY5bUdzF81vv, reczf4LoOK6z7oOec]),
+(cost_type:VARCHAR),
+(cost_description:VARCHAR)
+]
+# Table: main.financial_plan
+[
+(budget_id:TEXT, Primary Key, Examples: [recJOc7f9KgpgJm5q, recM0BC3bOG33jG4X, recN9yY7okNrFps0Y]),
+(category:TEXT, Examples: [Parking, Food, Advertisement]),
+(spent:REAL, Examples: [6.0, 0.0, 74.59]),
+(remaining:REAL, Examples: [4.0, 20.0, 0.409999999999997]),
+(amount:INTEGER, Examples: [10, 20, 75]),
+(event_status:TEXT, Examples: [Closed, Planning, Open]),
+(link_to_event:TEXT, Examples: [recEVTik3MlqbvLFi, rec180D2MI4EpckHy, reciRZdAqNIKuMC96])
+]
+# Table: main.gathering
+[
+(event_id:TEXT, Primary Key, Examples: [rec180D2MI4EpckHy, recEVTik3MlqbvLFi, recI43CzsZ0Q625ma]),
+(gathering_title:TEXT, Examples: [Reuni1 de oficiales - Marzo]),
+(event_date:TEXT, Examples: [2020-03-10T09:30:00, 2019-10-22T12:00:00, 2019-09-24T12:00:00]),
+(type:TEXT, Examples: [Meeting, Guest Speaker, Registration]),
+(notes:TEXT),
+(location:TEXT, Examples: [MU 215, Campus Common, Various locations]),
+(status:TEXT, Examples: [Planning, Closed, Open])
+]
+# Table: main.income
+[
+(income_id:TEXT, Primary Key, Examples: [rec8V9BPNIoewWt2z, recPG7h3YcEJpddEW, rech1nxcukSGGnyJC]),
+(date_received:TEXT, Examples: [2019-10-02, 2019-09-16, 2019-10-10]),
+(amount:INTEGER, Examples: [50]),
+(source:TEXT, Examples: [Dues]),
+(notes:TEXT),
+(link_to_member:TEXT, Examples: [rec3pH4DxMcWHMRB7, recro8T1MPMwRadVH, recuSfhAZIlKba4s2])
+]
+# Table: main.major
+[
+(major_id:TEXT, Primary Key, Examples: [rec1SiX2nFrkbTleH, rec6bKTSnOJAPwoXV, rec6pV6OC0wUsKqVE]),
+(major_name:TEXT, Examples: [Biological Engineering]),
+(department:TEXT, Examples: [Biological Engineering Department]),
+(college:TEXT, Examples: [College of Engineering])
+]
+# Table: main.member
+[
+(member_id:TEXT, Primary Key, Examples: [rec1x5zBFIqoOuPW8, rec280Sk7o31iG0Tx, rec28ORZgcm1dtqBZ]),
+(first_name:TEXT, Examples: [Angela, Grant, Luisa]),
+(t_shirt_size:TEXT, Examples: [Medium, X-Large, Large]),
+(zip:INTEGER, Examples: [55108, 29440, 10002]),
+(link_to_major:TEXT, Examples: [recxK3MHQFbR9J5uO, rec7BxKpjJ7bNph3O, recdIBgeU38UbV2sy])
+]
+# Table: main.zip_code
+[
+(zip_code:INTEGER, Primary Key, Examples: [544, 604, 612]),
+(type:TEXT, Examples: [Unique, PO Box, Standard]),
+(county:TEXT, Examples: [Suffolk County, Arecibo Municipio, Penuelas Municipio]),
+(state:TEXT, Examples: [New York, Puerto Rico, Massachusetts]),
+(city_name:VARCHAR),
+(city_type:VARCHAR)
+]
+【Foreign keys】

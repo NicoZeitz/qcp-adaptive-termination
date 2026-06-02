@@ -1,0 +1,60 @@
+【DB_ID】 agent0
+【Schema】
+# Table: main.account
+[
+(account_id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(district_id:INTEGER, Examples: [18, 1, 5]),
+(frequency_monthly:BOOLEAN, Examples: [False]),
+(frequency_quarterly:BOOLEAN, Examples: [False])
+]
+# Table: main.card
+[
+(card_id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(disp_id:INTEGER, Examples: [9, 19, 41]),
+(type:TEXT, Examples: [gold, classic, junior])
+]
+# Table: main.customer_info
+[
+(client_id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(gender:TEXT, Examples: [F, M]),
+(district_id:INTEGER, Examples: [18, 1, 5])
+]
+# Table: main.disp
+[
+(disp_id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(client_id:INTEGER, Examples: [1, 2, 3]),
+(account_id:INTEGER, Examples: [1, 2, 3]),
+(type:TEXT, Examples: [PROPRIETOR, DISPONENT])
+]
+# Table: main.loan
+[
+(loan_id:INTEGER, Primary Key, Examples: [4959, 4961, 4962]),
+(account_id:INTEGER, Examples: [2, 19, 25]),
+(date:DATE, Examples: [1994-01-05]),
+(status:TEXT, Examples: [A, B, D])
+]
+# Table: main.order
+[
+(order_id:INTEGER, Primary Key, Examples: [29404, 29408, 29412]),
+(account_id:INTEGER, Examples: [3, 4, 8]),
+(destination_bank:TEXT, Examples: [WX, UV, ST]),
+(account_to:INTEGER, Examples: [83084338, 5848086, 12510681]),
+(amount:REAL, Examples: [1135.0, 1285.0, 2612.0]),
+(k_symbol:TEXT, Examples: [SIPO, POJISTNE, LEASING])
+]
+# Table: main.region
+[
+(district_id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(A2:TEXT, Examples: [Hl.m. Praha, Benesov, Beroun]),
+(A6:TEXT, Examples: [0, 26, 29]),
+(A10:REAL, Examples: [100.0, 46.7, 41.7]),
+(A14:INTEGER, Examples: [167, 132, 111])
+]
+# Table: main.trans
+[
+(trans_id:INTEGER, Primary Key, Examples: [1, 5, 6]),
+(account_id:INTEGER, Examples: [1, 2, 3]),
+(date:DATE, Examples: [1995-03-24]),
+(balance:INTEGER, Examples: [1000, 4679, 20977])
+]
+【Foreign keys】

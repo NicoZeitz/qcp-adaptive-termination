@@ -1,0 +1,74 @@
+【DB_ID】 agent2
+【Schema】
+# Table: main.articles
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:12:12]),
+(OwnerUserId:INTEGER, Examples: [8, 24, 18]),
+(LasActivityDate:DATETIME, Examples: [2010-09-15 21:08:26]),
+(CommentCount:INTEGER, Examples: [1, 4, 2]),
+(LastEditorUserId:INTEGER, Examples: [88, 183, 23]),
+(ParentId:INTEGER, Examples: [3, 7, 6]),
+(ClosedDate:DATETIME, Examples: [2010-07-19 20:19:46])
+]
+# Table: main.awards
+[
+(Id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(UserId:INTEGER, Examples: [6, 37, 8]),
+(Name:TEXT, Examples: [Teacher, Student, Organizer]),
+(Date:DATETIME, Examples: [2010-07-19 19:39:07])
+]
+# Table: main.comments
+[
+(Id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(PostId:INTEGER, Examples: [5, 14, 23]),
+(Score:INTEGER, Examples: [0, 9, 4]),
+(Text:TEXT),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:16:14]),
+(UserId:INTEGER, Examples: [13, 23, 74]),
+(UserDisplayName:TEXT, Examples: [user28, Statprof, Pete])
+]
+# Table: main.postHistory
+[
+(Id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(PostHistoryTypeId:INTEGER, Examples: [1, 3, 16]),
+(PostId:INTEGER, Examples: [1, 2, 3]),
+(RevisionGUID:TEXT, Examples: [e58bf7fd-e60f-4c58-a6e4-dfc91cf98a69]),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:12:12]),
+(UserId:INTEGER, Examples: [8, 24, 18]),
+(Text:TEXT),
+(Comment:TEXT),
+(UserDisplayName:TEXT, Examples: [user28s, user209, Guy Srinivasan])
+]
+# Table: main.postLinks
+[
+(Id:INTEGER, Primary Key, Examples: [338, 478, 558]),
+(CreationDate:DATETIME, Examples: [2010-07-28 19:36:09]),
+(PostId:INTEGER, Examples: [834, 222, 886]),
+(RelatedPostId:INTEGER, Examples: [577, 213, 6]),
+(LinkTypeId:INTEGER, Examples: [1, 3])
+]
+# Table: main.tags
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(ExcerptPostId:INTEGER, Examples: [20258, 62158, 67815]),
+(WikiPostId:INTEGER, Examples: [20257, 62157, 67814])
+]
+# Table: main.user_profiles
+[
+(Id:INTEGER, Primary Key, Examples: [-1, 2, 3]),
+(AboutMe:TEXT),
+(AccountId:INTEGER, Examples: [-1, 2, 3]),
+(Last_Name:VARCHAR),
+(First_Name:VARCHAR)
+]
+# Table: main.votes
+[
+(Id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(PostId:INTEGER, Examples: [2, 4, 3]),
+(VoteTypeId:INTEGER, Examples: [2, 3, 5]),
+(CreationDate:DATE, Examples: [2010-07-19]),
+(UserId:INTEGER, Examples: [94, 158, 90]),
+(BountyAmount:INTEGER, Examples: [50, 25, 100])
+]
+【Foreign keys】

@@ -1,0 +1,58 @@
+【DB_ID】 agent2
+【Schema】
+# Table: main.badges
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(UserId:INTEGER, Examples: [5, 6, 8])
+]
+# Table: main.comments
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(PostId:INTEGER, Examples: [3, 5, 9]),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:15:52]),
+(UserId:INTEGER, Examples: [13, 37, 5])
+]
+# Table: main.postHistory
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(PostId:INTEGER, Examples: [1, 2, 3]),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:12:12]),
+(UserId:INTEGER, Examples: [8, 24, 18])
+]
+# Table: main.postLinks
+[
+(Id:INTEGER, Primary Key, Examples: [108, 145, 217]),
+(PostId:INTEGER, Examples: [395, 548, 375]),
+(RelatedPostId:INTEGER, Examples: [173, 539, 30])
+]
+# Table: main.posts
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(CreaionDate:DATETIME, Examples: [2010-07-19 19:12:12]),
+(OwnerUserId:INTEGER, Examples: [8, 24, 18]),
+(LasActivityDate:DATETIME, Examples: [2010-09-15 21:08:26]),
+(CommentCount:INTEGER, Examples: [1, 4, 2]),
+(LastEditorUserId:INTEGER, Examples: [88, 183, 23]),
+(ParentId:INTEGER, Examples: [3, 7, 6]),
+(ClosedDate:DATETIME, Examples: [2010-07-19 20:19:46])
+]
+# Table: main.tags
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(ExcerptPostId:INTEGER, Examples: [20258, 62158, 67815]),
+(WikiPostId:INTEGER, Examples: [20257, 62157, 67814])
+]
+# Table: main.users
+[
+(Id:INTEGER, Primary Key, Examples: [-1, 2, 3]),
+(DisplayName:TEXT, Examples: [Community, Geoff Dalgas, Jarrod Dixon]),
+(AboutMe:TEXT),
+(AccountId:INTEGER, Examples: [-1, 2, 3])
+]
+# Table: main.votes
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(PostId:INTEGER, Examples: [3, 2, 5]),
+(UserId:INTEGER, Examples: [58, 6, 66]),
+(BountyAmount:INTEGER, Examples: [50, 25, 0])
+]

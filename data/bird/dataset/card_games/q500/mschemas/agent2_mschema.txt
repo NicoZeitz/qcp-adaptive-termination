@@ -1,0 +1,137 @@
+【DB_ID】 agent2
+【Schema】
+# Table: main.card_sets
+[
+(id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(baseSetSize:INTEGER, Examples: [302, 378, 354]),
+(block:TEXT, Examples: [Core Set, Kaladesh, Alara]),
+(booster:TEXT),
+(code:TEXT, Examples: [2ED, 4ED, 7ED]),
+(isFoilOnly:INTEGER, Examples: [0, 1]),
+(isForeignOnly:INTEGER, Examples: [0, 1]),
+(isNonFoilOnly:INTEGER, Examples: [1, 0]),
+(isOnlineOnly:INTEGER, Examples: [0, 1]),
+(isPartialPreview:INTEGER, Examples: [0]),
+(keyruneCode:TEXT, Examples: [2ED, 4ED, 7ED]),
+(mcmId:INTEGER, Examples: [10, 37, 1718]),
+(mcmIdExtras:INTEGER, Examples: [2587, 2371, 2419]),
+(mcmName:TEXT, Examples: [Fourth Edition, Seventh Edition, Aether Revolt]),
+(mtgoCode:TEXT, Examples: [7E, AER, ALA]),
+(name:TEXT, Examples: [Unlimited Edition, Fourth Edition, Seventh Edition]),
+(parentCode:TEXT, Examples: [ZNR, MB1, KLD]),
+(releaseDate:DATE, Examples: [1993-12-01]),
+(tcgplayerGroupId:INTEGER, Examples: [115, 46, 2]),
+(totalSetSize:INTEGER, Examples: [302, 379, 354]),
+(type:TEXT, Examples: [core, expansion, starter])
+]
+# Table: main.cards
+[
+(id:INTEGER, Primary Key, Examples: [41138, 23810, 29566]),
+(asciiName:TEXT, Examples: [El-Hajjaj, Junun Efreet, Ghazban Ogre]),
+(availability:TEXT, Examples: [mtgo,paper, paper, arena]),
+(borderColor:TEXT, Examples: [black, white, borderless]),
+(cardKingdomFoilId:TEXT, Examples: [123096, 123099, 123228]),
+(cardKingdomId:TEXT, Examples: [122720, 122728, 122731]),
+(colorIdentity:TEXT, Examples: [W, B, U]),
+(colorIndicator:TEXT, Examples: [U, R, B]),
+(colors:TEXT, Examples: [W, B, U]),
+(convertedManaCost:REAL, Examples: [5.0, 6.0, 1.0]),
+(duelDeck:TEXT, Examples: [a, b]),
+(edhrecRank:INTEGER, Examples: [12702, 2801, 1900]),
+(faceConvertedManaCost:REAL, Examples: [5.0, 4.0, 3.0]),
+(faceName:TEXT, Examples: [Dawn, Return, Feed]),
+(flavorName:TEXT, Examples: [Godzilla, King of the Monsters]),
+(frameEffects:TEXT, Examples: [legendary, miracle, devoid]),
+(frameVersion:TEXT, Examples: [2003, 1993, 2015]),
+(hand:TEXT, Examples: [1, 2, -1]),
+(hasAlternativeDeckLimit:INTEGER, Examples: [0, 1]),
+(hasContentWarning:INTEGER, Examples: [0, 1]),
+(hasFoil:INTEGER, Examples: [0, 1]),
+(hasNonFoil:INTEGER, Examples: [1, 0]),
+(isAlternative:INTEGER, Examples: [0, 1]),
+(isFullArt:INTEGER, Examples: [0, 1]),
+(isOnlineOnly:INTEGER, Examples: [0, 1]),
+(isOversized:INTEGER, Examples: [0, 1]),
+(isPromo:INTEGER, Examples: [0, 1]),
+(isReprint:INTEGER, Examples: [1, 0]),
+(isReserved:INTEGER, Examples: [0, 1]),
+(isStarter:INTEGER, Examples: [0, 1]),
+(isStorySpotlight:INTEGER, Examples: [0, 1]),
+(isTextless:INTEGER, Examples: [0, 1]),
+(isTimeshifted:INTEGER, Examples: [0, 1]),
+(keywords:TEXT, Examples: [Flying, Enchant, Mill]),
+(layout:TEXT, Examples: [normal, aftermath, split]),
+(leadershipSkills:TEXT),
+(life:TEXT, Examples: [2, -4, 9]),
+(loyalty:TEXT, Examples: [3, 4, 5]),
+(manaCost:TEXT, Examples: [{4}{W}, {5}{W}, {W}]),
+(mcmId:TEXT, Examples: [16166, 16174, 16177]),
+(mcmMetaId:TEXT, Examples: [176, 499, 7562]),
+(mtgArenaId:TEXT, Examples: [74983, 74989, 74999]),
+(mtgjsonV4Id:TEXT, Examples: [9eb2e54c-a12b-5e88-a9c0-d8c84c52d59c]),
+(mtgoFoilId:TEXT, Examples: [26993, 27622, 27740]),
+(mtgoId:TEXT, Examples: [26992, 27621, 27739]),
+(multiverseId:TEXT, Examples: [129465, 130553, 130528]),
+(number:TEXT, Examples: [2, 10, 13]),
+(originalReleaseDate:TEXT, Examples: [2013/12/1, 2016/12/1, 2019/1/25]),
+(originalText:TEXT),
+(originalType:TEXT, Examples: [Creature - Angel, Instant, Enchantment]),
+(otherFaceIds:TEXT, Examples: [f9f10d34-071c-57a6-b58c-7553abad5c20]),
+(power:TEXT, Examples: [3, 1, 4]),
+(printings:TEXT),
+(promoTypes:TEXT, Examples: [boxtopper,boosterfun, boosterfun, release,buyabox]),
+(purchaseUrls:TEXT),
+(rarity:TEXT, Examples: [uncommon, rare, common]),
+(scryfallId:TEXT, Examples: [8f7980d4-da43-4d6d-ad16-14b8a34ae91d]),
+(scryfallIllustrationId:TEXT, Examples: [e4d6c53f-e936-4be8-8b70-47c2be863b20]),
+(scryfallOracleId:TEXT, Examples: [a2daaf32-dbfe-4618-892e-0da24f63a44a]),
+(setCode:TEXT, Examples: [10E, 2ED, 2XM]),
+(side:TEXT, Examples: [b, a, c]),
+(subtypes:TEXT, Examples: [Angel, Aura, Human,Soldier]),
+(supertypes:TEXT, Examples: [Legendary, Basic, Snow]),
+(tcgplayerProductId:TEXT, Examples: [15033, 15052, 15081]),
+(text:TEXT),
+(toughness:TEXT, Examples: [3, 1, 4]),
+(type:TEXT, Examples: [Creature — Angel, Instant, Enchantment — Aura]),
+(types:TEXT, Examples: [Creature, Instant, Enchantment]),
+(uuid:TEXT, Examples: [00010d56-fe38-5e35-8aed-518019aa36a5]),
+(variations:TEXT, Examples: [8fd4e2eb-3eb4-50ea-856b-ef638fa47f8a]),
+(watermark:TEXT, Examples: [set (ONS), set (AVR), set (SCG)]),
+(card_attribute_1:VARCHAR),
+(card_attribute_2:VARCHAR),
+(artist_first_name:VARCHAR),
+(artist_last_name:VARCHAR)
+]
+# Table: main.foreign_data
+[
+(id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(flavorText:TEXT),
+(language:TEXT, Examples: [Spanish, Portuguese (Brazil), French]),
+(multiverseid:INTEGER, Examples: [150317, 149551, 150318]),
+(name:TEXT, Examples: [Elegido de la Antepasada]),
+(text:TEXT),
+(type:TEXT, Examples: [Criatura — Clérigo humano]),
+(uuid:TEXT, Examples: [5f8287b1-5bb6-5f4c-ad17-316a40d5bb0c])
+]
+# Table: main.legalities
+[
+(id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(format:TEXT, Examples: [duel, premodern, gladiator]),
+(status:TEXT, Examples: [Legal, Restricted, Banned]),
+(uuid:TEXT, Examples: [5f8287b1-5bb6-5f4c-ad17-316a40d5bb0c])
+]
+# Table: main.rulings
+[
+(id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(date:DATE, Examples: [2007-02-01]),
+(text:TEXT),
+(uuid:TEXT, Examples: [56f4935b-f6c5-59b9-88bf-9bcce20247ce])
+]
+# Table: main.set_translations
+[
+(id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(language:TEXT, Examples: [Chinese Traditional, Japanese, Spanish]),
+(setCode:TEXT, Examples: [10E, 4ED, 5DN]),
+(translation:TEXT, Examples: [核心系列第十版])
+]
+【Foreign keys】

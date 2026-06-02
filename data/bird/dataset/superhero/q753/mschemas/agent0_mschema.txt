@@ -1,0 +1,61 @@
+【DB_ID】 agent0
+【Schema】
+# Table: main.alignment
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(alignment:TEXT, Examples: [Good, Bad, Neutral])
+]
+# Table: main.attribute
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(attribute_name:TEXT, Examples: [Intelligence, Strength, Speed])
+]
+# Table: main.colour
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(FARBE:TEXT, Examples: [No Color, Amber, Auburn])
+]
+# Table: main.gender
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(gender:TEXT, Examples: [Male, Female, N/A])
+]
+# Table: main.hero_attribute
+[
+(hero_id:INTEGER, Examples: [1, 5, 10]),
+(attribute_id:INTEGER, Examples: [1, 2, 3]),
+(attribute_value:INTEGER, Examples: [80, 85, 75])
+]
+# Table: main.hero_power
+[
+(hero_id:INTEGER, Examples: [1, 2, 3]),
+(power_id:INTEGER, Examples: [1, 2, 26])
+]
+# Table: main.publisher
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(publisher_name:TEXT, Examples: [ABC Studios, Dark Horse Comics, DC Comics])
+]
+# Table: main.race
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(race:TEXT, Examples: [-, Alien, Alpha])
+]
+# Table: main.superhero
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(superhero_name:TEXT, Examples: [3-D Man, A-Bomb, Abe Sapien]),
+(gender_id:INTEGER, Examples: [1, 2, 3]),
+(eye_colour_id:INTEGER, Examples: [9, 33, 7]),
+(hair_colour_id:INTEGER, Examples: [13, 1, 4]),
+(skin_colour_id:INTEGER, Examples: [1, 7, 23]),
+(race_id:INTEGER, Examples: [1, 24, 33]),
+(publisher_id:INTEGER, Examples: [13, 3, 4]),
+(alignment_id:INTEGER, Examples: [1, 2, 3])
+]
+# Table: main.superpower
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(power_name:TEXT, Examples: [Agility, Accelerated Healing, Lantern Power Ring])
+]
+【Foreign keys】

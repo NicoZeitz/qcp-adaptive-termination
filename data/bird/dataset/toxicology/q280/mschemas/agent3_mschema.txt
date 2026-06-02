@@ -1,0 +1,26 @@
+【DB_ID】 agent3
+【Schema】
+# Table: main.atom
+[
+(atom_id:TEXT, Primary Key, Examples: [TR001_10, TR001_12, TR001_17]),
+(molecule_id:TEXT, Examples: [TR001, TR002, TR003]),
+(element:TEXT, Examples: [c, cl, h])
+]
+# Table: main.bond
+[
+(bond_id:TEXT, Primary Key, Examples: [TR000_2_5, TR001_1_12, TR001_2_4]),
+(molecule_id:TEXT, Examples: [TR000, TR001, TR002]),
+(BOND_TYPE:TEXT, Examples: [-, =, HASHTAG])
+]
+# Table: main.connected
+[
+(atom_id:TEXT, Primary Key, Examples: [TR000_3, TR000_5, TR001_12]),
+(atom_id2:TEXT, Primary Key, Examples: [TR000_2, TR001_1, TR001_14]),
+(bond_id:TEXT, Examples: [TR000_2_3, TR000_2_5, TR001_1_12])
+]
+# Table: main.molecule
+[
+(molecule_id:TEXT, Primary Key, Examples: [TR000, TR002, TR004]),
+(carcinogenic_flag:TEXT, Examples: [+, -])
+]
+【Foreign keys】

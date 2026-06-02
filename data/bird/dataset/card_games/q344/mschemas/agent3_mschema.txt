@@ -1,0 +1,78 @@
+【DB_ID】 agent3
+【Schema】
+# Table: main.card_collection
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(borderColor:TEXT, Examples: [black, white, borderless]),
+(colorIndicator:TEXT, Examples: [U, G, R]),
+(edhrecRank:INTEGER, Examples: [15650, 12702, 11081]),
+(hasAlternativeDeckLimit:INTEGER, Examples: [0, 1]),
+(isAlternative:INTEGER, Examples: [0, 1]),
+(isPromo:INTEGER, Examples: [0, 1]),
+(isStorySpotlight:INTEGER, Examples: [0, 1]),
+(layout:TEXT, Examples: [normal, aftermath, split]),
+(manaCost:TEXT, Examples: [{5}{W}{W}, {4}{W}, {3}{W}]),
+(mtgjsonV4Id:TEXT, Examples: [ad41be73-582f-58ed-abd4-a88c1f616ac3]),
+(name:TEXT, Examples: [Ancestor's Chosen, Angel of McY, Aven Cloudchaser]),
+(originalType:TEXT, Examples: [Crt - Hmn Clrc]),
+(promoTypes:TEXT, Examples: [boxtopper,boosterfun, boosterfun, release,buyabox]),
+(scryfallIllustrationId:TEXT, Examples: [be2f7173-c8b7-4172-a388-9b2c6b3c16e5]),
+(subtypes:TEXT, Examples: [Human,Cleric, Angel, Bird,Soldier]),
+(toughness:TEXT, Examples: [4, 3, 2]),
+(variations:TEXT, Examples: [b7c19924-b4bf-56fc-aa73-f586e940bd42]),
+(author:TEXT),
+(quote:TEXT)
+]
+# Table: main.card_legality_rules
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(uuid:TEXT, Examples: [5f8287b1-5bb6-5f4c-ad17-316a40d5bb0c])
+]
+# Table: main.external_resources
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(flavorText:TEXT, Examples: [« La volonté de tous passe par ma main. »]),
+(language:TEXT, Examples: [French, Russian, Japanese]),
+(multiverseid:INTEGER, Examples: [149934, 149168, 149935]),
+(name:TEXT, Examples: [Élu de l'Ancêtre]),
+(text:TEXT),
+(type:TEXT, Examples: [Créature : humain et clerc]),
+(uuid:TEXT, Examples: [5f8287b1-5bb6-5f4c-ad17-316a40d5bb0c])
+]
+# Table: main.rulings
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(date:DATE, Examples: [2007-07-15]),
+(text:TEXT),
+(uuid:TEXT, Examples: [56f4935b-f6c5-59b9-88bf-9bcce20247ce])
+]
+# Table: main.set_translations
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(setCode:TEXT, Examples: [10E, 4ED, 5DN])
+]
+# Table: main.sets
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(baseSetSize:INTEGER, Examples: [332, 165, 354]),
+(block:TEXT, Examples: [Mirrodin, Core Set, Ice Age]),
+(booster:TEXT),
+(code:TEXT, Examples: [2XM, 5DN, 8ED]),
+(isFoilOnly:INTEGER, Examples: [0, 1]),
+(isForeignOnly:INTEGER, Examples: [0, 1]),
+(isNonFoilOnly:INTEGER, Examples: [0, 1]),
+(isOnlineOnly:INTEGER, Examples: [0, 1]),
+(isPartialPreview:INTEGER, Examples: [0]),
+(keyruneCode:TEXT, Examples: [2XM, 5DN, 8ED]),
+(mcmId:INTEGER, Examples: [3204, 47, 44]),
+(mcmIdExtras:INTEGER, Examples: [3209, 3459, 3113]),
+(mcmName:TEXT, Examples: [Double Masters, Fifth Dawn, Eighth Edition]),
+(mtgoCode:TEXT, Examples: [2XM, 5DN, 8ED]),
+(collection_name:TEXT, Examples: [Double Masters, Fifth Dawn, Eighth Edition]),
+(parentCode:TEXT, Examples: [JMP, M15, CSP]),
+(releaseDate:DATE, Examples: [2020-08-07]),
+(tcgplayerGroupId:INTEGER, Examples: [2655, 43, 3]),
+(totalSetSize:INTEGER, Examples: [384, 165, 361]),
+(type:TEXT, Examples: [masters, expansion, core])
+]
+【Foreign keys】
