@@ -1,0 +1,53 @@
+【DB_ID】 agent0
+【Schema】
+# Table: main.attendance
+[
+(link_to_event:TEXT, Primary Key, Examples: [rec2N69DMcrqN9PJC, rec5XDvJLyxDsGZWc, recEVTik3MlqbvLFi]),
+(link_to_member:TEXT, Primary Key, Examples: [recD078PnS3x2doBe, recZ4PkGERzl9ziHO, recT92PyyZCGq1R68])
+]
+# Table: main.budget
+[
+(budget_id:TEXT, Primary Key, Examples: [rec0QmEc3cSQFQ6V2, rec1bG6HSft7XIvTP, rec1z6ISJU2HdIsVm]),
+(category:TEXT, Examples: [Advertisement, Food, Speaker Gifts]),
+(event_status:TEXT, Examples: [Closed, Open, Planning]),
+(link_to_event:TEXT, Examples: [recI43CzsZ0Q625ma, recggMW2eyCYceNcy, recJ4Witp9tpjaugn])
+]
+# Table: main.event
+[
+(event_id:TEXT, Primary Key, Examples: [rec0Si5cQ4rJRVzd6, rec0akZnLLpGUloLH, rec0dZPcWXF0QjNnE]),
+(event_name:TEXT, Examples: [March Meeting]),
+(location:TEXT, Examples: [MU 215])
+]
+# Table: main.expense
+[
+(expense_id:TEXT, Primary Key, Examples: [rec017x6R3hQqkLAo, rec1nIjoZKTYayqZ6, rec1oMgNFt7Y0G40x]),
+(expense_desc:TEXT, Examples: [Post Cards, Posters, Water, Cookies, Pizza]),
+(link_to_member:TEXT, Examples: [rec4BLdZHS2Blfp4v, recro8T1MPMwRadVH, recD078PnS3x2doBe]),
+(link_to_budget:TEXT, Examples: [recvKTAWAFKkVNnXQ, recy8KY5bUdzF81vv, recwXIiKoBMjXJsGZ])
+]
+# Table: main.income
+[
+(income_id:TEXT, Primary Key, Examples: [rec0s9ZrO15zhzUeE, rec7f5XMQZexgtQJo, rec8BUJa8GXUjiglg]),
+(date_received:TEXT, Examples: [2019-10-17, 2019-09-04, 2019-10-08]),
+(link_to_member:TEXT, Examples: [reccW7q1KkhSKZsea, recTjHY5xXhvkCdVT, recUdRhbhcEO1Hk5r])
+]
+# Table: main.major
+[
+(major_id:TEXT, Primary Key, Examples: [rec06DF6vZ1CyPKpc, rec09LedkREyskCNv, rec0Eanv576RhQllI]),
+(major_name:TEXT, Examples: [Outdoor Product Design and Development])
+]
+# Table: main.member
+[
+(member_id:TEXT, Primary Key, Examples: [rec1x5zBFIqoOuPW8, rec280Sk7o31iG0Tx, rec28ORZgcm1dtqBZ]),
+(vorname:TEXT, Examples: [Angela, Grant, Luisa]),
+(t_shirt_size:TEXT, Examples: [Medium, X-Large, Large]),
+(zip:INTEGER, Examples: [55108, 29440, 10002]),
+(link_to_major:TEXT, Examples: [recxK3MHQFbR9J5uO, rec7BxKpjJ7bNph3O, recdIBgeU38UbV2sy])
+]
+# Table: main.zip_code
+[
+(zip_code:INTEGER, Primary Key, Examples: [501, 544, 601]),
+(type:TEXT, Examples: [Unique, Standard, PO Box]),
+(short_state:TEXT, Examples: [NY, PR, MA])
+]
+【Foreign keys】

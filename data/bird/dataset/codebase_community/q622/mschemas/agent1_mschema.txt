@@ -1,0 +1,97 @@
+【DB_ID】 agent1
+【Schema】
+# Table: main.comments
+[
+(Id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(PostId:INTEGER, Examples: [3, 16, 20]),
+(Score:INTEGER, Examples: [5, 1, 0]),
+(Text:TEXT),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:15:52]),
+(UserId:INTEGER, Examples: [13, 5, 78]),
+(UserDisplayName:TEXT, Examples: [user28, Pete, anonymous])
+]
+# Table: main.postHistory
+[
+(Id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(PostHistoryTypeId:INTEGER, Examples: [2, 1, 3]),
+(PostId:INTEGER, Examples: [1, 2, 3]),
+(RevisionGUID:TEXT, Examples: [e58bf7fd-e60f-4c58-a6e4-dfc91cf98a69]),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:12:12]),
+(UserId:INTEGER, Examples: [8, 24, 18]),
+(Text:TEXT),
+(Comment:TEXT),
+(UserDisplayName:TEXT, Examples: [user28, user209, Michael Bishop])
+]
+# Table: main.postLinks
+[
+(Id:INTEGER, Primary Key, Examples: [145, 217, 281]),
+(CreationDate:DATETIME, Examples: [2010-07-23 16:30:41]),
+(PostId:INTEGER, Examples: [548, 375, 715]),
+(RelatedPostId:INTEGER, Examples: [539, 30, 7]),
+(LinkTypeId:INTEGER, Examples: [1, 3])
+]
+# Table: main.posts
+[
+(Id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(PostTypeId:INTEGER, Examples: [1, 2, 4]),
+(AcceptedAnswerId:INTEGER, Examples: [15, 29, 32]),
+(CreaionDate:DATETIME, Examples: [2010-07-19 19:12:12]),
+(Score:INTEGER, Examples: [23, 81, 13]),
+(ViewCount:INTEGER, Examples: [1278, 1261, 184]),
+(Body:TEXT),
+(OwnerUserId:INTEGER, Examples: [8, 23, 50]),
+(LasActivityDate:DATETIME, Examples: [2010-09-15 21:08:26]),
+(Title:TEXT, Examples: [Eliciting priros from experts]),
+(Tags:TEXT, Examples: [<bayesian><prior><elicitation>]),
+(AnswerCount:INTEGER, Examples: [5, 1, 7]),
+(CommentCount:INTEGER, Examples: [1, 3, 4]),
+(FavoriteCount:INTEGER, Examples: [14, 1, 5]),
+(LastEditorUserId:INTEGER, Examples: [23, 7972, 930]),
+(LastEditDate:DATETIME, Examples: [2010-07-19 19:21:15]),
+(CommunityOwnedDate:DATETIME, Examples: [2010-07-19 19:14:43]),
+(ParentId:INTEGER, Examples: [3, 6, 17]),
+(ClosedDate:DATETIME, Examples: [2010-08-05 13:06:12]),
+(LastEditorDisplayName:TEXT, Examples: [user28, Juan Riera, Sycren]),
+(first_name:VARCHAR),
+(last_name:VARCHAR)
+]
+# Table: main.tags
+[
+(Id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(TagName:TEXT, Examples: [bayesian, open-source, machine-learning]),
+(Count:INTEGER, Examples: [1342, 13, 2564]),
+(ExcerptPostId:INTEGER, Examples: [20258, 9066, 64387]),
+(WikiPostId:INTEGER, Examples: [20257, 9065, 64386])
+]
+# Table: main.user_badges
+[
+(Id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(UserId:INTEGER, Examples: [5, 36, 23]),
+(Badge_Name:TEXT, Examples: [Teacher, Student, Editor]),
+(Date:DATETIME, Examples: [2010-07-19 19:39:07])
+]
+# Table: main.user_data
+[
+(Id:INTEGER, Primary Key, Examples: [-1, 5, 13]),
+(Reputation:INTEGER, Examples: [1, 6792, 817]),
+(CreationDate:DATETIME, Examples: [2010-07-19 06:55:26]),
+(LastAccessDate:DATETIME, Examples: [2010-07-19 06:55:26]),
+(WebsiteUrl:TEXT),
+(AboutMe:TEXT),
+(Views:INTEGER, Examples: [0, 1145, 178]),
+(UpVotes:INTEGER, Examples: [5007, 662, 44]),
+(DownVotes:INTEGER, Examples: [1920, 5, 1]),
+(AccountId:INTEGER, Examples: [-1, 54503, 46029]),
+(Age:INTEGER, Examples: [35, 28, 33]),
+(ProfileImageUrl:TEXT),
+(given_name:VARCHAR),
+(last_name:VARCHAR)
+]
+# Table: main.votes
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(PostId:INTEGER, Examples: [3, 2, 5]),
+(CreationDate:DATE, Examples: [2010-07-19]),
+(UserId:INTEGER, Examples: [58, 6, 66])
+]
+【Foreign keys】

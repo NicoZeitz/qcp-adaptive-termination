@@ -1,0 +1,39 @@
+【DB_ID】 agent2
+【Schema】
+# Table: main.customers
+[
+(CustomerID:INTEGER, Primary Key, Examples: [6, 10, 38]),
+(Segment:TEXT, Examples: [SME, LAM, KAM]),
+(Currency:TEXT, Examples: [EUR, CZK])
+]
+# Table: main.gasstations
+[
+(GasStationID:INTEGER, Primary Key, Examples: [46, 50, 54]),
+(ChainID:INTEGER, Examples: [23, 10, 4]),
+(Country:TEXT, Examples: [CZE, SVK]),
+(Segment:TEXT, Examples: [Other, Premium, Discount])
+]
+# Table: main.products
+[
+(ProductID:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(Description:TEXT, Examples: [Nafta, Mix, Mazadla/Tuky])
+]
+# Table: main.transactions_1k
+[
+(TransactionID:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(Date:DATE, Examples: [2012-08-24]),
+(Time:TEXT, Examples: [10:03:00, 08:53:00, 14:38:00]),
+(CustomerID:INTEGER, Examples: [46707, 7881, 19111]),
+(CardID:INTEGER, Examples: [550134, 99745, 726672]),
+(GasStationID:INTEGER, Examples: [3704, 741, 636]),
+(PRDCT_ID:INTEGER, Examples: [2, 5, 9]),
+(Amount:INTEGER, Examples: [18, 4, 21]),
+(Price:REAL, Examples: [430.72, 96.84, 477.68])
+]
+# Table: main.yearmonth
+[
+(CustomerID:INTEGER, Primary Key, Examples: [603, 1492, 2323]),
+(Date:TEXT, Primary Key, Examples: [201112, 2012-08, 201201]),
+(Consumption:REAL, Examples: [1931.36, 43.67, 528.0])
+]
+【Foreign keys】

@@ -1,0 +1,65 @@
+【DB_ID】 agent0
+【Schema】
+# Table: main.cards
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(artist:TEXT, Examples: [Pete Venters, Volkan Baǵa, Justin Sweet]),
+(cardKingdomFoilId:TEXT, Examples: [123094, 123095, 123096]),
+(colors:TEXT, Examples: [W, B, U]),
+(faceConvertedManaCost:REAL, Examples: [4.0, 5.0, 6.0]),
+(frameEffects:TEXT, Examples: [legendary, nyxtouched, miracle]),
+(hasContentWarning:INTEGER, Examples: [0, 1]),
+(isFullArt:INTEGER, Examples: [0, 1]),
+(isReprint:INTEGER, Examples: [1, 0]),
+(isTextless:INTEGER, Examples: [0, 1]),
+(leadershipSkills:TEXT),
+(mcmId:TEXT, Examples: [16165, 16166, 16171]),
+(mtgoFoilId:TEXT, Examples: [27501, 26993, 27473]),
+(number:TEXT, Examples: [1, 2, 7]),
+(otherFaceIds:TEXT, Examples: [87f0062a-8321-5c16-960e-a12ce1df5839]),
+(purchaseUrls:TEXT),
+(scryfallOracleId:TEXT, Examples: [fc2ccab7-cab1-4463-b73d-898070136d74]),
+(supertypes:TEXT, Examples: [Legendary, Basic, Legendary,Snow]),
+(type:TEXT, Examples: [Creature — Human Cleric]),
+(watermark:TEXT, Examples: [set (HOU), set (LGN), set (ONS)])
+]
+# Table: main.foreign_data
+[
+(id:INTEGER, Primary Key, Examples: [4, 8, 12]),
+(flavorText:TEXT, Examples: ["La volontà di tutti, eseguita per mano mia."]),
+(language:TEXT, Examples: [Italian, Chinese Simplified, Japanese]),
+(multiverseid:INTEGER, Examples: [148794, 147645, 148795]),
+(name:TEXT, Examples: [Prescelto dell'Antenata]),
+(text:TEXT),
+(type:TEXT, Examples: [Creatura — Chierico Umano]),
+(uuid:TEXT, Examples: [5f8287b1-5bb6-5f4c-ad17-316a40d5bb0c])
+]
+# Table: main.legalities
+[
+(id:INTEGER, Primary Key, Examples: [4, 8, 12]),
+(format:TEXT, Examples: [modern, commander, legacy]),
+(status:TEXT, Examples: [Legal, Restricted, Banned]),
+(uuid:TEXT, Examples: [5f8287b1-5bb6-5f4c-ad17-316a40d5bb0c])
+]
+# Table: main.rulings
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(date:DATE, Examples: [2007-07-15]),
+(uuid:TEXT, Examples: [6d268c95-c176-5766-9a46-c14f739aba1c])
+]
+# Table: main.set_translations
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(LNGUAGE:TEXT, Examples: [Chinese Simplified, Chinese Traditional, French]),
+(setCode:TEXT, Examples: [10E, 4ED, 5DN])
+]
+# Table: main.sets
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(baseSetSize:INTEGER, Examples: [383, 302, 332]),
+(isFoilOnly:INTEGER, Examples: [0, 1]),
+(isPartialPreview:INTEGER, Examples: [0, 1]),
+(Magic_Card_Market_Name:TEXT, Examples: [Tenth Edition, Double Masters, Fourth Edition]),
+(releaseDate:DATE, Examples: [2007-07-13])
+]
+【Foreign keys】

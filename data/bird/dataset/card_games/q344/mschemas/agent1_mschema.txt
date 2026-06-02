@@ -1,0 +1,83 @@
+【DB_ID】 agent1
+【Schema】
+# Table: main.card_inventory
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(asciiName:TEXT, Examples: [El-Hajjaj, Junun Efreet, Dandan]),
+(cardKingdomId:TEXT, Examples: [122719, 122720, 122725]),
+(convertedManaCost:REAL, Examples: [7.0, 5.0, 4.0]),
+(faceName:TEXT, Examples: [Dusk, Dawn, Commit]),
+(frameVersion:TEXT, Examples: [2003, 1993, 2015]),
+(hasFoil:INTEGER, Examples: [0, 1]),
+(isOnlineOnly:INTEGER, Examples: [0, 1]),
+(isReserved:INTEGER, Examples: [0, 1]),
+(isTimeshifted:INTEGER, Examples: [0, 1]),
+(mcmMetaId:TEXT, Examples: [156, 176, 368]),
+(mtgoId:TEXT, Examples: [27500, 26992, 27472]),
+(originalReleaseDate:TEXT, Examples: [2012/12/1, 2006/12/1, 2007/12/1]),
+(attack_power:TEXT, Examples: [4, 3, 2]),
+(rarity:TEXT, Examples: [uncommon, common, rare]),
+(setCode:TEXT, Examples: [10E, 2ED, 2XM]),
+(tcgplayerProductId:TEXT, Examples: [15032, 15033, 15045]),
+(types:TEXT, Examples: [Creature, Instant, Enchantment]),
+(life_total:INTEGER),
+(toughness:INTEGER),
+(asciiName_title:VARCHAR),
+(asciiName_series:VARCHAR)
+]
+# Table: main.card_sets
+[
+(id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(baseSetSize:INTEGER, Examples: [383, 378, 351]),
+(block:TEXT, Examples: [Core Set, Innistrad, Theros]),
+(booster:TEXT),
+(code:TEXT, Examples: [10E, 4BB, 6ED]),
+(isFoilOnly:INTEGER, Examples: [0, 1]),
+(isForeignOnly:INTEGER, Examples: [0, 1]),
+(isNonFoilOnly:INTEGER, Examples: [0, 1]),
+(isOnlineOnly:INTEGER, Examples: [0, 1]),
+(isPartialPreview:INTEGER, Examples: [0]),
+(keyruneCode:TEXT, Examples: [10E, 4ED, 6ED]),
+(mcmId:INTEGER, Examples: [74, 1820, 1194]),
+(mcmIdExtras:INTEGER),
+(mcmName:TEXT, Examples: [Tenth Edition, Masters 25, Archenemy]),
+(mtgoCode:TEXT, Examples: [10E, A25, AVR]),
+(set_name:TEXT, Examples: [Tenth Ed.]),
+(parentCode:TEXT, Examples: [MB1, ORI, JMP]),
+(releaseDate:DATE, Examples: [2007-07-13]),
+(tcgplayerGroupId:INTEGER, Examples: [1, 23, 2189]),
+(totalSetSize:INTEGER, Examples: [508, 378, 351]),
+(type:TEXT, Examples: [core, masters, starter])
+]
+# Table: main.foreign_data
+[
+(id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(tasteDescription:TEXT),
+(language:TEXT, Examples: [German, Japanese, Chinese Simplified]),
+(multiverseid:INTEGER, Examples: [148411, 148028, 148412]),
+(name:TEXT, Examples: [Ausgewählter der Ahnfrau]),
+(text:TEXT),
+(type:TEXT, Examples: [Kreatur — Mensch, Kleriker]),
+(uuid:TEXT, Examples: [5f8287b1-5bb6-5f4c-ad17-316a40d5bb0c]),
+(tasteDescription_noised:VARCHAR)
+]
+# Table: main.rules_status
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(status:TEXT, Examples: [Leagl, Banned, Restricted]),
+(uuid:TEXT, Examples: [5f8287b1-5bb6-5f4c-ad17-316a40d5bb0c])
+]
+# Table: main.rulings
+[
+(id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(date:DATE, Examples: [2007-07-15]),
+(text:TEXT),
+(uuid:TEXT, Examples: [6d268c95-c176-5766-9a46-c14f739aba1c])
+]
+# Table: main.set_translations
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(setCode:TEXT, Examples: [10E, 4ED, 5DN]),
+(translation:TEXT, Examples: [核心系列第十版])
+]
+【Foreign keys】

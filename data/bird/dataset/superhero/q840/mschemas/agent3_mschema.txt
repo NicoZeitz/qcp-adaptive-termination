@@ -1,0 +1,60 @@
+【DB_ID】 agent3
+【Schema】
+# Table: main.alignment
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.attribute
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.colour
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.gender
+[
+(id:INTEGER, Primary Key, Examples: [3]),
+(gender:TEXT, Examples: [N/A])
+]
+# Table: main.hero_attribute
+[
+(hero_id:INTEGER, Examples: [4, 9, 13]),
+(attribute_id:INTEGER, Examples: [1, 2, 3]),
+(ATTRBTE_VAL:INTEGER, Examples: [80, 85, 90])
+]
+# Table: main.hero_power
+[
+(hero_id:INTEGER, Examples: [1, 2, 3]),
+(power_id:INTEGER, Examples: [31, 18, 1])
+]
+# Table: main.publisher
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(publisher_name:TEXT, Examples: [Dark Horse Comics, HarperCollins, J. K. Rowling])
+]
+# Table: main.race
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.superhero
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(SPRHRO_NAME:TEXT, Examples: [Abe Sapien, Absorbing Man, Agent Bob]),
+(full_name:TEXT, Examples: [Abraham Sapien, Bob, Xenomorph]),
+(gender_id:INTEGER, Examples: [1, 2, 3]),
+(eye_colour_id:INTEGER, Examples: [7, 9, 1]),
+(hair_colour_id:INTEGER, Examples: [1, 9, 6]),
+(skin_colour_id:INTEGER, Examples: [7, 1, 4]),
+(race_id:INTEGER, Examples: [33, 24, 1]),
+(publisher_id:INTEGER, Examples: [3, 13, 4]),
+(alignment_id:INTEGER, Examples: [1, 2, 3]),
+(height_cm:INTEGER, Examples: [191, 193, 178]),
+(weight_kg:INTEGER, Examples: [65, 122, 81])
+]
+# Table: main.superpower
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(power_name:TEXT, Examples: [Lantern Power Ring, Stealth, Underwater breathing])
+]
+【Foreign keys】

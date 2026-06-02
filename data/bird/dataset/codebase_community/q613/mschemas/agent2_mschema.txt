@@ -1,0 +1,74 @@
+【DB_ID】 agent2
+【Schema】
+# Table: main.badges
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(User_Identifier:INTEGER, Examples: [5, 6, 8])
+]
+# Table: main.comment_data
+[
+(Id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(PostId:INTEGER, Examples: [5, 14, 23]),
+(Score:INTEGER, Examples: [0, 9, 4]),
+(Text:TEXT),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:16:14]),
+(UserId:INTEGER, Examples: [13, 23, 74]),
+(UserDisplayName:TEXT, Examples: [user28, Statprof, Pete])
+]
+# Table: main.postHistory
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(PostId:INTEGER, Examples: [1, 2, 3]),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:12:12]),
+(UserId:INTEGER, Examples: [8, 24, 18])
+]
+# Table: main.postLinks
+[
+(Id:INTEGER, Primary Key, Examples: [108, 145, 217]),
+(PostId:INTEGER, Examples: [395, 548, 375]),
+(RelatedPostId:INTEGER, Examples: [173, 539, 30])
+]
+# Table: main.posts
+[
+(Id:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(PostTypeId:INTEGER, Examples: [1, 2, 5]),
+(AcceptedAnswerId:INTEGER, Examples: [59, 1887, 61]),
+(Creation_Date:DATETIME, Examples: [2010-07-19 19:12:57]),
+(Score:INTEGER, Examples: [22, 152, 23]),
+(ViewCount:INTEGER, Examples: [8198, 29229, 21925]),
+(Body:TEXT),
+(OwnerUserId:INTEGER, Examples: [24, 5, 36]),
+(LasActivityDate:DATETIME, Examples: [2012-11-12 09:21:54]),
+(Title:TEXT),
+(Tags:TEXT, Examples: [<distributions><normality>]),
+(AnswerCount:INTEGER, Examples: [7, 15, 4]),
+(CommentCount:INTEGER, Examples: [1, 5, 4]),
+(FavoriteCount:INTEGER, Examples: [8, 137, 12]),
+(LastEditorUserId:INTEGER, Examples: [88, 22047, 919]),
+(LastEditDate:DATETIME, Examples: [2010-08-07 17:56:44]),
+(CommunityOwnedDate:DATETIME, Examples: [2010-08-09 13:05:50]),
+(ParentId:INTEGER, Examples: [3, 7, 22]),
+(ClosedDate:DATETIME, Examples: [2014-02-12 01:23:48]),
+(LastEditorDisplayName:TEXT, Examples: [user10525, user28, Greg])
+]
+# Table: main.tags
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(ExcerptPostId:INTEGER, Examples: [20258, 62158, 67815]),
+(WikiPostId:INTEGER, Examples: [20257, 62157, 67814])
+]
+# Table: main.user_data
+[
+(Id:INTEGER, Primary Key, Examples: [-1, 2, 3]),
+(DisplayName:TEXT, Examples: [Community, Geoff Dalgas, Jarrod Dixon]),
+(AboutMe:TEXT),
+(AccountId:INTEGER, Examples: [-1, 2, 3])
+]
+# Table: main.votes
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(PostId:INTEGER, Examples: [3, 2, 5]),
+(UserId:INTEGER, Examples: [58, 6, 66]),
+(BountyAmount:INTEGER, Examples: [50, 25, 0])
+]
+【Foreign keys】

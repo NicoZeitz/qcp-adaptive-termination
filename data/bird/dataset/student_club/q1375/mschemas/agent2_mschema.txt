@@ -1,0 +1,49 @@
+【DB_ID】 agent2
+【Schema】
+# Table: main.attendance
+[
+(link_to_event:TEXT, Primary Key, Examples: [rec2N69DMcrqN9PJC, rec5XDvJLyxDsGZWc, recEVTik3MlqbvLFi]),
+(link_to_member:TEXT, Primary Key, Examples: [rec28ORZgcm1dtqBZ, recEymrwCUKxiiosI, reccW7q1KkhSKZsea])
+]
+# Table: main.budget
+[
+(budget_id:TEXT, Primary Key, Examples: [rec0QmEc3cSQFQ6V2, rec1bG6HSft7XIvTP, rec1z6ISJU2HdIsVm]),
+(remaining:REAL, Examples: [7.19, 28.86, -0.199999999999999]),
+(link_to_event:TEXT, Examples: [recI43CzsZ0Q625ma, recggMW2eyCYceNcy, recJ4Witp9tpjaugn])
+]
+# Table: main.event
+[
+(event_id:TEXT, Primary Key, Examples: [rec0Si5cQ4rJRVzd6, rec0akZnLLpGUloLH, rec0dZPcWXF0QjNnE]),
+(type:TEXT, Examples: [Meeting, Election, Game])
+]
+# Table: main.expense
+[
+(expense_id:TEXT, Primary Key, Examples: [rec017x6R3hQqkLAo, rec1nIjoZKTYayqZ6, rec1oMgNFt7Y0G40x]),
+(cost:REAL, Examples: [122.06, 20.2, 51.81]),
+(link_to_member:TEXT, Examples: [rec4BLdZHS2Blfp4v, recro8T1MPMwRadVH, recD078PnS3x2doBe]),
+(link_to_budget:TEXT, Examples: [recvKTAWAFKkVNnXQ, recy8KY5bUdzF81vv, recwXIiKoBMjXJsGZ])
+]
+# Table: main.income
+[
+(income_id:TEXT, Primary Key, Examples: [rec0s9ZrO15zhzUeE, rec7f5XMQZexgtQJo, rec8BUJa8GXUjiglg]),
+(source:TEXT, Examples: [Dues, Fundraising, School Appropration]),
+(link_to_member:TEXT, Examples: [reccW7q1KkhSKZsea, recTjHY5xXhvkCdVT, recUdRhbhcEO1Hk5r])
+]
+# Table: main.major
+[
+(major_id:TEXT, Primary Key, Examples: [rec06DF6vZ1CyPKpc, rec09LedkREyskCNv, rec0Eanv576RhQllI]),
+(college:TEXT, Examples: [College of Agriculture and Applied Sciences])
+]
+# Table: main.member
+[
+(member_id:TEXT, Primary Key, Examples: [rec1x5zBFIqoOuPW8, rec280Sk7o31iG0Tx, rec28ORZgcm1dtqBZ]),
+(email:TEXT),
+(zip:INTEGER, Examples: [55108, 29440, 10002]),
+(link_to_major:TEXT, Examples: [recxK3MHQFbR9J5uO, rec7BxKpjJ7bNph3O, recdIBgeU38UbV2sy])
+]
+# Table: main.zip_code
+[
+(zip_code:INTEGER, Primary Key, Examples: [501, 544, 601]),
+(county:TEXT, Examples: [Suffolk County, Adjuntas Municipio, Aguada Municipio])
+]
+【Foreign keys】

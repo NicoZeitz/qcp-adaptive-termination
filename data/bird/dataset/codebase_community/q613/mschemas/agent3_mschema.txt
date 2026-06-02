@@ -1,0 +1,76 @@
+【DB_ID】 agent3
+【Schema】
+# Table: main.badges
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(MemberId:INTEGER, Examples: [5, 6, 8])
+]
+# Table: main.comments
+[
+(Id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(PostId:INTEGER, Examples: [9, 18, 43]),
+(Score:INTEGER, Examples: [0, 1, 5]),
+(Text:TEXT),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:18:54]),
+(UserId:INTEGER, Examples: [13, 36, 5]),
+(first_name:VARCHAR),
+(last_name:VARCHAR),
+(middle_name:VARCHAR)
+]
+# Table: main.postHistory
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(PostId:INTEGER, Examples: [1, 2, 3]),
+(UserId:INTEGER, Examples: [8, 24, 18]),
+(Text:TEXT)
+]
+# Table: main.postLinks
+[
+(Id:INTEGER, Primary Key, Examples: [108, 145, 217]),
+(PostId:INTEGER, Examples: [395, 548, 375]),
+(RelatedPostId:INTEGER, Examples: [173, 539, 30])
+]
+# Table: main.posts
+[
+(Id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(PostTypeId:INTEGER, Examples: [1, 2, 7]),
+(AcceptedAnswerId:INTEGER, Examples: [5, 18, 1201]),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:13:28]),
+(Score:INTEGER, Examples: [54, 76, 2]),
+(ViewCount:INTEGER, Examples: [3613, 5808, 224]),
+(Body:TEXT),
+(OwnerUserId:INTEGER, Examples: [18, 38, 34]),
+(LasActivityDate:DATETIME, Examples: [2013-05-27 14:48:36]),
+(Title:TEXT),
+(Tags:TEXT, Examples: [<software><open-source>]),
+(AnswerCount:INTEGER, Examples: [19, 24, 1]),
+(CommentCount:INTEGER, Examples: [4, 3, 2]),
+(FavoriteCount:INTEGER, Examples: [36, 79, 1]),
+(LastEditorUserId:INTEGER, Examples: [183, 253, 34]),
+(LastEditDate:DATETIME, Examples: [2011-02-12 05:50:03]),
+(CommunityOwnedDate:DATETIME, Examples: [2010-07-19 19:13:28]),
+(ParentId:INTEGER, Examples: [1, 7, 25]),
+(ClosedDate:DATETIME, Examples: [2013-01-08 20:43:45]),
+(LastEditorDisplayName:TEXT, Examples: [user28, sjcockell, Vincent]),
+(first_name:VARCHAR),
+(last_name:VARCHAR)
+]
+# Table: main.tags
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(ExcerptPostId:INTEGER, Examples: [20258, 62158, 67815])
+]
+# Table: main.user_data
+[
+(Id:INTEGER, Primary Key, Examples: [-1, 2, 3]),
+(LastAccessDate:DATETIME, Examples: [2010-07-19 06:55:26]),
+(Views:INTEGER, Examples: [0, 25, 22]),
+(Age:INTEGER, Examples: [37, 35, 28])
+]
+# Table: main.votes
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(PostId:INTEGER, Examples: [3, 2, 5]),
+(UserId:INTEGER, Examples: [58, 6, 66])
+]
+【Foreign keys】

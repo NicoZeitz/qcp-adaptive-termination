@@ -1,0 +1,65 @@
+【DB_ID】 agent2
+【Schema】
+# Table: main.attendance
+[
+(link_to_event:TEXT, Primary Key, Examples: [rec2N69DMcrqN9PJC, rec5XDvJLyxDsGZWc, recEVTik3MlqbvLFi]),
+(link_to_member:TEXT, Primary Key, Examples: [rec28ORZgcm1dtqBZ, recEymrwCUKxiiosI, reccW7q1KkhSKZsea])
+]
+# Table: main.budget
+[
+(budget_id:TEXT, Primary Key, Examples: [rec0QmEc3cSQFQ6V2, rec33PFqxLtnp80RJ, rec4DYUKBHMPZXWB2]),
+(category:TEXT, Examples: [Advertisement, Speaker Gifts, Food]),
+(spent:REAL, Examples: [67.81, 0.0, 54.25]),
+(remaining:REAL, Examples: [7.19, 25.0, 150.0]),
+(amount:INTEGER, Examples: [75, 25, 150]),
+(event_status:TEXT, Examples: [Closed, Open, Planning]),
+(link_to_event:TEXT, Examples: [recI43CzsZ0Q625ma, recHaMmaKyfktt5fW, reczhS8wix6Kzbp9P])
+]
+# Table: main.event
+[
+(event_id:TEXT, Primary Key, Examples: [rec0Si5cQ4rJRVzd6, rec0akZnLLpGUloLH, rec0dZPcWXF0QjNnE]),
+(type:TEXT, Examples: [Meeting, Election, Game])
+]
+# Table: main.expense
+[
+(expense_id:TEXT, Primary Key, Examples: [rec1oMgNFt7Y0G40x, recHPdtBtpThSA9lq, recS4pFu5y7MIT4ar]),
+(expense_description:TEXT, Examples: [Pizza]),
+(expense_date:TEXT, Examples: [2019-09-10, 2019-10-22, 2019-11-04]),
+(xspense:REAL, Examples: [51.81, 92.82, 74.59]),
+(approved:TEXT, Examples: [true]),
+(link_to_member:TEXT, Examples: [recD078PnS3x2doBe, rec4BLdZHS2Blfp4v, recro8T1MPMwRadVH]),
+(link_to_budget:TEXT, Examples: [recwXIiKoBMjXJsGZ, recr60T1tLsfdICV8, recN9yY7okNrFps0Y])
+]
+# Table: main.income
+[
+(income_id:TEXT, Primary Key, Examples: [rec0s9ZrO15zhzUeE, rec7f5XMQZexgtQJo, rec8BUJa8GXUjiglg]),
+(source:TEXT, Examples: [Dues, Fundraising, School Appropration]),
+(link_to_member:TEXT, Examples: [reccW7q1KkhSKZsea, recTjHY5xXhvkCdVT, recUdRhbhcEO1Hk5r])
+]
+# Table: main.major
+[
+(major_id:TEXT, Primary Key, Examples: [rec06DF6vZ1CyPKpc, rec09LedkREyskCNv, rec0Eanv576RhQllI]),
+(college:TEXT, Examples: [College of Agriculture and Applied Sciences])
+]
+# Table: main.member
+[
+(member_id:TEXT, Primary Key, Examples: [recD078PnS3x2doBe, recL94zpn6Xh6kQii, recP6DJPyi5donvXL]),
+(first_name:TEXT, Examples: [Phillip, Rafi, Katy]),
+(last_name:TEXT, Examples: [Cullen, Mckee, Balentine]),
+(email:TEXT),
+(position:TEXT, Examples: [Vice President, Member, Secretary]),
+(t_shirt_size:TEXT, Examples: [X-Large, Medium, Large]),
+(phone:TEXT, Examples: [905-555-5035, 954-555-6240, 716-555-3845]),
+(postal_code:INTEGER, Examples: [1020, 76901, 12203]),
+(link_to_major:TEXT, Examples: [rec9CqGCGV8Y8rOSY, recObV24Ass2ouQHK, rec1N0upiVLy5esTO])
+]
+# Table: main.zip_code
+[
+(zip_code:INTEGER, Primary Key, Examples: [602, 606, 610]),
+(type:TEXT, Examples: [Standard, PO Box, Unique]),
+(city:TEXT, Examples: [Aguada, Maricao, Anasco]),
+(county:TEXT, Examples: [Aguada Municipio, Maricao Municipio, Anasco Municipio]),
+(state:TEXT, Examples: [Puerto Rico, Massachusetts, Rhode Island]),
+(short_state:TEXT, Examples: [PR, MA, RI])
+]
+【Foreign keys】

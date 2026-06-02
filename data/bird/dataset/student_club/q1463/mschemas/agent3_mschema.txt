@@ -1,0 +1,73 @@
+【DB_ID】 agent3
+【Schema】
+# Table: main.activity
+[
+(event_id:TEXT, Primary Key, Examples: [rec0akZnLLpGUloLH, recJ4Witp9tpjaugn, recLrY8kyOR1PcZeF]),
+(event_name:TEXT, Examples: [Leaders gathring - January]),
+(event_date:TEXT, Examples: [2020-01-14T09:30:00, 2019-11-05T09:30:00, 2020-04-07T09:30:00]),
+(type:TEXT, Examples: [Meeting, Guest Speaker, Budget]),
+(notes:TEXT),
+(location:TEXT, Examples: [MU 215]),
+(status:TEXT, Examples: [Open, Closed, Planning])
+]
+# Table: main.attendance
+[
+(link_to_event:TEXT, Primary Key, Examples: [rec2N69DMcrqN9PJC, rec5XDvJLyxDsGZWc, recEVTik3MlqbvLFi]),
+(link_to_member:TEXT, Primary Key, Examples: [recTjHY5xXhvkCdVT, recQaxyXBQG5BBtD0, recjHj4BS5A541n9v])
+]
+# Table: main.expense
+[
+(expense_id:TEXT, Primary Key, Examples: [rec4Zg7WEmfiHXcnC, rec7gUiykKKW4RaJS, recJnyr7Z1CjAlHgA]),
+(expense_description:TEXT, Examples: [Posters]),
+(expense_date:TEXT, Examples: [2019-10-10, 2019-11-19, 2019-10-01]),
+(cost:REAL, Examples: [67.81, 6.0, 54.25]),
+(approved:TEXT, Examples: [true]),
+(link_to_member:TEXT, Examples: [rec4BLdZHS2Blfp4v, recro8T1MPMwRadVH, recD078PnS3x2doBe]),
+(link_to_budget:TEXT, Examples: [recsI0IzpUuxl2bPh, recTUGXxhTaFZ2qkg, recTxecmwIhCdIKvl])
+]
+# Table: main.financial_plan
+[
+(budget_id:TEXT, Primary Key, Examples: [rec4yM47hEjVVsCuq, rec5V70sIuIgpOzDT, recFZ47e0eVqcQD9O]),
+(category:TEXT, Examples: [Parking, Food, Advertisement]),
+(spent:REAL, Examples: [0.0, 173.06, 54.25]),
+(remaining:REAL, Examples: [10.0, -23.06, 75.0]),
+(amount:INTEGER, Examples: [10, 150, 75]),
+(event_status:TEXT, Examples: [Open, Closed]),
+(event_ref:TEXT, Examples: [recs4x1BYWAsU2SKg, recI43CzsZ0Q625ma, recHaMmaKyfktt5fW])
+]
+# Table: main.income
+[
+(income_id:TEXT, Primary Key, Examples: [recMFy9sJHhuPZ4cz, recOo362sJrXFv2az, recSOleKmRLKSGUxk]),
+(date_received:TEXT, Examples: [2019-09-25, 2019-09-08, 2019-10-14]),
+(amount:INTEGER, Examples: [50]),
+(source:TEXT, Examples: [Dues]),
+(notes:TEXT),
+(member_connect:TEXT, Examples: [recjHj4BS5A541n9v, recL94zpn6Xh6kQii, recf4UKTfipCzgcSA])
+]
+# Table: main.major
+[
+(major_id:TEXT, Primary Key, Examples: [rec06DF6vZ1CyPKpc, rec0Eanv576RhQllI, rec0xRZtkzxrg8kj2]),
+(major_name:TEXT, Examples: [Outdoor Product Design and Development]),
+(department:TEXT),
+(college:TEXT, Examples: [College of Agriculture and Applied Sciences])
+]
+# Table: main.member
+[
+(member_id:TEXT, Primary Key, Examples: [rec1x5zBFIqoOuPW8, rec280Sk7o31iG0Tx, rec28ORZgcm1dtqBZ]),
+(position:TEXT, Examples: [Member, Inactive, President]),
+(zip:INTEGER, Examples: [55108, 29440, 10002]),
+(department:VARCHAR),
+(major:VARCHAR)
+]
+# Table: main.zip_code
+[
+(zip_code:INTEGER, Primary Key, Examples: [603, 611, 623]),
+(type:TEXT, Examples: [Standard, PO Box, Unique]),
+(city:TEXT, Examples: [Aguadilla, Angeles, Cabo Rojo]),
+(county:TEXT, Examples: [Aguadilla Municipio, Cabo Rojo Municipio, Camuy Municipio]),
+(state:TEXT, Examples: [Puerto Rico, Massachusetts, Rhode Island]),
+(short_state:TEXT, Examples: [PR, MA, RI]),
+(area_code:VARCHAR),
+(postal_code:VARCHAR)
+]
+【Foreign keys】

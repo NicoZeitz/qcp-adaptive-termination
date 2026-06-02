@@ -1,0 +1,98 @@
+【DB_ID】 agent1
+【Schema】
+# Table: main.circuits
+[
+(circuitId:INTEGER, Primary Key, Examples: [2, 3, 4]),
+(circuit_name:TEXT, Examples: [SEPANG INTERNATIONAL CIRCUIT]),
+(lng:REAL, Examples: [101.738, 50.5106, 2.26111])
+]
+# Table: main.constructorResults
+[
+(constructorResultsId:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(raceId:INTEGER, Examples: [18, 19, 20]),
+(constructorId:INTEGER, Examples: [1, 2, 3]),
+(status:TEXT, Examples: [D])
+]
+# Table: main.constructorStandings
+[
+(constructorStandingsId:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(raceId:INTEGER, Examples: [18, 19, 20]),
+(constructorId:INTEGER, Examples: [1, 2, 3]),
+(position:INTEGER, Examples: [1, 3, 2])
+]
+# Table: main.constructors
+[
+(constructorId:INTEGER, Primary Key, Examples: [161, 21, 137]),
+(constructorRef:TEXT, Examples: [mclaren, toro_rosso, red_bull]),
+(name:TEXT, Examples: [Adams, Arrows, Arzani-Volpini]),
+(nationality:TEXT, Examples: [British, Italian, Austrian]),
+(url:TEXT)
+]
+# Table: main.driverStandings
+[
+(driverStandingsId:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(raceId:INTEGER, Examples: [18, 19, 20]),
+(driverId:INTEGER, Examples: [1, 2, 3]),
+(position:INTEGER, Examples: [1, 2, 3])
+]
+# Table: main.drivers
+[
+(driverId:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(number:INTEGER, Examples: [44, 6, 14]),
+(dob:DATE, Examples: [1985-01-07])
+]
+# Table: main.lapTimes
+[
+(raceId:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(driverId:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(lap:INTEGER, Primary Key, Examples: [2, 6, 10]),
+(position:INTEGER, Examples: [12, 9, 8]),
+(time:TEXT, Examples: [1:33.740, 1:30.469, 1:32.418]),
+(milliseconds:INTEGER, Examples: [93740, 90469, 92418])
+]
+# Table: main.pitStops
+[
+(raceId:INTEGER, Primary Key, Examples: [841, 842, 843]),
+(driverId:INTEGER, Primary Key, Examples: [1, 4, 10]),
+(stop:INTEGER, Primary Key, Examples: [2, 1, 3]),
+(lap:INTEGER, Examples: [36, 12, 18]),
+(time:TEXT, Examples: [17:59:29, 17:22:34, 17:33:02]),
+(duration:TEXT, Examples: [23.199, 23.251, 23.792]),
+(milliseconds:INTEGER, Examples: [23199, 23251, 23792])
+]
+# Table: main.qualifying
+[
+(qualifyId:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(raceId:INTEGER, Examples: [18, 19, 20]),
+(driverId:INTEGER, Examples: [1, 9, 5]),
+(constructorId:INTEGER, Examples: [1, 2, 6]),
+(position:INTEGER, Examples: [1, 2, 3])
+]
+# Table: main.races
+[
+(raceId:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(year:INTEGER, Examples: [2009, 2008, 2007]),
+(circuitId:INTEGER, Examples: [1, 2, 17]),
+(name:TEXT, Examples: [Australian Grand Prix])
+]
+# Table: main.results
+[
+(resultId:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(raceId:INTEGER, Examples: [18, 19, 20]),
+(driverId:INTEGER, Examples: [1, 2, 3]),
+(constructorId:INTEGER, Examples: [1, 2, 3]),
+(grid:INTEGER, Examples: [1, 5, 7]),
+(points:REAL, Examples: [10.0, 8.0, 6.0]),
+(fastestLap:INTEGER, Examples: [39, 41, 58]),
+(statusId:INTEGER, Examples: [1, 11, 5])
+]
+# Table: main.seasons
+[
+(year:INTEGER, Primary Key, Examples: [1950, 1951, 1952])
+]
+# Table: main.status
+[
+(statusId:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(status:TEXT, Examples: [Finished, Engine, Hydraulics])
+]
+【Foreign keys】

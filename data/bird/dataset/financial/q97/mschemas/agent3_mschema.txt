@@ -1,0 +1,80 @@
+【DB_ID】 agent3
+【Schema】
+# Table: main.account
+[
+(account_id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(district_id:INTEGER, Examples: [18, 1, 5])
+]
+# Table: main.card
+[
+(card_id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(disp_id:INTEGER, Examples: [41, 56, 79]),
+(type:TEXT, Examples: [gold, classic, junior]),
+(issued:DATE, Examples: [1995-09-03])
+]
+# Table: main.client
+[
+(client_id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(gender:TEXT, Examples: [F, M]),
+(birth_date:DATE, Examples: [1940-10-09]),
+(district_id:INTEGER, Examples: [1, 15, 57])
+]
+# Table: main.disp
+[
+(disp_id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(clientId:INTEGER, Examples: [3, 7, 11]),
+(account_id:INTEGER, Examples: [2, 5, 8]),
+(type:TEXT, Examples: [Disponent, OWNER])
+]
+# Table: main.district
+[
+(district_id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(A2:TEXT, Examples: [Beroun, Melnik, Praha - zapad]),
+(A3:TEXT, Examples: [central Bohemia, south Bohemia, west Bohemia]),
+(A4:TEXT, Examples: [75232, 94725, 75637]),
+(A5:TEXT, Examples: [55, 38, 35]),
+(A6:TEXT, Examples: [26, 28, 36]),
+(A7:TEXT, Examples: [4, 1, 9]),
+(A8:INTEGER, Examples: [1, 3, 0]),
+(A9:INTEGER, Examples: [5, 6, 7]),
+(A10:REAL, Examples: [41.7, 63.4, 36.5]),
+(A11:INTEGER, Examples: [8980, 9920, 9622]),
+(A12:REAL, Examples: [1.9, 2.2, 0.4]),
+(A13:REAL, Examples: [2.21, 2.87, 0.59]),
+(A14:INTEGER, Examples: [111, 130, 154]),
+(A15:INTEGER, Examples: [2824, 4289, 3475]),
+(A16:INTEGER, Examples: [2813, 4846, 3529])
+]
+# Table: main.loan
+[
+(loan_id:INTEGER, Primary Key, Examples: [4959, 4967, 5015]),
+(account_id:INTEGER, Examples: [2, 37, 226]),
+(date:DATE, Examples: [1994-01-05]),
+(amount:INTEGER, Examples: [80952, 318480, 109344]),
+(duration:INTEGER, Examples: [24, 60, 12]),
+(payments:REAL, Examples: [3373.0, 5308.0, 9112.0]),
+(status:TEXT, Examples: [A, D, C])
+]
+# Table: main.order
+[
+(order_id:INTEGER, Primary Key, Examples: [29403, 29407, 29411]),
+(account_id:INTEGER, Examples: [2, 4, 7]),
+(bank_to:TEXT, Examples: [QR, UV, IJ]),
+(account_to:INTEGER, Examples: [13943797, 26693541, 34452903]),
+(amount:REAL, Examples: [7266.0, 2078.0, 4880.0]),
+(k_symbol:TEXT, Examples: [SIPO, LEASING, UVER])
+]
+# Table: main.trans
+[
+(trans_id:INTEGER, Primary Key, Examples: [7, 11, 15]),
+(account_id:INTEGER, Examples: [1, 2, 3]),
+(date:DATE, Examples: [1995-06-13]),
+(type:TEXT, Examples: [PRIJEM, VYDAJ, VYBER]),
+(operation:TEXT, Examples: [PREVOD Z UCTU, PREVOD NA UCET, VYBER]),
+(amount:INTEGER, Examples: [3679, 2452, 180]),
+(balance:INTEGER, Examples: [26835, 23318, 14807]),
+(k_symbol:TEXT, Examples: [SIPO, SLUZBY, UVER]),
+(bank:TEXT, Examples: [AB, YZ, ST]),
+(account:INTEGER, Examples: [41403269, 87144583, 66487163])
+]
+【Foreign keys】

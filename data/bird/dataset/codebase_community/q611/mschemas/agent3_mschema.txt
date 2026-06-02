@@ -1,0 +1,86 @@
+【DB_ID】 agent3
+【Schema】
+# Table: main.account_profiles
+[
+(User_Id:INTEGER, Primary Key, Examples: [-1, 2, 3]),
+(LastAccessDate:DATETIME),
+(Views:INTEGER, Examples: [0, 25, 22]),
+(Age:INTEGER, Examples: [37, 35, 28])
+]
+# Table: main.badges
+[
+(Id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(UserId:INTEGER, Examples: [5, 6, 8])
+]
+# Table: main.comments
+[
+(Id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(PostId:INTEGER, Examples: [9, 18, 43]),
+(Score:INTEGER, Examples: [0, 1, 5]),
+(Text:TEXT),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:18:54]),
+(UserId:INTEGER, Examples: [13, 36, 5]),
+(UserDisplayName:TEXT, Examples: [user28, Pete, anonymous])
+]
+# Table: main.postHistory
+[
+(Id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(PostHistoryTypeId:INTEGER, Examples: [3, 2, 16]),
+(PostId:INTEGER, Examples: [1, 3, 4]),
+(RevisionGUID:TEXT, Examples: [e58bf7fd-e60f-4c58-a6e4-dfc91cf98a69]),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:12:12]),
+(UserId:INTEGER, Examples: [8, 18, 23]),
+(Text:TEXT),
+(Comment:TEXT, Examples: [add content from the comments;]),
+(UserDisplayName:TEXT, Examples: [user28, Branson, esco])
+]
+# Table: main.postLinks
+[
+(Id:INTEGER, Primary Key, Examples: [263, 479, 559]),
+(CreationDate:DATETIME, Examples: [2010-07-27 16:00:22]),
+(PostId:INTEGER, Examples: [769, 222, 886]),
+(RelatedPostId:INTEGER, Examples: [31, 146, 372]),
+(LinkTypeId:INTEGER, Examples: [1, 3])
+]
+# Table: main.posts
+[
+(Id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(PostTypeId:INTEGER, Examples: [1, 2, 7]),
+(AcceptedAnswerId:INTEGER, Examples: [5, 18, 1201]),
+(CreationDate:DATETIME, Examples: [2010-07-19 19:13:28]),
+(Score:INTEGER, Examples: [54, 76, 2]),
+(ViewCount:INTEGER, Examples: [3613, 5808, 224]),
+(Body:TEXT),
+(OwnerUserId:INTEGER, Examples: [18, 38, 34]),
+(LasActivityDate:DATETIME, Examples: [2013-05-27 14:48:36]),
+(Title:TEXT),
+(Tags:TEXT, Examples: [<software><open-source>]),
+(AnswerCount:INTEGER, Examples: [19, 24, 1]),
+(CommentCount:INTEGER, Examples: [4, 3, 2]),
+(FavoriteCount:INTEGER, Examples: [36, 79, 1]),
+(LastEditorUserId:INTEGER, Examples: [183, 253, 34]),
+(LastEditDate:DATETIME, Examples: [2011-02-12 05:50:03]),
+(CommunityOwnedDate:DATETIME, Examples: [2010-07-19 19:13:28]),
+(ParentId:INTEGER, Examples: [1, 7, 25]),
+(ClosedDate:DATETIME, Examples: [2013-01-08 20:43:45]),
+(first_name:VARCHAR),
+(last_name:VARCHAR)
+]
+# Table: main.tags
+[
+(Id:INTEGER, Primary Key, Examples: [3, 11, 15]),
+(TagName:TEXT, Examples: [elicitation, sample, measurement]),
+(Count:INTEGER, Examples: [6, 219, 97]),
+(ExcerptPostId:INTEGER, Examples: [28276, 66319, 63450]),
+(WikiPostId:INTEGER, Examples: [28275, 66318, 63449])
+]
+# Table: main.votes
+[
+(Id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(PostId:INTEGER, Examples: [5, 2, 6]),
+(VoteTypeId:INTEGER, Examples: [2, 5, 3]),
+(CreationDate:DATE),
+(UserId:INTEGER, Examples: [6, 66, 71]),
+(BountyAmount:INTEGER, Examples: [50, 0, 100])
+]
+【Foreign keys】

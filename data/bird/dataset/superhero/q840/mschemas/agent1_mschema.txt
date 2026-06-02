@@ -1,0 +1,60 @@
+【DB_ID】 agent1
+【Schema】
+# Table: main.alignment
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.attribute
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.colour
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.gender
+[
+(id:INTEGER, Primary Key, Examples: [1]),
+(gender:TEXT, Examples: [Male])
+]
+# Table: main.hero_attribute
+[
+(hero_id:INTEGER, Examples: [2, 6, 11]),
+(attribute_id:INTEGER, Examples: [1, 2, 3]),
+(ATTRBTE_VAL:INTEGER, Examples: [75, 100, 60])
+]
+# Table: main.hero_power
+[
+(hero_id:INTEGER, Examples: [1, 2, 3]),
+(power_id:INTEGER, Examples: [18, 6, 51])
+]
+# Table: main.publisher
+[
+(id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(publisher_name:TEXT, Examples: [George Lucas, IDW Publishing, Marvel Comics])
+]
+# Table: main.race
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.superhero
+[
+(id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(SPRHRO_NAME:TEXT, Examples: [3-D Man, Abomination, Adam Strange]),
+(full_name:TEXT, Examples: [Charles Chandler, Emil Blonsky, Adam Strange]),
+(gender_id:INTEGER, Examples: [1, 2, 3]),
+(eye_colour_id:INTEGER, Examples: [9, 14, 7]),
+(hair_colour_id:INTEGER, Examples: [13, 1, 6]),
+(skin_colour_id:INTEGER, Examples: [1, 7, 24]),
+(race_id:INTEGER, Examples: [1, 28, 24]),
+(publisher_id:INTEGER, Examples: [13, 4, 15]),
+(alignment_id:INTEGER, Examples: [1, 2, 3]),
+(height_cm:INTEGER, Examples: [188, 203, 185]),
+(weight_kg:INTEGER, Examples: [90, 441, 88])
+]
+# Table: main.superpower
+[
+(id:INTEGER, Primary Key, Examples: [1, 5, 9]),
+(power_name:TEXT, Examples: [Agility, Cold Resistance, Flight])
+]
+【Foreign keys】

@@ -1,0 +1,54 @@
+【DB_ID】 agent2
+【Schema】
+# Table: main.alignment
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.attribute
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.colour
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.gender
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.hero_attribute
+[
+(hero_id:INTEGER, Examples: [3, 8, 12]),
+(attribute_id:INTEGER, Examples: [1, 2, 3]),
+(attribute_value:INTEGER, Examples: [95, 85, 90])
+]
+# Table: main.hero_power
+[
+(hero_id:INTEGER, Examples: [1, 2, 3]),
+(power_id:INTEGER, Examples: [26, 16, 64])
+]
+# Table: main.publisher
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.race
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+# Table: main.superhero
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3]),
+(gender_id:INTEGER, Examples: [1, 2, 3]),
+(eye_colour_id:INTEGER, Examples: [9, 33, 7]),
+(hair_colour_id:INTEGER, Examples: [13, 1, 4]),
+(skin_colour_id:INTEGER, Examples: [1, 7, 23]),
+(race_id:INTEGER, Examples: [1, 24, 33]),
+(publisher_id:INTEGER, Examples: [13, 3, 4]),
+(alignment_id:INTEGER, Examples: [1, 2, 3]),
+(HGHT_CM:INTEGER, Examples: [188, 203, 191])
+]
+# Table: main.superpower
+[
+(id:INTEGER, Primary Key, Examples: [1, 2, 3])
+]
+【Foreign keys】

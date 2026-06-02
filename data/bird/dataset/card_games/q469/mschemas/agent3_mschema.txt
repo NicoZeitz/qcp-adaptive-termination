@@ -1,0 +1,137 @@
+【DB_ID】 agent3
+【Schema】
+# Table: main.card_data
+[
+(id:INTEGER, Primary Key, Examples: [54055, 12687, 52211]),
+(artist:TEXT, Examples: [Justin Sweet]),
+(asciiName:TEXT, Examples: [Junun Efreet, Dandan, El-Hajjaj]),
+(availability:TEXT, Examples: [mtgo,paper, paper, arena]),
+(borderColor:TEXT, Examples: [black, white, borderless]),
+(cardKingdomFoilId:TEXT, Examples: [123218, 123104, 123110]),
+(cardKingdomId:TEXT, Examples: [122725, 122729, 122733]),
+(colorIdentity:TEXT, Examples: [W, B, U]),
+(colorIndicator:TEXT, Examples: [U, R, B]),
+(colors:TEXT, Examples: [W, B, U]),
+(convertedManaCost:REAL, Examples: [4.0, 3.0, 2.0]),
+(duelDeck:TEXT, Examples: [a, b]),
+(edhrecRank:INTEGER, Examples: [11081, 12902, 14468]),
+(faceConvertedManaCost:REAL, Examples: [4.0, 3.0, 2.0]),
+(faceName:TEXT, Examples: [Commit, Insult, Start]),
+(flavorName:TEXT, Examples: [Babygodzilla, Ruin Reborn]),
+(flavorText:TEXT),
+(frameEffects:TEXT, Examples: [legendary, nyxtouched, miracle]),
+(frameVersion:TEXT, Examples: [2003, 1993, 2015]),
+(hand:TEXT, Examples: [1, 0, -2]),
+(hasAlternativeDeckLimit:INTEGER, Examples: [0, 1]),
+(hasContentWarning:INTEGER, Examples: [0, 1]),
+(hasFoil:INTEGER, Examples: [0, 1]),
+(hasNonFoil:INTEGER, Examples: [1, 0]),
+(isAlternative:INTEGER, Examples: [0, 1]),
+(isFullArt:INTEGER, Examples: [0, 1]),
+(isOnlineOnly:INTEGER, Examples: [0, 1]),
+(isOversized:INTEGER, Examples: [0, 1]),
+(isPromo:INTEGER, Examples: [0, 1]),
+(isReprint:INTEGER, Examples: [1, 0]),
+(isReserved:INTEGER, Examples: [0, 1]),
+(isStarter:INTEGER, Examples: [0, 1]),
+(isStorySpotlight:INTEGER, Examples: [0, 1]),
+(isTextless:INTEGER, Examples: [0, 1]),
+(isTimeshifted:INTEGER, Examples: [0, 1]),
+(keywords:TEXT, Examples: [Flying, First strike,Flash, Enchant]),
+(layout:TEXT, Examples: [normal, aftermath, split]),
+(leadershipSkills:TEXT),
+(life:TEXT, Examples: [-5, -1, 5]),
+(loyalty:TEXT, Examples: [6, X, 3]),
+(manaCost:TEXT, Examples: [{3}{W}, {2}{W}, {1}{B}]),
+(mcmId:TEXT, Examples: [16171, 16175, 16296]),
+(mcmMetaId:TEXT, Examples: [368, 520, 1117]),
+(mtgArenaId:TEXT, Examples: [74986, 74990, 74994]),
+(mtgjsonV4Id:TEXT, Examples: [c0de6fd8-367a-50fb-b2f4-2b8fa5aeb7d9]),
+(mtgoFoilId:TEXT, Examples: [27473, 27217, 27752]),
+(mtgoId:TEXT, Examples: [27472, 27216, 27751]),
+(multiverseId:TEXT, Examples: [129470, 136279, 135258]),
+(card_name:TEXT, Examples: [Aven Cludchaser, Benalish Knight, Contaminated Bond]),
+(number:TEXT, Examples: [7, 11, 132★]),
+(originalReleaseDate:TEXT, Examples: [2012/12/1, 2009/12/1, 2013/12/1]),
+(originalText:TEXT),
+(originalType:TEXT, Examples: [Creature - Bird Soldier]),
+(otherFaceIds:TEXT, Examples: [95a37a67-eac8-5ae2-9a50-31f81f810f18]),
+(power:TEXT, Examples: [2, 1, 3]),
+(printings:TEXT, Examples: [10E,8ED,9ED,ODY, 10E,ATH,WTH, 10E,9ED,MRD]),
+(promoTypes:TEXT, Examples: [boxtopper,boosterfun, boosterfun, intropack]),
+(purchaseUrls:TEXT),
+(rarity:TEXT, Examples: [common, rare, uncommon]),
+(scryfallId:TEXT, Examples: [407110e9-19af-4ff5-97b2-c03225031a73]),
+(scryfallIllustrationId:TEXT, Examples: [2eb663cd-020a-46d8-a6d9-bb63d4b5c848]),
+(scryfallOracleId:TEXT, Examples: [48bda7dd-d023-41e8-8c28-e0cfda0d07ca]),
+(setCode:TEXT, Examples: [10E, 2ED, 2XM]),
+(side:TEXT, Examples: [a, b, c]),
+(subtypes:TEXT, Examples: [Bird,Soldier, Human,Knight, Aura]),
+(supertypes:TEXT, Examples: [Legendary, Basic, Snow]),
+(tcgplayerProductId:TEXT, Examples: [15045, 15054, 15084]),
+(text:TEXT),
+(toughness:TEXT, Examples: [2, 1, 3]),
+(type:TEXT, Examples: [Creature — Bird Soldier]),
+(types:TEXT, Examples: [Creature, Enchantment, Instant]),
+(uuid:TEXT, Examples: [00066e04-5677-5ca4-8bd0-f7f7781c44a1]),
+(variations:TEXT, Examples: [6adaf14d-43e3-521a-adf1-960c808e5b1a]),
+(watermark:TEXT, Examples: [set (USG), set (LEA), set (THS)]),
+(loyalty_type:VARCHAR)
+]
+# Table: main.card_sets
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(baseSetSize:INTEGER, Examples: [332, 165, 354]),
+(block:TEXT, Examples: [Mirrodin, Core Set, Ice Age]),
+(booster:TEXT),
+(code:TEXT, Examples: [2XM, 5DN, 8ED]),
+(isFoilOnly:INTEGER, Examples: [0, 1]),
+(isForeignOnly:INTEGER, Examples: [0, 1]),
+(isNonFoilOnly:INTEGER, Examples: [0, 1]),
+(isOnlineOnly:INTEGER, Examples: [0, 1]),
+(isPartialPreview:INTEGER, Examples: [0]),
+(keyruneCode:TEXT, Examples: [2XM, 5DN, 8ED]),
+(mcmId:INTEGER, Examples: [3204, 47, 44]),
+(mcmIdExtras:INTEGER, Examples: [3209, 3459, 3113]),
+(mcmName:TEXT, Examples: [Double Masters, Fifth Dawn, Eighth Edition]),
+(mtgoCode:TEXT, Examples: [2XM, 5DN, 8ED]),
+(name:TEXT, Examples: [Double Masters, Fifth Dawn, Eighth Edition]),
+(parentCode:TEXT, Examples: [JMP, M15, CSP]),
+(releaseDate:DATE),
+(tcgplayerGroupId:INTEGER, Examples: [2655, 43, 3]),
+(totalSetSize:INTEGER, Examples: [384, 165, 361]),
+(type:TEXT, Examples: [masters, expansion, core])
+]
+# Table: main.foreign_data
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(flavorText:TEXT, Examples: [« La volonté de tous passe par ma main. »]),
+(language:TEXT, Examples: [French, Russian, Japanese]),
+(multiverseid:INTEGER, Examples: [149934, 149168, 149935]),
+(name:TEXT, Examples: [Élu de l'Ancêtre]),
+(text:TEXT),
+(type:TEXT, Examples: [Créature : humain et clerc]),
+(uuid:TEXT, Examples: [5f8287b1-5bb6-5f4c-ad17-316a40d5bb0c])
+]
+# Table: main.legalities
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(format:TEXT, Examples: [legacy, vintage, historic]),
+(status:TEXT, Examples: [Legal, Banned, Restricted]),
+(uuid:TEXT, Examples: [5f8287b1-5bb6-5f4c-ad17-316a40d5bb0c])
+]
+# Table: main.rulings
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(date:DATE, Examples: [2007-07-15]),
+(text:TEXT),
+(uuid:TEXT, Examples: [56f4935b-f6c5-59b9-88bf-9bcce20247ce])
+]
+# Table: main.set_translations
+[
+(id:INTEGER, Primary Key, Examples: [3, 7, 11]),
+(language:TEXT, Examples: [French, Korean, Chinese Simplified]),
+(setCode:TEXT, Examples: [10E, 4ED, 5DN]),
+(translation:TEXT, Examples: [Dixième édition, 코어세트 10판, La cinquième aube])
+]
+【Foreign keys】
