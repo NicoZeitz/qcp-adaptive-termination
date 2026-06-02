@@ -1,5 +1,6 @@
 from typing import Any
 
+import numpy as np
 from pandas import DataFrame
 from pydantic import JsonValue
 
@@ -10,11 +11,15 @@ ResultType = DataFrame
 
 
 def serialize_result(result: ResultType) -> dict[str, Any]:
-    return result.to_dict(orient="split")
+    # Replace NaN with None for JSON serialization (null in JSON)
+    result_with_none = result.replace(np.nan, None)
+    return result_with_none.to_dict(orient="split")
 
 
 def deserialize_result(data: dict[str, Any]) -> ResultType:
-    return DataFrame(**data)
+    df = DataFrame(**data)
+    # Convert None values back to NaN
+    return df.replace({None: np.nan})
 
 
 def try_parse_value_to_result_type(value: Any) -> ResultType:
