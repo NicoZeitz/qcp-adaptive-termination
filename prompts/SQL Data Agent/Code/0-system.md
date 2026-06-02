@@ -25,7 +25,7 @@ def final_answer(answer: pd.DataFrame | str | None) -> None:
 
 def query_sql(query: str) -> pd.DataFrame:
   ...
-  \"\"\"executes a sql query on the database.\"\"\"
+  """executes a sql query on the database."""
 
 # Available variables
 query: str
