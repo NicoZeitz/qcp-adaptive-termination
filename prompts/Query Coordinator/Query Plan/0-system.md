@@ -157,21 +157,19 @@ Drafted query plan:
 
 1. All agents are queried when relevant: In this case all agents are relevant to answer the question. This is the case sometimes, but not always.
 2. Data is distributed - no assumptions about local completeness: The data is split across all agents. It is not possible to assume that tables can be locally joined within an agent to answer the question. Therefore we have to ask multiple agents for the same information and combine it afterwards. The data can be horizontally and vertically split.
-3. Step s1-s3: Query all agents with titles table: We first have to find the title_id of 'Guardians of the Galaxy' from agents A3, A4 and A5, because we don't know which agent has the relevant information. The titles table appears in all three agents, indicating horizontal partitioning.
-4. Step s4-s5: Query all agents with type information: With the title_ids returned from those three agents we have to ask agents A3 and A6 for the type of those title_ids, because we need to filter them to only include movies. Since we don't know which agent has the relevant type information for the movie, we cannot do this filtering in the previous step. Note that A3 has the `type` column in the `titles` table, while A6 has a separate `title_types` table - this is vertical partitioning.
-5. Step s6: Global aggregation by Coordinator: All the information is aggregated by the coordinator to create a complete, deduplicated list of movie title_ids.
-6. Step s7-s9: NO local joins with titles table: We do NOT ask A3 to "join crew with titles and filter by primary_title and character name", even though A3 has both tables locally. This is because:
-   - The `crew` table appears in A3, A4, and A5 (horizontal partitioning)
-   - Crew rows for the same title_id might be distributed across all three agents
-   - A local join in A3 would only see A3's portion of crew data and miss rows stored in A4 or A5
-   - This would lead to incomplete and incorrect results
-   Instead, we provide the globally aggregated title_ids from step s6 to each agent, and each agent returns their portion of matching crew records.
-7. Step s10: Global aggregation of crew data: The crew information is aggregated again by the Coordinator to ensure we have a complete view of all person_ids.
-8. Step s11-s12: Query for person details: Only after global aggregation, we query A1 and A2 for person information (name and birth date respectively). Note that the `people` table is vertically partitioned: A1 has `name`, A2 has `born` and `died`.
-9. Step s13: Final aggregation: There should always be a final coordinator step which aggregates all information and returns the final answer. In this case:
-   - The title_id is pulled from step s6 (earlier global aggregation)
-   - The person name is pulled from step s11
-   - The person birth date is pulled from step s12
+3. Step s1: Query all agents with title table: We first have to find the `title_id` of 'Guardians of the Galaxy' from agents A3, A4 and A5, because we don't know which agent has the relevant information. Since the title table is in all three agents, **all** of them must be asked.
+4. Step s2: Query all agents with title `type` information. Ask both agents which have information about the type. This **has to be** done in a separate step and **cannot be merged** with the previous step (no assumptions about local completeness). First aggregate globally, then give the results to the next agent. Data in agents can be heterogenous: A3 has the `type` column directly in the `titles` table, while A6 has a separate `title_types` table.
+5. Step s3: **NO** local joins with titles table: We do NOT ask A3 to "join crew with titles and filter by primary_title and character name", even though A3 has both tables locally. This is because:
+  - The `crew` table appears in A3, A4, and A5 (horizontal partitioning)
+  - Crew rows for the same title_id might be distributed across all three agents
+  - A local join in A3 would only see A3's portion of crew data and miss rows stored in A4 or A5
+  - This would lead to incomplete and incorrect results
+  Instead, we provide the globally aggregated title_ids from step s2 to each agent, and each agent returns their portion of matching crew records.
+6. Step s4, s5: Example of vertical partitioning, then name and birth date of a person are distributed to multiple agents. So both A1 and A2 have to be asked for the specific data in separate steps. This is then merged in the next step with a to_agent coordinator. Again the input data for the peron_ids are only globally aggregated data
+7. Step s6: Final aggregation: There should always be a final coordinator step which aggregates all information and returns the final answer. In this case:
+   - The title_id is pulled from step s2 (earlier global aggregation)
+   - The person name is pulled from step s4
+   - The person birth date is pulled from step s5
    - All information is combined to answer the complete question
 
 The pattern "collect locally → aggregate globally → distribute globally aggregated results → collect locally → aggregate globally" ensures correctness when data is partitioned. Never assume an agent has complete local data for joins when the same tables appear in multiple agents schemas.
