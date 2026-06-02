@@ -34,44 +34,44 @@ The dataset is split between six different agents:
 【A2】
 【DB_ID】 A2
 【Schema】
-# Table: main.people
+# Table: main.persons
 [(person_id:VARCHAR),(born:INTEGER),(died:INTEGER)]
 
 【A3】
 【DB_ID】 A3
 【Schema】
 # Table: main.crew
-[(title_id:VARCHAR),(ordering:INTEGER),(person_id:VARCHAR),(category:VARCHAR),(job:VARCHAR),(characters:VARCHAR)]
+[(title_id:VARCHAR),(ordering:INTEGER),(personen_id:VARCHAR),(category:VARCHAR),(job:VARCHAR),(characters:VARCHAR)]
 # Table: main.titles
-[(title_id:VARCHAR),(type:VARCHAR),(primary_title:VARCHAR),(original_title:VARCHAR),(is_adult:INTEGER),(premiered:INTEGER),(ended:INTEGER),(runtime_minutes:INTEGER),(genres:VARCHAR)]
+[(title_id:VARCHAR),(type:VARCHAR),(mian_title:VARCHAR),(original_title:VARCHAR),(is_adult:INTEGER),(premiered:INTEGER),(ended:INTEGER),(runtime_minutes:INTEGER),(genres:VARCHAR)]
 
 【A4】
 【DB_ID】 A4
 【Schema】
-# Table: main.crew
-[(title_id:VARCHAR),(ordering:INTEGER),(person_id:VARCHAR),(category:VARCHAR),(job:VARCHAR),(characters:VARCHAR)]
-# Table: main.titles
-[(title_id:VARCHAR),(primary_title:VARCHAR),(original_title:VARCHAR),(is_adult:INTEGER),(premiered:INTEGER),(ended:INTEGER),(runtime_minutes:INTEGER),(genres:VARCHAR)]
+# Table: main.film_crew
+[(title_id:VARCHAR),(ordering:INTEGER),(person_id:VARCHAR),(category:VARCHAR),(beruf:VARCHAR),(charectars:VARCHAR)]
+# Table: main.title
+[(title_id:VARCHAR),(primary_title:VARCHAR),(orignial_title:VARCHAR),(mature_content:INTEGER),(premiered:INTEGER),(ended:INTEGER),(runtime_minutes:INTEGER),(genres:VARCHAR)]
 # Table: main.episodes
-[(episode_title_id:VARCHAR),(show_title_id:VARCHAR),(season_number:INTEGER),(episode_number:INTEGER)]
+[(episode_title_id:VARCHAR),(show_title_identification:VARCHAR),(season_number:INTEGER),(episode_number:INTEGER)]
 
 【A5】
 【DB_ID】 A5
 【Schema】
 # Table: main.crew
-[(title_id:VARCHAR),(ordering:INTEGER),(person_id:VARCHAR),(category:VARCHAR),(job:VARCHAR),(characters:VARCHAR)]
-# Table: main.titles
-[(title_id:VARCHAR),(primary_title:VARCHAR),(original_title:VARCHAR),(is_adult:INTEGER),(premiered:INTEGER),(ended:INTEGER),(runtime_minutes:INTEGER),(genres:VARCHAR)]
+[(title_id:VARCHAR),(ordering:INTEGER),(person_identification:VARCHAR),(category:VARCHAR),(job:VARCHAR),(charaktere:VARCHAR)]
+# Table: main.film_titles
+[(title_id:VARCHAR),(primary_title:VARCHAR),(original_title:VARCHAR),(is_adult:INTEGER),(premiered:INTEGER),(ended:INTEGER),(min_laufzeit:INTEGER),(genres:VARCHAR)]
 
 【A6】
 【DB_ID】 A6
 【Schema】
 # Table: main.akas
-[(title_id:VARCHAR),(title:VARCHAR),(region:VARCHAR),(language:VARCHAR),(types:VARCHAR),(attributes:VARCHAR),(is_original_title:INTEGER)]
+[(title_id:VARCHAR),(title:VARCHAR),(region:VARCHAR),(sprache:VARCHAR),(types:VARCHAR),(attributos:VARCHAR),(is_original_title:INTEGER)]
 # Table: main.title_types
-[(title_id:VARCHAR),(type:VARCHAR)]
-# Table: main.ratings
-[(title_id:VARCHAR),(rating:REAL),(votes:INTEGER)]
+[(title_identification:VARCHAR),(type:VARCHAR)]
+# Table: main.bewertungen
+[(title_id:VARCHAR),(rating:REAL),(stimmen:INTEGER)]
 ```
 
 Drafted query plan:
