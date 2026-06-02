@@ -62,22 +62,22 @@
             {
                 "type": "sql",
                 "name": "A0",
-                "path": "../data/bird/dataset/card_games/q469/agent0.sqlite"
+                "path": "../data/bird/dataset_own/card_games/q469/agent0.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A1",
-                "path": "../data/bird/dataset/card_games/q469/agent1.sqlite"
+                "path": "../data/bird/dataset_own/card_games/q469/agent1.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A2",
-                "path": "../data/bird/dataset/card_games/q469/agent2.sqlite"
+                "path": "../data/bird/dataset_own/card_games/q469/agent2.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A3",
-                "path": "../data/bird/dataset/card_games/q469/agent3.sqlite"
+                "path": "../data/bird/dataset_own/card_games/q469/agent3.sqlite"
             }
         ]
     }

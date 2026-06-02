@@ -47,22 +47,22 @@
             {
                 "type": "sql",
                 "name": "A0",
-                "path": "../data/bird/dataset/formula_1/q973/agent0.sqlite"
+                "path": "../data/bird/dataset_own/formula_1/q973/agent0.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A1",
-                "path": "../data/bird/dataset/formula_1/q973/agent1.sqlite"
+                "path": "../data/bird/dataset_own/formula_1/q973/agent1.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A2",
-                "path": "../data/bird/dataset/formula_1/q973/agent2.sqlite"
+                "path": "../data/bird/dataset_own/formula_1/q973/agent2.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A3",
-                "path": "../data/bird/dataset/formula_1/q973/agent3.sqlite"
+                "path": "../data/bird/dataset_own/formula_1/q973/agent3.sqlite"
             }
         ]
     }

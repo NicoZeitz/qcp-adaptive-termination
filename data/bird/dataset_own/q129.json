@@ -47,22 +47,22 @@
             {
                 "type": "sql",
                 "name": "A0",
-                "path": "../data/bird/dataset/financial/q129/agent0.sqlite"
+                "path": "../data/bird/dataset_own/financial/q129/agent0.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A1",
-                "path": "../data/bird/dataset/financial/q129/agent1.sqlite"
+                "path": "../data/bird/dataset_own/financial/q129/agent1.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A2",
-                "path": "../data/bird/dataset/financial/q129/agent2.sqlite"
+                "path": "../data/bird/dataset_own/financial/q129/agent2.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A3",
-                "path": "../data/bird/dataset/financial/q129/agent3.sqlite"
+                "path": "../data/bird/dataset_own/financial/q129/agent3.sqlite"
             }
         ]
     }

@@ -1,4 +1,4 @@
-output_path: ../data/bird/dataset_own/card_games/q481
+output_path: ../data/bird/dataset_own_own/card_games/q481
 database_url: sqlite:////Users/I550817/SAPDevelop/Lectures/qcp-prototype/data/bird/dev/dev_databases/card_games/card_games.sqlite
 agent_amount: 4
 split_type: mixed

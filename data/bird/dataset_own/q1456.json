@@ -37,22 +37,22 @@
             {
                 "type": "sql",
                 "name": "A0",
-                "path": "../data/bird/dataset/student_club/q1456/agent0.sqlite"
+                "path": "../data/bird/dataset_own/student_club/q1456/agent0.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A1",
-                "path": "../data/bird/dataset/student_club/q1456/agent1.sqlite"
+                "path": "../data/bird/dataset_own/student_club/q1456/agent1.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A2",
-                "path": "../data/bird/dataset/student_club/q1456/agent2.sqlite"
+                "path": "../data/bird/dataset_own/student_club/q1456/agent2.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A3",
-                "path": "../data/bird/dataset/student_club/q1456/agent3.sqlite"
+                "path": "../data/bird/dataset_own/student_club/q1456/agent3.sqlite"
             }
         ]
     }
