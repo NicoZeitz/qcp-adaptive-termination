@@ -110,8 +110,8 @@ mkdir -p "$run_dir"
 		--log_dir "../data/runs/run/${qid}_${timestamp}" \
 		--start_stage "$start_stage" \
 		--end_stage "$end_stage" \
-		>"$run_dir/stdout.txt" \
-		2>"$run_dir/stderr.txt"
+		> >(tee "$run_dir/stdout.txt") \
+		2> >(tee "$run_dir/stderr.txt" >&2)
 )
 
 if [[ "$end_stage" -ge 3 ]]; then
