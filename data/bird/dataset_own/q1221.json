@@ -207,22 +207,22 @@
             {
                 "type": "sql",
                 "name": "A0",
-                "path": "../data/bird/dataset/thrombosis_prediction/q1221/agent0.sqlite"
+                "path": "../data/bird/dataset_own/thrombosis_prediction/q1221/agent0.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A1",
-                "path": "../data/bird/dataset/thrombosis_prediction/q1221/agent1.sqlite"
+                "path": "../data/bird/dataset_own/thrombosis_prediction/q1221/agent1.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A2",
-                "path": "../data/bird/dataset/thrombosis_prediction/q1221/agent2.sqlite"
+                "path": "../data/bird/dataset_own/thrombosis_prediction/q1221/agent2.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A3",
-                "path": "../data/bird/dataset/thrombosis_prediction/q1221/agent3.sqlite"
+                "path": "../data/bird/dataset_own/thrombosis_prediction/q1221/agent3.sqlite"
             }
         ]
     }

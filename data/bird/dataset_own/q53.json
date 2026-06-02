@@ -113,22 +113,22 @@
             {
                 "type": "sql",
                 "name": "A0",
-                "path": "../data/bird/dataset/california_schools/q53/agent0.sqlite"
+                "path": "../data/bird/dataset_own/california_schools/q53/agent0.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A1",
-                "path": "../data/bird/dataset/california_schools/q53/agent1.sqlite"
+                "path": "../data/bird/dataset_own/california_schools/q53/agent1.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A2",
-                "path": "../data/bird/dataset/california_schools/q53/agent2.sqlite"
+                "path": "../data/bird/dataset_own/california_schools/q53/agent2.sqlite"
             },
             {
                 "type": "sql",
                 "name": "A3",
-                "path": "../data/bird/dataset/california_schools/q53/agent3.sqlite"
+                "path": "../data/bird/dataset_own/california_schools/q53/agent3.sqlite"
             }
         ]
     }
