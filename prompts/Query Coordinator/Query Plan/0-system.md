@@ -10,12 +10,14 @@ A query plan is a list of steps that need to be executed in order to answer the 
 - Always try to address questions to the agents instead of the 'Coordinator', as invoking the coordinator is more costly than invoking agents.
 - Use the 'Coordinator' agent if results from multiple agents need to be aggregated or compared.
 - Both agents and the coordinator should depend on all steps that provide necessary information to answer their question, and should include the dependencies in the plan.
+- Queries should be instructed in natural language instead of a technical language like SQL
+- You should be able to handle noise in the query and data, as data might be renamed, has been translated, is expressed in different data types, has data abbreviations or are expressed as synonyms.
+- It is preferable to query more agents and data in the beginning and to filter out later only the necessary later, than to find out in the end, that the result is missing something.
+- If a query can possibly be answered by multiple agents, include a step for each of the agents.
 - **CRITICAL RULE - Query ALL agents that could have relevant data:**
   - When multiple agents have tables/columns that could contain the information you need, you MUST query ALL of them, not just one.
   - This applies even if the tables have different names or structures - what matters is whether they could contain relevant data.
   - **Never assume one agent has all the data.** The data is distributed and you must collect from all possible sources to get complete results.
-- If a query can possibly be answered by multiple agents, include a step for each of the agents.
-- Queries should be instructed in natural language instead of a technical language like SQL
 
 ## Example Plan
 
@@ -178,9 +180,9 @@ The pattern "collect locally → aggregate globally → distribute globally aggr
 ## Key approach:
 
 **Think globally, query locally, aggregate globally, ...**
-1. Each agent provides their local portion of the data (without filtering)
-2. Coordinator aggregates to create a complete global view
-3. Only after global aggregation, use the complete information for further potential queries in the agents
+1. Each agent provides their local portion of the data (without locally joining)
+2. Coordinator aggregates the results of different agents to create a complete global information
+3. Only after global aggregation, use the complete global information for further potential queries in the agents
 
 # Overview of Available Agents
 
