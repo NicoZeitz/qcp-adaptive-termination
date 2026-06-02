@@ -18,6 +18,7 @@ from qtypes.agent_configuration import AgentConfiguration
 from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDummy
 from utils.cache import CacheMode, cached
 from utils.load_prompt import load_prompt
+from utils.span import indented_logging
 
 TResult = TypeVar("TResult", bound=JsonValue | PartialQueryAnswer)
 
@@ -111,7 +112,7 @@ async def run_agent[TResult](
             output_type=output_type,
         )
 
-        logging.info(f"Running agent: {agent_name}")
+        indented_logging(f"Running agent: {agent_name}")
         result = await Runner.run(
             agent,
             cast(list[TResponseInputItem], prompts),

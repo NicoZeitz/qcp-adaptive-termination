@@ -10,7 +10,7 @@ from typing import Any, Awaitable, Callable, Literal, ParamSpec, Sequence, TypeV
 
 from pydantic import BaseModel, JsonValue
 
-from utils.span import own_custom_span
+from utils.span import indented_logging, own_custom_span
 
 CacheMode = Literal[
     "READ_AND_WRITE",
@@ -61,7 +61,7 @@ class Cache:
         try:
             with cache_file.open("r", encoding="utf-8") as f:
                 payload = json.load(f)
-                logging.info(f"Cache: HIT ({cache_file})")
+                indented_logging(f"Cache: HIT ({cache_file})")
                 return payload.get("value"), True
         except (FileNotFoundError, Exception):
             self._throw_on_miss(key)
@@ -80,10 +80,10 @@ class Cache:
             with temporary_file.open("w", encoding="utf-8") as f:
                 # keep indent for readability, but remove extra spaces for smaller file size
                 json.dump(payload, f, separators=(",", ":"), ensure_ascii=False, indent=2)
-            logging.info(f"Cache: STORE ({cache_file})")
+            indented_logging(f"Cache: STORE ({cache_file})")
             temporary_file.replace(cache_file)
         except Exception as exc:
-            logging.error(f"Cache: ERROR storing cache file {cache_file}: {exc}")
+            indented_logging(f"Cache: ERROR storing cache file {cache_file}: {exc}", log_level=logging.ERROR)
             if temporary_file.exists():
                 temporary_file.unlink()
 
