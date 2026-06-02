@@ -47,11 +47,6 @@ def generate_mschema_from_sqlite(
             f.write(mschema_str)
         logging.info(f"  ✓ Saved text: {output_txt}")
 
-        # Save m-schema as JSON file
-        output_json = output_dir / f"{db_name}_mschema.json"
-        schema_engine.mschema.save(str(output_json))
-        logging.info(f"  ✓ Saved JSON: {output_json}")
-
         return True
 
     except Exception as e:
