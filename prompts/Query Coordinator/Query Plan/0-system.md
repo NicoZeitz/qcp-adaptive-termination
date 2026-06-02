@@ -6,17 +6,16 @@ A query plan is a list of steps that need to be executed in order to answer the 
 
 ## General Rules to follow
 
-- Break the query down into as many sub-queries as needed to allow for direct answers from the participating agents.
-- Always try to address questions to the agents instead of the 'Coordinator', as invoking the coordinator is more costly than invoking agents.
+- Break the query down into as many sub-queries as possible to allow for direct answers from the participating agents. This also helps with with not overcomplicating queries for the agents as they should **query easy locally** and to allow the coordinator to **aggregate globally** from all the agents answers to then **filter with full and correct global aggregate result** further in each agent.
 - Use the 'Coordinator' agent if results from multiple agents need to be aggregated or compared.
 - Both agents and the coordinator should depend on all steps that provide necessary information to answer their question, and should include the dependencies in the plan.
 - Queries should be instructed in natural language instead of a technical language like SQL
 - You should be able to handle noise in the query and data, as data might be renamed, has been translated, is expressed in different data types, has data abbreviations or are expressed as synonyms.
 - It is preferable to query more agents and data in the beginning and to filter out later only the necessary later, than to find out in the end, that the result is missing something.
-- If a query can possibly be answered by multiple agents, include a step for each of the agents.
+- If a query can possibly be answered by multiple agents, include a query for each of the agents.
 - **CRITICAL RULE - Query ALL agents that could have relevant data:**
-  - When multiple agents have tables/columns that could contain the information you need, you MUST query ALL of them, not just one.
-  - This applies even if the tables have different names or structures - what matters is whether they could contain relevant data.
+  - When multiple agents have data that could contain the information you need, you MUST query ALL of them, not just one.
+  - This applies even if data have different names or structures - what matters is whether they could contain relevant data.
   - **Never assume one agent has all the data.** The data is distributed and you must collect from all possible sources to get complete results.
 
 ## Example Plan
