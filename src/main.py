@@ -53,8 +53,8 @@ async def main(
         f"[{user}] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}",
         metadata={
             "provider": provider,
-            "start_stage": start_stage,
-            "end_stage": end_stage,
+            "start_stage": str(start_stage),
+            "end_stage": str(end_stage),
             "name": name,
             "input_file": str(input_file),
             "cache_dir": str(cache_dir),
