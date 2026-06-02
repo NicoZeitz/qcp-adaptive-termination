@@ -1,3 +1,4 @@
+import asyncio
 from typing import cast
 
 from agents import AgentsException, MaxTurnsExceeded
@@ -178,14 +179,19 @@ async def execute_query_plan_step_for_multiple_agents(
     local_results = PartialQueryAnswer()
     agent_answers: list[tuple[str, ResultType]] = []
 
-    for target_agent in query_plan_step.to_agent:
-        agent_result = await execute_query_plan_step_for_single_agent(
-            data_agents,
-            query_plan_step,
-            target_agent,
-            additional_information,
-        )
+    agent_results = await asyncio.gather(
+        *[
+            execute_query_plan_step_for_single_agent(
+                data_agents,
+                query_plan_step,
+                target_agent,
+                additional_information,
+            )
+            for target_agent in query_plan_step.to_agent
+        ]
+    )
 
+    for target_agent, agent_result in zip(query_plan_step.to_agent, agent_results):
         if agent_result.has_answer and agent_result.answer is not None:
             agent_answers.append((target_agent, agent_result.answer))
 
