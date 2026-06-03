@@ -33,11 +33,7 @@ class APIClient(AsyncOpenAI):
     ) -> httpx.Response:
         content = json.loads(request.content.decode("utf-8"))
         if "text" in content and "response_format" not in content and "GLM" in content["model"]:
-            content["response_format"] = {
-                "type": "json_object",
-                # "type": "json_schema",
-                "json_schema": content["text"]["format"]["schema"]
-            }
+            content["response_format"] = content["text"]["format"]
             content["input"].append({
                 "role": "system",
                 "content": f"JSON Schema: ```json\n{json.dumps(content['text']['format']['schema'], indent=2, ensure_ascii=False)}\n```"
@@ -45,7 +41,7 @@ class APIClient(AsyncOpenAI):
             #del content["text"]
             request._content = json.dumps(content).encode("utf-8")
 
-        logging.info(request.content.decode("utf-8"))
+        logging.info(content)
         response = await super()._send_request(request, stream=stream, **kwargs)
         logging.info(response.json())
         return response
