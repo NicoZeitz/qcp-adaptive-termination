@@ -45,9 +45,9 @@ class APIClient(AsyncOpenAI):
             #del content["text"]
             request._content = json.dumps(content).encode("utf-8")
 
-        print(request.content.decode("utf-8"))
+        logging.info(request.content.decode("utf-8"))
         response = await super()._send_request(request, stream=stream, **kwargs)
-        print(response.json())
+        logging.info(response.json())
         return response
 
 
@@ -120,10 +120,10 @@ def initialize(
             base_url=os.getenv("OPENAI_BASE_URL"), api_key=os.getenv("OPENAI_API_KEY")
         )
         set_agent_models(coordinator_model, data_model)
-        print(f"OpenAI base URL: {os.getenv('OPENAI_BASE_URL')}")
-        print(f"OpenAI API key: {'set' if os.getenv('OPENAI_API_KEY') else 'not set'}")
-        print(f"OpenAI coordinator model: {coordinator_model}")
-        print(f"OpenAI data model: {data_model}")
+        logging.info(f"OpenAI base URL: {os.getenv('OPENAI_BASE_URL')}")
+        logging.info(f"OpenAI API key: {'set' if os.getenv('OPENAI_API_KEY') else 'not set'}")
+        logging.info(f"OpenAI coordinator model: {coordinator_model}")
+        logging.info(f"OpenAI data model: {data_model}")
     elif provider == "University":
         coordinator_model = _normalize_openai_compatible_model_name(
             os.getenv("UNIVERSITY_COORDINATOR_MODEL")
@@ -137,12 +137,12 @@ def initialize(
             api_key=os.getenv("UNIVERSITY_API_KEY"),
         )
         set_agent_models(coordinator_model, data_model)
-        print(f"University base URL: {os.getenv('UNIVERSITY_BASE_URL')}")
-        print(
+        logging.info(f"University base URL: {os.getenv('UNIVERSITY_BASE_URL')}")
+        logging.info(
             f"University API key: {'set' if os.getenv('UNIVERSITY_API_KEY') else 'not set'}"
         )
-        print(f"University coordinator model: {coordinator_model}")
-        print(f"University data model: {data_model}")
+        logging.info(f"University coordinator model: {coordinator_model}")
+        logging.info(f"University data model: {data_model}")
     elif provider == "Work":
         coordinator_model = _normalize_openai_compatible_model_name(
             os.getenv("WORK_COORDINATOR_MODEL")
@@ -155,10 +155,10 @@ def initialize(
             base_url=os.getenv("WORK_BASE_URL"), api_key=os.getenv("WORK_API_KEY")
         )
         set_agent_models(coordinator_model, data_model)
-        print(f"Work base URL: {os.getenv('WORK_BASE_URL')}")
-        print(f"Work API key: {'set' if os.getenv('WORK_API_KEY') else 'not set'}")
-        print(f"Work coordinator model: {coordinator_model}")
-        print(f"Work data model: {data_model}")
+        logging.info(f"Work base URL: {os.getenv('WORK_BASE_URL')}")
+        logging.info(f"Work API key: {'set' if os.getenv('WORK_API_KEY') else 'not set'}")
+        logging.info(f"Work coordinator model: {coordinator_model}")
+        logging.info(f"Work data model: {data_model}")
     else:
         raise ValueError(f"Unsupported provider: {provider}")
     set_default_openai_client(custom_client)
