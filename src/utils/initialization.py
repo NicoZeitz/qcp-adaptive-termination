@@ -21,6 +21,21 @@ from utils.load_prompt import LangfuseProcessor
 from utils.openai_tracing import TruncatingBackendSpanExporter
 
 
+def _normalize_openai_compatible_model_name(model_name: str | None) -> str | None:
+    if model_name is None or "/" not in model_name:
+        return model_name
+
+    known_prefixes = {"openai", "litellm", "any-llm"}
+    prefix = model_name.split("/", 1)[0]
+
+    if prefix in known_prefixes:
+        return model_name
+
+    # Route unknown prefixes through the OpenAI provider alias so OpenAI-compatible
+    # backends can still receive namespaced model IDs like "unsloth/...".
+    return f"openai/{model_name}"
+
+
 def initialize(
     log_name: str = f"{datetime.now().strftime('%Y-%m-%d %H-%M-%S')}",
     log_dir: Path = Path("../.logs"),
@@ -64,28 +79,56 @@ def initialize(
 
     # Set up OpenAI Client
     if provider == "OpenAI":
+        coordinator_model = _normalize_openai_compatible_model_name(
+            os.getenv("OPENAI_COORDINATOR_MODEL")
+        )
+        data_model = _normalize_openai_compatible_model_name(
+            os.getenv("OPENAI_DATA_MODEL")
+        )
+
         custom_client = AsyncOpenAI(
             base_url=os.getenv("OPENAI_BASE_URL"), api_key=os.getenv("OPENAI_API_KEY")
         )
-        set_agent_models(
-            os.getenv("OPENAI_COORDINATOR_MODEL"), os.getenv("OPENAI_DATA_MODEL")
-        )
+        set_agent_models(coordinator_model, data_model)
+        print(f"OpenAI base URL: {os.getenv('OPENAI_BASE_URL')}")
+        print(f"OpenAI API key: {'set' if os.getenv('OPENAI_API_KEY') else 'not set'}")
+        print(f"OpenAI coordinator model: {coordinator_model}")
+        print(f"OpenAI data model: {data_model}")
     elif provider == "University":
+        coordinator_model = _normalize_openai_compatible_model_name(
+            os.getenv("UNIVERSITY_COORDINATOR_MODEL")
+        )
+        data_model = _normalize_openai_compatible_model_name(
+            os.getenv("UNIVERSITY_DATA_MODEL")
+        )
+
         custom_client = AsyncOpenAI(
             base_url=os.getenv("UNIVERSITY_BASE_URL"),
             api_key=os.getenv("UNIVERSITY_API_KEY"),
         )
-        set_agent_models(
-            os.getenv("UNIVERSITY_COORDINATOR_MODEL"),
-            os.getenv("UNIVERSITY_DATA_MODEL"),
+        set_agent_models(coordinator_model, data_model)
+        print(f"University base URL: {os.getenv('UNIVERSITY_BASE_URL')}")
+        print(
+            f"University API key: {'set' if os.getenv('UNIVERSITY_API_KEY') else 'not set'}"
         )
+        print(f"University coordinator model: {coordinator_model}")
+        print(f"University data model: {data_model}")
     elif provider == "Work":
+        coordinator_model = _normalize_openai_compatible_model_name(
+            os.getenv("WORK_COORDINATOR_MODEL")
+        )
+        data_model = _normalize_openai_compatible_model_name(
+            os.getenv("WORK_DATA_MODEL")
+        )
+
         custom_client = AsyncOpenAI(
             base_url=os.getenv("WORK_BASE_URL"), api_key=os.getenv("WORK_API_KEY")
         )
-        set_agent_models(
-            os.getenv("WORK_COORDINATOR_MODEL"), os.getenv("WORK_DATA_MODEL")
-        )
+        set_agent_models(coordinator_model, data_model)
+        print(f"Work base URL: {os.getenv('WORK_BASE_URL')}")
+        print(f"Work API key: {'set' if os.getenv('WORK_API_KEY') else 'not set'}")
+        print(f"Work coordinator model: {coordinator_model}")
+        print(f"Work data model: {data_model}")
     else:
         raise ValueError(f"Unsupported provider: {provider}")
     set_default_openai_client(custom_client)
