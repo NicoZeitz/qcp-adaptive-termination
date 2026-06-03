@@ -14,6 +14,7 @@ from langfuse import get_client
 from opentelemetry import trace
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+from stages.common.agent_configuration import set_agent_models
 from utils.cache import Cache
 from utils.file_span_exporter import FileSpanExporter
 from utils.load_prompt import LangfuseProcessor
@@ -24,7 +25,7 @@ def initialize(
     log_name: str = f"{datetime.now().strftime('%Y-%m-%d %H-%M-%S')}",
     log_dir: Path = Path("../.logs"),
     cache_dir: Path = Path("../.cache"),
-    provider: Literal["University", "Work"] = "University",
+    provider: Literal["OpenAI", "University", "Work"] = "OpenAI",
     throw_on_cache_miss: bool = False,
     disable_cache: bool = False,
 ):
@@ -62,11 +63,31 @@ def initialize(
         sys.exit(1)
 
     # Set up OpenAI Client
-    custom_client = (
-        AsyncOpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY"))
-        if provider == "Work"
-        else AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    )
+    if provider == "OpenAI":
+        custom_client = AsyncOpenAI(
+            base_url=os.getenv("OPENAI_BASE_URL"), api_key=os.getenv("OPENAI_API_KEY")
+        )
+        set_agent_models(
+            os.getenv("OPENAI_COORDINATOR_MODEL"), os.getenv("OPENAI_DATA_MODEL")
+        )
+    elif provider == "University":
+        custom_client = AsyncOpenAI(
+            base_url=os.getenv("UNIVERSITY_BASE_URL"),
+            api_key=os.getenv("UNIVERSITY_API_KEY"),
+        )
+        set_agent_models(
+            os.getenv("UNIVERSITY_COORDINATOR_MODEL"),
+            os.getenv("UNIVERSITY_DATA_MODEL"),
+        )
+    elif provider == "Work":
+        custom_client = AsyncOpenAI(
+            base_url=os.getenv("WORK_BASE_URL"), api_key=os.getenv("WORK_API_KEY")
+        )
+        set_agent_models(
+            os.getenv("WORK_COORDINATOR_MODEL"), os.getenv("WORK_DATA_MODEL")
+        )
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
     set_default_openai_client(custom_client)
 
     # Keep OpenAI trace export enabled, but trim payload fields before upload.

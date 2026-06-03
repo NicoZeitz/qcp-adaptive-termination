@@ -4,8 +4,6 @@ from typing import cast
 from dataclasses import dataclass
 from sqlalchemy import Inspector, create_engine, inspect, text
 import random
-import datetime
-import uuid
 
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
@@ -217,7 +215,11 @@ def create_split_tree_for_table(
 
     if len(always_included_columns) == 0:
         fk_cols = list(
-            {col for fk in input_db_engine_inspector.get_foreign_keys(table) for col in fk["constrained_columns"]}
+            {
+                col
+                for fk in input_db_engine_inspector.get_foreign_keys(table)
+                for col in fk["constrained_columns"]
+            }
         )
         always_included_columns = fk_cols
 

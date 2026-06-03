@@ -34,7 +34,7 @@ async def main(
     log_dir: Path,
     start_stage: int,
     end_stage: int,
-    provider: Literal["University", "Work"],
+    provider: Literal["OpenAI", "University", "Work"],
     throw_on_cache_miss: bool = False,
     disable_cache: bool = False,
 ):
@@ -191,9 +191,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--provider",
         type=str,
-        choices=["University", "Work"],
-        default="University",
-        help="Provider to use for the agents (default: University)",
+        choices=["OpenAI", "University", "Work"],
+        default="OpenAI",
+        help="Provider to use for the agents (default: OpenAI)",
     )
     parser.add_argument(
         "--throw-on-cache-miss",
