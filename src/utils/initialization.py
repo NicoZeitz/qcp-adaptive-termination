@@ -1,11 +1,14 @@
 from datetime import datetime
+import json
 import os
 from pathlib import Path
 import logging
-from typing import Literal
+from typing import Literal, Unpack
 from agents import set_default_openai_client, set_trace_processors
 from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
+import httpx
+from openai._types import HttpxSendArgs
 import nest_asyncio
 import sys
 from openai import AsyncOpenAI
@@ -19,6 +22,33 @@ from utils.cache import Cache
 from utils.file_span_exporter import FileSpanExporter
 from utils.load_prompt import LangfuseProcessor
 from utils.openai_tracing import TruncatingBackendSpanExporter
+
+class APIClient(AsyncOpenAI):
+    async def _send_request(
+        self,
+        request: httpx.Request,
+        *,
+        stream: bool,
+        **kwargs: Unpack[HttpxSendArgs],
+    ) -> httpx.Response:
+        content = json.loads(request.content.decode("utf-8"))
+        if "text" in content and "response_format" not in content and "GLM" in content["model"]:
+            content["response_format"] = {
+                "type": "json_object",
+                # "type": "json_schema",
+                "json_schema": content["text"]["format"]["schema"]
+            }
+            content["input"].append({
+                "role": "system",
+                "content": f"JSON Schema: ```json\n{json.dumps(content['text']['format']['schema'], indent=2, ensure_ascii=False)}\n```"
+            })
+            #del content["text"]
+            request._content = json.dumps(content).encode("utf-8")
+
+        print(request.content.decode("utf-8"))
+        response = await super()._send_request(request, stream=stream, **kwargs)
+        print(response.json())
+        return response
 
 
 def _normalize_openai_compatible_model_name(model_name: str | None) -> str | None:
@@ -86,7 +116,7 @@ def initialize(
             os.getenv("OPENAI_DATA_MODEL")
         )
 
-        custom_client = AsyncOpenAI(
+        custom_client = APIClient(
             base_url=os.getenv("OPENAI_BASE_URL"), api_key=os.getenv("OPENAI_API_KEY")
         )
         set_agent_models(coordinator_model, data_model)
@@ -102,7 +132,7 @@ def initialize(
             os.getenv("UNIVERSITY_DATA_MODEL")
         )
 
-        custom_client = AsyncOpenAI(
+        custom_client = APIClient(
             base_url=os.getenv("UNIVERSITY_BASE_URL"),
             api_key=os.getenv("UNIVERSITY_API_KEY"),
         )
@@ -121,7 +151,7 @@ def initialize(
             os.getenv("WORK_DATA_MODEL")
         )
 
-        custom_client = AsyncOpenAI(
+        custom_client = APIClient(
             base_url=os.getenv("WORK_BASE_URL"), api_key=os.getenv("WORK_API_KEY")
         )
         set_agent_models(coordinator_model, data_model)
