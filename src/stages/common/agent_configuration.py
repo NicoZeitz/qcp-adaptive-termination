@@ -44,7 +44,7 @@ def get_coordinator_agent_configuration(name_postfix: str) -> AgentConfiguration
 
     return AgentConfiguration(
         name=f"Query Coordinator - {name_postfix}",
-        model="gpt-5",
+        model=get_coordinator_agent_model(),
         reasoning=reasoning,
     )
 
@@ -58,6 +58,6 @@ def get_data_agent_agent_configuration(
 
     return AgentConfiguration(
         name=f"{data_agent.name} - {name_postfix}",
-        model="gpt-5",
+        model=get_data_agent_model(),
         reasoning=reasoning,
     )
