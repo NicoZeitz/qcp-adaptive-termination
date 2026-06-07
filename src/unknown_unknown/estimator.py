@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 import math
 import random
 from collections.abc import Sequence
@@ -13,7 +14,7 @@ from scipy.stats import poisson
 from .bucket import Bucket, DataItem
 
 MC_DEFAULT_NB_RUNS = 200
-MC_DEFAULT_LAMBDA_GRID_MC = (-4.0, -2.0, 0.0, 2.0, 4.0)
+MC_DEFAULT_LAMBDA_GRID = tuple(round(v * 0.1, 1) for v in range(-4, 5))
 MC_RANDOM_SEED = None
 MC_DEFAULT_MAX_THETA_POINTS = 7
 MC_LAPLACE_ALPHA = 0.1
@@ -100,7 +101,7 @@ class Estimator:
                 self._c_abun += 1
 
         self._mc_nb_runs: int = MC_DEFAULT_NB_RUNS
-        self._mc_lambda_grid: tuple[float, ...] = MC_DEFAULT_LAMBDA_GRID_MC
+        self._mc_lambda_grid: tuple[float, ...] = MC_DEFAULT_LAMBDA_GRID
         self._mc_random_seed: int | None = MC_RANDOM_SEED
         self._mc_max_theta_points: int = MC_DEFAULT_MAX_THETA_POINTS
         self._mc_laplace_alpha: float = MC_LAPLACE_ALPHA
@@ -108,7 +109,7 @@ class Estimator:
     def set_monte_carlo_parameters(
         self,
         nb_runs: int = MC_DEFAULT_NB_RUNS,
-        lambda_grid: tuple[float, ...] = MC_DEFAULT_LAMBDA_GRID_MC,
+        lambda_grid: tuple[float, ...] = MC_DEFAULT_LAMBDA_GRID,
         random_seed: int | None = MC_RANDOM_SEED,
         max_theta_points: int = MC_DEFAULT_MAX_THETA_POINTS,
         laplace_alpha: float = MC_LAPLACE_ALPHA,
@@ -516,19 +517,25 @@ class Estimator:
         bucket_value_estimator: ValueEstimator,
         count_estimator: CountEstimator,
     ) -> float:
-        return sum(
-            Estimator([b.samples])._frequency_f12_delta(count_estimator)
-            if bucket_value_estimator is ValueEstimator.FREQUENCY_F12
-            else Estimator([b.samples])._frequency_delta(
-                count_estimator=count_estimator
-            )
-            if bucket_value_estimator is ValueEstimator.FREQUENCY
-            else Estimator([b.samples])._naive_delta(count_estimator)
-            for b in self._dynamic_buckets(bucket_value_estimator)
-        )
+        def return_estimator(b: Bucket) -> float:
+            # Preserve per-source structure so cross-source overlap signals survive.
+            per_source: dict[str | None, list[DataItem]] = {}
+            for item in b.samples:
+                per_source.setdefault(item.source_id, []).append(item)
+            sources = list(per_source.values())
+            sub = Estimator(sources)
+            if bucket_value_estimator is ValueEstimator.FREQUENCY_F12:
+                return sub._frequency_f12_delta(count_estimator)
+            elif bucket_value_estimator is ValueEstimator.FREQUENCY:
+                return sub._frequency_delta(count_estimator=count_estimator)
+            else:
+                return sub._naive_delta(count_estimator=count_estimator)
 
+        return sum(return_estimator(b) for b in self._dynamic_buckets(bucket_value_estimator))
+
+    @lru_cache(maxsize=None)
     def _dynamic_buckets(self, bucket_value_estimator: ValueEstimator) -> list[Bucket]:
-        """Splits the value range into adaptive buckets to minimise total estimated delta."""
+        """Splits the value range into adaptive buckets to minimize total estimated delta."""
         if not self._all_samples:
             return []
 
@@ -551,7 +558,6 @@ class Estimator:
                     bucket.f1_count < bucket.number_of_samples
                     and not bucket.split_locked
                 ):
-                    samples_sorted = bucket.sorted_samples()
                     lb, ub = bucket.lower_bound, bucket.upper_bound
 
                     best_left, best_right = self._split_bucket(bucket, (lb + ub) / 2.0)
@@ -559,7 +565,13 @@ class Estimator:
                         best_left, bucket_value_estimator
                     ) + self._bucket_sum_est(best_right, bucket_value_estimator)
 
-                    for item in samples_sorted:
+                    # Deduplicate split candidates by value — duplicate observations
+                    # produce identical splits so trying each unique value once suffices.
+                    seen_values: set[float] = set()
+                    for item in bucket.sorted_samples():
+                        if item.value in seen_values:
+                            continue
+                        seen_values.add(item.value)
                         left, right = self._split_bucket(bucket, item.value)
                         score = self._bucket_sum_est(
                             left, bucket_value_estimator
@@ -584,7 +596,10 @@ class Estimator:
     def _bucket_sum_est(
         self, bucket: Bucket, bucket_value_estimator: ValueEstimator
     ) -> float:
-        est = Estimator([bucket.samples])
+        per_source: dict[str | None, list[DataItem]] = {}
+        for item in bucket.samples:
+            per_source.setdefault(item.source_id, []).append(item)
+        est = Estimator(list(per_source.values()))
         if bucket_value_estimator is ValueEstimator.FREQUENCY:
             delta = est._frequency_delta(count_estimator=CountEstimator.CHAO92)
         elif bucket_value_estimator is ValueEstimator.FREQUENCY_F12:
@@ -598,40 +613,39 @@ class Estimator:
         return est._observed_sum + delta
 
     def _unseen_lp(self) -> float:
-        grid_factor = 1.05
+        grid_factor = 1.1
         alpha = 0.5
 
         xlp_min = 1.0 / (self._n_obs * max(10, self._n_obs))
-        i_min = next((i for i, v in enumerate(self._freq) if v > 0), 0)
-        if i_min > 0:
-            xlp_min = (i_min + 1.0) / self._n_obs
 
         sparse_species = 0.0
         sparse_mass = 0.0
-        dense_indices: list[int] = []
-        for i, fi in enumerate(self._freq):
+        f_lp_raw = [0.0] * len(self._freq)
+        for idx, fi in enumerate(self._freq):
             if fi <= 0:
                 continue
-            radius = int(math.ceil(math.sqrt(i)))
-            lo = max(0, i - radius)
-            hi = min(len(self._freq) - 1, i + radius)
-            local_sum = sum(self._freq[j] for j in range(lo, hi + 1))
-            if local_sum < math.sqrt(max(i, 1)):
-                sparse_species += fi
-                sparse_mass += ((i + 1.0) / self._n_obs) * fi
-            else:
-                dense_indices.append(i)
 
-        if not dense_indices:
+            i = idx + 1
+            radius = int(math.ceil(math.sqrt(i)))
+            lo = max(0, idx - radius)
+            hi = min(len(self._freq) - 1, idx + radius)
+            local_sum = sum(self._freq[j] for j in range(lo, hi + 1))
+
+            # Match MATLAB split rule: sparse if local mass is below 2*sqrt(i).
+            if local_sum < 2.0 * math.sqrt(i):
+                sparse_species += fi
+                sparse_mass += (i / self._n_obs) * fi
+            else:
+                f_lp_raw[idx] = float(fi)
+
+        dense_positions = [i for i, v in enumerate(f_lp_raw) if v > 0.0]
+        if not dense_positions:
             return max(float(self._n_unique), sparse_species)
 
-        lp_mass = max(1e-12, 1.0 - sparse_mass)
-        f_max = max(dense_indices)
-        dense_map = {i: float(self._freq[i]) for i in dense_indices}
-        f_lp = [dense_map.get(i, 0.0) for i in range(f_max + 1)]
-        f_lp.extend([0.0] * int(math.ceil(math.sqrt(f_max + 1))))
+        f_max = max(dense_positions) + 1
+        f_lp = f_lp_raw[:f_max] + [0.0] * int(math.ceil(math.sqrt(f_max)))
 
-        xlp_max = (f_max + 1.0) / self._n_obs
+        xlp_max = f_max / self._n_obs
         if xlp_max <= xlp_min:
             return self.chao92()
 
@@ -642,36 +656,38 @@ class Estimator:
 
         m = len(xlp)
         r = len(f_lp)
-        bmat = np.zeros((r, m), dtype=float)
+        coef = np.zeros((r, m), dtype=float)
         for i in range(r):
             k = i + 1
             for j, x in enumerate(xlp):
-                bmat[i, j] = poisson.pmf(k, self._n_obs * x) / x
+                coef[i, j] = poisson.pmf(k, self._n_obs * x) / x
 
-        # vars = [y_1..y_m, s_1..s_r], where y_j = x_j * h_j and |By-f| <= s.
-        cvec = np.array(
-            [alpha / x for x in xlp] + [1.0 / math.sqrt(v + 1.0) for v in f_lp],
-            dtype=float,
-        )
+        # Variables are [y_1..y_m, s_plus_1, s_minus_1, ..., s_plus_r, s_minus_r]
+        # with y_j = x_j * h_j (MATLAB-style scaling for conditioning).
+        lp1_obj = np.zeros(m + 2 * r, dtype=float)
+        for i, fi in enumerate(f_lp):
+            w = 1.0 / math.sqrt(fi + 1.0)
+            lp1_obj[m + 2 * i] = w
+            lp1_obj[m + 2 * i + 1] = w
 
-        a_ub = np.zeros((2 * r, m + r), dtype=float)
+        a_ub = np.zeros((2 * r, m + 2 * r), dtype=float)
         b_ub = np.zeros(2 * r, dtype=float)
         for i in range(r):
-            a_ub[i, :m] = bmat[i, :]
-            a_ub[i, m + i] = -1.0
-            b_ub[i] = f_lp[i]
+            a_ub[2 * i, :m] = coef[i, :]
+            a_ub[2 * i + 1, :m] = -coef[i, :]
+            a_ub[2 * i, m + 2 * i] = -1.0
+            a_ub[2 * i + 1, m + 2 * i + 1] = -1.0
+            b_ub[2 * i] = f_lp[i]
+            b_ub[2 * i + 1] = -f_lp[i]
 
-            a_ub[r + i, :m] = -bmat[i, :]
-            a_ub[r + i, m + i] = -1.0
-            b_ub[r + i] = -f_lp[i]
-
-        a_eq = np.zeros((1, m + r), dtype=float)
+        a_eq = np.zeros((1, m + 2 * r), dtype=float)
         a_eq[0, :m] = 1.0
+        lp_mass = max(1e-12, 1.0 - sparse_mass)
         b_eq = np.array([lp_mass], dtype=float)
 
-        bounds = [(0.0, None)] * (m + r)
-        res = linprog(
-            c=cvec,
+        bounds = [(0.0, None)] * (m + 2 * r)
+        res1 = linprog(
+            c=lp1_obj,
             A_ub=a_ub,
             b_ub=b_ub,
             A_eq=a_eq,
@@ -679,10 +695,28 @@ class Estimator:
             bounds=bounds,
             method="highs",
         )
-        if not res.success:
+        if not res1.success:
             return self.chao92()
 
-        y = res.x[:m]
+        lp2_obj = np.zeros(m + 2 * r, dtype=float)
+        lp2_obj[:m] = 1.0 / np.array(xlp, dtype=float)
+
+        a2_ub = np.vstack([a_ub, lp1_obj])
+        b2_ub = np.concatenate([b_ub, np.array([res1.fun + alpha], dtype=float)])
+
+        res2 = linprog(
+            c=lp2_obj,
+            A_ub=a2_ub,
+            b_ub=b2_ub,
+            A_eq=a_eq,
+            b_eq=b_eq,
+            bounds=bounds,
+            method="highs",
+        )
+        if not res2.success:
+            return self.chao92()
+
+        y = res2.x[:m]
         lp_species = float(sum(y_i / x_i for y_i, x_i in zip(y, xlp)))
         return sparse_species + lp_species
 
@@ -724,7 +758,7 @@ class Estimator:
             return 0
         n_estimated = self._count_estimate(count_estimator)
         n_ub = (
-            self._n_unique
+            self._n_unique * 2
             if not math.isfinite(n_estimated)
             else max(self._n_unique, int(math.ceil(n_estimated)))
         )
@@ -760,58 +794,55 @@ class Estimator:
         n_w: Sequence[int],
         nb_runs: int,
     ) -> float:
+        """Average KL-divergence between observed and simulated f-statistic distributions."""
         if theta_n <= 0:
             return 0.0
         rng = random.Random(self._mc_random_seed)
         total = 0.0
-        n_size = sum(n_w)
-        p_dist = self._index_by_frequency(self._entities)
+
+        # Observed f-statistics: fs[k] = number of entities seen exactly k times.
+        fs_obs: dict[int, int] = {}
+        for abundance, _ in self._entities.values():
+            k = int(abundance)
+            fs_obs[k] = fs_obs.get(k, 0) + 1
 
         for _ in range(nb_runs):
-            simulated: dict[int, list[float]] = {}
+            # Simulate one integrated dataset Q under parameters (theta_n, theta_lambda).
+            sim_abundance: dict[int, int] = {}  # entity_idx -> count across all workers
             for worker_n in n_w:
                 local: set[int] = set()
                 target = min(worker_n, theta_n)
                 while len(local) < target:
-                    idx = int(math.floor(rng.random() * (theta_n + 1)))
-                    p = (
-                        1.0 - math.exp(idx * theta_lambda / theta_n)
-                        if theta_lambda < 0
-                        else math.exp(-idx * theta_lambda / theta_n)
-                    )
+                    idx = int(math.floor(rng.random() * theta_n))
+                    p = math.exp(-idx * theta_lambda / max(theta_n, 1))
                     if rng.random() <= p:
                         local.add(idx)
                 for idx in local:
-                    if idx in simulated:
-                        simulated[idx][0] += 1.0
-                    else:
-                        simulated[idx] = [1.0, 0.0]
+                    sim_abundance[idx] = sim_abundance.get(idx, 0) + 1
 
-            keys = set(p_dist.keys()) | set(simulated.keys())
-            if not keys:
+            # Convert simulation to f-statistics.
+            fs_sim: dict[int, int] = {}
+            for cnt in sim_abundance.values():
+                fs_sim[cnt] = fs_sim.get(cnt, 0) + 1
+
+            # All frequency counts present in either distribution.
+            all_counts = set(fs_obs.keys()) | set(fs_sim.keys())
+            if not all_counts:
                 continue
 
             alpha = self._mc_laplace_alpha
-            p_denom = len(self._all_samples) + alpha * len(keys)
-            q_denom = n_size + alpha * len(keys)
+            # Smooth F_S: entities with counts only in Q get alpha mass.
+            p_denom = sum(fs_obs.values()) + alpha * len(all_counts)
+            q_denom = sum(fs_sim.values()) + alpha * len(all_counts)
+
             kl = 0.0
-            for k in keys:
-                p = (p_dist[k][0] + alpha) / p_denom if k in p_dist else alpha / p_denom
-                q = (
-                    (simulated[k][0] + alpha) / q_denom
-                    if k in simulated
-                    else alpha / q_denom
-                )
+            for k in all_counts:
+                p = (fs_obs.get(k, 0) + alpha) / p_denom
+                q = (fs_sim.get(k, 0) + alpha) / q_denom
                 kl += p * math.log(p / q)
             total += kl
 
         return total / max(nb_runs, 1)
-
-    @staticmethod
-    def _index_by_frequency(entities: dict[str, list[float]]) -> dict[int, list[float]]:
-        """Index entities by abundance rank (most frequent = index 1)."""
-        sorted_entities = sorted(entities.values(), key=lambda x: x[0], reverse=True)
-        return {i + 1: v for i, v in enumerate(sorted_entities)}
 
     @staticmethod
     def _rbf_search_min(

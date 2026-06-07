@@ -3,6 +3,8 @@ from __future__ import annotations
 import math
 import random
 
+import matplotlib.pyplot as plt
+
 from unknown_unknown import DataItem, Estimator, ValueEstimator, CountEstimator
 
 
@@ -20,11 +22,14 @@ def synthetic_example(
     if lambda_ < 0.0:
         raise ValueError("lambda_ must be >= 0")
 
-    # Hidden ground-truth population: positive values with a heavy tail.
+    # Hidden ground-truth population: uniformly spaced values from 10 to 1000.
+    # Paper: N unique items with attribute-value ranging from 10 to 1,000.
     random.seed(seed)
     all_companies = {
-        f"company_{i}": round(random.expovariate(1 / 500) + 50, 1)
-        for i in range(1, n + 1)
+        f"company_{i+1:03d}": value
+        for i, value in enumerate(
+            [10 + i * (1000 - 10) // (n - 1) if n > 1 else 500 for i in range(n)]
+        )
     }
 
     # Paper-style synthetic sampling signal:
@@ -86,6 +91,14 @@ def synthetic_example(
     true_min = min(all_companies.values())
     true_max = max(all_companies.values())
 
+    print("Ground-truth population (hidden):")
+    for name, value in all_companies.items():
+        print(f"{name}: {value}")
+
+    print("Sampled sources and values:")
+    for source in sources:
+        print(f"{source[0].source_id}: {[f'{item.name}({item.value})' for item in sorted(source, key=lambda x: x.value, reverse=True)]}")
+
     # fmt: off
     def print_estimate(count_estimator: CountEstimator, value_estimator: ValueEstimator) -> None:
         print(f"{count_estimator.name.capitalize()+',':<11s} {value_estimator.name.capitalize():<20s} : {e.estimated_count(count_estimator):>10.2f} COUNT, {e.estimated_sum(value_estimator, count_estimator):>10.2f} SUM, {e.estimated_avg(value_estimator, count_estimator):>10.2f} AVG")
@@ -102,6 +115,41 @@ def synthetic_example(
         for value_estimator in ValueEstimator:
             print_estimate(count_estimator, value_estimator)
 
+    # Visualize value distributions
+    num_sources = len(sources)
+    fig, axes = plt.subplots(
+        1, num_sources + 1, figsize=(4 * (num_sources + 1), 4)
+    )
+    if num_sources == 0:
+        axes = [axes]
+
+    # Ground truth distribution
+    ground_truth_values = list(all_companies.values())
+    axes[0].hist(ground_truth_values, bins=15, color="blue", alpha=0.7, edgecolor="black")
+    axes[0].set_title("Ground Truth (All Entities)")
+    axes[0].set_xlabel("Value")
+    axes[0].set_ylabel("Frequency")
+    axes[0].grid(True, alpha=0.3)
+
+    # Source distributions
+    for idx, source in enumerate(sources):
+        source_values = [item.value for item in source]
+        axes[idx + 1].hist(
+            source_values, bins=10, color="green", alpha=0.7, edgecolor="black"
+        )
+        axes[idx + 1].set_title(f"Source {idx + 1} (n={len(source)})")
+        axes[idx + 1].set_xlabel("Value")
+        axes[idx + 1].set_ylabel("Frequency")
+        axes[idx + 1].grid(True, alpha=0.3)
+
+    plt.suptitle(
+        f"Value Distributions (n={n}, sources={num_sources}, λ={lambda_}, ρ={rho})",
+        fontsize=14,
+        fontweight="bold",
+    )
+    plt.tight_layout()
+    plt.show()
+
 
 if __name__ == "__main__":
-    synthetic_example(n=100, source_counts=[5] * 10, lambda_=0, rho=0)
+    synthetic_example(n=100, source_counts=[100] * 5, lambda_=0, rho=1)
