@@ -23,6 +23,7 @@ from utils.file_span_exporter import FileSpanExporter
 from utils.load_prompt import LangfuseProcessor
 from utils.openai_tracing import TruncatingBackendSpanExporter
 
+
 class APIClient(AsyncOpenAI):
     async def _send_request(
         self,
@@ -32,13 +33,19 @@ class APIClient(AsyncOpenAI):
         **kwargs: Unpack[HttpxSendArgs],
     ) -> httpx.Response:
         content = json.loads(request.content.decode("utf-8"))
-        if "text" in content and "response_format" not in content and "GLM" in content["model"]:
+        if (
+            "text" in content
+            and "response_format" not in content
+            and "GLM" in content["model"]
+        ):
             content["response_format"] = content["text"]["format"]
-            content["input"].append({
-                "role": "system",
-                "content": f"JSON Schema: ```json\n{json.dumps(content['text']['format']['schema'], indent=2, ensure_ascii=False)}\n```"
-            })
-            #del content["text"]
+            content["input"].append(
+                {
+                    "role": "system",
+                    "content": f"JSON Schema: ```json\n{json.dumps(content['text']['format']['schema'], indent=2, ensure_ascii=False)}\n```",
+                }
+            )
+            # del content["text"]
             request._content = json.dumps(content).encode("utf-8")
 
         logging.info(content)
@@ -117,7 +124,9 @@ def initialize(
         )
         set_agent_models(coordinator_model, data_model)
         logging.info(f"OpenAI base URL: {os.getenv('OPENAI_BASE_URL')}")
-        logging.info(f"OpenAI API key: {'set' if os.getenv('OPENAI_API_KEY') else 'not set'}")
+        logging.info(
+            f"OpenAI API key: {'set' if os.getenv('OPENAI_API_KEY') else 'not set'}"
+        )
         logging.info(f"OpenAI coordinator model: {coordinator_model}")
         logging.info(f"OpenAI data model: {data_model}")
     elif provider == "University":
@@ -152,7 +161,9 @@ def initialize(
         )
         set_agent_models(coordinator_model, data_model)
         logging.info(f"Work base URL: {os.getenv('WORK_BASE_URL')}")
-        logging.info(f"Work API key: {'set' if os.getenv('WORK_API_KEY') else 'not set'}")
+        logging.info(
+            f"Work API key: {'set' if os.getenv('WORK_API_KEY') else 'not set'}"
+        )
         logging.info(f"Work coordinator model: {coordinator_model}")
         logging.info(f"Work data model: {data_model}")
     else:
