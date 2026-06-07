@@ -34,6 +34,7 @@ def _strip_markdown_code_fences(text: str) -> str:
     candidate = re.sub(r"```$", "", candidate)
     return candidate.strip()
 
+
 class MarkdownTolerantOutputSchema(AgentOutputSchemaBase):
     """Delegates to AgentOutputSchema but retries with stripped markdown fences."""
 
