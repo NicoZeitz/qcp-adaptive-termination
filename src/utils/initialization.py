@@ -32,7 +32,7 @@ class APIClient(AsyncOpenAI):
         **kwargs: Unpack[HttpxSendArgs],
     ) -> httpx.Response:
         content = json.loads(request.content.decode("utf-8"))
-        if "text" in content and "response_format" not in content and "GLM" in content["model"]:
+        if "text" in content and "response_format" not in content and "unsloth" in content["model"]:
             content["response_format"] = content["text"]["format"]
             content["input"].append({
                 "role": "system",
@@ -41,9 +41,15 @@ class APIClient(AsyncOpenAI):
             #del content["text"]
             request._content = json.dumps(content).encode("utf-8")
 
-        logging.info(content)
+        # logging.info(json.dumps(content))
         response = await super()._send_request(request, stream=stream, **kwargs)
-        logging.info(response.json())
+        # logging.info(json.dumps(response.json()))
+
+        content = response.json()
+        # strip all </think> and before
+        content["output"][-1]["content"][-1]["text"] = content["output"][-1]["content"][-1]["text"].split("</think>")[-1].strip()
+        response._content = json.dumps(content).encode("utf-8")
+
         return response
 
 
