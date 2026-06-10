@@ -10,6 +10,7 @@ Usage:
     python figure_synthetic.py
     python figure_synthetic.py --count-estimator chao84
 """
+
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import math
@@ -18,9 +19,9 @@ import random
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-import numpy as np
 
-from unknown_unknown import DataItem, Estimator, ValueEstimator, CountEstimator
+from unknown_unknown import Estimator, ValueEstimator, CountEstimator
+from unknown_unknown.data_item import DataItem
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -37,9 +38,9 @@ COUNT_ESTIMATOR = CountEstimator(args.count_estimator)
 # ── Experiment grid ───────────────────────────────────────────────────────────
 
 REGIMES = [
-    ("Ideal\nλ=0, ρ=0",      0.0, 0.0),
-    ("Realistic\nλ=4, ρ=1",  4.0, 1.0),
-    ("Rare\nλ=4, ρ=0",       4.0, 0.0),
+    ("Ideal\nλ=0, ρ=0", 0.0, 0.0),
+    ("Realistic\nλ=4, ρ=1", 4.0, 1.0),
+    ("Rare\nλ=4, ρ=0", 4.0, 0.0),
 ]
 W_VALUES = [100, 10, 5]
 N_POPULATION = 100
@@ -48,10 +49,11 @@ SAMPLE_SIZES = list(range(80, 501, 60))  # 80, 140, 200, ..., 500
 
 # ── Synthetic data helpers ────────────────────────────────────────────────────
 
+
 def build_population(n: int, seed: int) -> dict[str, float]:
     random.seed(seed)
     return {
-        f"company_{i+1:03d}": 10 + i * (1000 - 10) // (n - 1) if n > 1 else 500
+        f"company_{i + 1:03d}": 10 + i * (1000 - 10) // (n - 1) if n > 1 else 500
         for i in range(n)
     }
 
@@ -90,7 +92,9 @@ def sample_source(
     for _ in range(target):
         weights = [max(publicity[name], 1e-12) for name in names]
         chosen = rng.choices(names, weights=weights, k=1)[0]
-        selected.append(DataItem(name=chosen, value=companies[chosen], source_id=source_id))
+        selected.append(
+            DataItem(name=chosen, value=companies[chosen], source_id=source_id)
+        )
         names.remove(chosen)
     return selected
 
@@ -103,7 +107,9 @@ def run_experiment(
     seed: int,
     count_estimator: CountEstimator,
 ) -> dict[str, float]:
-    print(f"Running experiment: n_per_source={n_per_source}, w={w}, λ={lambda_}, ρ={rho}, count_estimator={count_estimator.value}")
+    print(
+        f"Running experiment: n_per_source={n_per_source}, w={w}, λ={lambda_}, ρ={rho}, count_estimator={count_estimator.value}"
+    )
     companies = build_population(N_POPULATION, seed)
     publicity = build_publicity(companies, lambda_, rho)
     true_sum = sum(companies.values())
@@ -116,15 +122,19 @@ def run_experiment(
     e = Estimator(sources)
 
     return {
-        "true_sum":    true_sum,
-        "observed":    e.sample_sum(),
-        "naive":       e.estimated_sum(ValueEstimator.NAIVE,            count_estimator),
-        "freq":        e.estimated_sum(ValueEstimator.FREQUENCY,        count_estimator),
-        "freq_f12":    e.estimated_sum(ValueEstimator.FREQUENCY_F12,     count_estimator),
-        "bucket_naive": e.estimated_sum(ValueEstimator.BUCKET_NAIVE,    count_estimator),
-        "bucket_freq": e.estimated_sum(ValueEstimator.BUCKET_FREQUENCY, count_estimator),
-        "bucket_freq_f12": e.estimated_sum(ValueEstimator.BUCKET_FREQUENCY_F12, count_estimator),
-        "monte_carlo": e.estimated_sum(ValueEstimator.MONTE_CARLO,     count_estimator),
+        "true_sum": true_sum,
+        "observed": e.sample_sum(),
+        "naive": e.estimated_sum(ValueEstimator.NAIVE, count_estimator),
+        "freq": e.estimated_sum(ValueEstimator.FREQUENCY, count_estimator),
+        "freq_f12": e.estimated_sum(ValueEstimator.FREQUENCY_F12, count_estimator),
+        "bucket_naive": e.estimated_sum(ValueEstimator.NAIVE, count_estimator, use_bucket=True),
+        "bucket_freq": e.estimated_sum(
+            ValueEstimator.FREQUENCY, count_estimator, use_bucket=True
+        ),
+        "bucket_freq_f12": e.estimated_sum(
+            ValueEstimator.FREQUENCY_F12, count_estimator, use_bucket=True
+        ),
+        "monte_carlo": e.estimated_sum(ValueEstimator.NAIVE, count_estimator, use_monte_carlo=True),
     }
 
 
@@ -135,15 +145,21 @@ def _run_experiment_star(args):
 # ── Plotting ──────────────────────────────────────────────────────────────────
 
 LINE_STYLES: dict[str, dict] = {
-    "observed":    dict(color="#1f77b4", ls="-.",  marker="o", ms=3.5, label="Observed"),
-    "naive":       dict(color="#ff7f0e", ls="-.", marker="s", ms=3.5, label="Naive"),
-    "freq":        dict(color="#2ca02c", ls="-.", marker="^", ms=3.5, label="Freq"),
-    #"freq_f12":    dict(color="#2ca02c", ls="-.", marker="v", ms=3.5, label="Freq f12"),
-    #"bucket_naive": dict(color="#9467bd", ls=":", marker="D", ms=3.5, label="Bucket-Naive"),
-    "bucket_freq": dict(color="#d62728", ls=":",  marker="x", ms=4.0, label="Bucket-Freq"),
-    #"bucket_freq_f12": dict(color="#d62728", ls=":",  marker="X", ms=4.0, label="Bucket-Freq f12"),
-    "monte_carlo": dict(color="#8c564b", ls="--", marker="P", ms=3.5, label="Monte Carlo"),
-    "true_sum":    dict(color="gray", alpha=0.5,    ls="-",  marker=None,         label="Ground Truth"),
+    "observed": dict(color="#1f77b4", ls="-.", marker="o", ms=3.5, label="Observed"),
+    "naive": dict(color="#ff7f0e", ls="-.", marker="s", ms=3.5, label="Naive"),
+    "freq": dict(color="#2ca02c", ls="-.", marker="^", ms=3.5, label="Freq"),
+    # "freq_f12":    dict(color="#2ca02c", ls="-.", marker="v", ms=3.5, label="Freq f12"),
+    # "bucket_naive": dict(color="#9467bd", ls=":", marker="D", ms=3.5, label="Bucket-Naive"),
+    "bucket_freq": dict(
+        color="#d62728", ls=":", marker="x", ms=4.0, label="Bucket-Freq"
+    ),
+    # "bucket_freq_f12": dict(color="#d62728", ls=":",  marker="X", ms=4.0, label="Bucket-Freq f12"),
+    "monte_carlo": dict(
+        color="#8c564b", ls="--", marker="P", ms=3.5, label="Monte Carlo"
+    ),
+    "true_sum": dict(
+        color="gray", alpha=0.5, ls="-", marker=None, label="Ground Truth"
+    ),
 }
 
 
@@ -156,7 +172,9 @@ if __name__ == "__main__":
         for total in SAMPLE_SIZES
     ]
 
-    print(f"Running {len(all_params)} experiments in parallel (count estimator: {COUNT_ESTIMATOR.value})...")
+    print(
+        f"Running {len(all_params)} experiments in parallel (count estimator: {COUNT_ESTIMATOR.value})..."
+    )
     results_cache: dict[tuple, dict[str, float]] = {}
     with ProcessPoolExecutor() as executor:
         futures = {executor.submit(_run_experiment_star, p): p for p in all_params}
@@ -165,9 +183,11 @@ if __name__ == "__main__":
             results_cache[params] = result
 
     fig, axes = plt.subplots(
-        len(REGIMES), len(W_VALUES),
+        len(REGIMES),
+        len(W_VALUES),
         figsize=(4.5 * len(W_VALUES), 3.5 * len(REGIMES)),
-        sharex=False, sharey=False,
+        sharex=False,
+        sharey=False,
     )
 
     for col, w in enumerate(W_VALUES):
@@ -175,13 +195,17 @@ if __name__ == "__main__":
             ax = axes[row][col]
 
             results = [
-                results_cache[(max(1, total // w), w, lambda_, rho, SEED, COUNT_ESTIMATOR)]
+                results_cache[
+                    (max(1, total // w), w, lambda_, rho, SEED, COUNT_ESTIMATOR)
+                ]
                 for total in SAMPLE_SIZES
             ]
             xs = SAMPLE_SIZES
 
             for key, style in LINE_STYLES.items():
-                ys_plot = [r[key] if math.isfinite(r[key]) else float("nan") for r in results]
+                ys_plot = [
+                    r[key] if math.isfinite(r[key]) else float("nan") for r in results
+                ]
                 if all(math.isnan(v) for v in ys_plot):
                     continue
                 lw = 1.6 if key == "true_sum" else 1.4
@@ -191,9 +215,11 @@ if __name__ == "__main__":
             ax.set_xlim(SAMPLE_SIZES[0] - 10, SAMPLE_SIZES[-1] + 10)
             ax.set_xticks(SAMPLE_SIZES[::2])
             ax.tick_params(labelsize=7)
-            ax.yaxis.set_major_formatter(ticker.FuncFormatter(
-                lambda v, _: f"{v/1000:.1f}k" if abs(v) >= 1000 else f"{v:.0f}"
-            ))
+            ax.yaxis.set_major_formatter(
+                ticker.FuncFormatter(
+                    lambda v, _: f"{v / 1000:.1f}k" if abs(v) >= 1000 else f"{v:.0f}"
+                )
+            )
             ax.grid(True, alpha=0.25, lw=0.5)
 
             if row == 0:
@@ -202,9 +228,15 @@ if __name__ == "__main__":
                 ax.set_ylabel(regime_label + "\n\nSUM estimate", fontsize=8)
 
     legend_handles = [
-        mlines.Line2D([], [], label=style["label"],
-                      color=style["color"], ls=style["ls"],
-                      marker=style.get("marker"), markersize=style.get("ms", 5))
+        mlines.Line2D(
+            [],
+            [],
+            label=style["label"],
+            color=style["color"],
+            ls=style["ls"],
+            marker=style.get("marker"),
+            markersize=style.get("ms", 5),
+        )
         for style in LINE_STYLES.values()
     ]
     fig.legend(

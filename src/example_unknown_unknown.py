@@ -5,7 +5,8 @@ import random
 
 import matplotlib.pyplot as plt
 
-from unknown_unknown import DataItem, Estimator, ValueEstimator, CountEstimator
+from unknown_unknown import Estimator, ValueEstimator, CountEstimator
+from unknown_unknown.data_item import DataItem
 
 
 def synthetic_example(
@@ -26,7 +27,7 @@ def synthetic_example(
     # Paper: N unique items with attribute-value ranging from 10 to 1,000.
     random.seed(seed)
     all_companies = {
-        f"company_{i+1:03d}": value
+        f"company_{i + 1:03d}": value
         for i, value in enumerate(
             [10 + i * (1000 - 10) // (n - 1) if n > 1 else 500 for i in range(n)]
         )
@@ -97,7 +98,9 @@ def synthetic_example(
 
     print("Sampled sources and values:")
     for source in sources:
-        print(f"{source[0].source_id}: {[f'{item.name}({item.value})' for item in sorted(source, key=lambda x: x.value, reverse=True)]}")
+        print(
+            f"{source[0].source_id}: {[f'{item.name}({item.value})' for item in sorted(source, key=lambda x: x.value, reverse=True)]}"
+        )
 
     # fmt: off
     def print_estimate(count_estimator: CountEstimator, value_estimator: ValueEstimator) -> None:
@@ -106,9 +109,13 @@ def synthetic_example(
     print(
         f"================== Synthetic Example (n={n}, sources={len(source_counts)}, λ={lambda_}, ρ={rho}) =================="
     )
-    print(f"Coverage                         :     {e.sample_coverage():.3f}")
+    print(f"Coverage                         :     {e._sample_coverage():.3f}")
+    def fmt_extreme(v: float | None) -> str:
+        return f"{v:>10.2f}" if v is not None else "   unknown"
+
     print(f"True                             : {true_count:>10.2f} COUNT, {true_sum:>10.2f} SUM, {true_avg:>10.2f} AVG, {true_min:>10.2f} MIN, {true_max:>10.2f} MAX")
     print(f"Sample                           : {e.sample_count():>10.2f} COUNT, {e.sample_sum():>10.2f} SUM, {e.sample_avg():>10.2f} AVG, {e.sample_min():>10.2f} MIN, {e.sample_max():>10.2f} MAX")
+    print(f"Estimated (bucket)               :            COUNT,            SUM,            AVG, {fmt_extreme(e.estimated_min())} MIN, {fmt_extreme(e.estimated_max())} MAX")
     # fmt: on
 
     for count_estimator in CountEstimator:
@@ -117,15 +124,15 @@ def synthetic_example(
 
     # Visualize value distributions
     num_sources = len(sources)
-    fig, axes = plt.subplots(
-        1, num_sources + 1, figsize=(4 * (num_sources + 1), 4)
-    )
+    fig, axes = plt.subplots(1, num_sources + 1, figsize=(4 * (num_sources + 1), 4))
     if num_sources == 0:
         axes = [axes]
 
     # Ground truth distribution
     ground_truth_values = list(all_companies.values())
-    axes[0].hist(ground_truth_values, bins=15, color="blue", alpha=0.7, edgecolor="black")
+    axes[0].hist(
+        ground_truth_values, bins=15, color="blue", alpha=0.7, edgecolor="black"
+    )
     axes[0].set_title("Ground Truth (All Entities)")
     axes[0].set_xlabel("Value")
     axes[0].set_ylabel("Frequency")

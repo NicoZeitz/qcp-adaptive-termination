@@ -125,7 +125,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load env
-    load_dotenv()
+    load_dotenv(override=True)
     # Set up langfuse
     langfuse = get_client()
     if not langfuse.auth_check():
