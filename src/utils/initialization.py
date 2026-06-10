@@ -36,21 +36,24 @@ class APIClient(AsyncOpenAI):
         if (
             "text" in content
             and "response_format" not in content
-            and "GLM" in content["model"]
+            and "unsloth" in content["model"]
         ):
             content["response_format"] = content["text"]["format"]
-            content["input"].append(
-                {
-                    "role": "system",
-                    "content": f"JSON Schema: ```json\n{json.dumps(content['text']['format']['schema'], indent=2, ensure_ascii=False)}\n```",
-                }
-            )
+            # content["input"].append(
+            #     {
+            #         "role": "system",
+            #         "content": f"JSON Schema: ```json\n{json.dumps(content['text']['format']['schema'], indent=2, ensure_ascii=False)}\n```",
+            #     }
+            # )
             # del content["text"]
             request._content = json.dumps(content).encode("utf-8")
 
-        logging.info(content)
+        # logging.info(content)
         response = await super()._send_request(request, stream=stream, **kwargs)
-        logging.info(response.json())
+        # logging.info(response.json())
+
+        # strip overthing before </
+
         return response
 
 
