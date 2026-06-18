@@ -62,7 +62,7 @@ async def answer_step_coordinator(
             PartialQueryAnswer,
             await run_agent(
                 agent_configuration=get_coordinator_agent_configuration("Code"),
-                prompt_name="Query Coordinator/Aggregate",
+                prompt_name="execution-coordinator-aggregate",
                 prompt_parameters={"query": query},
                 tools=[code_environment.as_function_tool()],
                 tool_use_behavior=custom_tool_handler,

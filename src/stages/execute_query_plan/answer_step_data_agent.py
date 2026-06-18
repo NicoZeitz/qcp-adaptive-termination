@@ -89,7 +89,7 @@ async def get_sql_data_agent_parameters(
     m_schema = await data_agent_data_description(data_agent)
 
     return Parameters(
-        prompt_name="SQL Data Agent/Code",
+        prompt_name="execution-data-agent-sql-code",
         prompt_parameters={"m_schema": m_schema, "query": query},
         additional_tools={"query_sql": query_sql},
         additional_span_data=additional_span_data_func,
