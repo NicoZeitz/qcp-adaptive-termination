@@ -35,14 +35,21 @@ def build_relevance_model(data_agents: list[DataAgent]) -> type[BaseModel]:
 
 
 async def filter_coordinator_with_reasoning(
-    query: str, data_agents: list[DataAgent], agent_registry: str
+    query: str,
+    data_agents: list[DataAgent],
+    agent_registry: str,
+    additional_context: str | None = None,
 ) -> list[tuple[DataAgent, str]]:
     RelevanceModel = build_relevance_model(data_agents)
 
     relevances = await run_llm(
         agent_configuration=get_coordinator_agent_configuration("Relevance"),
         prompt_name="discovery-coordinator-relevance",
-        prompt_parameters={"agent_registry": agent_registry, "query": query},
+        prompt_parameters={
+            "agent_registry": agent_registry,
+            "query": query,
+            "additional_context": additional_context,
+        },
         output_type=RelevanceModel,
     )
 
@@ -65,12 +72,15 @@ async def filter_coordinator_with_reasoning(
 
 
 async def filter_data_agent_with_reasoning(
-    query: str, item: tuple[DataAgent, str]
+    query: str,
+    item: tuple[DataAgent, str],
+    additional_context: str | None = None,
 ) -> DataAgent | None:
     data_agent, reasoning = item
-    prompt_parameters = {
+    prompt_parameters: dict[str, str | None] = {
         "query": query,
         "reasoning": reasoning,
+        "additional_context": additional_context,
     }
 
     if data_agent.type == "sql":

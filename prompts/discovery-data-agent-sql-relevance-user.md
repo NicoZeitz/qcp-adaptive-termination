@@ -6,6 +6,11 @@ The Coordinator thinks you are relevant for this query.
 【Coordinator reasoning for your relevance】
 {{reasoning}}
 
+{{#additional_context}}
+【Additional Context】
+{{additional_context}}
+
+{{/additional_context}}
 **Your Task:**
 Evaluate whether you can help answer this query including the coordinator reasoning with your data. You are relevant, if any part of the query or reasoning could be answered using your data, even in a partial, indirect, or abstract way. Even loose or inferred connections that the reasoning explains make you relevant.
 

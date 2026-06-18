@@ -69,7 +69,7 @@ class MarkdownTolerantOutputSchema(AgentOutputSchemaBase):
 async def run_agent[TResult](
     agent_configuration: AgentConfiguration,
     prompt_name: str,
-    prompt_parameters: dict[str, str],
+    prompt_parameters: dict[str, str | None],
     *,
     context: JsonValue = None,
     output_type: Type[TResult] | None = str,
@@ -198,7 +198,7 @@ async def run_agent[TResult](
 async def run_llm[TResult](
     agent_configuration: AgentConfiguration,
     prompt_name: str,
-    prompt_parameters: dict[str, str],
+    prompt_parameters: dict[str, str | None],
     *,
     output_type: Type[TResult] | None = str,
     context: JsonValue = None,
