@@ -5,7 +5,7 @@ import pandas as pd
 
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.additional_information import AdditionalInformation
-from qtypes.aligned_result_list import AlignedResultList, AlignedSchemaMetadata
+from qtypes.aligned_result_list import AggregationType, AlignedResultList, AlignedSchemaMetadata
 from qtypes.data_agent import DataAgent
 from qtypes.estimator_result import EstimatorResult
 from qtypes.multi_agent_iteration_record import (
@@ -22,7 +22,7 @@ from utils.run_agent import run_agent
 from utils.span import append_to_span_output, own_custom_span
 
 
-def _df_to_data_items(
+def dataframe_to_data_items(
     df: pd.DataFrame, key_cols: list[str], value_col: str | None, source_id: str
 ) -> list[DataItem]:
     items = []
@@ -33,7 +33,7 @@ def _df_to_data_items(
     return items
 
 
-def _compute_estimator_result(
+def compute_estimator_result(
     aligned: AlignedResultList,
     agents_queried: int,
     agents_total: int,
@@ -46,7 +46,7 @@ def _compute_estimator_result(
         source_samples: list[list[DataItem]] = []
         for source_id in aligned.data["source_agent"].unique():
             subset = aligned.data[aligned.data["source_agent"] == source_id]
-            items = _df_to_data_items(
+            items = dataframe_to_data_items(
                 subset, schema.keys, schema.value_column, str(source_id)
             )
             if items:
@@ -92,7 +92,7 @@ def _compute_estimator_result(
         return None
 
 
-async def _align_schema(
+async def align_schema(
     aligned: AlignedResultList,
     agent_name: str,
     agent_result: ResultType,
@@ -106,7 +106,7 @@ async def _align_schema(
     partial_answer: PartialQueryAnswer | None = None
     captured_schema: AlignedSchemaMetadata | None = None
 
-    def set_schema(aggregation_type: str, keys: list, value_column: str | None = None):
+    def set_schema(aggregation_type: AggregationType, keys: list, value_column: str | None = None):
         nonlocal partial_answer, captured_schema
         captured_schema = AlignedSchemaMetadata(
             aggregation_type=aggregation_type,
@@ -132,7 +132,7 @@ async def _align_schema(
             tools={"set_schema": set_schema},
         )
         prompt_name = "execution-coordinator-align-schema-first"
-        prompt_parameters = {
+        prompt_parameters: dict[str, str | None] = {
             "query": query,
             "agent_name": agent_name,
             "agent_result_preview": str(new_data.head(5).to_string()),
@@ -148,7 +148,7 @@ async def _align_schema(
             tools={"merge_result": merge_result},
         )
         prompt_name = "execution-coordinator-align-schema-continue"
-        prompt_parameters = {
+        prompt_parameters: dict[str, str | None] = {
             "query": query,
             "agent_name": agent_name,
             "agent_result_preview": str(new_data.head(5).to_string()),
@@ -166,20 +166,42 @@ async def _align_schema(
             final_output=partial_answer,
         )
 
-    await run_agent(
-        agent_configuration=get_coordinator_agent_configuration(
-            "Align Schema First" if is_first else "Align Schema Continue"
-        ),
-        prompt_name=prompt_name,
-        prompt_parameters=prompt_parameters,
-        tools=[code_environment.as_function_tool()],
-        tool_use_behavior=custom_tool_handler,
-        reset_tool_choice=False,
-        parallel_tool_calls=False,
-        tool_choice="required",
-        output_type=PartialQueryAnswerDummy,
-        get_actual_result=lambda: partial_answer,
-    )
+    with own_custom_span(
+        f"Query Coordinator - Align Schema {'First' if is_first else 'Continue'}",
+        input={
+            "query": query,
+            "agent_name": agent_name,
+            "is_first": is_first,
+            "agent_result_rows": len(new_data),
+            "agent_result_preview": str(new_data.head(5).to_string()),
+            "existing_result_rows": len(aligned.data) if not is_first else None,
+            "existing_result_preview": str(aligned.data.head(10).to_string()) if not is_first
+            else None,
+        },
+    ):
+        await run_agent(
+            agent_configuration=get_coordinator_agent_configuration(
+                "Align Schema First" if is_first else "Align Schema Continue"
+            ),
+            prompt_name=prompt_name,
+            prompt_parameters=prompt_parameters,
+            tools=[code_environment.as_function_tool()],
+            tool_use_behavior=custom_tool_handler,
+            reset_tool_choice=False,
+            parallel_tool_calls=False,
+            tool_choice="required",
+            output_type=PartialQueryAnswerDummy,
+            get_actual_result=lambda: partial_answer,
+        )
+        append_to_span_output({
+            "has_answer": partial_answer is not None and partial_answer.has_answer,
+            "result_rows": len(partial_answer.answer)
+            if partial_answer is not None
+            and partial_answer.has_answer
+            and partial_answer.answer is not None
+            else 0,
+            "captured_schema": str(captured_schema) if captured_schema is not None else None,
+        })
 
     if partial_answer is None or not partial_answer.has_answer:
         # fallback: just append raw
@@ -256,28 +278,46 @@ async def _run_completeness_evaluator(
         is_done = decision == "final_result" or decision == "query_more_agents"
         return ToolsToFinalOutputResult(is_final_output=is_done, final_output=None)
 
-    await run_agent(
-        agent_configuration=get_coordinator_agent_configuration(
-            "Completeness Evaluator"
-        ),
-        prompt_name="execution-coordinator-completeness-evaluator",
-        prompt_parameters={
+    with own_custom_span(
+        "Query Coordinator - Completeness Evaluator",
+        input={
             "query": query,
+            "result_list_rows": len(aligned.data),
             "result_list_preview": str(aligned.data.head(10).to_string()),
             "estimator_summary": est_summary
             or "Not yet available (fewer than 2 agents queried).",
-            "remaining_agents": ", ".join(remaining_agents)
-            if remaining_agents
-            else "none",
+            "remaining_agents": remaining_agents,
+            "remaining_agents_count": len(remaining_agents),
         },
-        tools=[code_environment.as_function_tool()],
-        tool_use_behavior=custom_tool_handler,
-        reset_tool_choice=False,
-        parallel_tool_calls=False,
-        tool_choice="required",
-        output_type=PartialQueryAnswerDummy,
-        get_actual_result=lambda: None,
-    )
+    ):
+        await run_agent(
+            agent_configuration=get_coordinator_agent_configuration(
+                "Completeness Evaluator"
+            ),
+            prompt_name="execution-coordinator-completeness-evaluator",
+            prompt_parameters={
+                "query": query,
+                "result_list_preview": str(aligned.data.head(10).to_string()),
+                "estimator_summary": est_summary
+                or "Not yet available (fewer than 2 agents queried).",
+                "remaining_agents": ", ".join(remaining_agents)
+                if remaining_agents
+                else "none",
+            },
+            tools=[code_environment.as_function_tool()],
+            tool_use_behavior=custom_tool_handler,
+            reset_tool_choice=False,
+            parallel_tool_calls=False,
+            tool_choice="required",
+            output_type=PartialQueryAnswerDummy,
+            get_actual_result=lambda: None,
+        )
+        append_to_span_output({
+            "decision": decision,
+            "next_agents": next_agents,
+            "next_agents_count": len(next_agents),
+            "has_final_result": final_result_value is not None,
+        })
 
     return decision, next_agents, final_result_value
 
@@ -308,65 +348,93 @@ async def answer_step_multiple_agents(
             if agent_name not in agents_to_query:
                 continue
 
-            agent_partial = await answer_step_data_agent(
-                data_agents=data_agents,
-                query=query,
-                to_agent=agent_name,
-                additional_information=additional_information,
-            )
-            queried.append(agent_name)
+            iteration_index = len(iteration_records) + 1
+            with own_custom_span(
+                f"Multiple Agents - Round {iteration_index}: {agent_name}",
+                input={
+                    "query": query,
+                    "agent_name": agent_name,
+                    "iteration": iteration_index,
+                    "agents_queried_so_far": list(queried),
+                    "agents_remaining": [a for a in all_agents if a not in queried],
+                },
+            ):
+                agent_partial = await answer_step_data_agent(
+                    data_agents=data_agents,
+                    query=query,
+                    to_agent=agent_name,
+                    additional_information=additional_information,
+                )
+                queried.append(agent_name)
 
-            if not agent_partial.has_answer or agent_partial.answer is None:
-                if agent_partial.has_needs:
-                    collected_needs.extend(agent_partial.needs)
-                estimator_result = _compute_estimator_result(
+                if not agent_partial.has_answer or agent_partial.answer is None:
+                    if agent_partial.has_needs:
+                        collected_needs.extend(agent_partial.needs)
+                    estimator_result = compute_estimator_result(
+                        aligned, len(queried), agents_total
+                    )
+                    record = MultiAgentIterationRecord(
+                        step_id=query_plan_step.id,
+                        agent_name=agent_name,
+                        result_list=aligned.data.copy(),
+                        estimator_result=estimator_result,
+                        evaluator_decision="query_more_agents",
+                        evaluator_next_agents=[a for a in all_agents if a not in queried],
+                    )
+                    iteration_records.append(record)
+                    append_to_span_output({
+                        "agent_has_answer": False,
+                        "evaluator_decision": "query_more_agents",
+                    })
+                    continue
+
+                aligned = await align_schema(
+                    aligned, agent_name, agent_partial.answer, query
+                )
+
+                estimator_result = compute_estimator_result(
                     aligned, len(queried), agents_total
                 )
+
+                remaining = [a for a in all_agents if a not in queried]
+                (
+                    decision,
+                    next_agents,
+                    final_result_value,
+                ) = await _run_completeness_evaluator(
+                    aligned, estimator_result, query, remaining
+                )
+
                 record = MultiAgentIterationRecord(
                     step_id=query_plan_step.id,
                     agent_name=agent_name,
                     result_list=aligned.data.copy(),
                     estimator_result=estimator_result,
-                    evaluator_decision="query_more_agents",
-                    evaluator_next_agents=[a for a in all_agents if a not in queried],
+                    evaluator_decision=decision,
+                    evaluator_next_agents=next_agents,
                 )
                 iteration_records.append(record)
-                continue
 
-            aligned = await _align_schema(
-                aligned, agent_name, agent_partial.answer, query
-            )
+                append_to_span_output({
+                    "agent_has_answer": True,
+                    "aligned_result_rows": len(aligned.data),
+                    "evaluator_decision": decision,
+                    "evaluator_next_agents": next_agents,
+                    "estimator_sample_coverage": estimator_result.sample_coverage
+                    if estimator_result is not None
+                    else None,
+                    "estimator_agents_queried": estimator_result.agents_queried
+                    if estimator_result is not None
+                    else None,
+                })
 
-            estimator_result = _compute_estimator_result(
-                aligned, len(queried), agents_total
-            )
-
-            remaining = [a for a in all_agents if a not in queried]
-            (
-                decision,
-                next_agents,
-                final_result_value,
-            ) = await _run_completeness_evaluator(
-                aligned, estimator_result, query, remaining
-            )
-
-            record = MultiAgentIterationRecord(
-                step_id=query_plan_step.id,
-                agent_name=agent_name,
-                result_list=aligned.data.copy(),
-                estimator_result=estimator_result,
-                evaluator_decision=decision,
-                evaluator_next_agents=next_agents,
-            )
-            iteration_records.append(record)
-
-            if decision == "final_result":
-                if final_result_value is not None:
-                    last_final_result = final_result_value
-                if not continue_after_final_result:
-                    break
-            elif decision == "query_more_agents":
-                agents_to_query = [a for a in next_agents if a not in queried]
+                if decision == "final_result":
+                    if final_result_value is not None:
+                        last_final_result = final_result_value
+                    if not continue_after_final_result:
+                        break
+                elif decision == "query_more_agents":
+                    agents_to_query = [a for a in next_agents if a not in queried]
 
         append_to_span_output({"iteration_records_count": len(iteration_records)})
 
