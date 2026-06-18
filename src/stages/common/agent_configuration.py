@@ -8,6 +8,9 @@ coordinator_reasoning_mapping: dict[str, Reasoning] = {
     "Draft Query Plan": Reasoning(effort="high", summary="concise"),
     "Code": Reasoning(effort="medium", summary="concise"),
     "Replan Query Plan": Reasoning(effort="high", summary="concise"),
+    "Align Schema First": Reasoning(effort="medium", summary="concise"),
+    "Align Schema Continue": Reasoning(effort="medium", summary="concise"),
+    "Completeness Evaluator": Reasoning(effort="medium", summary="concise"),
 }
 
 data_agent_reasoning_mapping: dict[str, Reasoning] = {

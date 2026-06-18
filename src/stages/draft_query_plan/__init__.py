@@ -24,6 +24,7 @@ from utils.span import append_to_span_output, own_custom_span
 def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
     data_agent_names = [agent.name for agent in data_agents]
     AgentName = Literal["Coordinator", *data_agent_names]
+    DataAgentName = Literal[*data_agent_names]
     StrictModelConfig = ConfigDict(extra="forbid")
 
     QueryDependency = create_model(
@@ -46,7 +47,7 @@ def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseMode
         id=(str, FieldDefinitions.step_id),
         query=(str, FieldDefinitions.step_query),
         to_agent=(
-            list[AgentName],
+            list[DataAgentName],
             Field(
                 description=FieldDefinitions.step_to_agents.description,
                 min_length=2,
