@@ -1,7 +1,0 @@
-output_path: ../data/bird/dataset_own_own/financial/q97
-database_url: sqlite:////Users/I550817/SAPDevelop/Lectures/qcp-prototype/data/bird/dev/dev_databases/financial/financial.sqlite
-agent_amount: 4
-split_type: mixed
-noise_type: none
-force_splits: False
-seed: 42
