@@ -127,14 +127,18 @@ def run_experiment(
         "naive": e.estimated_sum(ValueEstimator.NAIVE, count_estimator),
         "freq": e.estimated_sum(ValueEstimator.FREQUENCY, count_estimator),
         "freq_f12": e.estimated_sum(ValueEstimator.FREQUENCY_F12, count_estimator),
-        "bucket_naive": e.estimated_sum(ValueEstimator.NAIVE, count_estimator, use_bucket=True),
+        "bucket_naive": e.estimated_sum(
+            ValueEstimator.NAIVE, count_estimator, use_bucket=True
+        ),
         "bucket_freq": e.estimated_sum(
             ValueEstimator.FREQUENCY, count_estimator, use_bucket=True
         ),
         "bucket_freq_f12": e.estimated_sum(
             ValueEstimator.FREQUENCY_F12, count_estimator, use_bucket=True
         ),
-        "monte_carlo": e.estimated_sum(ValueEstimator.NAIVE, count_estimator, use_monte_carlo=True),
+        "monte_carlo": e.estimated_sum(
+            ValueEstimator.NAIVE, count_estimator, use_monte_carlo=True
+        ),
     }
 
 
