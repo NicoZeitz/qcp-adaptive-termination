@@ -3,7 +3,7 @@ import shutil
 import time
 from pathlib import Path
 
-from generate_mschemas import generate_mschema_from_sqlite
+from scripts.generate_mschemas import generate_mschema_from_sqlite
 from splits.splitter import SplitType, create_agents
 
 if __name__ == "__main__":

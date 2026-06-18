@@ -109,7 +109,7 @@ def synthetic_example(
     print(
         f"================== Synthetic Example (n={n}, sources={len(source_counts)}, λ={lambda_}, ρ={rho}) =================="
     )
-    print(f"Coverage                         :     {e._sample_coverage():.3f}")
+    print(f"Coverage                         :     {e.sample_coverage():.3f}")
     def fmt_extreme(v: float | None) -> str:
         return f"{v:>10.2f}" if v is not None else "   unknown"
 

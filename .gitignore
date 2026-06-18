@@ -239,8 +239,22 @@ data/wikidbs/
 # Runs
 data/runs/
 
+# Dataset generated outputs (databases, per-run logs, plots)
+data/dataset/dataset_*/
 
 # Other generated files
-A Vision for Autonomous Data Agent Collaboration From Query-by-Integration to Query-by-Collaboration CIDR2026_QCPDB.pdf
+documentation/**/*.pdf
+
 .logs/
 .cache/
+
+# Generated figures
+schema.png
+src/figure_synthetic_*.png
+src/scripts/figure_synthetic_*.png
+
+# Scratch / results
+results.md
+
+# Claude Code local settings
+.claude/
