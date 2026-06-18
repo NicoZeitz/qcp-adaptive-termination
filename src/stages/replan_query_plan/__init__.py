@@ -3,10 +3,11 @@ import json
 from pydantic import BaseModel
 
 from qtypes.data_agent import DataAgent
-from qtypes.need import need_to_json_preview
 from qtypes.query_plan import QueryPlan
+from qtypes.query_plan_step import MultiAgentQueryPlanStep
 from qtypes.query_plan_step_execution_result import FailedExecution
-from qtypes.result import ResultType, result_to_json_preview
+from qtypes.result import ResultType
+from utils.preview import need_to_json_preview, result_to_json_preview
 from stages.common.agent_configuration import get_coordinator_agent_configuration
 from stages.common.data_agent.agent_registry import (
     AgentRegistryType,
@@ -37,7 +38,7 @@ def create_query_plan_prompt_context(query_plan: QueryPlan) -> str:
                     "to_agent": step.to_agent,
                     **(
                         {"merge_task": step.merge_task}
-                        if hasattr(step, "merge_task")
+                        if isinstance(step, MultiAgentQueryPlanStep)
                         else {}
                     ),
                     "dependencies": [
