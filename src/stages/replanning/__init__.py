@@ -13,7 +13,7 @@ from stages.common.data_agent.agent_registry import (
     AgentRegistryType,
     build_agent_registry,
 )
-from stages.draft_query_plan import (
+from stages.planning import (
     create_draft_query_plan_model,
     map_query_plan_model_to_query_plan,
 )

@@ -19,9 +19,9 @@ from qtypes.query_plan_step_execution_result import (
     SuccessfulExecution,
 )
 from qtypes.result import ResultType
-from stages.execute_query_plan.answer_step_coordinator import answer_step_coordinator
-from stages.execute_query_plan.answer_step_data_agent import answer_step_data_agent
-from stages.execute_query_plan.answer_step_multiple_agents import (
+from stages.execution.answer_step_coordinator import answer_step_coordinator
+from stages.execution.answer_step_data_agent import answer_step_data_agent
+from stages.execution.answer_step_multiple_agents import (
     answer_step_multiple_agents,
 )
 from utils.span import append_to_span_output, own_custom_span

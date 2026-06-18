@@ -16,7 +16,7 @@ from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDu
 from qtypes.query_plan_step import MultiAgentQueryPlanStep
 from qtypes.result import ResultType, try_parse_value_to_result_type
 from stages.common.agent_configuration import get_coordinator_agent_configuration
-from stages.execute_query_plan.answer_step_data_agent import answer_step_data_agent
+from stages.execution.answer_step_data_agent import answer_step_data_agent
 from unknown_unknown import DataItem, Estimator
 from utils.run_agent import run_agent
 from utils.span import append_to_span_output, own_custom_span

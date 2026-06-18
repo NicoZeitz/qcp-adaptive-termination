@@ -9,13 +9,13 @@ from datetime import datetime
 from agents import trace
 
 from utils.preview import result_to_json_preview
-from stages.draft_query_plan import draft_query_plan
+from stages.planning import draft_query_plan
 from qtypes.drafted_query_plan import DraftedQueryPlan
-from stages.execute_query_plan import execute_query_plan
+from stages.execution import execute_query_plan
 from qtypes.collaborative_query_answering_result import (
     CollaborativeQueryAnsweringResult,
 )
-from stages.filter_relevant_agents import filter_relevant_agents
+from stages.discovery import filter_relevant_agents
 from qtypes.collaborative_query_answering import CollaborativeQueryAnswering
 from qtypes.filtered_relevant_agents import FilteredRelevantAgents
 from utils.cache import load_cache_file
@@ -139,7 +139,7 @@ async def main(
             )
             data = cast(CollaborativeQueryAnsweringResult, data)
 
-            from stages.execute_query_plan import last_iteration_records
+            from stages.execution import last_iteration_records
 
             logging.info(f"{user}: Finished stage 3")
             logging.info(f"Result: {data}")
