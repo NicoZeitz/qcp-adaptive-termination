@@ -14,7 +14,6 @@ from qtypes.result import try_parse_value_to_result_type
 from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.data_description import data_agent_data_description
 from stages.common.data_agent.sql_data_agent.get_db_connection import get_db_engine
-from stages.common.data_agent.text_data_agent.get_text import get_text
 from utils.serialize_value import serialize_value
 from utils.preview import preview_dataframe
 from utils.run_agent import run_agent
@@ -45,20 +44,6 @@ class SqlQuery:
             span_data["error"] = serialize_value(self.error)
 
         return span_data
-
-
-async def get_text_data_agent_parameters(
-    data_agent: DataAgent, query: str
-) -> Parameters:
-    summary = await data_agent_data_description(data_agent)
-    return Parameters(
-        prompt_name="Text Data Agent/Code",
-        prompt_parameters={"summary": summary, "query": query},
-        additional_variables={
-            "text": get_text(data_agent),
-            "summary": summary,
-        },
-    )
 
 
 async def get_sql_data_agent_parameters(
@@ -106,9 +91,7 @@ async def answer_step_data_agent(
         (agent for agent in data_agents if agent.name == to_agent)
     )
 
-    if responsible_data_agent.type == "text":
-        parameters = await get_text_data_agent_parameters(responsible_data_agent, query)
-    elif responsible_data_agent.type == "sql":
+    if responsible_data_agent.type == "sql":
         parameters = await get_sql_data_agent_parameters(
             responsible_data_agent, query, additional_information
         )
