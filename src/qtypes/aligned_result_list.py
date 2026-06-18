@@ -2,15 +2,15 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 import pandas as pd
+from pydantic import BaseModel
 
 AggregationType = Literal["count", "min", "max", "sum", "avg"]
 
 
-@dataclass
-class AlignedSchemaMetadata:
+class AlignedSchemaMetadata(BaseModel):
     aggregation_type: AggregationType
-    keys: list[str]  # entity identifier columns
-    value_column: str | None  # numeric column; None for count/listing queries
+    keys: list[str]
+    value_column: str | None = None
 
 
 @dataclass
