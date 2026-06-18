@@ -8,8 +8,6 @@ from stages.common.agent_configuration import (
     get_data_agent_agent_configuration,
 )
 from stages.common.data_agent.data_description import data_agent_data_description
-from stages.common.data_agent.text_data_agent.get_text import get_text
-from utils.preview import CHAR_LIMIT_LONG_LLM, preview_text
 from utils.run_agent import run_agent
 from utils.span import append_to_span_output
 
@@ -75,13 +73,7 @@ async def filter_data_agent_with_reasoning(
         "reasoning": reasoning,
     }
 
-    if data_agent.type == "text":
-        prompt_name = "Text Data Agent/Relevance"
-        prompt_parameters["summary"] = await data_agent_data_description(data_agent)
-        prompt_parameters["preview"] = preview_text(
-            get_text(data_agent), CHAR_LIMIT_LONG_LLM
-        )
-    elif data_agent.type == "sql":
+    if data_agent.type == "sql":
         prompt_name = "discovery-data-agent-sql-relevance"
         prompt_parameters["m_schema"] = await data_agent_data_description(data_agent)
     else:

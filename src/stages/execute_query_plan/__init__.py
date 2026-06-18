@@ -9,7 +9,7 @@ from qtypes.query_plan import QueryPlan
 from qtypes.query_plan_step_execution_result import FailedExecution, SuccessfulExecution
 from qtypes.result import ResultType, get_failed_result
 from stages.execute_query_plan.add_agents_for_needs import add_agents_for_needs
-from stages.execute_query_plan.replan_query_plan import replan_query_plan
+from stages.replan_query_plan import replan_query_plan
 from stages.execute_query_plan.execute_query_plan_next_step import (
     execute_query_plan_next_step,
 )

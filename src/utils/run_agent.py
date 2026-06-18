@@ -193,3 +193,29 @@ async def run_agent[TResult](
         parallel_tool_calls=parallel_tool_calls,
         tool_choice=tool_choice,
     )
+
+
+async def run_llm[TResult](
+    agent_configuration: AgentConfiguration,
+    prompt_name: str,
+    prompt_parameters: dict[str, str],
+    *,
+    output_type: Type[TResult] | None = str,
+    context: JsonValue = None,
+    cache_mode: CacheMode | None = None,
+) -> TResult:
+    single_turn_config = AgentConfiguration(
+        name=agent_configuration.name,
+        model=agent_configuration.model,
+        reasoning=agent_configuration.reasoning,
+        max_turns=1,
+    )
+    return await run_agent(
+        agent_configuration=single_turn_config,
+        prompt_name=prompt_name,
+        prompt_parameters=prompt_parameters,
+        output_type=output_type,
+        context=context,
+        tools=[],
+        cache_mode=cache_mode,
+    )
