@@ -6,14 +6,16 @@ from qtypes.collaborative_query_answering_result import (
 from qtypes.data_agent import DataAgent
 from qtypes.execution_result import ExecutionResult
 from qtypes.multi_agent_iteration_record import MultiAgentIterationRecord
+from qtypes.need import serialize_need
 from qtypes.query_plan import QueryPlan
 from qtypes.query_plan_step_execution_result import FailedExecution, SuccessfulExecution
 from qtypes.result import ResultType, get_failed_result
-from stages.execute_query_plan.add_agents_for_needs import add_agents_for_needs
-from stages.replan_query_plan import replan_query_plan
+from stages.common.data_agent.agent_registry import AgentRegistryType
 from stages.execute_query_plan.execute_query_plan_next_step import (
     execute_query_plan_next_step,
 )
+from stages.filter_relevant_agents import FilterType, filter_relevant_agents_internal
+from stages.replan_query_plan import replan_query_plan
 from utils.cache import cached
 from utils.span import append_to_span_output, own_custom_span
 
@@ -71,13 +73,24 @@ async def replan(
         },
     ):
         updated_data_agents = current_data_agents
+
         if failed_execution.needs:
-            updated_data_agents = await add_agents_for_needs(
-                data_agents=data_agents,
-                current_data_agents=current_data_agents,
-                needs=failed_execution.needs,
-                query=query_plan.query,
+            current_agent_names = {agent.name for agent in current_data_agents}
+            remaining_agents = [
+                agent for agent in data_agents if agent.name not in current_agent_names
+            ]
+            needs_context = "\n".join(
+                f"- {serialize_need(need)}" for need in failed_execution.needs
             )
+            if remaining_agents:
+                result = await filter_relevant_agents_internal(
+                    query=query_plan.query,
+                    data_agents=remaining_agents,
+                    agent_registry_type=AgentRegistryType.NATURAL_LANGUAGE,
+                    filter_type=FilterType.REASONING,
+                    additional_context=needs_context,
+                )
+                updated_data_agents = current_data_agents + result.relevant_data_agents
 
         new_query_plan = await replan_query_plan(
             data_agents=data_agents,

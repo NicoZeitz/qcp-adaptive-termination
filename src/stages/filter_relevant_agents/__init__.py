@@ -57,6 +57,7 @@ async def filter_relevant_agents_internal(
     data_agents: list[DataAgent],
     agent_registry_type: AgentRegistryType,
     filter_type: FilterType,
+    additional_context: str | None = None,
 ) -> FilteredRelevantAgents:
     result: Any
 
@@ -80,7 +81,7 @@ async def filter_relevant_agents_internal(
     ):
         if filter_type == FilterType.REASONING:
             result = await filter_coordinator_with_reasoning(
-                query, data_agents, agent_registry
+                query, data_agents, agent_registry, additional_context
             )
         else:
             raise ValueError(f"Unsupported filter type: {filter_type}")
@@ -92,7 +93,9 @@ async def filter_relevant_agents_internal(
         relevant_data_agents = []
         for item in result:
             if filter_type == FilterType.REASONING:
-                agent = await filter_data_agent_with_reasoning(query, item)
+                agent = await filter_data_agent_with_reasoning(
+                    query, item, additional_context
+                )
 
             if agent is not None:
                 relevant_data_agents.append(agent)
