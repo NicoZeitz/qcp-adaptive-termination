@@ -18,6 +18,15 @@ A query plan is a list of steps that need to be executed in order to answer the 
   - This applies even if data have different names or structures - what matters is whether they could contain relevant data.
   - **Never assume one agent has all the data.** The data is distributed and you must collect from all possible sources to get complete results.
 
+## Multi-Agent Steps
+
+When the same data is expected to be distributed across multiple agents (horizontal partitioning), use a multi-agent step by listing all agents in `to_agent` as an array. This triggers a dedicated parallel execution and result merging process.
+
+- Multi-agent steps can only target data agents — never the 'Coordinator' directly.
+- The `merge_task` field describes how to combine the results from all agents into a unified result list.
+- Each agent in the step receives the same query and the same dependencies.
+- The merged result from a multi-agent step is then available to dependent steps.
+
 ## Example Plan
 
 Here is an example of a query plan. Please use this as a reference on how to draft a query plan for your available agents and query. The query for the example query plan is the question "Who played Rocket in the movie called 'Guardians of the Galaxy' and when was he born? Also return the title id of the movie.".
@@ -157,8 +166,8 @@ Drafted query plan:
 
 1. All agents are queried when relevant: In this case all agents are relevant to answer the question. This is the case sometimes, but not always.
 2. Data is distributed - no assumptions about local completeness: The data is split across all agents. It is not possible to assume that tables can be locally joined within an agent to answer the question. Therefore we have to ask multiple agents for the same information and combine it afterwards. The data can be horizontally and vertically split.
-3. Step s1: Query all agents with title table: We first have to find the `title_id` of 'Guardians of the Galaxy' from agents A3, A4 and A5, because we don't know which agent has the relevant information. Since the title table is in all three agents, **all** of them must be asked.
-4. Step s2: Query all agents with title `type` information. Ask both agents which have information about the type. This **has to be** done in a separate step and **cannot be merged** with the previous step (no assumptions about local completeness). First aggregate globally, then give the results to the next agent. Data in agents can be heterogenous: A3 has the `type` column directly in the `titles` table, while A6 has a separate `title_types` table.
+3. Step s1: Query all agents with title table using a multi-agent step: We first have to find the `title_id` of 'Guardians of the Galaxy' from agents A3, A4 and A5, because we don't know which agent has the relevant information. Since the title table is in all three agents, **all** of them must be asked.
+4. Step s2: Query all agents with title `type` information using a multi-agent step. Ask both agents which have information about the type. This **has to be** done in a separate step and **cannot be merged** with the previous step (no assumptions about local completeness). First aggregate globally, then give the results to the next agent. Data in agents can be heterogenous: A3 has the `type` column directly in the `titles` table, while A6 has a separate `title_types` table.
 5. Step s3: **NO** local joins with titles table: We do NOT ask A3 to "join crew with titles and filter by primary_title and character name", even though A3 has both tables locally. This is because:
   - The `crew` table appears in A3, A4, and A5 (horizontal partitioning)
   - Crew rows for the same title_id might be distributed across all three agents
