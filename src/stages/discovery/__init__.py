@@ -5,7 +5,7 @@ from stages.common.data_agent.agent_registry import (
     AgentRegistryType,
     build_agent_registry,
 )
-from stages.filter_relevant_agents.filter_with_reasoning import (
+from stages.discovery.filter_with_reasoning import (
     filter_coordinator_with_reasoning,
     filter_data_agent_with_reasoning,
 )

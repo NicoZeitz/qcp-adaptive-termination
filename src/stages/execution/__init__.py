@@ -11,11 +11,11 @@ from qtypes.query_plan import QueryPlan
 from qtypes.query_plan_step_execution_result import FailedExecution, SuccessfulExecution
 from qtypes.result import ResultType, get_failed_result
 from stages.common.data_agent.agent_registry import AgentRegistryType
-from stages.execute_query_plan.execute_query_plan_next_step import (
+from stages.execution.execute_query_plan_next_step import (
     execute_query_plan_next_step,
 )
-from stages.filter_relevant_agents import FilterType, filter_relevant_agents_internal
-from stages.replan_query_plan import replan_query_plan
+from stages.discovery import FilterType, filter_relevant_agents_internal
+from stages.replanning import replan_query_plan
 from utils.cache import cached
 from utils.span import append_to_span_output, own_custom_span
 
