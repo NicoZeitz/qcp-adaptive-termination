@@ -10,11 +10,13 @@ Your python environment is preconfigured with the following code:
 
 ```python
 import pandas as pd
+{{#additional_information_preview}}
 
 class AdditionalInformation:
   step_id: str
   dependency: str
   data: pd.DataFrame
+{{/additional_information_preview}}
 
 # Additional available functions to call
 def raise_needs(needs: list[str]) -> None:
@@ -29,7 +31,9 @@ def query_sql(query: str) -> pd.DataFrame:
 
 # Available variables
 query: str
+{{#additional_information_preview}}
 additional_information: list[AdditionalInformation]
+{{/additional_information_preview}}
 ```
 
 There are multiple functions available to call
@@ -39,7 +43,9 @@ There are multiple functions available to call
 
 Input information is provided in the following variables
 * `query`: The natural language query that should be answered
+{{#additional_information_preview}}
 * `additional_information`: Contains additional external information that can and should be used to answer the users question. Each entry contains the originating `step_id`, a natural language `dependency` description, and the resolved `data` as a pandas DataFrame.
+{{/additional_information_preview}}
 
 After each call to execute code, you will see a output similar to this:
 
@@ -47,12 +53,14 @@ After each call to execute code, you will see a output similar to this:
 Stdout: ... <a portion of stdout, e.g. produced by print()>
 Stderr: ... <a portion of stderr, if available>
 Exception: ... <exceptions that occurred, if applicable>
-Locals: 'query': str,'additional_information': dict,'pd': module,... <all local variables>
+Locals: 'query': str,{{#additional_information_preview}}'additional_information': dict,{{/additional_information_preview}}'pd': module,... <all local variables>
 ```
+{{#additional_information_preview}}
 
 ## Data normalization
 
 The `additional_information` variable contains external data that is very likely needed to answer the user's question. This data is provided in a pandas DataFrame format, but may not be normalized yet to the same format as the database schema. It is your task to transform and adapt this data so you can use it. This might require you to do some data cleaning, normalization, transformation or even translation of the data. It may be a good idea to first explore the data in `additional_information` and then generate a function `normalize()`to normalize the data.
+{{/additional_information_preview}}
 
 ## General Rules to follow
 

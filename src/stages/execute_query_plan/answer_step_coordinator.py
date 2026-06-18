@@ -14,6 +14,7 @@ from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDu
 from qtypes.query_plan_step import QueryPlanStep
 from qtypes.result import try_parse_value_to_result_type
 from stages.common.agent_configuration import get_coordinator_agent_configuration
+from utils.preview import preview_additional_information
 from utils.run_agent import run_agent
 from utils.span import append_to_span_output, own_custom_span
 
@@ -63,7 +64,10 @@ async def answer_step_coordinator(
             await run_agent(
                 agent_configuration=get_coordinator_agent_configuration("Code"),
                 prompt_name="execution-coordinator-aggregate",
-                prompt_parameters={"query": query},
+                prompt_parameters={
+                    "query": query,
+                    "additional_information_preview": preview_additional_information(additional_information),
+                },
                 tools=[code_environment.as_function_tool()],
                 tool_use_behavior=custom_tool_handler,
                 reset_tool_choice=False,

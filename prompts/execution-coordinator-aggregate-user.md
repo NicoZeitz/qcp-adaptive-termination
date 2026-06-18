@@ -1,1 +1,7 @@
-Please provide a final answer to the user's original question "{{query}}" based on the given additional information.
+{{query}}
+{{#additional_information_preview}}
+
+## Additional Information Preview
+
+{{additional_information_preview}}
+{{/additional_information_preview}}
