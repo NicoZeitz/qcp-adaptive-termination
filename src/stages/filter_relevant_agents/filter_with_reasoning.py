@@ -43,7 +43,7 @@ async def filter_coordinator_with_reasoning(
 
     relevances = await run_agent(
         agent_configuration=get_coordinator_agent_configuration("Relevance"),
-        prompt_name="Query Coordinator/Relevance",
+        prompt_name="discovery-coordinator-relevance",
         prompt_parameters={"agent_registry": agent_registry, "query": query},
         output_type=RelevanceModel,
     )
@@ -82,7 +82,7 @@ async def filter_data_agent_with_reasoning(
             get_text(data_agent), CHAR_LIMIT_LONG_LLM
         )
     elif data_agent.type == "sql":
-        prompt_name = "SQL Data Agent/Relevance"
+        prompt_name = "discovery-data-agent-sql-relevance"
         prompt_parameters["m_schema"] = await data_agent_data_description(data_agent)
     else:
         raise ValueError(f"Unsupported agent type: {data_agent.type}")

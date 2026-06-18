@@ -37,7 +37,7 @@ async def sql_data_and_nl_description(data_agent: DataAgent) -> tuple[str, str]:
         agent_configuration=get_data_agent_agent_configuration(
             data_agent, "Schema Description"
         ),
-        prompt_name="SQL Data Agent/Schema Description",
+        prompt_name="discovery-data-agent-sql-schema-description",
         prompt_parameters={
             "m_schema_without_comments": m_schema_without_comments,
         },

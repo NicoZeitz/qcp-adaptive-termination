@@ -19,6 +19,7 @@ MC_RANDOM_SEED = None
 MC_DEFAULT_MAX_THETA_POINTS = 7
 MC_LAPLACE_ALPHA = 0.1
 
+
 class CountEstimator(Enum):
     """Strategy for estimating the total number of unique entities in the population."""
 
@@ -186,6 +187,46 @@ class Estimator:
         self._mc_max_theta_points = max_theta_points
         self._mc_laplace_alpha = laplace_alpha
 
+    # ── Public Helpers: core statistics ──────────────────────────────────────────────
+
+    def sample_mean(self) -> float:
+        """Mean of all raw observations (counting duplicates), not the per-entity mean."""
+        return sum(item.value for item in self._all_samples) / self._n
+
+    def sample_std(self) -> float:
+        """Standard deviation of all raw observations (counting duplicates)."""
+        mean = self.sample_mean()
+        sq_mean = sum(item.value**2 for item in self._all_samples) / self._n
+        return math.sqrt(max(0.0, sq_mean - mean * mean))
+
+    def f1_count(self) -> int:
+        """Number of entities observed exactly once (singletons)."""
+        return self._freq[0]
+
+    def γ_sq(self) -> float:
+        """Squared coefficient of variation of the publicity distribution, estimated from f-statistics.
+
+        Returns 0 when there is only one observation (no variance possible).
+        Returns inf when sample coverage is zero (all entities are singletons).
+        """
+        if self._n == 1:
+            return 0.0
+        C_hat = self.sample_coverage()
+        if C_hat == 0:
+            return math.inf
+        moment = sum((idx + 1) * idx * f for idx, f in enumerate(self._freq[: self._c]))
+        γ_sq = (self._c / C_hat) * (moment / (self._n * (self._n - 1))) - 1.0
+        return max(γ_sq, 0.0)
+
+    def sample_coverage(self) -> float:
+        """Good-Turing sample coverage C = 1 - f1/n.
+
+        Measures the fraction of total probability mass covered by observed entities.
+        0 when every entity is a singleton (maximum uncertainty), 1 when there are
+        no singletons (complete coverage of the observed population).
+        """
+        return 1.0 - self.f1_count() / self._n
+
     # ── Observed (known) aggregates ───────────────────────────────────────────
 
     def sample_sum(self) -> float:
@@ -223,8 +264,14 @@ class Estimator:
             return max(
                 self._c,
                 sum(
-                    Estimator(b.to_sources()).estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
-                    for b in self._dynamic_buckets(bucket_value_estimator, count_estimator)
+                    Estimator(b.to_sources()).estimated_count(
+                        count_estimator,
+                        use_bucket=False,
+                        use_monte_carlo=use_monte_carlo,
+                    )
+                    for b in self._dynamic_buckets(
+                        bucket_value_estimator, count_estimator
+                    )
                 ),
             )
 
@@ -252,10 +299,10 @@ class Estimator:
         for skew in the publicity distribution via the squared CV γ².
         Returns inf when coverage is zero (every entity seen exactly once).
         """
-        C_hat = self._sample_coverage()
+        C_hat = self.sample_coverage()
         if C_hat == 0:
             return math.inf
-        γ_sq = self._γ_sq()
+        γ_sq = self.γ_sq()
         if not math.isfinite(γ_sq):
             return math.inf
         N_hat = (self._c / C_hat) + (self._n * (1.0 - C_hat) / C_hat) * γ_sq
@@ -271,8 +318,7 @@ class Estimator:
             return self._c
         return max(
             self._c,
-            self._c
-            + (self._freq[0] * self._freq[0]) / (2.0 * self._freq[1]),
+            self._c + (self._freq[0] * self._freq[0]) / (2.0 * self._freq[1]),
         )
 
     def jackknife1(self) -> float:
@@ -300,9 +346,15 @@ class Estimator:
         rare entities, then adds the observed abundant count.
         Falls back to chao92 when all rare entities are singletons (zero coverage).
         """
-        c_rare = sum(1 for abundance, _ in self._entities.values() if int(abundance) <= 10)
+        c_rare = sum(
+            1 for abundance, _ in self._entities.values() if int(abundance) <= 10
+        )
         c_abundant = self._c - c_rare
-        n_rare = sum(int(abundance) for abundance, _ in self._entities.values() if int(abundance) <= 10)
+        n_rare = sum(
+            int(abundance)
+            for abundance, _ in self._entities.values()
+            if int(abundance) <= 10
+        )
 
         if n_rare == 0:
             return self._c
@@ -317,9 +369,7 @@ class Estimator:
             for i in range(min(10, len(self._freq))):
                 sum_term += i * (i + 1) * self._freq[i]
             cv = max(
-                (c_rare / cov_ace)
-                * (sum_term / (n_rare * (n_rare - 1)))
-                - 1.0,
+                (c_rare / cov_ace) * (sum_term / (n_rare * (n_rare - 1))) - 1.0,
                 0.0,
             )
         est = c_abundant + c_rare / cov_ace + self._freq[0] * cv / cov_ace
@@ -346,7 +396,9 @@ class Estimator:
         confidence_epsilon: float = 0.01,
     ) -> float:
         """Lower bound for the estimated total unique entity count at the given confidence level."""
-        lower, _ = self.estimated_count_bounds(confidence_interval_type, confidence_epsilon)
+        lower, _ = self.estimated_count_bounds(
+            confidence_interval_type, confidence_epsilon
+        )
         return lower
 
     def estimated_count_upper_bound(
@@ -355,7 +407,9 @@ class Estimator:
         confidence_epsilon: float = 0.01,
     ) -> float:
         """Upper bound for the estimated total unique entity count at the given confidence level."""
-        _, upper = self.estimated_count_bounds(confidence_interval_type, confidence_epsilon)
+        _, upper = self.estimated_count_bounds(
+            confidence_interval_type, confidence_epsilon
+        )
         return upper
 
     def estimated_count_bounds(
@@ -374,7 +428,9 @@ class Estimator:
             return self.chao84_confidence_interval(confidence_epsilon)
         if confidence_interval_type == BoundType.GOOD_TURING:
             return self.good_turing_confidence_interval(confidence_epsilon)
-        raise ValueError(f"Unsupported confidence interval type: {confidence_interval_type}")
+        raise ValueError(
+            f"Unsupported confidence interval type: {confidence_interval_type}"
+        )
 
     def good_turing_confidence_interval(
         self, confidence_epsilon: float
@@ -386,11 +442,13 @@ class Estimator:
         """
         numeric_eps = sys.float_info.epsilon
         n = self._n
-        f1 = self._f1_count()
+        f1 = self.f1_count()
         c = self._c
 
         M0_hat = f1 / n  # Good-Turing estimate of missing mass
-        error = (2.0 * math.sqrt(2.0) + math.sqrt(3.0)) * math.sqrt(math.log(3.0 / confidence_epsilon) / n)
+        error = (2.0 * math.sqrt(2.0) + math.sqrt(3.0)) * math.sqrt(
+            math.log(3.0 / confidence_epsilon) / n
+        )
 
         M0_upper = min(1.0, M0_hat + error)
         M0_lower = max(0.0, M0_hat - error)
@@ -399,7 +457,9 @@ class Estimator:
         N_hat_lower = c / max(numeric_eps, 1.0 - M0_lower)
         return (max(self._c, N_hat_lower), max(self._c, N_hat_upper))
 
-    def chao84_confidence_interval(self, confidence_epsilon: float) -> tuple[float, float]:
+    def chao84_confidence_interval(
+        self, confidence_epsilon: float
+    ) -> tuple[float, float]:
         """Confidence interval for total unique entity count using the asymmetric Chao84 interval.
 
         Uses the log-normal approximation for N - c, which gives a tighter interval
@@ -420,15 +480,9 @@ class Estimator:
 
         z_prime = float(norm.ppf(1.0 - confidence_epsilon / 2.0))
 
-        σ_sq = f2 * (
-            0.5 * (f1 / f2) ** 2
-            + (f1 / f2) ** 3
-            + 0.25 * (f1 / f2) ** 4
-        )
+        σ_sq = f2 * (0.5 * (f1 / f2) ** 2 + (f1 / f2) ** 3 + 0.25 * (f1 / f2) ** 4)
 
-        T = math.exp(
-            z_prime * math.sqrt(math.log(1.0 + σ_sq / (N_hat_minus_c ** 2)))
-        )
+        T = math.exp(z_prime * math.sqrt(math.log(1.0 + σ_sq / (N_hat_minus_c**2))))
 
         N_hat_lower = c + N_hat_minus_c / T
         N_hat_upper = c + N_hat_minus_c * T
@@ -448,7 +502,12 @@ class Estimator:
 
         Returns inf if the delta is not finite.
         """
-        d = self.delta(value_estimator, count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo)
+        d = self.delta(
+            value_estimator,
+            count_estimator,
+            use_bucket=use_bucket,
+            use_monte_carlo=use_monte_carlo,
+        )
         return math.inf if not math.isfinite(d) else self._φ_K + d
 
     def delta(
@@ -461,16 +520,22 @@ class Estimator:
     ) -> float:
         """Estimated SUM contribution of missing entities (Δ = φ_D - φ_K)."""
         if use_bucket:
-            return self._bucket_delta(value_estimator, count_estimator, use_monte_carlo=use_monte_carlo)
+            return self._bucket_delta(
+                value_estimator, count_estimator, use_monte_carlo=use_monte_carlo
+            )
 
         if value_estimator is ValueEstimator.NAIVE:
             return self._naive_delta(count_estimator, use_monte_carlo=use_monte_carlo)
         if value_estimator is ValueEstimator.FREQUENCY:
-            return self._frequency_delta(count_estimator, use_monte_carlo=use_monte_carlo)
+            return self._frequency_delta(
+                count_estimator, use_monte_carlo=use_monte_carlo
+            )
         if value_estimator is ValueEstimator.GOOD_TURING:
             return self._good_turing_delta()
         if value_estimator is ValueEstimator.FREQUENCY_F12:
-            return self._frequency_f12_delta(count_estimator, use_monte_carlo=use_monte_carlo)
+            return self._frequency_f12_delta(
+                count_estimator, use_monte_carlo=use_monte_carlo
+            )
 
         raise ValueError(f"Unsupported estimator: {value_estimator}")
 
@@ -483,12 +548,17 @@ class Estimator:
     ) -> float:
         """Sum of per-bucket deltas across all dynamically generated buckets."""
         return sum(
-            Estimator(b.to_sources()).delta(value_estimator, count_estimator, use_monte_carlo=use_monte_carlo)
+            Estimator(b.to_sources()).delta(
+                value_estimator, count_estimator, use_monte_carlo=use_monte_carlo
+            )
             for b in self._dynamic_buckets(value_estimator, count_estimator)
         )
 
     def _naive_delta(
-        self, count_estimator: CountEstimator = CountEstimator.CHAO92, *, use_monte_carlo: bool = False
+        self,
+        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        *,
+        use_monte_carlo: bool = False,
     ) -> float:
         """Estimated SUM of missing entities using mean substitution.
 
@@ -512,7 +582,7 @@ class Estimator:
         since singletons are the best proxy for unseen entities.
         Returns 0 when there are no singletons.
         """
-        f1 = self._f1_count()
+        f1 = self.f1_count()
         if f1 == 0:
             return 0.0
 
@@ -529,7 +599,7 @@ class Estimator:
         estimate of the missing probability mass scaled to the observed aggregate.
         Returns 0 when there are no singletons or all observations are singletons.
         """
-        f1 = self._f1_count()
+        f1 = self.f1_count()
         if f1 == 0:
             return 0.0
 
@@ -537,7 +607,10 @@ class Estimator:
         return self._φ_f1 * self._c / denom if denom > 0 else 0.0
 
     def _frequency_f12_delta(
-        self, count_estimator: CountEstimator = CountEstimator.CHAO92, *, use_monte_carlo: bool = False
+        self,
+        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        *,
+        use_monte_carlo: bool = False,
     ) -> float:
         """Estimated SUM of missing entities using the average singleton+doubleton value.
 
@@ -546,7 +619,7 @@ class Estimator:
         Returns 0 when there are neither singletons nor doubletons.
         """
         f2 = self._freq[1] if len(self._freq) > 1 else 0
-        denom = self._f1_count() + f2
+        denom = self.f1_count() + f2
         if denom == 0:
             return 0.0
         N_hat = self.estimated_count(count_estimator, use_monte_carlo=use_monte_carlo)
@@ -618,7 +691,9 @@ class Estimator:
 
         for b in buckets:
             sub = Estimator(b.to_sources())
-            n_hat = sub.estimated_count(bucket_count_estimator, use_monte_carlo=bucket_use_monte_carlo)
+            n_hat = sub.estimated_count(
+                bucket_count_estimator, use_monte_carlo=bucket_use_monte_carlo
+            )
             weight = n_hat if math.isfinite(n_hat) else sub._c
             total_weight += weight
             weighted_sum += weight * sub.sample_avg()
@@ -681,7 +756,11 @@ class Estimator:
         """
         buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator)
         sub = Estimator(buckets[0].to_sources())
-        if sub.estimated_count(count_estimator, use_monte_carlo=use_monte_carlo) - sub._c == 0:
+        if (
+            sub.estimated_count(count_estimator, use_monte_carlo=use_monte_carlo)
+            - sub._c
+            == 0
+        ):
             return self._observed_min
         return None
 
@@ -701,7 +780,11 @@ class Estimator:
         """
         buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator)
         sub = Estimator(buckets[-1].to_sources())
-        if sub.estimated_count(count_estimator, use_monte_carlo=use_monte_carlo) - sub._c == 0:
+        if (
+            sub.estimated_count(count_estimator, use_monte_carlo=use_monte_carlo)
+            - sub._c
+            == 0
+        ):
             return self._observed_max
         return None
 
@@ -818,7 +901,11 @@ class Estimator:
     # ── Private Helpers: Buckets ───────────────────────────────────────────
 
     @lru_cache(maxsize=None)
-    def _dynamic_buckets(self, bucket_value_estimator: ValueEstimator, bucket_count_estimator: CountEstimator) -> list[Bucket]:
+    def _dynamic_buckets(
+        self,
+        bucket_value_estimator: ValueEstimator,
+        bucket_count_estimator: CountEstimator,
+    ) -> list[Bucket]:
         """Split the value range into adaptive buckets that minimize total estimated delta.
 
         Starts with one bucket covering the full range, then recursively tries to split
@@ -849,7 +936,9 @@ class Estimator:
                 lb, ub = bucket.lower_bound, bucket.upper_bound
 
                 best_left, best_right, best_score = None, None, math.inf
-                for split_value in [(lb + ub) / 2.0] + [item.value for item in bucket.sorted_samples()]:
+                for split_value in [(lb + ub) / 2.0] + [
+                    item.value for item in bucket.sorted_samples()
+                ]:
                     left, right = self._split_bucket(bucket, split_value)
                     if left.number_of_samples == 0 or right.number_of_samples == 0:
                         continue
@@ -862,7 +951,14 @@ class Estimator:
                     if score < best_score:
                         best_left, best_right, best_score = left, right, score
 
-                if best_left is None or best_right is None or best_score >= self._bucket_sum_est(bucket, bucket_value_estimator, bucket_count_estimator):
+                if (
+                    best_left is None
+                    or best_right is None
+                    or best_score
+                    >= self._bucket_sum_est(
+                        bucket, bucket_value_estimator, bucket_count_estimator
+                    )
+                ):
                     bucket.split_locked = True
                     next_buckets.append(bucket)
                 else:
@@ -873,10 +969,15 @@ class Estimator:
         return sorted(buckets, key=lambda x: x.lower_bound)
 
     def _bucket_sum_est(
-        self, bucket: Bucket, bucket_value_estimator: ValueEstimator, bucket_count_estimator: CountEstimator
+        self,
+        bucket: Bucket,
+        bucket_value_estimator: ValueEstimator,
+        bucket_count_estimator: CountEstimator,
     ) -> float:
         """Estimated SUM for a single bucket, used as the splitting score."""
-        return Estimator(bucket.to_sources()).estimated_sum(bucket_value_estimator, bucket_count_estimator)
+        return Estimator(bucket.to_sources()).estimated_sum(
+            bucket_value_estimator, bucket_count_estimator
+        )
 
     @staticmethod
     def _split_bucket(bucket: Bucket, split_value: float) -> tuple[Bucket, Bucket]:
@@ -930,9 +1031,7 @@ class Estimator:
             for tn in n_grid
             for tl in self._mc_lambda_grid
         ]
-        best_n, _ = self._rbf_search_min(
-            points, self._c, n_ub, self._mc_lambda_grid
-        )
+        best_n, _ = self._rbf_search_min(points, self._c, n_ub, self._mc_lambda_grid)
         return int(best_n)
 
     def _mc_distance(
@@ -1030,47 +1129,3 @@ class Estimator:
         scores = rbf(candidates / xy_scale)
         best_idx = int(np.argmin(scores))
         return int(candidates[best_idx, 0]), float(candidates[best_idx, 1])
-
-    # ── Private Helpers: core statistics ──────────────────────────────────────────────
-
-    def _sample_mean(self) -> float:
-        """Mean of all raw observations (counting duplicates), not the per-entity mean."""
-        return sum(item.value for item in self._all_samples) / self._n
-
-    def _sample_std(self) -> float:
-        """Standard deviation of all raw observations (counting duplicates)."""
-        mean = self._sample_mean()
-        sq_mean = sum(item.value**2 for item in self._all_samples) / self._n
-        return math.sqrt(max(0.0, sq_mean - mean * mean))
-
-    def _f1_count(self) -> int:
-        """Number of entities observed exactly once (singletons)."""
-        return self._freq[0]
-
-    def _γ_sq(self) -> float:
-        """Squared coefficient of variation of the publicity distribution, estimated from f-statistics.
-
-        Returns 0 when there is only one observation (no variance possible).
-        Returns inf when sample coverage is zero (all entities are singletons).
-        """
-        if self._n == 1:
-            return 0.0
-        C_hat = self._sample_coverage()
-        if C_hat == 0:
-            return math.inf
-        moment = sum(
-            (idx + 1) * idx * f for idx, f in enumerate(self._freq[: self._c])
-        )
-        γ_sq = (self._c / C_hat) * (
-            moment / (self._n * (self._n - 1))
-        ) - 1.0
-        return max(γ_sq, 0.0)
-
-    def _sample_coverage(self) -> float:
-        """Good-Turing sample coverage C = 1 - f1/n.
-
-        Measures the fraction of total probability mass covered by observed entities.
-        0 when every entity is a singleton (maximum uncertainty), 1 when there are
-        no singletons (complete coverage of the observed population).
-        """
-        return 1.0 - self._f1_count() / self._n
