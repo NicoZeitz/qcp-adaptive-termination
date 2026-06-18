@@ -17,7 +17,7 @@ from stages.common.data_agent.agent_registry import (
     build_agent_registry,
 )
 from utils.cache import cached
-from utils.run_agent import run_agent
+from utils.run_agent import run_llm
 from utils.span import append_to_span_output, own_custom_span
 
 
@@ -133,7 +133,7 @@ async def draft_query_plan(
         )
         QueryPlanModel = create_draft_query_plan_model(relevant_data_agents)
 
-        result = await run_agent(
+        result = await run_llm(
             agent_configuration=get_coordinator_agent_configuration("Draft Query Plan"),
             prompt_name="planning-coordinator-query-plan",
             prompt_parameters={

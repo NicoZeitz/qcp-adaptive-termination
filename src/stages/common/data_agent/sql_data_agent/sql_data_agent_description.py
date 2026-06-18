@@ -2,7 +2,7 @@ from pydantic import BaseModel, create_model, Field
 
 from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.sql_data_agent.get_db_connection import get_db_engine
-from utils.run_agent import run_agent
+from utils.run_agent import run_llm
 from qtypes.data_agent import DataAgent
 from stages.common.mschema.schema_engine import SchemaEngine
 
@@ -33,7 +33,7 @@ async def sql_data_and_nl_description(data_agent: DataAgent) -> tuple[str, str]:
 
     DatabaseDescriptionModel = create_database_description_model(schema_engine)
 
-    result = await run_agent(
+    result = await run_llm(
         agent_configuration=get_data_agent_agent_configuration(
             data_agent, "Schema Description"
         ),

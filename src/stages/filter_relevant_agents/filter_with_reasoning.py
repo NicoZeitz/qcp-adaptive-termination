@@ -8,7 +8,7 @@ from stages.common.agent_configuration import (
     get_data_agent_agent_configuration,
 )
 from stages.common.data_agent.data_description import data_agent_data_description
-from utils.run_agent import run_agent
+from utils.run_agent import run_llm
 from utils.span import append_to_span_output
 
 
@@ -39,7 +39,7 @@ async def filter_coordinator_with_reasoning(
 ) -> list[tuple[DataAgent, str]]:
     RelevanceModel = build_relevance_model(data_agents)
 
-    relevances = await run_agent(
+    relevances = await run_llm(
         agent_configuration=get_coordinator_agent_configuration("Relevance"),
         prompt_name="discovery-coordinator-relevance",
         prompt_parameters={"agent_registry": agent_registry, "query": query},
@@ -79,7 +79,7 @@ async def filter_data_agent_with_reasoning(
     else:
         raise ValueError(f"Unsupported agent type: {data_agent.type}")
 
-    is_relevant = await run_agent(
+    is_relevant = await run_llm(
         agent_configuration=get_data_agent_agent_configuration(data_agent, "Relevance"),
         prompt_name=prompt_name,
         prompt_parameters=prompt_parameters,
