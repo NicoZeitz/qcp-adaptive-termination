@@ -1,7 +1,0 @@
-【DB_ID】 A3
-【Schema】
-# Table: main.bond
-[
-(bond_id:TEXT, Examples: [TR006_24_36, TR006_24_37, TR006_25_33]),
-(molecule_id:TEXT, Examples: [TR006, TR007, TR008])
-]
