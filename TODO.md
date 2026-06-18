@@ -1,5 +1,6 @@
 Problems with execution
-
+* No custom spans for subcalls (schema alignement, completeness eval)
+* Evaluators weird
 
 Other
 * Rename stages (Discovery, Planning, Execution)
