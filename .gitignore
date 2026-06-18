@@ -222,25 +222,8 @@ __marimo__/
 *.db
 *.sqlite
 
-# IMDB
-data/imdb/**/*.png
-data/imdb/**/*.svg
-data/imdb/text/*.txt
-data/imdb/**/config.txt
-data/imdb/**/*.tsv.gz
-
-# BIRD
-data/bird/**/metadata.json
-data/bird/dev/
-
-# WikiDBs
-data/wikidbs/
-
-# Runs
-data/runs/
-
-# Dataset generated outputs (databases, per-run logs, plots)
-data/dataset/dataset_*/
+# All data — too large/generated to track
+data/
 
 # Other generated files
 documentation/**/*.pdf
