@@ -1,7 +1,7 @@
+from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, cast
 
 from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
-from attr import dataclass
 import pandas as pd
 from pydantic import JsonValue
 
@@ -15,7 +15,7 @@ from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.data_description import data_agent_data_description
 from stages.common.data_agent.sql_data_agent.get_db_connection import get_db_engine
 from utils.serialize_value import serialize_value
-from utils.preview import preview_dataframe
+from utils.preview import preview_additional_information, preview_dataframe
 from utils.run_agent import run_agent
 from utils.span import append_to_span_output, own_custom_span
 
@@ -23,9 +23,9 @@ from utils.span import append_to_span_output, own_custom_span
 @dataclass
 class Parameters:
     prompt_name: str
-    prompt_parameters: dict[str, Any] = {}
-    additional_variables: dict[str, str] = {}
-    additional_tools: dict[str, Any] = {}
+    prompt_parameters: dict[str, str | None] = field(default_factory=dict)
+    additional_variables: dict[str, Any] = field(default_factory=dict)
+    additional_tools: dict[str, Any] = field(default_factory=dict)
     additional_span_data: Optional[Callable[[], dict[str, Any]]] = None
 
 
@@ -75,7 +75,7 @@ async def get_sql_data_agent_parameters(
 
     return Parameters(
         prompt_name="execution-data-agent-sql-code",
-        prompt_parameters={"m_schema": m_schema, "query": query},
+        prompt_parameters={"m_schema": m_schema, "query": query, "additional_information_preview": preview_additional_information(additional_information) },
         additional_tools={"query_sql": query_sql},
         additional_span_data=additional_span_data_func,
     )
@@ -115,7 +115,7 @@ async def answer_query(
     query: str,
     additional_information: list[AdditionalInformation],
     prompt_name: str,
-    prompt_parameters: dict[str, str],
+    prompt_parameters: dict[str, str | None],
     additional_variables: dict[str, Any],
     additional_tools: dict[str, Any],
     additional_span_data: Callable[[], dict[str, Any]] | None = None,
@@ -125,7 +125,6 @@ async def answer_query(
         "Data Agent - answer_query",
         input={"query": query, "additional_information": additional_information},
     ):
-        # sql_queries: list[SqlQuery] = []
         partial_answer = PartialQueryAnswer()
 
         def raise_needs(new_needs: Any):

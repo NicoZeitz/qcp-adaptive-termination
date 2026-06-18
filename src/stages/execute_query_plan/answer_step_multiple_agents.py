@@ -294,6 +294,7 @@ async def answer_step_multiple_agents(
 
     aligned = AlignedResultList()
     iteration_records: list[MultiAgentIterationRecord] = []
+    collected_needs: list = []
 
     last_final_result: ResultType | None = None
     agents_to_query = list(all_agents)
@@ -316,6 +317,8 @@ async def answer_step_multiple_agents(
             queried.append(agent_name)
 
             if not agent_partial.has_answer or agent_partial.answer is None:
+                if agent_partial.has_needs:
+                    collected_needs.extend(agent_partial.needs)
                 estimator_result = _compute_estimator_result(
                     aligned, len(queried), agents_total
                 )
@@ -372,5 +375,8 @@ async def answer_step_multiple_agents(
             answer.set_answer(last_final_result)
         elif not aligned.data.empty:
             answer.set_answer(aligned.data)
+
+        if collected_needs:
+            answer.add_needs(collected_needs)
 
         return answer, iteration_records

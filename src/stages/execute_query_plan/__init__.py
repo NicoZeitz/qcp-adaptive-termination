@@ -19,6 +19,9 @@ from stages.replan_query_plan import replan_query_plan
 from utils.cache import cached
 from utils.span import append_to_span_output, own_custom_span
 
+# Stored separately from the cached result to avoid serialization issues with DataFrames.
+last_iteration_records: list[MultiAgentIterationRecord] = []
+
 
 async def execute_query_plan_attempt(
     replan_attempt: int,
@@ -116,6 +119,7 @@ async def execute_query_plan(
     data_agents: list[DataAgent],
     continue_after_final_result: bool = False,
 ) -> CollaborativeQueryAnsweringResult:
+    global last_iteration_records
     MAX_REPLAN_ATTEMPTS = 2
     iteration_records: list[MultiAgentIterationRecord] = []
 
@@ -129,15 +133,15 @@ async def execute_query_plan(
         )
 
         if execution_result.success:
+            last_iteration_records = iteration_records
             return CollaborativeQueryAnsweringResult(
                 result=cast(ResultType, execution_result.result),
-                iteration_records=iteration_records,
             )
 
         if replan_attempt >= MAX_REPLAN_ATTEMPTS:
+            last_iteration_records = iteration_records
             return CollaborativeQueryAnsweringResult(
                 result=get_failed_result(),
-                iteration_records=iteration_records,
             )
 
         relevant_data_agents, query_plan = await replan(
@@ -148,7 +152,7 @@ async def execute_query_plan(
             failed_execution=cast(FailedExecution, execution_result.failed_execution),
         )
 
+    last_iteration_records = iteration_records
     return CollaborativeQueryAnsweringResult(
         result=get_failed_result(),
-        iteration_records=iteration_records,
     )
