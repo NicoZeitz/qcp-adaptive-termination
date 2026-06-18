@@ -16,7 +16,7 @@ from stages.draft_query_plan import (
     create_draft_query_plan_model,
     map_query_plan_model_to_query_plan,
 )
-from utils.run_agent import run_agent
+from utils.run_agent import run_llm
 
 
 def create_answer_map_from_query_plan(query_plan: QueryPlan) -> dict[str, ResultType]:
@@ -102,7 +102,7 @@ async def replan_query_plan(
     answer_map = create_answer_map_from_query_plan(query_plan)
     QueryReplanModel = create_query_replan_model(relevant_data_agents)
 
-    result = await run_agent(
+    result = await run_llm(
         agent_configuration=get_coordinator_agent_configuration("Replan Query Plan"),
         prompt_name="execution-coordinator-replan",
         prompt_parameters={
