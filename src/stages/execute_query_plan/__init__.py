@@ -5,6 +5,7 @@ from qtypes.collaborative_query_answering_result import (
 )
 from qtypes.data_agent import DataAgent
 from qtypes.execution_result import ExecutionResult
+from qtypes.multi_agent_iteration_record import MultiAgentIterationRecord
 from qtypes.query_plan import QueryPlan
 from qtypes.query_plan_step_execution_result import FailedExecution, SuccessfulExecution
 from qtypes.result import ResultType, get_failed_result
@@ -21,6 +22,8 @@ async def execute_query_plan_attempt(
     replan_attempt: int,
     query_plan: QueryPlan,
     current_data_agents: list[DataAgent],
+    iteration_records: list[MultiAgentIterationRecord],
+    continue_after_final_result: bool = False,
 ) -> ExecutionResult:
     with own_custom_span(
         f"{replan_attempt} - Execute Query Plan",
@@ -31,7 +34,10 @@ async def execute_query_plan_attempt(
     ):
         while True:
             execution_result = await execute_query_plan_next_step(
-                current_data_agents, query_plan
+                current_data_agents,
+                query_plan,
+                iteration_records,
+                continue_after_final_result,
             )
 
             if (
@@ -95,22 +101,31 @@ async def execute_query_plan(
     query_plan: QueryPlan,
     relevant_data_agents: list[DataAgent],
     data_agents: list[DataAgent],
+    continue_after_final_result: bool = False,
 ) -> CollaborativeQueryAnsweringResult:
     MAX_REPLAN_ATTEMPTS = 2
+    iteration_records: list[MultiAgentIterationRecord] = []
+
     for replan_attempt in range(MAX_REPLAN_ATTEMPTS + 1):
         execution_result = await execute_query_plan_attempt(
             replan_attempt=replan_attempt,
             query_plan=query_plan,
             current_data_agents=relevant_data_agents,
+            iteration_records=iteration_records,
+            continue_after_final_result=continue_after_final_result,
         )
 
         if execution_result.success:
             return CollaborativeQueryAnsweringResult(
-                result=cast(ResultType, execution_result.result)
+                result=cast(ResultType, execution_result.result),
+                iteration_records=iteration_records,
             )
 
         if replan_attempt >= MAX_REPLAN_ATTEMPTS:
-            return CollaborativeQueryAnsweringResult(result=get_failed_result())
+            return CollaborativeQueryAnsweringResult(
+                result=get_failed_result(),
+                iteration_records=iteration_records,
+            )
 
         relevant_data_agents, query_plan = await replan(
             replan_attempt=replan_attempt,
@@ -120,4 +135,7 @@ async def execute_query_plan(
             failed_execution=cast(FailedExecution, execution_result.failed_execution),
         )
 
-    return CollaborativeQueryAnsweringResult(result=get_failed_result())
+    return CollaborativeQueryAnsweringResult(
+        result=get_failed_result(),
+        iteration_records=iteration_records,
+    )
