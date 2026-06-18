@@ -2,9 +2,6 @@ from typing import Any
 
 import numpy as np
 from pandas import DataFrame
-from pydantic import JsonValue
-
-from utils.preview import preview_dataframe
 
 
 ResultType = DataFrame
@@ -42,10 +39,6 @@ def try_parse_value_to_result_type(value: Any) -> ResultType:
         raise ValueError(
             f"Answer must be a DataFrame, string or None, got {type(value)}: {value}"
         )
-
-
-def result_to_json_preview(result: ResultType) -> JsonValue:
-    return preview_dataframe(result)
 
 
 def get_failed_result() -> ResultType:

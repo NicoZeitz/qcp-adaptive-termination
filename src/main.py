@@ -8,7 +8,7 @@ from datetime import datetime
 
 from agents import trace
 
-from qtypes.result import result_to_json_preview
+from utils.preview import result_to_json_preview
 from stages.draft_query_plan import draft_query_plan
 from qtypes.drafted_query_plan import DraftedQueryPlan
 from stages.execute_query_plan import execute_query_plan
@@ -150,13 +150,17 @@ async def main(
                 f.write(data.model_dump_json(indent=4, ensure_ascii=False))
 
             if last_iteration_records:
-                records_output_path = log_dir / f"{log_filename} - iteration_records.json"
+                records_output_path = (
+                    log_dir / f"{log_filename} - iteration_records.json"
+                )
                 serialized = [
                     {
                         "step_id": r.step_id,
                         "agent_name": r.agent_name,
                         "result_list": r.result_list.to_dict(orient="records"),
-                        "estimator_result": asdict(r.estimator_result) if r.estimator_result is not None else None,
+                        "estimator_result": asdict(r.estimator_result)
+                        if r.estimator_result is not None
+                        else None,
                         "evaluator_decision": r.evaluator_decision,
                         "evaluator_next_agents": r.evaluator_next_agents,
                     }

@@ -75,7 +75,13 @@ async def get_sql_data_agent_parameters(
 
     return Parameters(
         prompt_name="execution-data-agent-sql-code",
-        prompt_parameters={"m_schema": m_schema, "query": query, "additional_information_preview": preview_additional_information(additional_information) },
+        prompt_parameters={
+            "m_schema": m_schema,
+            "query": query,
+            "additional_information_preview": preview_additional_information(
+                additional_information
+            ),
+        },
         additional_tools={"query_sql": query_sql},
         additional_span_data=additional_span_data_func,
     )
