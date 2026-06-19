@@ -20,7 +20,6 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from stages.common.agent_configuration import set_agent_models
 from utils.cache import Cache
 from utils.file_span_exporter import FileSpanExporter
-from utils.load_prompt import LangfuseProcessor
 from utils.openai_tracing import TruncatingBackendSpanExporter
 
 
@@ -191,7 +190,6 @@ def initialize(
     # Set up tracing
     tracing_log_file = log_dir / f"{log_name}_traces.jsonl"
     nest_asyncio.apply()
-    trace.get_tracer_provider().add_span_processor(LangfuseProcessor())  # type: ignore
     trace.get_tracer_provider().add_span_processor(  # type: ignore
         BatchSpanProcessor(FileSpanExporter(tracing_log_file))
     )

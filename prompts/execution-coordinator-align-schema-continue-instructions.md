@@ -36,6 +36,8 @@ In case data should just be listed or counted, use the `count` aggregation and d
 
 In case values across should be aggregated across a column, specify the column as `value_column` and use the corresponding aggregation type (e.g. `sum`).
 
+Aggregation is always meant as a aggregation off all data items across all data agents. So a `max` aggregation would return one maximum value across all deduplicated rows across all data agents, not a maximum aggregation/deduplication of the rows with the same key across data sources.
+
 ## Python environment
 
 Available tools: `execute_code` — use it to manipulate `agent_result` and call `merge_result(...)`.
