@@ -1,9 +1,9 @@
-from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, cast
+from dataclasses import dataclass
+from typing import Any, cast
 
 from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
-import pandas as pd
 from pydantic import JsonValue
+import pandas as pd
 
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.additional_information import AdditionalInformation
@@ -14,19 +14,10 @@ from qtypes.result import try_parse_value_to_result_type
 from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.data_description import data_agent_data_description
 from stages.common.data_agent.sql_data_agent.get_db_connection import get_db_engine
-from utils.serialize_value import serialize_value
 from utils.preview import preview_additional_information, preview_dataframe
 from utils.run_agent import run_agent
+from utils.serialize_value import serialize_value
 from utils.span import append_to_span_output, own_custom_span
-
-
-@dataclass
-class Parameters:
-    prompt_name: str
-    prompt_parameters: dict[str, str | None] = field(default_factory=dict)
-    additional_variables: dict[str, Any] = field(default_factory=dict)
-    additional_tools: dict[str, Any] = field(default_factory=dict)
-    additional_span_data: Optional[Callable[[], dict[str, Any]]] = None
 
 
 @dataclass
@@ -46,92 +37,34 @@ class SqlQuery:
         return span_data
 
 
-async def get_sql_data_agent_parameters(
+async def answer_query_sql_data_agent(
     data_agent: DataAgent,
     query: str,
     additional_information: list[AdditionalInformation],
-) -> Parameters:
-    db_engine = get_db_engine(data_agent)
-
-    sql_queries: list[SqlQuery] = []
-
-    def query_sql(query: str) -> pd.DataFrame:
-        sql_query = SqlQuery(query=query)
-
-        try:
-            result = pd.read_sql_query(query, db_engine, dtype_backend="numpy_nullable")
-            sql_query.result = result
-            return result
-        except Exception as e:
-            sql_query.error = e
-            raise
-        finally:
-            sql_queries.append(sql_query)
-
-    def additional_span_data_func() -> dict[str, Any]:
-        return {"sql_queries": [sql_query.to_span_data() for sql_query in sql_queries]}
-
-    m_schema = await data_agent_data_description(data_agent)
-
-    return Parameters(
-        prompt_name="execution-data-agent-sql-code",
-        prompt_parameters={
-            "m_schema": m_schema,
-            "query": query,
-            "additional_information_preview": preview_additional_information(
-                additional_information
-            ),
-        },
-        additional_tools={"query_sql": query_sql},
-        additional_span_data=additional_span_data_func,
-    )
-
-
-async def answer_step_data_agent(
-    data_agents: list[DataAgent],
-    query: str,
-    to_agent: str,
-    additional_information: list[AdditionalInformation],
 ) -> PartialQueryAnswer:
-    responsible_data_agent = next(
-        (agent for agent in data_agents if agent.name == to_agent)
-    )
-
-    if responsible_data_agent.type == "sql":
-        parameters = await get_sql_data_agent_parameters(
-            responsible_data_agent, query, additional_information
-        )
-    else:
-        raise ValueError(f"Unsupported data agent type: {responsible_data_agent.type}")
-
-    return await answer_query(
-        data_agent=responsible_data_agent,
-        query=query,
-        additional_information=additional_information,
-        prompt_name=parameters.prompt_name,
-        prompt_parameters=parameters.prompt_parameters,
-        additional_variables=parameters.additional_variables,
-        additional_tools=parameters.additional_tools,
-        additional_span_data=parameters.additional_span_data,
-    )
-
-
-async def answer_query(
-    data_agent: DataAgent,
-    query: str,
-    additional_information: list[AdditionalInformation],
-    prompt_name: str,
-    prompt_parameters: dict[str, str | None],
-    additional_variables: dict[str, Any],
-    additional_tools: dict[str, Any],
-    additional_span_data: Callable[[], dict[str, Any]] | None = None,
-) -> PartialQueryAnswer:
-
     with own_custom_span(
         "Data Agent - answer_query",
         input={"query": query, "additional_information": additional_information},
     ):
+        db_engine = get_db_engine(data_agent)
+        m_schema = await data_agent_data_description(data_agent)
+        sql_queries: list[SqlQuery] = []
         partial_answer = PartialQueryAnswer()
+
+        def query_sql(query: str) -> pd.DataFrame:
+            sql_query = SqlQuery(query=query)
+
+            try:
+                result = pd.read_sql_query(
+                    query, db_engine, dtype_backend="numpy_nullable"
+                )
+                sql_query.result = result
+                return result
+            except Exception as e:
+                sql_query.error = e
+                raise
+            finally:
+                sql_queries.append(sql_query)
 
         def raise_needs(new_needs: Any):
             partial_answer.add_needs(try_parse_value_to_need_type(new_needs))
@@ -145,12 +78,11 @@ async def answer_query(
                 "additional_information": additional_information,
                 # pre-import some common libraries for the agent to use in the code tool
                 "pd": pd,
-                **additional_variables,
             },
             tools={
                 "raise_needs": raise_needs,
                 "final_answer": final_answer,
-                **additional_tools,
+                "query_sql": query_sql,
             },
         )
 
@@ -169,8 +101,14 @@ async def answer_query(
                 agent_configuration=get_data_agent_agent_configuration(
                     data_agent, "Code"
                 ),
-                prompt_name=prompt_name,
-                prompt_parameters=prompt_parameters,
+                prompt_name="execution-data-agent-sql-code",
+                prompt_parameters={
+                    "m_schema": m_schema,
+                    "query": query,
+                    "additional_information_preview": preview_additional_information(
+                        additional_information
+                    ),
+                },
                 tools=[code_environment.as_function_tool()],
                 tool_use_behavior=custom_tool_handler,
                 reset_tool_choice=False,
@@ -185,7 +123,7 @@ async def answer_query(
             {
                 "code": code_environment.to_span_data(),
                 "partial_answer": result,
-                **(additional_span_data() if additional_span_data is not None else {}),
+                "sql_queries": [sql_query.to_span_data() for sql_query in sql_queries],
             }
         )
         return result
