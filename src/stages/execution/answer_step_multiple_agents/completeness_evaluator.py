@@ -42,7 +42,9 @@ async def run_completeness_evaluator(
 ) -> QueryMoreAgentsOutcome | FinalResultOutcome:
     decision: EvaluatorDecision | None = None
     final_result_value: ResultType | None = None
-    force_result = estimator_statistics.agents_queried == estimator_statistics.agents_total
+    force_result = (
+        estimator_statistics.agents_queried == estimator_statistics.agents_total
+    )
 
     def final_result(result: Any):
         nonlocal decision, final_result_value

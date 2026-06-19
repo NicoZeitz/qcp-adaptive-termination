@@ -60,21 +60,21 @@ async def answer_step_coordinator(
             )
 
         result = await run_agent(
-                agent_configuration=get_coordinator_agent_configuration("Code"),
-                prompt_name="execution-coordinator-aggregate",
-                prompt_parameters={
-                    "query": query,
-                    "additional_information_preview": preview_additional_information(
-                        additional_information
-                    ),
-                },
-                tools=[code_environment.as_function_tool()],
-                tool_use_behavior=custom_tool_handler,
-                reset_tool_choice=False,
-                parallel_tool_calls=False,
-                tool_choice="required",
-                output_type=PartialQueryAnswer,
-            )
+            agent_configuration=get_coordinator_agent_configuration("Code"),
+            prompt_name="execution-coordinator-aggregate",
+            prompt_parameters={
+                "query": query,
+                "additional_information_preview": preview_additional_information(
+                    additional_information
+                ),
+            },
+            tools=[code_environment.as_function_tool()],
+            tool_use_behavior=custom_tool_handler,
+            reset_tool_choice=False,
+            parallel_tool_calls=False,
+            tool_choice="required",
+            output_type=PartialQueryAnswer,
+        )
 
         append_to_span_output(
             {

@@ -9,7 +9,6 @@ from qtypes.multi_agent_iteration_record import (
 from qtypes.outcome import FinalResultOutcome, QueryMoreAgentsOutcome, RaiseNeedOutcome
 from qtypes.partial_query_answer import PartialQueryAnswer
 from qtypes.query_plan_step import MultiAgentQueryPlanStep, QueryPlanStep
-from qtypes.result import ResultType
 from stages.execution.answer_step_data_agent import answer_step_data_agent
 from stages.execution.answer_step_multiple_agents.align_schema import align_schema
 from stages.execution.answer_step_multiple_agents.completeness_evaluator import (
@@ -97,7 +96,9 @@ async def run_agent_round(
         if estimator_statistics is None:
             outcome = QueryMoreAgentsOutcome(result_list=result_list)
         else:
-            outcome = await run_completeness_evaluator(result_list, estimator_statistics, query)
+            outcome = await run_completeness_evaluator(
+                result_list, estimator_statistics, query
+            )
             iteration_record.evaluator_decision = outcome.decision
 
         add_multi_agent_iteration_record(iteration_record)

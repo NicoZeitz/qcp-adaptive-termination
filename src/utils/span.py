@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 def model_dump(value: Any) -> Any:
     if isinstance(value, BaseModel):
-        return value.model_dump(context='preview')
+        return value.model_dump(context="preview")
     elif isinstance(value, list):
         return [model_dump(item) for item in value]
     elif isinstance(value, dict):

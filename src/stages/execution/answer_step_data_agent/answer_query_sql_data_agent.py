@@ -14,7 +14,7 @@ from qtypes.result import try_parse_value_to_result_type
 from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.data_description import data_agent_data_description
 from stages.common.data_agent.sql_data_agent.get_db_connection import get_db_engine
-from utils.preview import preview_additional_information, preview_dataframe
+from utils.preview import preview_additional_information, result_to_json_preview
 from utils.run_agent import run_agent
 from utils.serialize_value import serialize_value
 from utils.span import append_to_span_output, own_custom_span
@@ -30,7 +30,7 @@ class SqlQuery:
         span_data: dict[str, JsonValue] = {"query": self.query}
 
         if self.result is not None:
-            span_data["result_preview"] = preview_dataframe(self.result)
+            span_data["result_preview"] = result_to_json_preview(self.result)
         if self.error is not None:
             span_data["error"] = serialize_value(self.error)
 
@@ -96,24 +96,22 @@ async def answer_query_sql_data_agent(
             )
 
         result = await run_agent(
-                agent_configuration=get_data_agent_agent_configuration(
-                    data_agent, "Code"
+            agent_configuration=get_data_agent_agent_configuration(data_agent, "Code"),
+            prompt_name="execution-data-agent-sql-code",
+            prompt_parameters={
+                "m_schema": m_schema,
+                "query": query,
+                "additional_information_preview": preview_additional_information(
+                    additional_information
                 ),
-                prompt_name="execution-data-agent-sql-code",
-                prompt_parameters={
-                    "m_schema": m_schema,
-                    "query": query,
-                    "additional_information_preview": preview_additional_information(
-                        additional_information
-                    ),
-                },
-                tools=[code_environment.as_function_tool()],
-                tool_use_behavior=custom_tool_handler,
-                reset_tool_choice=False,
-                parallel_tool_calls=False,
-                tool_choice="required",
-                output_type=PartialQueryAnswer,
-            )
+            },
+            tools=[code_environment.as_function_tool()],
+            tool_use_behavior=custom_tool_handler,
+            reset_tool_choice=False,
+            parallel_tool_calls=False,
+            tool_choice="required",
+            output_type=PartialQueryAnswer,
+        )
 
         append_to_span_output(
             {

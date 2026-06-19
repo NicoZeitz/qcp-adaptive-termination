@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field
