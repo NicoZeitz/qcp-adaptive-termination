@@ -117,7 +117,7 @@ async def answer_step_multiple_agents(
     additional_information: list[AdditionalInformation],
     continue_after_final_result: bool = False,
 ) -> PartialQueryAnswer:
-    all_agents = list(sorted(query_plan_step.to_agent))
+    all_agents = list(query_plan_step.to_agent)
     agents_queried: list[str] = []
     result_list = AlignedResultList()
 
