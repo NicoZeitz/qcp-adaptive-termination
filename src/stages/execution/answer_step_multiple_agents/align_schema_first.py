@@ -45,7 +45,7 @@ async def align_schema_first(
         dataframe = try_parse_value_to_result_type(result_df)
         validate_aligned_schema_metadata(dataframe, aligned_schema_metadata)
 
-        result_list.schema = aligned_schema_metadata
+        result_list.schema_metadata = aligned_schema_metadata
         dataframe[SOURCE_AGENT_COLUMN] = agent_name
         result_list.data = dataframe
 
@@ -60,7 +60,8 @@ async def align_schema_first(
     ) -> ToolsToFinalOutputResult:
         nonlocal result_list
         return ToolsToFinalOutputResult(
-            is_final_output=result_list.schema is not None, final_output=result_list
+            is_final_output=result_list.schema_metadata is not None,
+            final_output=result_list,
         )
 
     agent_result_preview = preview_dataframe(agent_result)

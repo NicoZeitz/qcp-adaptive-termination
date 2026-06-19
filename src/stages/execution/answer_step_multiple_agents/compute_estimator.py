@@ -23,7 +23,7 @@ def compute_estimator_statistics(
     agents_queried: int,
     agents_total: int,
 ) -> EstimatorStatistics | None:
-    schema = result_list.schema
+    schema = result_list.schema_metadata
     data = result_list.data
 
     if schema is None:
