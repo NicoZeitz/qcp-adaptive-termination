@@ -10,6 +10,9 @@ ResultType = DataFrame
 def serialize_result(result: ResultType) -> dict[str, Any]:
     # Replace NaN with None for JSON serialization (null in JSON)
     result_with_none = result.replace(np.nan, None)
+    result_with_none = result_with_none.replace(
+        {np.inf: "Infinity", -np.inf: "-Infinity"}
+    )
     return result_with_none.to_dict(orient="split")
 
 
