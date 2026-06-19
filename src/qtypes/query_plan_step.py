@@ -1,16 +1,10 @@
-from typing import Any, TypeAlias
+from abc import ABC
+from typing import TypeAlias
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    JsonValue,
-    field_serializer,
-    field_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field
 
 from qtypes.query_dependency import QueryDependency
-from qtypes.result import ResultType, deserialize_result, serialize_result
+from qtypes.serializers import SerializedOptionalResultType
 
 
 class BaseQueryPlanStep(BaseModel):
@@ -19,27 +13,7 @@ class BaseQueryPlanStep(BaseModel):
     id: str
     query: str
     dependencies: list[QueryDependency]
-    answer: ResultType | None
-
-    @field_serializer("answer")
-    def serialize_answer(self, answer: ResultType | None) -> JsonValue:
-        if answer is None:
-            return None
-
-        return serialize_result(answer)
-
-    @field_validator("answer", mode="before")
-    @classmethod
-    def validate_answer(
-        cls: type["BaseQueryPlanStep"], value: Any
-    ) -> ResultType | None:
-        if value is None:
-            return None
-        elif isinstance(value, ResultType):
-            return value
-        elif isinstance(value, dict):
-            return deserialize_result(value)
-        return value
+    answer: SerializedOptionalResultType = None
 
 
 class SingleAgentQueryPlanStep(BaseQueryPlanStep):

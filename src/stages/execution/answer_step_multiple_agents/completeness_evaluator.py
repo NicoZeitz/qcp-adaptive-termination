@@ -1,7 +1,7 @@
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.aligned_result_list import AlignedResultList
 from qtypes.estimator_statistics import EstimatorStatistics
-from qtypes.multi_agent_iteration_record import EvaluatorDecision
+from qtypes.outcome import EvaluatorDecision
 from qtypes.outcome import FinalResultOutcome
 from qtypes.outcome import QueryMoreAgentsOutcome
 from qtypes.result import ResultType, try_parse_value_to_result_type
@@ -15,7 +15,7 @@ import pandas as pd
 from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
 
 
-from typing import Any
+from typing import Any, Callable
 
 
 def build_estimator_summary(estimator_result: EstimatorStatistics) -> str:
@@ -37,11 +37,12 @@ def build_estimator_summary(estimator_result: EstimatorStatistics) -> str:
 
 async def run_completeness_evaluator(
     aligned_result_list: AlignedResultList,
-    estimator_result: EstimatorStatistics,
+    estimator_statistics: EstimatorStatistics,
     query: str,
 ) -> QueryMoreAgentsOutcome | FinalResultOutcome:
     decision: EvaluatorDecision | None = None
     final_result_value: ResultType | None = None
+    force_result = estimator_statistics.agents_queried == estimator_statistics.agents_total
 
     def final_result(result: Any):
         nonlocal decision, final_result_value
@@ -52,17 +53,20 @@ async def run_completeness_evaluator(
         nonlocal decision
         decision = "query_more_agents"
 
+    tools: dict[str, Callable] = {
+        "final_result": final_result,
+    }
+    if not force_result:
+        tools["query_more_agents"] = query_more_agents
+
     code_environment = CodeExecutionEnvironment(
         variables={
             "query": query,
             "result_list": aligned_result_list.data,
-            "estimator": estimator_result.estimator,
+            "estimator": estimator_statistics.estimator,
             "pd": pd,
         },
-        tools={
-            "final_result": final_result,
-            "query_more_agents": query_more_agents,
-        },
+        tools=tools,
     )
 
     def custom_tool_handler(
@@ -74,7 +78,7 @@ async def run_completeness_evaluator(
             final_output=decision == "final_result",
         )
 
-    estimator_summary = build_estimator_summary(estimator_result)
+    estimator_summary = build_estimator_summary(estimator_statistics)
     result_list_preview = preview_dataframe(aligned_result_list.data)
 
     with own_custom_span(
@@ -82,7 +86,7 @@ async def run_completeness_evaluator(
         input={
             "query": query,
             "result_list_preview": result_list_preview,
-            "estimator_statistics": estimator_result.model_dump(),
+            "estimator_statistics": estimator_statistics.model_dump(),
         },
     ):
         await run_agent(
@@ -94,6 +98,7 @@ async def run_completeness_evaluator(
                 "query": query,
                 "result_list_preview": result_list_preview,
                 "estimator_summary": estimator_summary,
+                "force_result": force_result,
             },
             tools=[code_environment.as_function_tool()],
             tool_use_behavior=custom_tool_handler,
@@ -101,7 +106,6 @@ async def run_completeness_evaluator(
             parallel_tool_calls=False,
             tool_choice="required",
             output_type=bool,
-            get_actual_result=lambda: None,
         )
         append_to_span_output(
             {

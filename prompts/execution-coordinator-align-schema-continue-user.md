@@ -1,15 +1,17 @@
 Query: {{query}}
 
-Schema: `{{schema}}`
+Schema:
+```
+{{existing_schema}}
+```
 
-Existing result list columns: `{{existing_result_columns}}`
 Existing result list preview:
 ```
 {{existing_result_preview}}
 ```
 
-New agent: **{{agent_name}}**
-New agent result columns: `{{agent_result_columns}}`
+New agent: {{agent_name}}
+
 New agent result preview:
 ```
 {{agent_result_preview}}

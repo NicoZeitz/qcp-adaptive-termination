@@ -1,8 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pandas as pd
 from pandas import DataFrame, MultiIndex
 from pydantic import JsonValue
 
-from qtypes.additional_information import AdditionalInformation
+if TYPE_CHECKING:
+    from qtypes.additional_information import AdditionalInformation
 
 CHAR_LIMIT_LLM = 2000
 CHAR_LIMIT_LONG_LLM = 6000

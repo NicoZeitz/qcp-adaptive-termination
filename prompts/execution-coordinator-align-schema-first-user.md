@@ -1,8 +1,6 @@
 Query: {{query}}
 
-First agent queried: **{{agent_name}}**
-
-Agent result columns: `{{agent_result_columns}}`
+First agent queried: {{agent_name}}
 
 Agent result preview:
 ```

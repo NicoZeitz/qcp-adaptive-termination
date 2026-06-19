@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
 from pydantic import JsonValue
@@ -9,7 +9,7 @@ from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.additional_information import AdditionalInformation
 from qtypes.data_agent import DataAgent
 from qtypes.need import try_parse_value_to_need_type
-from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDummy
+from qtypes.partial_query_answer import PartialQueryAnswer
 from qtypes.result import try_parse_value_to_result_type
 from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.data_description import data_agent_data_description
@@ -95,9 +95,7 @@ async def answer_query_sql_data_agent(
                 final_output=partial_answer,
             )
 
-        result = cast(
-            PartialQueryAnswer,
-            await run_agent(
+        result = await run_agent(
                 agent_configuration=get_data_agent_agent_configuration(
                     data_agent, "Code"
                 ),
@@ -114,10 +112,8 @@ async def answer_query_sql_data_agent(
                 reset_tool_choice=False,
                 parallel_tool_calls=False,
                 tool_choice="required",
-                output_type=PartialQueryAnswerDummy,  # See: https://github.com/openai/openai-agents-python/blob/main/src/agents/run_internal/turn_resolution.py#L189-L190,
-                get_actual_result=lambda: partial_answer,
-            ),
-        )
+                output_type=PartialQueryAnswer,
+            )
 
         append_to_span_output(
             {
