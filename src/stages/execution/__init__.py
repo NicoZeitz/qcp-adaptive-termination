@@ -22,6 +22,9 @@ from utils.span import append_to_span_output, own_custom_span
 # Stored separately from the cached result to avoid serialization issues with DataFrames.
 last_iteration_records: list[MultiAgentIterationRecord] = []
 
+STAGE_NAME = "Stage 3: Execution"
+REPLAN_STAGE_NAME = "Stage 4: Replan"
+
 
 async def execute_query_plan_attempt(
     replan_attempt: int,
@@ -31,7 +34,7 @@ async def execute_query_plan_attempt(
     continue_after_final_result: bool = False,
 ) -> ExecutionResult:
     with own_custom_span(
-        f"{replan_attempt} - Execute Query Plan",
+        f"{replan_attempt} - {STAGE_NAME}",
         input={
             "query_plan": query_plan,
             "current_data_agents": current_data_agents,
@@ -66,7 +69,7 @@ async def replan(
     failed_execution: FailedExecution,
 ) -> tuple[list[DataAgent], QueryPlan]:
     with own_custom_span(
-        f"{replan_attempt} - Stage 4: Replan",
+        f"{replan_attempt} - {REPLAN_STAGE_NAME}",
         input={
             "replan_attempt": replan_attempt,
             "current_data_agents": current_data_agents,
@@ -112,7 +115,7 @@ async def replan(
         return updated_data_agents, new_query_plan
 
 
-@cached(name_prefix="Stage 3: Execute Query Plan", mode="WRITE_ONLY")
+@cached(name_prefix=STAGE_NAME, mode="WRITE_ONLY")
 async def execute_query_plan(
     query_plan: QueryPlan,
     relevant_data_agents: list[DataAgent],

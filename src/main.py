@@ -9,13 +9,13 @@ from agents import trace
 from opentelemetry import trace as otel_trace
 
 from utils.preview import result_to_json_preview
-from stages.planning import draft_query_plan
+from stages.planning import draft_query_plan, STAGE_NAME as PLANNING_STAGE_NAME
 from qtypes.drafted_query_plan import DraftedQueryPlan
-from stages.execution import execute_query_plan
+from stages.execution import execute_query_plan, STAGE_NAME as EXECUTION_STAGE_NAME
 from qtypes.collaborative_query_answering_result import (
     CollaborativeQueryAnsweringResult,
 )
-from stages.discovery import filter_relevant_agents
+from stages.discovery import filter_relevant_agents, STAGE_NAME as DISCOVERY_STAGE_NAME
 from qtypes.collaborative_query_answering import CollaborativeQueryAnswering
 from qtypes.filtered_relevant_agents import FilteredRelevantAgents
 from utils.cache import load_cache_file
@@ -23,9 +23,9 @@ from utils.initialization import initialize
 
 
 stages_mapping = {
-    1: "Discovery",
-    2: "Planning",
-    3: "Execution",
+    1: DISCOVERY_STAGE_NAME,
+    2: PLANNING_STAGE_NAME,
+    3: EXECUTION_STAGE_NAME,
 }
 
 
@@ -63,7 +63,7 @@ async def main(
     )
 
     logging.info(
-        f"NZ: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for input path {input_file} with provider {provider}"
+        f"NZ: Running {stages_mapping[start_stage]} - {stages_mapping[end_stage]}: for input path {input_file} with provider {provider}"
     )
 
     tracer = otel_trace.get_tracer(__name__)
@@ -102,7 +102,7 @@ async def main(
             logging.info("  No extra entries found.")
 
         if start_stage == 1:
-            logging.info(f"Starting stage 1: {stages_mapping[1]}")
+            logging.info(f"Starting {stages_mapping[start_stage]}")
             logging.info(f"Data: {data}")
 
             data = cast(CollaborativeQueryAnswering, data)
@@ -117,7 +117,7 @@ async def main(
                 return
 
         if start_stage == 2:
-            logging.info(f"Starting stage 2: {stages_mapping[2]}")
+            logging.info(f"Starting {stages_mapping[start_stage]}")
             logging.info(f"Data: {data}")
 
             data = cast(FilteredRelevantAgents, data)
@@ -134,7 +134,7 @@ async def main(
                 return
 
         if start_stage == 3:
-            logging.info(f"Starting stage 3: {stages_mapping[3]}")
+            logging.info(f"Starting {stages_mapping[start_stage]}")
             logging.info(f"Data: {data}")
 
             data = cast(DraftedQueryPlan, data)
