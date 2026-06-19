@@ -5,7 +5,6 @@ from qtypes.collaborative_query_answering_result import (
 )
 from qtypes.data_agent import DataAgent
 from qtypes.execution_result import ExecutionResult
-from qtypes.multi_agent_iteration_record import MultiAgentIterationRecord
 from qtypes.need import serialize_need
 from qtypes.query_plan import QueryPlan
 from qtypes.query_plan_step_execution_result import FailedExecution, SuccessfulExecution
@@ -19,9 +18,6 @@ from stages.replanning import replan_query_plan
 from utils.cache import cached
 from utils.span import append_to_span_output, own_custom_span
 
-# Stored separately from the cached result to avoid serialization issues with DataFrames.
-last_iteration_records: list[MultiAgentIterationRecord] = []
-
 STAGE_NAME = "Stage 3: Execution"
 REPLAN_STAGE_NAME = "Stage 4: Replan"
 
@@ -30,7 +26,6 @@ async def execute_query_plan_attempt(
     replan_attempt: int,
     query_plan: QueryPlan,
     current_data_agents: list[DataAgent],
-    iteration_records: list[MultiAgentIterationRecord],
     continue_after_final_result: bool = False,
 ) -> ExecutionResult:
     with own_custom_span(
@@ -44,7 +39,6 @@ async def execute_query_plan_attempt(
             execution_result = await execute_query_plan_next_step(
                 current_data_agents,
                 query_plan,
-                iteration_records,
                 continue_after_final_result,
             )
 
@@ -122,27 +116,22 @@ async def execute_query_plan(
     data_agents: list[DataAgent],
     continue_after_final_result: bool = False,
 ) -> CollaborativeQueryAnsweringResult:
-    global last_iteration_records
     MAX_REPLAN_ATTEMPTS = 2
-    iteration_records: list[MultiAgentIterationRecord] = []
 
     for replan_attempt in range(MAX_REPLAN_ATTEMPTS + 1):
         execution_result = await execute_query_plan_attempt(
             replan_attempt=replan_attempt,
             query_plan=query_plan,
             current_data_agents=relevant_data_agents,
-            iteration_records=iteration_records,
             continue_after_final_result=continue_after_final_result,
         )
 
         if execution_result.success:
-            last_iteration_records = iteration_records
             return CollaborativeQueryAnsweringResult(
                 result=cast(ResultType, execution_result.result),
             )
 
         if replan_attempt >= MAX_REPLAN_ATTEMPTS:
-            last_iteration_records = iteration_records
             return CollaborativeQueryAnsweringResult(
                 result=get_failed_result(),
             )
@@ -155,7 +144,6 @@ async def execute_query_plan(
             failed_execution=cast(FailedExecution, execution_result.failed_execution),
         )
 
-    last_iteration_records = iteration_records
     return CollaborativeQueryAnsweringResult(
         result=get_failed_result(),
     )

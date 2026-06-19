@@ -19,6 +19,8 @@ class CollaborativeQueryAnsweringResult(BaseModel):
     def validate_result(
         cls: type["CollaborativeQueryAnsweringResult"], value: Any
     ) -> ResultType:
-        if isinstance(value, dict):
+        if isinstance(value, ResultType):
+            return value
+        elif isinstance(value, dict):
             return deserialize_result(value)
         return value

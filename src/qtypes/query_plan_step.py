@@ -35,8 +35,9 @@ class BaseQueryPlanStep(BaseModel):
     ) -> ResultType | None:
         if value is None:
             return None
-
-        if isinstance(value, dict):
+        elif isinstance(value, ResultType):
+            return value
+        elif isinstance(value, dict):
             return deserialize_result(value)
         return value
 

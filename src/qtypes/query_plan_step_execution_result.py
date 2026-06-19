@@ -28,7 +28,9 @@ class SuccessfulExecution(QueryPlanStepExecutionResult, BaseModel):
     @field_validator("result", mode="before")
     @classmethod
     def validate_result(cls: type["SuccessfulExecution"], value: Any) -> ResultType:
-        if isinstance(value, dict):
+        if isinstance(value, ResultType):
+            return value
+        elif isinstance(value, dict):
             return deserialize_result(value)
         return value
 
@@ -54,8 +56,9 @@ class FailedExecution(QueryPlanStepExecutionResult, BaseModel):
     ) -> ResultType | None:
         if value is None:
             return None
-
-        if isinstance(value, dict):
+        elif isinstance(value, ResultType):
+            return value
+        elif isinstance(value, dict):
             return deserialize_result(value)
         return value
 

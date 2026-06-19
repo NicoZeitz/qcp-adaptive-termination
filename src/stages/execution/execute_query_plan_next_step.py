@@ -4,7 +4,6 @@ from agents import AgentsException, MaxTurnsExceeded
 
 from qtypes.additional_information import AdditionalInformation
 from qtypes.data_agent import DataAgent
-from qtypes.multi_agent_iteration_record import MultiAgentIterationRecord
 from qtypes.need import exception_to_need
 from qtypes.partial_query_answer import PartialQueryAnswer
 from qtypes.query_plan import QueryPlan
@@ -30,7 +29,6 @@ from utils.span import append_to_span_output, own_custom_span
 async def execute_query_plan_next_step(
     data_agents: list[DataAgent],
     query_plan: QueryPlan,
-    iteration_records: list[MultiAgentIterationRecord],
     continue_after_final_result: bool = False,
 ) -> QueryPlanStepExecutionResult:
     step_to_execute = None
@@ -65,7 +63,6 @@ async def execute_query_plan_next_step(
             data_agents,
             step_to_execute,
             additional_information,
-            iteration_records,
             continue_after_final_result,
         )
 
@@ -101,7 +98,6 @@ async def execute_query_plan_step(
     data_agents: list[DataAgent],
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
-    iteration_records: list[MultiAgentIterationRecord],
     continue_after_final_result: bool = False,
 ) -> PartialQueryAnswer:
     with own_custom_span(
@@ -119,13 +115,12 @@ async def execute_query_plan_step(
                 additional_information,
             )
         else:
-            result, new_records = await answer_step_multiple_agents(
+            result = await answer_step_multiple_agents(
                 data_agents=data_agents,
                 query_plan_step=cast(MultiAgentQueryPlanStep, query_plan_step),
                 additional_information=additional_information,
                 continue_after_final_result=continue_after_final_result,
             )
-            iteration_records.extend(new_records)
 
         append_to_span_output({"partial_answer": result})
         return result
