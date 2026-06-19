@@ -82,7 +82,6 @@ async def align_schema_first(
             prompt_parameters={
                 "query": query,
                 "agent_name": agent_name,
-                "force_result": False,
                 "agent_result_preview": agent_result_preview,
             },
             tools=[code_environment.as_function_tool()],

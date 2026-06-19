@@ -65,7 +65,7 @@ async def run_agent_round(
         )
 
         if (
-            result.needs is not None
+            len(result.needs) > 0
             or result.answer is None
             or result.has_needs
             or not result.has_answer
