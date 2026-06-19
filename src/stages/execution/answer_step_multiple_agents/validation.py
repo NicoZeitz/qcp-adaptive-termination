@@ -1,9 +1,6 @@
-from typing import Any
-
 from pandas import DataFrame
 
 from qtypes.aligned_result_list import AggregationType, AlignedSchemaMetadata
-from qtypes.result import ResultType, try_parse_value_to_result_type
 
 SOURCE_AGENT_COLUMN = "source_agent"
 
