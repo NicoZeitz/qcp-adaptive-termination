@@ -32,7 +32,6 @@ async def run_agent_round(
     agent_current: str,
     additional_information: list[AdditionalInformation],
     result_list: AlignedResultList,
-    per_agent_results: dict[str, ResultType],
     agents_queried: list[str],
     agents_remaining: list[str],
 ) -> FinalResultOutcome | QueryMoreAgentsOutcome | RaiseNeedOutcome:
@@ -89,26 +88,13 @@ async def run_agent_round(
         result_list = await align_schema(
             result_list, agent_current, result.answer, query
         )
-        if len(remaining_agents_now) == 0:
-            # TODO: run run_completness eval to produce final result
-            # No more agents to query, return final result
-            outcome = FinalResultOutcome(result=result_list.data)
-            add_multi_agent_iteration_record(iteration_record)
-            append_to_span_output(
-                {
-                    "outcome": outcome.model_dump(),
-                    "iteration_record": iteration_record.model_dump(),
-                }
-            )
-            return outcome
 
-        per_agent_results = {**per_agent_results, agent_current: result.answer}
-        estimator_result = compute_estimator_statistics(
+        estimator_statistics = compute_estimator_statistics(
             result_list, len(agents_queried_now), agents_total
         )
-        iteration_record.estimator_result = estimator_result
+        iteration_record.estimator_result = estimator_statistics
 
-        if estimator_result is None:
+        if estimator_statistics is None:
             outcome = QueryMoreAgentsOutcome(result_list=result_list)
             add_multi_agent_iteration_record(iteration_record)
             append_to_span_output(
@@ -119,7 +105,7 @@ async def run_agent_round(
             )
             return outcome
 
-        outcome = await run_completeness_evaluator(result_list, estimator_result, query)
+        outcome = await run_completeness_evaluator(result_list, estimator_statistics, query)
         iteration_record.evaluator_decision = outcome.decision
         append_to_span_output(
             {
@@ -137,8 +123,6 @@ async def answer_step_multiple_agents(
     additional_information: list[AdditionalInformation],
     continue_after_final_result: bool = False,
 ) -> PartialQueryAnswer:
-    per_agent_results: dict[str, ResultType] = {}
-
     all_agents = list(sorted(query_plan_step.to_agent))
     agents_queried: list[str] = []
     result_list = AlignedResultList()
@@ -158,7 +142,6 @@ async def answer_step_multiple_agents(
                 agent_current=agent_name,
                 additional_information=additional_information,
                 result_list=result_list,
-                per_agent_results=per_agent_results,
                 agents_queried=agents_queried,
                 agents_remaining=[a for a in all_agents if a not in agents_queried],
             )

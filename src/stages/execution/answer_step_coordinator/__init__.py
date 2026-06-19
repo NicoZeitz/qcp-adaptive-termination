@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any
 
 from agents import (
     FunctionToolResult,
@@ -10,7 +10,7 @@ import pandas as pd
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.additional_information import AdditionalInformation
 from qtypes.need import try_parse_value_to_need_type
-from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDummy
+from qtypes.partial_query_answer import PartialQueryAnswer
 from qtypes.query_plan_step import QueryPlanStep
 from qtypes.result import try_parse_value_to_result_type
 from stages.common.agent_configuration import get_coordinator_agent_configuration
@@ -59,9 +59,7 @@ async def answer_step_coordinator(
                 final_output=partial_answer,
             )
 
-        result = cast(
-            PartialQueryAnswer,
-            await run_agent(
+        result = await run_agent(
                 agent_configuration=get_coordinator_agent_configuration("Code"),
                 prompt_name="execution-coordinator-aggregate",
                 prompt_parameters={
@@ -75,10 +73,8 @@ async def answer_step_coordinator(
                 reset_tool_choice=False,
                 parallel_tool_calls=False,
                 tool_choice="required",
-                output_type=PartialQueryAnswerDummy,  # See: https://github.com/openai/openai-agents-python/blob/main/src/agents/run_internal/turn_resolution.py#L189-L190
-                get_actual_result=lambda: partial_answer,
-            ),
-        )
+                output_type=PartialQueryAnswer,
+            )
 
         append_to_span_output(
             {
