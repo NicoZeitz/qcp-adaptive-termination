@@ -86,7 +86,7 @@ async def run_completeness_evaluator(
         input={
             "query": query,
             "result_list_preview": result_list_preview,
-            "estimator_statistics": estimator_statistics.model_dump(),
+            "estimator_statistics": estimator_statistics,
         },
     ):
         await run_agent(
