@@ -18,12 +18,11 @@ from qtypes.filtered_relevant_agents import FilteredRelevantAgents
 from qtypes.data_agent import DataAgent
 from utils.cache import cached
 
+STAGE_NAME = "Stage 1: Discovery"
+
 
 class FilterType(Enum):
     REASONING = "reasoning"
-
-
-STAGE_NAME = "Stage 1: Filter Relevant Agents"
 
 
 @cached(name_prefix=STAGE_NAME, mode="WRITE_ONLY")

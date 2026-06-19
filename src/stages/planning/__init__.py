@@ -20,6 +20,8 @@ from utils.cache import cached
 from utils.run_agent import run_llm
 from utils.span import append_to_span_output, own_custom_span
 
+STAGE_NAME = "Stage 2: Planning"
+
 
 def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
     data_agent_names = [agent.name for agent in data_agents]
@@ -117,12 +119,12 @@ def map_query_plan_model_to_query_plan(
     return query_plan
 
 
-@cached(name_prefix="Stage 2: Draft Query Plan", mode="WRITE_ONLY")
+@cached(name_prefix=STAGE_NAME, mode="WRITE_ONLY")
 async def draft_query_plan(
     query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
 ) -> DraftedQueryPlan:
     with own_custom_span(
-        "Coordinator - Draft Query Plan",
+        STAGE_NAME,
         input={
             "query": query,
             "data_agents": data_agents,
@@ -135,8 +137,8 @@ async def draft_query_plan(
         QueryPlanModel = create_draft_query_plan_model(relevant_data_agents)
 
         result = await run_llm(
-            agent_configuration=get_coordinator_agent_configuration("Draft Query Plan"),
-            prompt_name="planning-coordinator-query-plan",
+            agent_configuration=get_coordinator_agent_configuration("Planning"),
+            prompt_name="planning-coordinator-planning",
             prompt_parameters={
                 "agent_registry": agent_registry,
                 "query": query,
