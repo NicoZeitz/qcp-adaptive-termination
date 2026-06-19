@@ -63,7 +63,9 @@ async def align_schema_continue(
     code_environment = CodeExecutionEnvironment(
         variables={
             "query": query,
-            "aggregation_type": cast(AlignedSchemaMetadata, aligned.schema).aggregation_type,
+            "aggregation_type": cast(
+                AlignedSchemaMetadata, aligned.schema
+            ).aggregation_type,
             "keys": cast(AlignedSchemaMetadata, aligned.schema).keys,
             "value_column": cast(AlignedSchemaMetadata, aligned.schema).value_column,
             "agent_result": agent_result,
