@@ -8,7 +8,7 @@ from qtypes.multi_agent_iteration_record import (
 )
 from qtypes.outcome import FinalResultOutcome, QueryMoreAgentsOutcome, RaiseNeedOutcome
 from qtypes.partial_query_answer import PartialQueryAnswer
-from qtypes.query_plan_step import MultiAgentQueryPlanStep, QueryPlanStep
+from qtypes.query_plan_step import MultiAgentQueryPlanStep
 from stages.execution.answer_step_data_agent import answer_step_data_agent
 from stages.execution.answer_step_multiple_agents.align_schema import align_schema
 from stages.execution.answer_step_multiple_agents.completeness_evaluator import (
@@ -27,7 +27,7 @@ from utils.span import append_to_span_output, own_custom_span
 
 async def run_agent_round(
     data_agents: list[DataAgent],
-    query_plan_step: QueryPlanStep,
+    query_plan_step: MultiAgentQueryPlanStep,
     agent_current: str,
     additional_information: list[AdditionalInformation],
     result_list: AlignedResultList,
@@ -85,7 +85,7 @@ async def run_agent_round(
             return outcome
 
         result_list = await align_schema(
-            result_list, agent_current, result.answer, query
+            result_list, agent_current, result.answer, query_plan_step.merge_task
         )
 
         estimator_statistics = compute_estimator_statistics(

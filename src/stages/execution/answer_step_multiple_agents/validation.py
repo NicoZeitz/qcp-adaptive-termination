@@ -8,16 +8,6 @@ from qtypes.result import ResultType, try_parse_value_to_result_type
 SOURCE_AGENT_COLUMN = "source_agent"
 
 
-def validate_and_parse_result_type(result: Any):
-    parsed_result = try_parse_value_to_result_type(result)
-    if not isinstance(parsed_result, ResultType):
-        raise ValueError(
-            f"Expected a {type(ResultType()).__name__} for schema alignment."
-        )
-
-    return parsed_result
-
-
 def validate_aligned_schema_metadata(
     dataframe: DataFrame, metadata: AlignedSchemaMetadata
 ):
