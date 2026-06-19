@@ -20,4 +20,4 @@ class AlignedResultList(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     data: SerializedResultType = ResultType()
-    schema: AlignedSchemaMetadata | None = None
+    schema_metadata: AlignedSchemaMetadata | None = None

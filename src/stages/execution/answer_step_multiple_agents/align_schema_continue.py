@@ -44,30 +44,32 @@ async def align_schema_continue(
         new_aligned_schema_metadata = AlignedSchemaMetadata(
             aggregation_type=aggregation_type
             if aggregation_type is not None
-            else cast(AlignedSchemaMetadata, aligned.schema).aggregation_type,
+            else cast(AlignedSchemaMetadata, aligned.schema_metadata).aggregation_type,
             keys=list(keys)
             if keys is not None
-            else cast(AlignedSchemaMetadata, aligned.schema).keys,
+            else cast(AlignedSchemaMetadata, aligned.schema_metadata).keys,
             value_column=value_column
             if value_column is not None
-            else cast(AlignedSchemaMetadata, aligned.schema).value_column,
+            else cast(AlignedSchemaMetadata, aligned.schema_metadata).value_column,
         )
 
         validate_aligned_schema_metadata(dataframe, new_aligned_schema_metadata)
         validate_source_agent_column(aligned.data, dataframe, agent_name)
 
         aligned.data = dataframe
-        aligned.schema = new_aligned_schema_metadata
+        aligned.schema_metadata = new_aligned_schema_metadata
         is_done = True
 
     code_environment = CodeExecutionEnvironment(
         variables={
             "query": query,
             "aggregation_type": cast(
-                AlignedSchemaMetadata, aligned.schema
+                AlignedSchemaMetadata, aligned.schema_metadata
             ).aggregation_type,
-            "keys": cast(AlignedSchemaMetadata, aligned.schema).keys,
-            "value_column": cast(AlignedSchemaMetadata, aligned.schema).value_column,
+            "keys": cast(AlignedSchemaMetadata, aligned.schema_metadata).keys,
+            "value_column": cast(
+                AlignedSchemaMetadata, aligned.schema_metadata
+            ).value_column,
             "agent_result": agent_result,
             "existing_results": aligned.data,
             "pd": pd,
@@ -92,7 +94,9 @@ async def align_schema_continue(
             "agent_name": agent_name,
             "is_first": False,
             "agent_result_preview": agent_result_preview,
-            "existing_schema": aligned.schema if aligned.schema else None,
+            "existing_schema": aligned.schema_metadata
+            if aligned.schema_metadata
+            else None,
             "existing_result_preview": existing_result_preview,
         },
     ):
@@ -106,7 +110,7 @@ async def align_schema_continue(
                 "agent_name": agent_name,
                 "agent_result_preview": agent_result_preview,
                 "existing_schema": cast(
-                    AlignedSchemaMetadata, aligned.schema
+                    AlignedSchemaMetadata, aligned.schema_metadata
                 ).model_dump_json(indent=2),
                 "existing_result_preview": existing_result_preview,
             },

@@ -14,7 +14,7 @@ async def align_schema(
     agent_result: ResultType,
     query: str,
 ) -> AlignedResultList:
-    if aligned.schema is None:
+    if aligned.schema_metadata is None:
         return await align_schema_first(query, agent_name, agent_result)
     else:
         return await align_schema_continue(query, agent_name, agent_result, aligned)
