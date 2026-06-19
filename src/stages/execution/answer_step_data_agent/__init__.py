@@ -16,7 +16,7 @@ async def answer_step_data_agent(
         (agent for agent in data_agents if agent.name == to_agent)
     )
 
-    if responsible_data_agent == "sql":
+    if responsible_data_agent.type == "sql":
         return await answer_query_sql_data_agent(
             responsible_data_agent, query, additional_information
         )
