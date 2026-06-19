@@ -6,6 +6,7 @@ from qtypes.outcome import FinalResultOutcome
 from qtypes.outcome import QueryMoreAgentsOutcome
 from qtypes.result import ResultType, try_parse_value_to_result_type
 from stages.common.agent_configuration import get_coordinator_agent_configuration
+from unknown_unknown.estimator import Estimator
 from utils.preview import preview_dataframe, result_to_json_preview
 from utils.run_agent import run_agent
 from utils.span import append_to_span_output, own_custom_span
@@ -37,6 +38,7 @@ def build_estimator_summary(estimator_result: EstimatorStatistics) -> str:
 
 async def run_completeness_evaluator(
     aligned_result_list: AlignedResultList,
+    estimator: Estimator,
     estimator_statistics: EstimatorStatistics,
     query: str,
 ) -> QueryMoreAgentsOutcome | FinalResultOutcome:
@@ -65,7 +67,7 @@ async def run_completeness_evaluator(
         variables={
             "query": query,
             "result_list": aligned_result_list.data,
-            "estimator": estimator_statistics.estimator,
+            "estimator": estimator,
             "pd": pd,
         },
         tools=tools,

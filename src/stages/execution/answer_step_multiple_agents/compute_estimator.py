@@ -22,7 +22,7 @@ def compute_estimator_statistics(
     result_list: AlignedResultList,
     agents_queried: int,
     agents_total: int,
-) -> EstimatorStatistics | None:
+) -> None | tuple[EstimatorStatistics, Estimator]:
     schema = result_list.schema_metadata
     data = result_list.data
 
@@ -46,7 +46,6 @@ def compute_estimator_statistics(
     agg = schema.aggregation_type
 
     result = EstimatorStatistics(
-        estimator=estimator,
         sample_coverage=estimator.sample_coverage(),
         agents_queried=agents_queried,
         agents_total=agents_total,
@@ -78,4 +77,4 @@ def compute_estimator_statistics(
         result.observed_value = estimator.sample_max()
         result.estimated_value = estimator.estimated_max()
 
-    return result
+    return result, estimator
