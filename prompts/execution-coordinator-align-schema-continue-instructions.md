@@ -46,7 +46,7 @@ Your python environment is preconfigured with the following code:
 import pandas as pd
 
 # Additional available functions to call
-def set_schema(merged_df: pd.DataFrame, aggregation_type: Literal["count", "min", "max", "sum", "avg"] | None = None, keys: list[str] | None = None, value_column: str | None = None) -> None:
+def merge_result(merged_df: pd.DataFrame, aggregation_type: Literal["count", "min", "max", "sum", "avg"] | None = None, keys: list[str] | None = None, value_column: str | None = None) -> None:
   ...
 
 # Available variables
@@ -59,7 +59,7 @@ existing_results: pd.DataFrame
 ```
 
 There is one function available to call
-* `set_schema`: Finish by returning the concatenated dataset as well as new schema metadata (only if it changed).
+* `merge_result`: Finish by returning the concatenated dataset as well as new schema metadata (only if it changed).
 
 Input information is provided in the following variables
 * `query`: The natural language query that should be answered
