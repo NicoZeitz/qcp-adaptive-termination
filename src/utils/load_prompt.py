@@ -1,26 +1,20 @@
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from langfuse.model import ChatMessageDict
-from opentelemetry.context import Context
-from opentelemetry.trace import Span
-from opentelemetry.sdk.trace import SpanProcessor
 
 import chevron
 
 PROMPTS_DIR = Path(__file__).parents[2] / "prompts"
 
+_prompt_cache: dict[str, str] = {
+    f.stem: f.read_text() for f in PROMPTS_DIR.glob("*.md")
+}
+
 
 def load_prompt(name: str, parameters: dict[str, Any]) -> list[ChatMessageDict]:
-    instructions = chevron.render(
-        (PROMPTS_DIR / f"{name}-instructions.md").read_text(), parameters
-    )
-    user = chevron.render((PROMPTS_DIR / f"{name}-user.md").read_text(), parameters)
+    instructions = chevron.render(_prompt_cache[f"{name}-instructions"], parameters)
+    user = chevron.render(_prompt_cache[f"{name}-user"], parameters)
     return [
         {"role": "system", "content": instructions},
         {"role": "user", "content": user},
     ]
-
-
-class LangfuseProcessor(SpanProcessor):
-    def on_start(self, span: Span, parent_context: Optional[Context] = None) -> None:
-        pass  # prompt version tracking removed; Langfuse used for tracing only
