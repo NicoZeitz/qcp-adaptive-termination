@@ -6,7 +6,11 @@ import pandas as pd
 
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.additional_information import AdditionalInformation
-from qtypes.aligned_result_list import AggregationType, AlignedResultList, AlignedSchemaMetadata
+from qtypes.aligned_result_list import (
+    AggregationType,
+    AlignedResultList,
+    AlignedSchemaMetadata,
+)
 from qtypes.data_agent import DataAgent
 from qtypes.estimator_result import EstimatorResult
 from qtypes.multi_agent_iteration_record import (
@@ -127,7 +131,12 @@ async def align_schema(
     partial_answer: PartialQueryAnswer | None = None
     captured_schema: AlignedSchemaMetadata | None = None
 
-    def set_schema(result_df: Any, aggregation_type: AggregationType, keys: list, value_column: str | None = None):
+    def set_schema(
+        result_df: Any,
+        aggregation_type: AggregationType,
+        keys: list,
+        value_column: str | None = None,
+    ):
         """Commit the schema for the unified result list and provide the transformed result.
 
         Transform agent_result into result_df before calling — rename, drop, or add
@@ -171,7 +180,9 @@ async def align_schema(
             "query": query,
             "agent_name": agent_name,
             "agent_result_columns": str(list(raw_data.columns)),
-            "agent_result_preview": preview_dataframe(raw_data, top_rows=5, bottom_rows=0),
+            "agent_result_preview": preview_dataframe(
+                raw_data, top_rows=5, bottom_rows=0
+            ),
         }
     else:
         new_data = raw_data.copy()
@@ -190,9 +201,13 @@ async def align_schema(
             "query": query,
             "agent_name": agent_name,
             "agent_result_columns": str(list(new_data.columns)),
-            "agent_result_preview": preview_dataframe(new_data, top_rows=5, bottom_rows=0),
+            "agent_result_preview": preview_dataframe(
+                new_data, top_rows=5, bottom_rows=0
+            ),
             "existing_result_columns": str(list(aligned.data.columns)),
-            "existing_result_preview": preview_dataframe(aligned.data, top_rows=10, bottom_rows=0),
+            "existing_result_preview": preview_dataframe(
+                aligned.data, top_rows=10, bottom_rows=0
+            ),
             "schema": aligned.schema.model_dump_json() if aligned.schema else None,
         }
 
@@ -214,11 +229,21 @@ async def align_schema(
             "is_first": is_first,
             "agent_result_rows": len(raw_data),
             "agent_result_columns": list(raw_data.columns),
-            "agent_result_preview": preview_dataframe(raw_data, top_rows=5, bottom_rows=0),
+            "agent_result_preview": preview_dataframe(
+                raw_data, top_rows=5, bottom_rows=0
+            ),
             "existing_result_rows": len(aligned.data) if not is_first else None,
-            "existing_result_columns": list(aligned.data.columns) if not is_first else None,
-            "existing_schema": aligned.schema.model_dump() if not is_first and aligned.schema else None,
-            "existing_result_preview": preview_dataframe(aligned.data, top_rows=10, bottom_rows=0) if not is_first else None,
+            "existing_result_columns": list(aligned.data.columns)
+            if not is_first
+            else None,
+            "existing_schema": aligned.schema.model_dump()
+            if not is_first and aligned.schema
+            else None,
+            "existing_result_preview": preview_dataframe(
+                aligned.data, top_rows=10, bottom_rows=0
+            )
+            if not is_first
+            else None,
         },
     ):
         await run_agent(
@@ -239,15 +264,21 @@ async def align_schema(
         has_answer = partial_answer is not None and partial_answer.has_answer
         result_rows = (
             len(partial_answer.answer)
-            if has_answer and partial_answer is not None and partial_answer.answer is not None
+            if has_answer
+            and partial_answer is not None
+            and partial_answer.answer is not None
             else 0
         )
-        append_to_span_output({
-            "has_answer": has_answer,
-            "result_rows": result_rows,
-            "captured_schema": captured_schema.model_dump() if captured_schema is not None else None,
-            "fallback_used": not has_answer,
-        })
+        append_to_span_output(
+            {
+                "has_answer": has_answer,
+                "result_rows": result_rows,
+                "captured_schema": captured_schema.model_dump()
+                if captured_schema is not None
+                else None,
+                "fallback_used": not has_answer,
+            }
+        )
         indented_logging(
             f"Align Schema {'First' if is_first else 'Continue'}: "
             f"has_answer={has_answer}, rows={result_rows}, "
@@ -333,8 +364,11 @@ async def run_completeness_evaluator(
             "query": query,
             "result_list_rows": len(aligned.data),
             "result_list_preview": preview_dataframe(aligned.data),
-            "estimator_summary": est_summary or "Not yet available (fewer than 2 agents queried).",
-            "estimator_result": estimator_result.__dict__ if estimator_result is not None else None,
+            "estimator_summary": est_summary
+            or "Not yet available (fewer than 2 agents queried).",
+            "estimator_result": estimator_result.__dict__
+            if estimator_result is not None
+            else None,
             "remaining_agents": remaining_agents,
             "remaining_agents_count": len(remaining_agents),
         },
@@ -361,12 +395,14 @@ async def run_completeness_evaluator(
             output_type=PartialQueryAnswerDummy,
             get_actual_result=lambda: None,
         )
-        append_to_span_output({
-            "decision": decision,
-            "next_agents": next_agents,
-            "next_agents_count": len(next_agents),
-            "has_final_result": final_result_value is not None,
-        })
+        append_to_span_output(
+            {
+                "decision": decision,
+                "next_agents": next_agents,
+                "next_agents_count": len(next_agents),
+                "has_final_result": final_result_value is not None,
+            }
+        )
 
     return decision, next_agents, final_result_value
 
@@ -422,7 +458,10 @@ async def answer_step_multiple_agents(
                         collected_needs.extend(agent_partial.needs)
                     estimator_result = (
                         compute_estimator_result(
-                            aligned.schema, per_agent_results, len(queried), agents_total
+                            aligned.schema,
+                            per_agent_results,
+                            len(queried),
+                            agents_total,
                         )
                         if aligned.schema is not None
                         else None
@@ -433,13 +472,17 @@ async def answer_step_multiple_agents(
                         result_list=aligned.data.copy(),
                         estimator_result=estimator_result,
                         evaluator_decision="query_more_agents",
-                        evaluator_next_agents=[a for a in all_agents if a not in queried],
+                        evaluator_next_agents=[
+                            a for a in all_agents if a not in queried
+                        ],
                     )
                     iteration_records.append(record)
-                    append_to_span_output({
-                        "agent_has_answer": False,
-                        "evaluator_decision": "query_more_agents",
-                    })
+                    append_to_span_output(
+                        {
+                            "agent_has_answer": False,
+                            "evaluator_decision": "query_more_agents",
+                        }
+                    )
                     continue
 
                 per_agent_results[agent_name] = agent_partial.answer
@@ -475,18 +518,20 @@ async def answer_step_multiple_agents(
                 )
                 iteration_records.append(record)
 
-                append_to_span_output({
-                    "agent_has_answer": True,
-                    "aligned_result_rows": len(aligned.data),
-                    "evaluator_decision": decision,
-                    "evaluator_next_agents": next_agents,
-                    "estimator_sample_coverage": estimator_result.sample_coverage
-                    if estimator_result is not None
-                    else None,
-                    "estimator_agents_queried": estimator_result.agents_queried
-                    if estimator_result is not None
-                    else None,
-                })
+                append_to_span_output(
+                    {
+                        "agent_has_answer": True,
+                        "aligned_result_rows": len(aligned.data),
+                        "evaluator_decision": decision,
+                        "evaluator_next_agents": next_agents,
+                        "estimator_sample_coverage": estimator_result.sample_coverage
+                        if estimator_result is not None
+                        else None,
+                        "estimator_agents_queried": estimator_result.agents_queried
+                        if estimator_result is not None
+                        else None,
+                    }
+                )
 
                 if decision == "final_result":
                     if final_result_value is not None:

@@ -1,12 +1,12 @@
 import logging
 import json
-import os
 from dataclasses import asdict
 from pathlib import Path
 from typing import Literal, cast
 from datetime import datetime
 
 from agents import trace
+from opentelemetry import trace as otel_trace
 
 from utils.preview import result_to_json_preview
 from stages.planning import draft_query_plan
@@ -23,9 +23,9 @@ from utils.initialization import initialize
 
 
 stages_mapping = {
-    1: "Filter Relevant Agents",
-    2: "Draft Query Plan",
-    3: "Execute Query Plan",
+    1: "Discovery",
+    2: "Planning",
+    3: "Execution",
 }
 
 
@@ -44,39 +44,44 @@ async def main(
         raise Exception
 
     max_trace_label_len = 50
-    user = "NZ" if os.getlogin() == "I550817" else "FW"
 
     log_filename = f"Stage {start_stage}-{end_stage} - {datetime.now().strftime('%Y-%m-%d %H-%M-%S')}"
 
     name_prefix = f"{name.strip()[:max_trace_label_len]} - " if name else ""
     input_file_prefix = input_file.stem[:max_trace_label_len]
+    trace_label = (
+        f"[NZ] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}"
+    )
 
-    with trace(
-        f"[{user}] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}",
-        metadata={
-            "provider": provider,
-            "start_stage": str(start_stage),
-            "end_stage": str(end_stage),
-            "name": name,
-            "input_file": str(input_file),
-            "cache_dir": str(cache_dir),
-            "log_dir": str(log_dir),
-        },
-    ) as trace_ctx:
-        initialize(
-            log_filename,
-            log_dir,
-            cache_dir,
-            provider,
-            throw_on_cache_miss,
-            disable_cache,
-        )
+    initialize(
+        log_filename,
+        log_dir,
+        cache_dir,
+        provider,
+        throw_on_cache_miss,
+        disable_cache,
+    )
 
-        logging.info(f"Trace ID: {trace_ctx.trace_id}")
-        logging.info(
-            f"{user}: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for input path {input_file} with provider {provider}"
-        )
+    logging.info(
+        f"NZ: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for input path {input_file} with provider {provider}"
+    )
 
+    tracer = otel_trace.get_tracer(__name__)
+    with (
+        trace(
+            trace_label,
+            metadata={
+                "provider": provider,
+                "start_stage": str(start_stage),
+                "end_stage": str(end_stage),
+                "name": name,
+                "input_file": str(input_file),
+                "cache_dir": str(cache_dir),
+                "log_dir": str(log_dir),
+            },
+        ) as trace_ctx,
+        tracer.start_as_current_span(trace_label),
+    ):
         data, extra = load_cache_file(
             input_file,
             deserializable_classes=[
@@ -87,7 +92,8 @@ async def main(
             ],
         )
 
-        logging.info(f"{user}: Successfully loaded input file. Starting execution.")
+        logging.info("Successfully loaded input file. Starting execution.")
+        logging.info(f"Trace ID: {trace_ctx.trace_id}")
         logging.info("Extra entries in cache_file:")
         if extra:
             for k, v in extra.items():
@@ -96,14 +102,14 @@ async def main(
             logging.info("  No extra entries found.")
 
         if start_stage == 1:
-            logging.info(f"{user}: Starting stage 1: Filter Relevant Agents")
+            logging.info(f"Starting stage 1: {stages_mapping[1]}")
             logging.info(f"Data: {data}")
 
             data = cast(CollaborativeQueryAnswering, data)
             data = await filter_relevant_agents(data.query, data.data_agents)
             data = cast(FilteredRelevantAgents, data)
 
-            logging.info(f"{user}: Finished stage 1")
+            logging.info("Finished stage 1")
             logging.info(f"Result: {data}")
 
             start_stage += 1
@@ -111,7 +117,7 @@ async def main(
                 return
 
         if start_stage == 2:
-            logging.info(f"{user}: Starting stage 2: Draft Query Plan")
+            logging.info(f"Starting stage 2: {stages_mapping[2]}")
             logging.info(f"Data: {data}")
 
             data = cast(FilteredRelevantAgents, data)
@@ -120,7 +126,7 @@ async def main(
             )
             data = cast(DraftedQueryPlan, data)
 
-            logging.info(f"{user}: Finished stage 2")
+            logging.info("Finished stage 2")
             logging.info(f"Result: {data}")
 
             start_stage += 1
@@ -128,7 +134,7 @@ async def main(
                 return
 
         if start_stage == 3:
-            logging.info(f"{user}: Starting stage 3: Execute Query Plan")
+            logging.info(f"Starting stage 3: {stages_mapping[3]}")
             logging.info(f"Data: {data}")
 
             data = cast(DraftedQueryPlan, data)
@@ -141,7 +147,7 @@ async def main(
 
             from stages.execution import last_iteration_records
 
-            logging.info(f"{user}: Finished stage 3")
+            logging.info("Finished stage 3")
             logging.info(f"Result: {data}")
             logging.info(f"Iteration records: {len(last_iteration_records)}")
             logging.info(result_to_json_preview(data.result))

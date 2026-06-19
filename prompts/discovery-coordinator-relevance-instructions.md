@@ -14,7 +14,7 @@ Additional remarks:
 - Just tell him: 'I need this, I think you have that, ...'
 - Address the agent as 'you'
 
-A agent is relevant if it can provide any information that could be used to answer the query even if only partially or in an indirect or abstract way. Only return False and mark the agent as unrelevant if the agents data cannot be used in any way to help th query answering. It is better to mark an agent falsely as relevant then later discovering, that the agent was needed to answer the query! A good measure for table based agents is for example, that if there is any column which could be necessary to answer the query, even only in context with other agents, to mark it as relevant.
+A agent is relevant if it can provide any information that could be used to answer the query even if only partially or in an indirect or abstract way. Only return False and mark the agent as irrelevant if the agents data cannot be used in any way to help th query answering. It is better to mark an agent falsely as relevant then later discovering, that the agent was needed to answer the query! A good measure for table based agents is for example, that if there is any column which could be necessary to answer the query, even only in context with other agents, to mark it as relevant.
 
 【Agent Registry】
 {{agent_registry}}
