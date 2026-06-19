@@ -91,13 +91,13 @@ async def run_agent_round(
         estimator_statistics = compute_estimator_statistics(
             result_list, len(agents_queried_now), agents_total
         )
-        iteration_record.estimator_result = estimator_statistics
 
         if estimator_statistics is None:
             outcome = QueryMoreAgentsOutcome(result_list=result_list)
         else:
+            iteration_record.estimator_result = estimator_statistics[0]
             outcome = await run_completeness_evaluator(
-                result_list, estimator_statistics, query
+                result_list, estimator_statistics[1], estimator_statistics[0], query
             )
             iteration_record.evaluator_decision = outcome.decision
 
