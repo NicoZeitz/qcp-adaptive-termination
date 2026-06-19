@@ -79,8 +79,8 @@ async def run_agent_round(
             add_multi_agent_iteration_record(iteration_record)
             append_to_span_output(
                 {
-                    "outcome": outcome.model_dump(),
-                    "iteration_record": iteration_record.model_dump(),
+                    "outcome": outcome,
+                    "iteration_record": iteration_record,
                 }
             )
             return outcome
@@ -96,24 +96,17 @@ async def run_agent_round(
 
         if estimator_statistics is None:
             outcome = QueryMoreAgentsOutcome(result_list=result_list)
-            add_multi_agent_iteration_record(iteration_record)
-            append_to_span_output(
-                {
-                    "outcome": outcome.model_dump(),
-                    "iteration_record": iteration_record.model_dump(),
-                }
-            )
-            return outcome
+        else:
+            outcome = await run_completeness_evaluator(result_list, estimator_statistics, query)
+            iteration_record.evaluator_decision = outcome.decision
 
-        outcome = await run_completeness_evaluator(result_list, estimator_statistics, query)
-        iteration_record.evaluator_decision = outcome.decision
+        add_multi_agent_iteration_record(iteration_record)
         append_to_span_output(
             {
-                "outcome": outcome.model_dump(),
-                "iteration_record": iteration_record.model_dump(),
+                "outcome": outcome,
+                "iteration_record": iteration_record,
             }
         )
-        add_multi_agent_iteration_record(iteration_record)
         return outcome
 
 
@@ -171,10 +164,8 @@ async def answer_step_multiple_agents(
         append_to_span_output(
             {
                 "iteration_records_count": len(iteration_records),
-                "iteration_records": [
-                    record.model_dump() for record in iteration_records
-                ],
-                "answer": answer.model_dump(),
+                "iteration_records": iteration_records,
+                "answer": answer,
             }
         )
 
