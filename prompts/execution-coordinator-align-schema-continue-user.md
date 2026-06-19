@@ -16,5 +16,3 @@ New agent result preview:
 ```
 {{agent_result_preview}}
 ```
-
-Transform `agent_result` to match the existing schema (rename/drop/derive columns as needed), concatenate with `existing_result_list`, and call `merge_result(merged_df)`.

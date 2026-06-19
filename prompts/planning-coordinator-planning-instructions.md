@@ -20,12 +20,15 @@ A query plan is a list of steps that need to be executed in order to answer the 
 
 ## Multi-Agent Steps
 
-When the same data is expected to be distributed across multiple agents (horizontal partitioning), use a multi-agent step by listing all agents in `to_agent` as an array. This triggers a dedicated parallel execution and result merging process.
+When the same data is expected to be distributed across multiple agents (horizontal partitioning), use a multi-agent step by listing all agents in `to_agent` as an array. This triggers a dedicated execution and result merging process.
 
 - Multi-agent steps can only target data agents — never the 'Coordinator' directly.
 - The `merge_task` field describes how to combine the results from all agents into a unified result list.
 - Each agent in the step receives the same query and the same dependencies.
 - The merged result from a multi-agent step is then available to dependent steps.
+- Always use a multi-agent steps for aggregate queries (e.g. count, sum, avg, min, max) over multiple agents. In this case the `merge_task` should directly combine the results into the aggregate result.
+- Do not distribute aggregate queries into different steps even if the data sources are heterogenous. A aggregate query over the data should always be a multi-agent step.
+- Do not receive all results in a multi-agent step and then aggregate the results in another step. Instead directly do the aggregation in the merge task.
 
 ## Example Plan
 

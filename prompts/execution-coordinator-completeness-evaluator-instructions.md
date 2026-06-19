@@ -72,9 +72,11 @@ query: str
 result_list: pd.DataFrame
 estimator: Estimator
 ```
-
-There are multiple functions available to call
+{{#force_result}}
+There is one function available to call
+{{/force_result}}
 {{^force_result}}
+There are multiple functions available to call
 * `query_more_agents`: Finish the completeness evaluation with a negative result. Querying should continue with the next agent.
 {{/force_result}}
 * `final_answer`: Finish the answering process with a positive result. Should be used to pass the answer to the user's question. Can also be empty in case there is no result. Always prefer to pass a DataFrame as parameter (e.g. empty DataFrame for an answer with no result, DataFrame with only 1 entry, or a bigger table answer). Always take a final look at the results to make sure, that the answer has the right format and is not empty, unless you can't answer with your given data.

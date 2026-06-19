@@ -4,12 +4,11 @@ from qtypes.aligned_result_list import (
     AlignedResultList,
     AlignedSchemaMetadata,
 )
-from qtypes.result import ResultType
+from qtypes.result import ResultType, try_parse_value_to_result_type
 from stages.common.agent_configuration import get_coordinator_agent_configuration
 from stages.execution.answer_step_multiple_agents.validation import (
     SOURCE_AGENT_COLUMN,
     validate_aligned_schema_metadata,
-    validate_and_parse_result_type,
     validate_source_agent_column,
 )
 from utils.preview import preview_dataframe
@@ -40,7 +39,7 @@ async def align_schema_continue(
         value_column: str | None = None,
     ):
         nonlocal is_done, aligned
-        dataframe = validate_and_parse_result_type(merged_df)
+        dataframe = try_parse_value_to_result_type(merged_df)
 
         new_aligned_schema_metadata = AlignedSchemaMetadata(
             aggregation_type=aggregation_type
@@ -64,8 +63,11 @@ async def align_schema_continue(
     code_environment = CodeExecutionEnvironment(
         variables={
             "query": query,
-            "existing_result_list": aligned,
+            "aggregation_type": cast(AlignedSchemaMetadata, aligned.schema).aggregation_type,
+            "keys": cast(AlignedSchemaMetadata, aligned.schema).keys,
+            "value_column": cast(AlignedSchemaMetadata, aligned.schema).value_column,
             "agent_result": agent_result,
+            "existing_results": aligned.data,
             "pd": pd,
         },
         tools={"merge_result": merge_result},

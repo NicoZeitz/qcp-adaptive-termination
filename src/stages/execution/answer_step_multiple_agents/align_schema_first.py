@@ -4,12 +4,11 @@ from qtypes.aligned_result_list import (
     AlignedResultList,
     AlignedSchemaMetadata,
 )
-from qtypes.result import ResultType
+from qtypes.result import ResultType, try_parse_value_to_result_type
 from stages.common.agent_configuration import get_coordinator_agent_configuration
 from stages.execution.answer_step_multiple_agents.validation import (
     SOURCE_AGENT_COLUMN,
     validate_aligned_schema_metadata,
-    validate_and_parse_result_type,
 )
 from utils.preview import preview_dataframe
 from utils.run_agent import run_agent
@@ -43,7 +42,7 @@ async def align_schema_first(
             keys=list(keys),
             value_column=value_column,
         )
-        dataframe = validate_and_parse_result_type(result_df)
+        dataframe = try_parse_value_to_result_type(result_df)
         validate_aligned_schema_metadata(dataframe, aligned_schema_metadata)
 
         result_list.schema = aligned_schema_metadata
