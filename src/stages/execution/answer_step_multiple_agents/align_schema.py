@@ -60,7 +60,9 @@ async def align_schema_first(
         _tool_results: list[FunctionToolResult],
     ) -> ToolsToFinalOutputResult:
         is_done = partial_answer is not None and partial_answer.is_final
-        return ToolsToFinalOutputResult(is_final_output=is_done, final_output=partial_answer)
+        return ToolsToFinalOutputResult(
+            is_final_output=is_done, final_output=partial_answer
+        )
 
     with own_custom_span(
         "Query Coordinator - Align Schema First",
@@ -70,17 +72,23 @@ async def align_schema_first(
             "is_first": True,
             "agent_result_rows": len(raw_data),
             "agent_result_columns": list(raw_data.columns),
-            "agent_result_preview": preview_dataframe(raw_data, top_rows=5, bottom_rows=0),
+            "agent_result_preview": preview_dataframe(
+                raw_data, top_rows=5, bottom_rows=0
+            ),
         },
     ):
         await run_agent(
-            agent_configuration=get_coordinator_agent_configuration("Align Schema First"),
+            agent_configuration=get_coordinator_agent_configuration(
+                "Align Schema First"
+            ),
             prompt_name="execution-coordinator-align-schema-first",
             prompt_parameters={
                 "query": query,
                 "agent_name": agent_name,
                 "agent_result_columns": str(list(raw_data.columns)),
-                "agent_result_preview": preview_dataframe(raw_data, top_rows=5, bottom_rows=0),
+                "agent_result_preview": preview_dataframe(
+                    raw_data, top_rows=5, bottom_rows=0
+                ),
             },
             tools=[code_environment.as_function_tool()],
             tool_use_behavior=custom_tool_handler,
@@ -154,7 +162,9 @@ async def align_schema_continue(
         _tool_results: list[FunctionToolResult],
     ) -> ToolsToFinalOutputResult:
         is_done = partial_answer is not None and partial_answer.is_final
-        return ToolsToFinalOutputResult(is_final_output=is_done, final_output=partial_answer)
+        return ToolsToFinalOutputResult(
+            is_final_output=is_done, final_output=partial_answer
+        )
 
     with own_custom_span(
         "Query Coordinator - Align Schema Continue",
@@ -164,21 +174,29 @@ async def align_schema_continue(
             "is_first": False,
             "agent_result_rows": len(new_data),
             "agent_result_columns": list(new_data.columns),
-            "agent_result_preview": preview_dataframe(new_data, top_rows=5, bottom_rows=0),
+            "agent_result_preview": preview_dataframe(
+                new_data, top_rows=5, bottom_rows=0
+            ),
             "existing_result_rows": len(aligned.data),
             "existing_result_columns": list(aligned.data.columns),
             "existing_schema": aligned.schema.model_dump() if aligned.schema else None,
-            "existing_result_preview": preview_dataframe(aligned.data, top_rows=10, bottom_rows=0),
+            "existing_result_preview": preview_dataframe(
+                aligned.data, top_rows=10, bottom_rows=0
+            ),
         },
     ):
         await run_agent(
-            agent_configuration=get_coordinator_agent_configuration("Align Schema Continue"),
+            agent_configuration=get_coordinator_agent_configuration(
+                "Align Schema Continue"
+            ),
             prompt_name="execution-coordinator-align-schema-continue",
             prompt_parameters={
                 "query": query,
                 "agent_name": agent_name,
                 "agent_result_columns": str(list(new_data.columns)),
-                "agent_result_preview": preview_dataframe(new_data, top_rows=5, bottom_rows=0),
+                "agent_result_preview": preview_dataframe(
+                    new_data, top_rows=5, bottom_rows=0
+                ),
                 "existing_result_columns": str(list(aligned.data.columns)),
                 "existing_result_preview": preview_dataframe(
                     aligned.data, top_rows=10, bottom_rows=0
@@ -226,7 +244,9 @@ async def align_schema(
     raw_data = agent_result.copy()
 
     if is_first:
-        partial_answer, captured_schema = await align_schema_first(query, agent_name, raw_data)
+        partial_answer, captured_schema = await align_schema_first(
+            query, agent_name, raw_data
+        )
         if partial_answer is None or not partial_answer.has_answer:
             fallback = raw_data.copy()
             fallback["source_agent"] = agent_name
