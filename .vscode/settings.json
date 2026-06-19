@@ -10,7 +10,7 @@
         "**/.venv": true,
         "**/__pycache__": true,
         "**/.ruff_cache": true,
-        "**/.cache": true,
+        // "**/.cache": true,
         "**/.logs": true,
     },
     "explorer.fileNesting.patterns": {
