@@ -3,7 +3,11 @@ from abc import ABC
 from pydantic import BaseModel, ConfigDict
 
 from qtypes.query_plan_step import QueryPlanStep
-from qtypes.serializers import SerializedNeedList, SerializedOptionalResultType, SerializedResultType
+from qtypes.serializers import (
+    SerializedNeedList,
+    SerializedOptionalResultType,
+    SerializedResultType,
+)
 
 
 class QueryPlanStepExecutionResult(ABC, BaseModel):

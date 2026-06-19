@@ -1,7 +1,11 @@
 from typing import Literal
 
 from qtypes.aligned_result_list import AlignedResultList
-from qtypes.serializers import SerializedNeedList, SerializedOptionalResultType, SerializedResultType
+from qtypes.serializers import (
+    SerializedNeedList,
+    SerializedOptionalResultType,
+    SerializedResultType,
+)
 
 from pydantic import BaseModel, ConfigDict
 

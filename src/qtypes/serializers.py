@@ -4,7 +4,11 @@ from pydantic import BeforeValidator, JsonValue, PlainSerializer, SerializationI
 from pydantic.json_schema import SkipJsonSchema
 
 from qtypes.need import NeedType, deserialize_need, serialize_need
-from qtypes.result import ResultType, deserialize_result, serialize_result as serialize_result_type
+from qtypes.result import (
+    ResultType,
+    deserialize_result,
+    serialize_result as serialize_result_type,
+)
 from utils.preview import result_to_json_preview
 
 
@@ -28,7 +32,9 @@ def validate_optional_result(value: Any) -> ResultType | None:
     return validate_result(value)
 
 
-def serialize_optional_result(result: ResultType | None, info: SerializationInfo) -> JsonValue:
+def serialize_optional_result(
+    result: ResultType | None, info: SerializationInfo
+) -> JsonValue:
     if result is None:
         return None
     return serialize_result(result, info)
@@ -44,20 +50,26 @@ def serialize_need_list(needs: list[NeedType]) -> JsonValue:
     return [serialize_need(need) for need in needs]
 
 
-SerializedResultType = SkipJsonSchema[Annotated[
-    ResultType,
-    BeforeValidator(validate_result),
-    PlainSerializer(serialize_result, return_type=JsonValue),
-]]
+SerializedResultType = SkipJsonSchema[
+    Annotated[
+        ResultType,
+        BeforeValidator(validate_result),
+        PlainSerializer(serialize_result, return_type=JsonValue),
+    ]
+]
 
-SerializedOptionalResultType = SkipJsonSchema[Annotated[
-    ResultType | None,
-    BeforeValidator(validate_optional_result),
-    PlainSerializer(serialize_optional_result, return_type=JsonValue),
-]]
+SerializedOptionalResultType = SkipJsonSchema[
+    Annotated[
+        ResultType | None,
+        BeforeValidator(validate_optional_result),
+        PlainSerializer(serialize_optional_result, return_type=JsonValue),
+    ]
+]
 
-SerializedNeedList = SkipJsonSchema[Annotated[
-    list[NeedType],
-    BeforeValidator(validate_need_list),
-    PlainSerializer(serialize_need_list, return_type=JsonValue),
-]]
+SerializedNeedList = SkipJsonSchema[
+    Annotated[
+        list[NeedType],
+        BeforeValidator(validate_need_list),
+        PlainSerializer(serialize_need_list, return_type=JsonValue),
+    ]
+]
