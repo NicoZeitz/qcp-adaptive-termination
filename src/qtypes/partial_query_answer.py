@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, JsonValue, field_serializer, field_validator
 
@@ -17,12 +17,14 @@ class PartialQueryAnswer(BaseModel):
     has_answer: bool = False
     needs: list[NeedType] = []
 
-    def set_answer(self, answer: ResultType):
+    def set_answer(self, answer: ResultType) -> Self:
         self.answer = answer
         self.has_answer = True
+        return self
 
-    def add_needs(self, needs: set[NeedType] | list[NeedType]):
+    def add_needs(self, needs: set[NeedType] | list[NeedType]) -> Self:
         self.needs = list(set(self.needs).union(needs))
+        return self
 
     @property
     def has_needs(self) -> bool:
@@ -41,7 +43,9 @@ class PartialQueryAnswer(BaseModel):
     @field_validator("answer", mode="before")
     @classmethod
     def validate_answer(cls: type["PartialQueryAnswer"], value: Any) -> ResultType:
-        if isinstance(value, dict):
+        if isinstance(value, ResultType):
+            return value
+        elif isinstance(value, dict):
             return deserialize_result(value)
         return value
 

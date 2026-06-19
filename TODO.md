@@ -1,9 +1,7 @@
 Problems with execution
-* Skip completness after first run / run first two in parallel
 * Better prompting for python env + no overriting tools allowed
-* None returned as final output
-
-
+* completness always run at all agents queried
+* align schema prompts
 
 
 Split Generation

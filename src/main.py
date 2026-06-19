@@ -1,6 +1,5 @@
 import logging
 import json
-from dataclasses import asdict
 from pathlib import Path
 from typing import Literal, cast
 from datetime import datetime
@@ -142,38 +141,38 @@ async def main(
                 data.query_plan,
                 data.relevant_data_agents,
                 data.data_agents,
+                continue_after_final_result=True,  # TODO: remove
             )
             data = cast(CollaborativeQueryAnsweringResult, data)
 
-            from stages.execution import last_iteration_records
-
             logging.info("Finished stage 3")
             logging.info(f"Result: {data}")
-            logging.info(f"Iteration records: {len(last_iteration_records)}")
             logging.info(result_to_json_preview(data.result))
             output_path = log_dir / f"{log_filename} - final_result.json"
             with open(output_path, "w") as f:
                 f.write(data.model_dump_json(indent=4, ensure_ascii=False))
 
-            if last_iteration_records:
+            # TODO: remove iteration records
+            from stages.execution.answer_step_multiple_agents.iteration_records import (
+                multi_agent_iteration_records,
+            )
+
+            logging.info(
+                f"Iteration counts per execution_id: { {k: len(v) for k, v in multi_agent_iteration_records.items()} }"
+            )
+            for execution_id, records in multi_agent_iteration_records.items():
                 records_output_path = (
-                    log_dir / f"{log_filename} - iteration_records.json"
+                    log_dir
+                    / f"{log_filename} - iteration_records - {execution_id}.json"
                 )
-                serialized = [
-                    {
-                        "step_id": r.step_id,
-                        "agent_name": r.agent_name,
-                        "result_list": r.result_list.to_dict(orient="records"),
-                        "estimator_result": asdict(r.estimator_result)
-                        if r.estimator_result is not None
-                        else None,
-                        "evaluator_decision": r.evaluator_decision,
-                        "evaluator_next_agents": r.evaluator_next_agents,
-                    }
-                    for r in last_iteration_records
-                ]
                 with open(records_output_path, "w", encoding="utf-8") as f:
-                    json.dump(serialized, f, indent=4, ensure_ascii=False, default=str)
+                    json.dump(
+                        [r.model_dump() for r in records],
+                        f,
+                        indent=4,
+                        ensure_ascii=False,
+                        default=str,
+                    )
 
 
 if __name__ == "__main__":

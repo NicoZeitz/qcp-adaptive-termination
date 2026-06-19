@@ -1,11 +1,12 @@
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.aligned_result_list import AlignedResultList
-from qtypes.estimator_result import EstimatorResult
+from qtypes.estimator_statistics import EstimatorStatistics
 from qtypes.multi_agent_iteration_record import EvaluatorDecision
-from qtypes.partial_query_answer import PartialQueryAnswerDummy
+from qtypes.outcome import FinalResultOutcome
+from qtypes.outcome import QueryMoreAgentsOutcome
 from qtypes.result import ResultType, try_parse_value_to_result_type
 from stages.common.agent_configuration import get_coordinator_agent_configuration
-from utils.preview import preview_dataframe
+from utils.preview import preview_dataframe, result_to_json_preview
 from utils.run_agent import run_agent
 from utils.span import append_to_span_output, own_custom_span
 
@@ -17,54 +18,45 @@ from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResu
 from typing import Any
 
 
-def build_estimator_summary(estimator_result: EstimatorResult | None) -> str:
-    if estimator_result is None:
-        return ""
+def build_estimator_summary(estimator_result: EstimatorStatistics) -> str:
     summary = (
-        f"aggregation_type: {estimator_result.aggregation_type}\n"
-        f"sample_coverage: {estimator_result.sample_coverage:.3f}\n"
-        f"agents_queried: {estimator_result.agents_queried} / {estimator_result.agents_total}\n"
+        f"Aggregation type: {estimator_result.aggregation_type}\n"
+        f"Agents queried: {estimator_result.agents_queried} /  {estimator_result.agents_total} ({estimator_result.agents_queried / estimator_result.agents_total:.2%}%)\n"
+        f"Sample Coverage: {estimator_result.sample_coverage:.3f}\n"
     )
-    if estimator_result.estimated_count is not None:
-        summary += f"estimated_count: {estimator_result.estimated_count:.1f} [{estimator_result.estimated_count_lower:.1f}, {estimator_result.estimated_count_upper:.1f}]\n"
-    if estimator_result.estimated_sum is not None:
-        summary += f"estimated_sum: {estimator_result.estimated_sum:.3f} [{estimator_result.estimated_sum_lower:.3f}, {estimator_result.estimated_sum_upper:.3f}]\n"
-    if estimator_result.estimated_avg is not None:
-        summary += f"estimated_avg: {estimator_result.estimated_avg:.3f} [{estimator_result.estimated_avg_lower:.3f}, {estimator_result.estimated_avg_upper:.3f}]\n"
-    if estimator_result.estimated_min is not None:
-        summary += f"estimated_min: {estimator_result.estimated_min}\n"
-    if estimator_result.estimated_max is not None:
-        summary += f"estimated_max: {estimator_result.estimated_max}\n"
+    summary += f"Observed {estimator_result.aggregation_type}: {estimator_result.observed_value}\n"
+    summary += f"Estimated {estimator_result.aggregation_type}: {estimator_result.estimated_value}\n"
+    if (
+        estimator_result.estimated_value_lower is not None
+        and estimator_result.estimated_value_upper is not None
+    ):
+        summary += f"Estimated {estimator_result.aggregation_type} confidence interval: [{estimator_result.estimated_value_lower}, {estimator_result.estimated_value_upper}]\n"
+
     return summary
 
 
 async def run_completeness_evaluator(
-    aligned: AlignedResultList,
-    estimator_result: EstimatorResult | None,
+    aligned_result_list: AlignedResultList,
+    estimator_result: EstimatorStatistics,
     query: str,
-    remaining_agents: list[str],
-) -> tuple[EvaluatorDecision, list[str], ResultType | None]:
-    decision: EvaluatorDecision = "query_more_agents"
-    next_agents: list[str] = list(remaining_agents)
+) -> QueryMoreAgentsOutcome | FinalResultOutcome:
+    decision: EvaluatorDecision | None = None
     final_result_value: ResultType | None = None
 
     def final_result(result: Any):
         nonlocal decision, final_result_value
-        decision = "final_result"
         final_result_value = try_parse_value_to_result_type(result)
+        decision = "final_result"
 
-    def query_more_agents(agents: list):
-        nonlocal decision, next_agents
+    def query_more_agents():
+        nonlocal decision
         decision = "query_more_agents"
-        next_agents = [a for a in agents if a in remaining_agents]
-
-    est_summary = build_estimator_summary(estimator_result)
 
     code_environment = CodeExecutionEnvironment(
         variables={
             "query": query,
-            "result_list": aligned.data,
-            "remaining_agents": remaining_agents,
+            "result_list": aligned_result_list.data,
+            "estimator": estimator_result.estimator,
             "pd": pd,
         },
         tools={
@@ -77,22 +69,20 @@ async def run_completeness_evaluator(
         _context: RunContextWrapper[None],
         _tool_results: list[FunctionToolResult],
     ) -> ToolsToFinalOutputResult:
-        is_done = decision == "final_result" or decision == "query_more_agents"
-        return ToolsToFinalOutputResult(is_final_output=is_done, final_output=None)
+        return ToolsToFinalOutputResult(
+            is_final_output=decision is not None,
+            final_output=decision == "final_result",
+        )
+
+    estimator_summary = build_estimator_summary(estimator_result)
+    result_list_preview = preview_dataframe(aligned_result_list.data)
 
     with own_custom_span(
         "Query Coordinator - Completeness Evaluator",
         input={
             "query": query,
-            "result_list_rows": len(aligned.data),
-            "result_list_preview": preview_dataframe(aligned.data),
-            "estimator_summary": est_summary
-            or "Not yet available (fewer than 2 agents queried).",
-            "estimator_result": estimator_result.__dict__
-            if estimator_result is not None
-            else None,
-            "remaining_agents": remaining_agents,
-            "remaining_agents_count": len(remaining_agents),
+            "result_list_preview": result_list_preview,
+            "estimator_statistics": estimator_result.model_dump(),
         },
     ):
         await run_agent(
@@ -102,28 +92,27 @@ async def run_completeness_evaluator(
             prompt_name="execution-coordinator-completeness-evaluator",
             prompt_parameters={
                 "query": query,
-                "result_list_preview": preview_dataframe(aligned.data),
-                "estimator_summary": est_summary
-                or "Not yet available (fewer than 2 agents queried).",
-                "remaining_agents": ", ".join(remaining_agents)
-                if remaining_agents
-                else "none",
+                "result_list_preview": result_list_preview,
+                "estimator_summary": estimator_summary,
             },
             tools=[code_environment.as_function_tool()],
             tool_use_behavior=custom_tool_handler,
             reset_tool_choice=False,
             parallel_tool_calls=False,
             tool_choice="required",
-            output_type=PartialQueryAnswerDummy,
+            output_type=bool,
             get_actual_result=lambda: None,
         )
         append_to_span_output(
             {
                 "decision": decision,
-                "next_agents": next_agents,
-                "next_agents_count": len(next_agents),
-                "has_final_result": final_result_value is not None,
+                "final_result": result_to_json_preview(final_result_value)
+                if final_result_value is not None
+                else None,
             }
         )
 
-    return decision, next_agents, final_result_value
+    if decision == "final_result":
+        return FinalResultOutcome(result=final_result_value)
+    else:
+        return QueryMoreAgentsOutcome(result_list=aligned_result_list)

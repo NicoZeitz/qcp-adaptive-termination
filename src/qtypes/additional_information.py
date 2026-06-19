@@ -19,6 +19,8 @@ class AdditionalInformation(BaseModel):
     @field_validator("data", mode="before")
     @classmethod
     def validate_data(cls: type["AdditionalInformation"], value: Any) -> ResultType:
-        if isinstance(value, dict):
+        if isinstance(value, ResultType):
+            return value
+        elif isinstance(value, dict):
             return deserialize_result(value)
         return value
