@@ -17,12 +17,10 @@ from stages.execution.answer_step_multiple_agents.completeness_evaluator import 
 from stages.execution.answer_step_multiple_agents.compute_estimator import (
     compute_estimator_statistics,
 )
-from stages.execution.answer_step_multiple_agents.iteration_records import (
-    add_multi_agent_iteration_record,
-    get_current_multi_agent_iteration_records,
-    multi_agent_iteration_record_context,
-)
+from stages.execution.answer_step_multiple_agents.validation import SOURCE_AGENT_COLUMN
 from utils.span import append_to_span_output, own_custom_span
+
+MULTI_AGENT_ITERATION_RECORDS: dict[str, list[MultiAgentIterationRecord]] = {}
 
 
 async def run_agent_round(
@@ -33,6 +31,7 @@ async def run_agent_round(
     result_list: AlignedResultList,
     agents_queried: list[str],
     agents_remaining: list[str],
+    iteration_records: list[MultiAgentIterationRecord],
 ) -> FinalResultOutcome | QueryMoreAgentsOutcome | RaiseNeedOutcome:
     query = query_plan_step.query
     agents_total = len(agents_remaining) + len(agents_queried)
@@ -75,13 +74,13 @@ async def run_agent_round(
                 partial_answer=result.answer,
                 has_partial_answer=result.has_answer,
             )
-            add_multi_agent_iteration_record(iteration_record)
             append_to_span_output(
                 {
                     "outcome": outcome,
                     "iteration_record": iteration_record,
                 }
             )
+            iteration_records.append(iteration_record)
             return outcome
 
         result_list = await align_schema(
@@ -96,18 +95,26 @@ async def run_agent_round(
             outcome = QueryMoreAgentsOutcome(result_list=result_list)
         else:
             iteration_record.estimator_result = estimator_statistics[0]
+            new_unique_count = (
+                result_list.data[SOURCE_AGENT_COLUMN] == agent_current
+            ).sum()
             outcome = await run_completeness_evaluator(
-                result_list, estimator_statistics[1], estimator_statistics[0], query
+                result_list,
+                estimator_statistics[1],
+                estimator_statistics[0],
+                query,
+                new_unique_count,
+                iteration_records,
             )
             iteration_record.evaluator_decision = outcome.decision
 
-        add_multi_agent_iteration_record(iteration_record)
         append_to_span_output(
             {
                 "outcome": outcome,
                 "iteration_record": iteration_record,
             }
         )
+        iteration_records.append(iteration_record)
         return outcome
 
 
@@ -121,14 +128,13 @@ async def answer_step_multiple_agents(
     agents_queried: list[str] = []
     result_list = AlignedResultList()
 
-    with (
-        own_custom_span(
-            f"Multiple Agents: {query_plan_step.id}",
-            input={"query": query_plan_step.query, "agents": all_agents},
-        ) as span,
-        multi_agent_iteration_record_context(f"{query_plan_step.id} {span.span_id}"),
-    ):
-        answer = PartialQueryAnswer()
+    answer = PartialQueryAnswer()
+    iteration_records = []
+
+    with own_custom_span(
+        f"Multiple Agents: {query_plan_step.id}",
+        input={"query": query_plan_step.query, "agents": all_agents},
+    ) as span:
         for agent_name in all_agents:
             outcome = await run_agent_round(
                 data_agents=data_agents,
@@ -138,6 +144,7 @@ async def answer_step_multiple_agents(
                 result_list=result_list,
                 agents_queried=agents_queried,
                 agents_remaining=[a for a in all_agents if a not in agents_queried],
+                iteration_records=iteration_records,
             )
             agents_queried.append(agent_name)
 
@@ -161,7 +168,6 @@ async def answer_step_multiple_agents(
 
             result_list = outcome.result_list
 
-        iteration_records = get_current_multi_agent_iteration_records()
         append_to_span_output(
             {
                 "iteration_records_count": len(iteration_records),
@@ -169,5 +175,7 @@ async def answer_step_multiple_agents(
                 "answer": answer,
             }
         )
-
+        MULTI_AGENT_ITERATION_RECORDS[f"{query_plan_step.id} {span.span_id}"] = (
+            iteration_records
+        )
         return answer

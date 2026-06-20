@@ -525,7 +525,9 @@ class Estimator:
             )
 
         if value_estimator is ValueEstimator.NAIVE:
-            return self._naive_delta(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
+            return self._naive_delta(
+                count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
+            )
         if value_estimator is ValueEstimator.FREQUENCY:
             return self._frequency_delta(
                 count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
@@ -549,7 +551,10 @@ class Estimator:
         """Sum of per-bucket deltas across all dynamically generated buckets."""
         return sum(
             Estimator(b.to_sources()).delta(
-                value_estimator, count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
+                value_estimator,
+                count_estimator,
+                use_bucket=False,
+                use_monte_carlo=use_monte_carlo,
             )
             for b in self._dynamic_buckets(value_estimator, count_estimator)
         )
@@ -566,7 +571,9 @@ class Estimator:
         Assumes missing entities have the same average value as the observed ones:
         Δ = (φ_K / c) * (N_hat - c).
         """
-        N_hat = self.estimated_count(count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo)
+        N_hat = self.estimated_count(
+            count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo
+        )
         if not math.isfinite(N_hat):
             return math.inf
         return (self._φ_K / self._c) * (N_hat - self._c)
@@ -588,7 +595,9 @@ class Estimator:
         if f1 == 0:
             return 0.0
 
-        N_hat = self.estimated_count(count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo)
+        N_hat = self.estimated_count(
+            count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo
+        )
         if not math.isfinite(N_hat):
             return math.inf
         return (self._φ_f1 / f1) * (N_hat - self._c)
@@ -625,7 +634,9 @@ class Estimator:
         denom = self.f1_count() + f2
         if denom == 0:
             return 0.0
-        N_hat = self.estimated_count(count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo)
+        N_hat = self.estimated_count(
+            count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo
+        )
         if not math.isfinite(N_hat):
             return math.inf
         return (self._φ_f12 / denom) * (N_hat - self._c)
@@ -695,7 +706,9 @@ class Estimator:
         for b in buckets:
             sub = Estimator(b.to_sources())
             n_hat = sub.estimated_count(
-                bucket_count_estimator, use_bucket=False, use_monte_carlo=bucket_use_monte_carlo
+                bucket_count_estimator,
+                use_bucket=False,
+                use_monte_carlo=bucket_use_monte_carlo,
             )
             weight = n_hat if math.isfinite(n_hat) else sub._c
             total_weight += weight
@@ -760,7 +773,9 @@ class Estimator:
         buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator)
         sub = Estimator(buckets[0].to_sources())
         if (
-            sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
+            sub.estimated_count(
+                count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
+            )
             - sub._c
             == 0
         ):
@@ -784,7 +799,9 @@ class Estimator:
         buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator)
         sub = Estimator(buckets[-1].to_sources())
         if (
-            sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
+            sub.estimated_count(
+                count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
+            )
             - sub._c
             == 0
         ):

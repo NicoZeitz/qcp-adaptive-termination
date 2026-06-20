@@ -5,7 +5,12 @@ Current result list preview:
 {{result_list_preview}}
 ```
 
-Estimator statistics:
+## Current estimator statistics:
 ```
 {{estimator_summary}}
+```
+
+## Previous rounds (for reference):
+```
+{{previous_statistics_summary}}
 ```
