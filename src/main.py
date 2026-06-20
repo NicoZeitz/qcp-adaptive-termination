@@ -153,14 +153,14 @@ async def main(
                 f.write(data.model_dump_json(indent=4, ensure_ascii=False))
 
             # TODO: remove iteration records
-            from stages.execution.answer_step_multiple_agents.iteration_records import (
-                multi_agent_iteration_records,
+            from stages.execution.answer_step_multiple_agents import (
+                MULTI_AGENT_ITERATION_RECORDS,
             )
 
             logging.info(
-                f"Iteration counts per execution_id: { {k: len(v) for k, v in multi_agent_iteration_records.items()} }"
+                f"Iteration counts per execution_id: { {k: len(v) for k, v in MULTI_AGENT_ITERATION_RECORDS.items()} }"
             )
-            for execution_id, records in multi_agent_iteration_records.items():
+            for execution_id, records in MULTI_AGENT_ITERATION_RECORDS.items():
                 records_output_path = (
                     log_dir
                     / f"{log_filename} - iteration_records - {execution_id}.json"
