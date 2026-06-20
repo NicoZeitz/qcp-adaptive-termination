@@ -255,7 +255,7 @@ class Estimator:
         self,
         count_estimator: CountEstimator = CountEstimator.CHAO92,
         *,
-        use_bucket: bool = False,
+        use_bucket: bool = True,
         use_monte_carlo: bool = False,
         bucket_value_estimator: ValueEstimator = ValueEstimator.NAIVE,
     ) -> float:
@@ -495,7 +495,7 @@ class Estimator:
         value_estimator: ValueEstimator = ValueEstimator.NAIVE,
         count_estimator: CountEstimator = CountEstimator.CHAO92,
         *,
-        use_bucket: bool = False,
+        use_bucket: bool = True,
         use_monte_carlo: bool = False,
     ) -> float:
         """Corrected SUM including the estimated contribution from missing entities.
@@ -515,7 +515,7 @@ class Estimator:
         value_estimator: ValueEstimator = ValueEstimator.NAIVE,
         count_estimator: CountEstimator = CountEstimator.CHAO92,
         *,
-        use_bucket: bool = False,
+        use_bucket: bool = True,
         use_monte_carlo: bool = False,
     ) -> float:
         """Estimated SUM contribution of missing entities (Δ = φ_D - φ_K)."""
@@ -525,16 +525,16 @@ class Estimator:
             )
 
         if value_estimator is ValueEstimator.NAIVE:
-            return self._naive_delta(count_estimator, use_monte_carlo=use_monte_carlo)
+            return self._naive_delta(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
         if value_estimator is ValueEstimator.FREQUENCY:
             return self._frequency_delta(
-                count_estimator, use_monte_carlo=use_monte_carlo
+                count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
             )
         if value_estimator is ValueEstimator.GOOD_TURING:
             return self._good_turing_delta()
         if value_estimator is ValueEstimator.FREQUENCY_F12:
             return self._frequency_f12_delta(
-                count_estimator, use_monte_carlo=use_monte_carlo
+                count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
             )
 
         raise ValueError(f"Unsupported estimator: {value_estimator}")
@@ -549,7 +549,7 @@ class Estimator:
         """Sum of per-bucket deltas across all dynamically generated buckets."""
         return sum(
             Estimator(b.to_sources()).delta(
-                value_estimator, count_estimator, use_monte_carlo=use_monte_carlo
+                value_estimator, count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
             )
             for b in self._dynamic_buckets(value_estimator, count_estimator)
         )
@@ -559,13 +559,14 @@ class Estimator:
         count_estimator: CountEstimator = CountEstimator.CHAO92,
         *,
         use_monte_carlo: bool = False,
+        use_bucket: bool = True,
     ) -> float:
         """Estimated SUM of missing entities using mean substitution.
 
         Assumes missing entities have the same average value as the observed ones:
         Δ = (φ_K / c) * (N_hat - c).
         """
-        N_hat = self.estimated_count(count_estimator, use_monte_carlo=use_monte_carlo)
+        N_hat = self.estimated_count(count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo)
         if not math.isfinite(N_hat):
             return math.inf
         return (self._φ_K / self._c) * (N_hat - self._c)
@@ -574,6 +575,7 @@ class Estimator:
         self,
         count_estimator: CountEstimator = CountEstimator.CHAO92,
         *,
+        use_bucket: bool = True,
         use_monte_carlo: bool = False,
     ) -> float:
         """Estimated SUM of missing entities using the average singleton value.
@@ -586,7 +588,7 @@ class Estimator:
         if f1 == 0:
             return 0.0
 
-        N_hat = self.estimated_count(count_estimator, use_monte_carlo=use_monte_carlo)
+        N_hat = self.estimated_count(count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo)
         if not math.isfinite(N_hat):
             return math.inf
         return (self._φ_f1 / f1) * (N_hat - self._c)
@@ -610,6 +612,7 @@ class Estimator:
         self,
         count_estimator: CountEstimator = CountEstimator.CHAO92,
         *,
+        use_bucket: bool = True,
         use_monte_carlo: bool = False,
     ) -> float:
         """Estimated SUM of missing entities using the average singleton+doubleton value.
@@ -622,7 +625,7 @@ class Estimator:
         denom = self.f1_count() + f2
         if denom == 0:
             return 0.0
-        N_hat = self.estimated_count(count_estimator, use_monte_carlo=use_monte_carlo)
+        N_hat = self.estimated_count(count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo)
         if not math.isfinite(N_hat):
             return math.inf
         return (self._φ_f12 / denom) * (N_hat - self._c)
@@ -669,7 +672,7 @@ class Estimator:
 
     def estimated_avg(
         self,
-        use_bucket: bool = False,
+        use_bucket: bool = True,
         *,
         bucket_count_estimator: CountEstimator = CountEstimator.CHAO92,
         bucket_value_estimator: ValueEstimator = ValueEstimator.NAIVE,
@@ -692,7 +695,7 @@ class Estimator:
         for b in buckets:
             sub = Estimator(b.to_sources())
             n_hat = sub.estimated_count(
-                bucket_count_estimator, use_monte_carlo=bucket_use_monte_carlo
+                bucket_count_estimator, use_bucket=False, use_monte_carlo=bucket_use_monte_carlo
             )
             weight = n_hat if math.isfinite(n_hat) else sub._c
             total_weight += weight
@@ -757,7 +760,7 @@ class Estimator:
         buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator)
         sub = Estimator(buckets[0].to_sources())
         if (
-            sub.estimated_count(count_estimator, use_monte_carlo=use_monte_carlo)
+            sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
             - sub._c
             == 0
         ):
@@ -781,7 +784,7 @@ class Estimator:
         buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator)
         sub = Estimator(buckets[-1].to_sources())
         if (
-            sub.estimated_count(count_estimator, use_monte_carlo=use_monte_carlo)
+            sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
             - sub._c
             == 0
         ):
@@ -976,7 +979,7 @@ class Estimator:
     ) -> float:
         """Estimated SUM for a single bucket, used as the splitting score."""
         return Estimator(bucket.to_sources()).estimated_sum(
-            bucket_value_estimator, bucket_count_estimator
+            bucket_value_estimator, bucket_count_estimator, use_bucket=False
         )
 
     @staticmethod
