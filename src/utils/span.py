@@ -9,12 +9,18 @@ from pydantic import BaseModel
 
 
 def model_dump(value: Any) -> Any:
+    import math
+
     if isinstance(value, BaseModel):
-        return value.model_dump(context="preview")
+        return model_dump(value.model_dump(context="preview"))
     elif isinstance(value, list):
         return [model_dump(item) for item in value]
     elif isinstance(value, dict):
         return {key: model_dump(val) for key, val in value.items()}
+    elif isinstance(value, float) and not math.isfinite(value):
+        if math.isnan(value):
+            return "NaN"
+        return "Infinity" if value > 0 else "-Infinity"
     else:
         return value
 
