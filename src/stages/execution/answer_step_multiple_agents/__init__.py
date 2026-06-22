@@ -1,8 +1,11 @@
+from typing import cast
+
 from qtypes.additional_information import AdditionalInformation
 from qtypes.aligned_result_list import (
     AlignedResultList,
 )
 from qtypes.data_agent import DataAgent
+from qtypes.estimator_statistics import EstimatorStatistics
 from qtypes.multi_agent_iteration_record import (
     MultiAgentIterationRecord,
 )
@@ -17,7 +20,6 @@ from stages.execution.answer_step_multiple_agents.completeness_evaluator import 
 from stages.execution.answer_step_multiple_agents.compute_estimator import (
     compute_estimator_statistics,
 )
-from stages.execution.answer_step_multiple_agents.validation import SOURCE_AGENT_COLUMN
 from utils.span import append_to_span_output, own_custom_span
 
 MULTI_AGENT_ITERATION_RECORDS: dict[str, list[MultiAgentIterationRecord]] = {}
@@ -53,7 +55,8 @@ async def run_agent_round(
             result_list=result_list.data,
             estimator_result=None,
             evaluator_decision=None,
-            evaluator_next_agents=remaining_agents_now,
+            queried_agents=agents_queried_now,
+            remaining_agents=remaining_agents_now,
         )
 
         result = await answer_step_data_agent(
@@ -88,23 +91,26 @@ async def run_agent_round(
         )
 
         estimator_statistics = compute_estimator_statistics(
-            result_list, len(agents_queried_now), agents_total
+            result_list, len(agents_queried_now), agents_total, agent_current
         )
 
         if estimator_statistics is None:
             outcome = QueryMoreAgentsOutcome(result_list=result_list)
         else:
             iteration_record.estimator_result = estimator_statistics[0]
-            new_unique_count = (
-                result_list.data[SOURCE_AGENT_COLUMN] == agent_current
-            ).sum()
             outcome = await run_completeness_evaluator(
                 result_list,
                 estimator_statistics[1],
                 estimator_statistics[0],
                 query,
-                new_unique_count,
-                iteration_records,
+                list(
+                    map(
+                        lambda record: cast(
+                            EstimatorStatistics, record.estimator_result
+                        ),
+                        iteration_records,
+                    )
+                ),
             )
             iteration_record.evaluator_decision = outcome.decision
 

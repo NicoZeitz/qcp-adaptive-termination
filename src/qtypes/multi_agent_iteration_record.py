@@ -13,4 +13,5 @@ class MultiAgentIterationRecord(BaseModel):
     result_list: SerializedResultType
     estimator_result: EstimatorStatistics | None
     evaluator_decision: EvaluatorDecision | None
-    evaluator_next_agents: list[str] = []
+    queried_agents: list[str] = []
+    remaining_agents: list[str] = []

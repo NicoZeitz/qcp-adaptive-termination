@@ -1,4 +1,7 @@
 In Execution
+* Check iteration records works with new stuff
+* Check history how it works + implement own changes
+
 * Fix aggregation type by providing examples
 * history of sample coverage changes
 * always provide count statistics

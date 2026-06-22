@@ -22,6 +22,7 @@ def compute_estimator_statistics(
     result_list: AlignedResultList,
     agents_queried: int,
     agents_total: int,
+    agent_current: str,
 ) -> None | tuple[EstimatorStatistics, Estimator]:
     schema = result_list.schema_metadata
     data = result_list.data
@@ -45,11 +46,14 @@ def compute_estimator_statistics(
     estimator = Estimator(source_samples)
     agg = schema.aggregation_type
 
+    new_unique_count = (result_list.data[SOURCE_AGENT_COLUMN] == agent_current).sum()
+
     result = EstimatorStatistics(
         sample_coverage=estimator.sample_coverage(),
         agents_queried=agents_queried,
         agents_total=agents_total,
         aggregation_type=agg,
+        new_unique_count=new_unique_count,
     )
 
     if agg == "count":

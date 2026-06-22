@@ -7,6 +7,7 @@ class EstimatorStatistics(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     sample_coverage: float
+    new_unique_count: int
     agents_queried: int
     agents_total: int
     aggregation_type: AggregationType

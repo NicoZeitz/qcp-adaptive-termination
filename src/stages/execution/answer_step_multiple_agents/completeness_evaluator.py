@@ -1,7 +1,6 @@
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.aligned_result_list import AlignedResultList
 from qtypes.estimator_statistics import EstimatorStatistics
-from qtypes.multi_agent_iteration_record import MultiAgentIterationRecord
 from qtypes.outcome import EvaluatorDecision
 from qtypes.outcome import FinalResultOutcome
 from qtypes.outcome import QueryMoreAgentsOutcome
@@ -20,53 +19,35 @@ from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResu
 from typing import Any, Callable
 
 
-def build_estimator_summary(
-    estimator_result: EstimatorStatistics, new_unique_count: int
-) -> str:
+def build_estimator_summary(estimator_statistics: EstimatorStatistics) -> str:
     summary = (
-        f"Aggregation type: {estimator_result.aggregation_type}\n"
-        f"Agents queried: {estimator_result.agents_queried} /  {estimator_result.agents_total} ({estimator_result.agents_queried / estimator_result.agents_total:.2%}%)\n"
-        f"New unique entries added by this agent: {new_unique_count}\n"
-        f"Sample Coverage: {estimator_result.sample_coverage:.3f}\n"
+        f"Aggregation type: {estimator_statistics.aggregation_type}\n"
+        f"Agents queried: {estimator_statistics.agents_queried} /  {estimator_statistics.agents_total} ({estimator_statistics.agents_queried / estimator_statistics.agents_total:.2%}%)\n"
+        f"New unique entries added by this agent: {estimator_statistics.new_unique_count}\n"
+        f"Sample Coverage: {estimator_statistics.sample_coverage:.3f}\n"
     )
-    summary += f"Observed {estimator_result.aggregation_type}: {estimator_result.observed_value}\n"
-    summary += f"Estimated {estimator_result.aggregation_type}: {estimator_result.estimated_value}\n"
+    summary += f"Observed {estimator_statistics.aggregation_type}: {estimator_statistics.observed_value}\n"
+    summary += f"Estimated {estimator_statistics.aggregation_type}: {estimator_statistics.estimated_value}\n"
     if (
-        estimator_result.estimated_value_lower is not None
-        and estimator_result.estimated_value_upper is not None
+        estimator_statistics.estimated_value_lower is not None
+        and estimator_statistics.estimated_value_upper is not None
     ):
-        summary += f"Estimated {estimator_result.aggregation_type} confidence interval: [{estimator_result.estimated_value_lower}, {estimator_result.estimated_value_upper}]\n"
+        summary += f"Estimated {estimator_statistics.aggregation_type} confidence interval: [{estimator_statistics.estimated_value_lower}, {estimator_statistics.estimated_value_upper}]\n"
 
     return summary
 
 
 def build_previous_statistics_summary(
-    previous_records: list[MultiAgentIterationRecord],
-) -> str:
-    if not previous_records:
-        return "(none)"
+    previous_estimator_statistics: list[EstimatorStatistics],
+) -> str | None:
+    if not previous_estimator_statistics:
+        return None
+
     lines = []
-    for record in previous_records:
-        decision = record.evaluator_decision or "n/a"
-        stats = record.estimator_result
-        if stats is None:
-            lines.append(
-                f"- {record.agent_name}: decision={decision}, no estimator statistics available"
-            )
-        else:
-            line = (
-                f"- {record.agent_name}: decision={decision}, "
-                f"coverage={stats.sample_coverage:.3f}, "
-                f"observed={stats.observed_value}, "
-                f"estimated={stats.estimated_value}"
-            )
-            if (
-                stats.estimated_value_lower is not None
-                and stats.estimated_value_upper is not None
-            ):
-                line += f", CI=[{stats.estimated_value_lower}, {stats.estimated_value_upper}]"
-            lines.append(line)
-    return "\n".join(lines)
+    for estimator_statistic in previous_estimator_statistics:
+        summary = build_estimator_summary(estimator_statistic)
+        lines.append(summary)
+    return "\n\n".join(lines)
 
 
 async def run_completeness_evaluator(
@@ -74,8 +55,7 @@ async def run_completeness_evaluator(
     estimator: Estimator,
     estimator_statistics: EstimatorStatistics,
     query: str,
-    new_unique_count: int,
-    previous_records: list[MultiAgentIterationRecord],
+    previous_estimator_statistics: list[EstimatorStatistics],
 ) -> QueryMoreAgentsOutcome | FinalResultOutcome:
     decision: EvaluatorDecision | None = None
     final_result_value: ResultType | None = None
@@ -117,8 +97,10 @@ async def run_completeness_evaluator(
             final_output=decision == "final_result",
         )
 
-    estimator_summary = build_estimator_summary(estimator_statistics, new_unique_count)
-    previous_statistics_summary = build_previous_statistics_summary(previous_records)
+    estimator_summary = build_estimator_summary(estimator_statistics)
+    previous_statistics_summary = build_previous_statistics_summary(
+        previous_estimator_statistics
+    )
     result_list_preview = preview_dataframe(aligned_result_list.data)
 
     with own_custom_span(
@@ -127,7 +109,7 @@ async def run_completeness_evaluator(
             "query": query,
             "result_list_preview": result_list_preview,
             "estimator_statistics": estimator_statistics,
-            "previous_records_count": len(previous_records),
+            "previous_estimator_statistics_count": len(previous_estimator_statistics),
         },
     ):
         await run_agent(
