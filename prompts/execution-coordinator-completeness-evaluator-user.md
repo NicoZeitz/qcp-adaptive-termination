@@ -9,8 +9,10 @@ Current result list preview:
 ```
 {{estimator_summary}}
 ```
+{{#previous_statistics_summary}}
 
 ## Previous rounds (for reference):
 ```
 {{previous_statistics_summary}}
 ```
+{{/previous_statistics_summary}}
