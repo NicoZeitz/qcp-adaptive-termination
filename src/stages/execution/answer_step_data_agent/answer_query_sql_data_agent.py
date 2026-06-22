@@ -1,0 +1,123 @@
+from dataclasses import dataclass
+from typing import Any
+
+from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
+from pydantic import JsonValue
+import pandas as pd
+
+from code_execution.code_execution_environment import CodeExecutionEnvironment
+from qtypes.additional_information import AdditionalInformation
+from qtypes.data_agent import DataAgent
+from qtypes.need import try_parse_value_to_need_type
+from qtypes.partial_query_answer import PartialQueryAnswer
+from qtypes.result import try_parse_value_to_result_type
+from stages.common.agent_configuration import get_data_agent_agent_configuration
+from stages.common.data_agent.data_description import data_agent_data_description
+from stages.common.data_agent.sql_data_agent.get_db_connection import get_db_engine
+from utils.preview import preview_additional_information, result_to_json_preview
+from utils.run_agent import run_agent
+from utils.serialize_value import serialize_value
+from utils.span import append_to_span_output, own_custom_span
+
+
+@dataclass
+class SqlQuery:
+    query: str
+    error: Exception | None = None
+    result: pd.DataFrame | None = None
+
+    def to_span_data(self) -> JsonValue:
+        span_data: dict[str, JsonValue] = {"query": self.query}
+
+        if self.result is not None:
+            span_data["result_preview"] = result_to_json_preview(self.result)
+        if self.error is not None:
+            span_data["error"] = serialize_value(self.error)
+
+        return span_data
+
+
+async def answer_query_sql_data_agent(
+    data_agent: DataAgent,
+    query: str,
+    additional_information: list[AdditionalInformation],
+) -> PartialQueryAnswer:
+    with own_custom_span(
+        "Data Agent - answer_query",
+        input={"query": query, "additional_information": additional_information},
+    ):
+        db_engine = get_db_engine(data_agent)
+        m_schema = await data_agent_data_description(data_agent)
+        sql_queries: list[SqlQuery] = []
+        partial_answer = PartialQueryAnswer()
+
+        def query_sql(query: str) -> pd.DataFrame:
+            sql_query = SqlQuery(query=query)
+
+            try:
+                result = pd.read_sql_query(
+                    query, db_engine, dtype_backend="numpy_nullable"
+                )
+                sql_query.result = result
+                return result
+            except Exception as e:
+                sql_query.error = e
+                raise
+            finally:
+                sql_queries.append(sql_query)
+
+        def raise_needs(new_needs: Any):
+            partial_answer.add_needs(try_parse_value_to_need_type(new_needs))
+
+        def final_answer(new_answer: Any):
+            partial_answer.set_answer(try_parse_value_to_result_type(new_answer))
+
+        code_environment = CodeExecutionEnvironment(
+            variables={
+                "query": query,
+                "additional_information": additional_information,
+                # pre-import some common libraries for the agent to use in the code tool
+                "pd": pd,
+            },
+            tools={
+                "raise_needs": raise_needs,
+                "final_answer": final_answer,
+                "query_sql": query_sql,
+            },
+        )
+
+        def custom_tool_handler(
+            _context: RunContextWrapper[None],
+            _tool_results: list[FunctionToolResult],
+        ) -> ToolsToFinalOutputResult:
+            return ToolsToFinalOutputResult(
+                is_final_output=partial_answer.is_final,
+                final_output=partial_answer,
+            )
+
+        result = await run_agent(
+            agent_configuration=get_data_agent_agent_configuration(data_agent, "Code"),
+            prompt_name="execution-data-agent-sql-code",
+            prompt_parameters={
+                "m_schema": m_schema,
+                "query": query,
+                "additional_information_preview": preview_additional_information(
+                    additional_information
+                ),
+            },
+            tools=[code_environment.as_function_tool()],
+            tool_use_behavior=custom_tool_handler,
+            reset_tool_choice=False,
+            parallel_tool_calls=False,
+            tool_choice="required",
+            output_type=PartialQueryAnswer,
+        )
+
+        append_to_span_output(
+            {
+                "code": code_environment.to_span_data(),
+                "partial_answer": result,
+                "sql_queries": [sql_query.to_span_data() for sql_query in sql_queries],
+            }
+        )
+        return result

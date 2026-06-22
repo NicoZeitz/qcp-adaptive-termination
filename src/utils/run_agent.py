@@ -1,9 +1,7 @@
-from typing import Callable, Literal, Type, TypeVar, cast
-import re
+from typing import Literal, Type, cast
 
 from agents import (
     Agent,
-    AgentOutputSchemaBase,
     FunctionTool,
     ModelSettings,
     Runner,
@@ -11,64 +9,19 @@ from agents import (
     Tool,
     ToolsToFinalOutputFunction,
 )
-from agents.agent_output import AgentOutputSchema
-from agents.exceptions import ModelBehaviorError
 from agents.run_config import DEFAULT_MAX_TURNS
 from pydantic import BaseModel, JsonValue
 
 from qtypes.agent_configuration import AgentConfiguration
-from qtypes.partial_query_answer import PartialQueryAnswer, PartialQueryAnswerDummy
 from utils.cache import CacheMode, cached
 from utils.load_prompt import load_prompt
 from utils.span import indented_logging
-
-TResult = TypeVar("TResult", bound=JsonValue | PartialQueryAnswer)
-
-
-def _strip_markdown_code_fences(text: str) -> str:
-    stripped = text.strip()
-    if not stripped.startswith("```"):
-        return stripped
-
-    candidate = re.sub(r"^```json", "", stripped)
-    candidate = re.sub(r"```$", "", candidate)
-    return candidate.strip()
-
-class MarkdownTolerantOutputSchema(AgentOutputSchemaBase):
-    """Delegates to AgentOutputSchema but retries with stripped markdown fences."""
-
-    def __init__(self, output_type: type[BaseModel], strict_json_schema: bool = True):
-        self._delegate = AgentOutputSchema(
-            output_type=output_type,
-            strict_json_schema=strict_json_schema,
-        )
-
-    def is_plain_text(self) -> bool:
-        return self._delegate.is_plain_text()
-
-    def name(self) -> str:
-        return self._delegate.name()
-
-    def json_schema(self) -> dict[str, object]:
-        return self._delegate.json_schema()
-
-    def is_strict_json_schema(self) -> bool:
-        return self._delegate.is_strict_json_schema()
-
-    def validate_json(self, json_str: str) -> object:
-        try:
-            return self._delegate.validate_json(json_str)
-        except ModelBehaviorError:
-            cleaned = _strip_markdown_code_fences(json_str)
-            if cleaned == json_str:
-                raise
-            return self._delegate.validate_json(cleaned)
 
 
 async def run_agent[TResult](
     agent_configuration: AgentConfiguration,
     prompt_name: str,
-    prompt_parameters: dict[str, str],
+    prompt_parameters: dict[str, str | int | float | bool | None],
     *,
     context: JsonValue = None,
     output_type: Type[TResult] | None = str,
@@ -80,7 +33,6 @@ async def run_agent[TResult](
     parallel_tool_calls: bool = True,
     tool_choice: Literal["auto", "required", "none"] | None = None,
     cache_mode: CacheMode | None = None,
-    get_actual_result: Callable[[], TResult] | None = None,
 ) -> TResult:
     tools = tools or []
 
@@ -96,7 +48,6 @@ async def run_agent[TResult](
 
     output: JsonValue = None
     deserializable_classes: list[type[BaseModel]] = []
-    agent_output_type: Type[TResult] | None | AgentOutputSchemaBase = output_type
 
     if output_type is None or output_type is str:
         output = {"type": "string"}
@@ -106,17 +57,9 @@ async def run_agent[TResult](
         output = {"type": "integer"}
     elif output_type is float:
         output = {"type": "number"}
-    elif isinstance(output_type, type) and (
-        issubclass(output_type, PartialQueryAnswer)
-        or issubclass(output_type, PartialQueryAnswerDummy)
-    ):
-        output = {"type": "PartialQueryAnswer"}
-        deserializable_classes.append(PartialQueryAnswer)
-        agent_output_type = MarkdownTolerantOutputSchema(output_type)
     elif isinstance(output_type, type) and issubclass(output_type, BaseModel):
         output = output_type.model_json_schema()
         deserializable_classes.append(output_type)
-        agent_output_type = MarkdownTolerantOutputSchema(output_type)
     else:
         raise ValueError(f"Unsupported output type: {output_type}")
 
@@ -152,7 +95,7 @@ async def run_agent[TResult](
             tools=cast(list[Tool], tools) or [],
             tool_use_behavior=tool_use_behavior,
             reset_tool_choice=reset_tool_choice,
-            output_type=agent_output_type,
+            output_type=output_type,
         )
 
         indented_logging(f"Running agent: {agent_name}")
@@ -162,10 +105,7 @@ async def run_agent[TResult](
             context=context,
             max_turns=agent_configuration.max_turns or DEFAULT_MAX_TURNS,
         )
-        if get_actual_result is None:
-            return result.final_output
-
-        return get_actual_result()
+        return result.final_output
 
     return await compute_value(
         agent_name,
@@ -191,4 +131,30 @@ async def run_agent[TResult](
         tool_use=tool_use,
         parallel_tool_calls=parallel_tool_calls,
         tool_choice=tool_choice,
+    )
+
+
+async def run_llm[TResult](
+    agent_configuration: AgentConfiguration,
+    prompt_name: str,
+    prompt_parameters: dict[str, str | int | float | bool | None],
+    *,
+    output_type: Type[TResult] | None = str,
+    context: JsonValue = None,
+    cache_mode: CacheMode | None = None,
+) -> TResult:
+    single_turn_config = AgentConfiguration(
+        name=agent_configuration.name,
+        model=agent_configuration.model,
+        reasoning=agent_configuration.reasoning,
+        max_turns=1,
+    )
+    return await run_agent(
+        agent_configuration=single_turn_config,
+        prompt_name=prompt_name,
+        prompt_parameters=prompt_parameters,
+        output_type=output_type,
+        context=context,
+        tools=[],
+        cache_mode=cache_mode,
     )

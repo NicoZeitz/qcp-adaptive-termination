@@ -1,19 +1,20 @@
 import logging
-import os
+import json
 from pathlib import Path
 from typing import Literal, cast
 from datetime import datetime
 
 from agents import trace
+from opentelemetry import trace as otel_trace
 
-from qtypes.result import result_to_json_preview
-from stages.draft_query_plan import draft_query_plan
+from utils.preview import result_to_json_preview
+from stages.planning import draft_query_plan, STAGE_NAME as PLANNING_STAGE_NAME
 from qtypes.drafted_query_plan import DraftedQueryPlan
-from stages.execute_query_plan import execute_query_plan
+from stages.execution import execute_query_plan, STAGE_NAME as EXECUTION_STAGE_NAME
 from qtypes.collaborative_query_answering_result import (
     CollaborativeQueryAnsweringResult,
 )
-from stages.filter_relevant_agents import filter_relevant_agents
+from stages.discovery import filter_relevant_agents, STAGE_NAME as DISCOVERY_STAGE_NAME
 from qtypes.collaborative_query_answering import CollaborativeQueryAnswering
 from qtypes.filtered_relevant_agents import FilteredRelevantAgents
 from utils.cache import load_cache_file
@@ -21,9 +22,9 @@ from utils.initialization import initialize
 
 
 stages_mapping = {
-    1: "Filter Relevant Agents",
-    2: "Draft Query Plan",
-    3: "Execute Query Plan",
+    1: DISCOVERY_STAGE_NAME,
+    2: PLANNING_STAGE_NAME,
+    3: EXECUTION_STAGE_NAME,
 }
 
 
@@ -42,39 +43,44 @@ async def main(
         raise Exception
 
     max_trace_label_len = 50
-    user = "NZ" if os.getlogin() == "I550817" else "FW"
 
     log_filename = f"Stage {start_stage}-{end_stage} - {datetime.now().strftime('%Y-%m-%d %H-%M-%S')}"
 
     name_prefix = f"{name.strip()[:max_trace_label_len]} - " if name else ""
     input_file_prefix = input_file.stem[:max_trace_label_len]
+    trace_label = (
+        f"[NZ] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}"
+    )
 
-    with trace(
-        f"[{user}] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}",
-        metadata={
-            "provider": provider,
-            "start_stage": str(start_stage),
-            "end_stage": str(end_stage),
-            "name": name,
-            "input_file": str(input_file),
-            "cache_dir": str(cache_dir),
-            "log_dir": str(log_dir),
-        },
-    ) as trace_ctx:
-        initialize(
-            log_filename,
-            log_dir,
-            cache_dir,
-            provider,
-            throw_on_cache_miss,
-            disable_cache,
-        )
+    initialize(
+        log_filename,
+        log_dir,
+        cache_dir,
+        provider,
+        throw_on_cache_miss,
+        disable_cache,
+    )
 
-        logging.info(f"Trace ID: {trace_ctx.trace_id}")
-        logging.info(
-            f"{user}: Running stage {start_stage} {stages_mapping[start_stage]} - {end_stage} {stages_mapping[end_stage]}: for input path {input_file} with provider {provider}"
-        )
+    logging.info(
+        f"NZ: Running {stages_mapping[start_stage]} - {stages_mapping[end_stage]}: for input path {input_file} with provider {provider}"
+    )
 
+    tracer = otel_trace.get_tracer(__name__)
+    with (
+        trace(
+            trace_label,
+            metadata={
+                "provider": provider,
+                "start_stage": str(start_stage),
+                "end_stage": str(end_stage),
+                "name": name,
+                "input_file": str(input_file),
+                "cache_dir": str(cache_dir),
+                "log_dir": str(log_dir),
+            },
+        ) as trace_ctx,
+        tracer.start_as_current_span(trace_label),
+    ):
         data, extra = load_cache_file(
             input_file,
             deserializable_classes=[
@@ -85,7 +91,8 @@ async def main(
             ],
         )
 
-        logging.info(f"{user}: Successfully loaded input file. Starting execution.")
+        logging.info("Successfully loaded input file. Starting execution.")
+        logging.info(f"Trace ID: {trace_ctx.trace_id}")
         logging.info("Extra entries in cache_file:")
         if extra:
             for k, v in extra.items():
@@ -94,14 +101,14 @@ async def main(
             logging.info("  No extra entries found.")
 
         if start_stage == 1:
-            logging.info(f"{user}: Starting stage 1: Filter Relevant Agents")
+            logging.info(f"Starting {stages_mapping[start_stage]}")
             logging.info(f"Data: {data}")
 
             data = cast(CollaborativeQueryAnswering, data)
             data = await filter_relevant_agents(data.query, data.data_agents)
             data = cast(FilteredRelevantAgents, data)
 
-            logging.info(f"{user}: Finished stage 1")
+            logging.info("Finished stage 1")
             logging.info(f"Result: {data}")
 
             start_stage += 1
@@ -109,7 +116,7 @@ async def main(
                 return
 
         if start_stage == 2:
-            logging.info(f"{user}: Starting stage 2: Draft Query Plan")
+            logging.info(f"Starting {stages_mapping[start_stage]}")
             logging.info(f"Data: {data}")
 
             data = cast(FilteredRelevantAgents, data)
@@ -118,7 +125,7 @@ async def main(
             )
             data = cast(DraftedQueryPlan, data)
 
-            logging.info(f"{user}: Finished stage 2")
+            logging.info("Finished stage 2")
             logging.info(f"Result: {data}")
 
             start_stage += 1
@@ -126,7 +133,7 @@ async def main(
                 return
 
         if start_stage == 3:
-            logging.info(f"{user}: Starting stage 3: Execute Query Plan")
+            logging.info(f"Starting {stages_mapping[start_stage]}")
             logging.info(f"Data: {data}")
 
             data = cast(DraftedQueryPlan, data)
@@ -134,15 +141,38 @@ async def main(
                 data.query_plan,
                 data.relevant_data_agents,
                 data.data_agents,
+                continue_after_final_result=True,  # TODO: remove
             )
             data = cast(CollaborativeQueryAnsweringResult, data)
 
-            logging.info(f"{user}: Finished stage 3")
+            logging.info("Finished stage 3")
             logging.info(f"Result: {data}")
             logging.info(result_to_json_preview(data.result))
             output_path = log_dir / f"{log_filename} - final_result.json"
             with open(output_path, "w") as f:
                 f.write(data.model_dump_json(indent=4, ensure_ascii=False))
+
+            # TODO: remove iteration records
+            from stages.execution.answer_step_multiple_agents import (
+                MULTI_AGENT_ITERATION_RECORDS,
+            )
+
+            logging.info(
+                f"Iteration counts per execution_id: { {k: len(v) for k, v in MULTI_AGENT_ITERATION_RECORDS.items()} }"
+            )
+            for execution_id, records in MULTI_AGENT_ITERATION_RECORDS.items():
+                records_output_path = (
+                    log_dir
+                    / f"{log_filename} - iteration_records - {execution_id}.json"
+                )
+                with open(records_output_path, "w", encoding="utf-8") as f:
+                    json.dump(
+                        [r.model_dump() for r in records],
+                        f,
+                        indent=4,
+                        ensure_ascii=False,
+                        default=str,
+                    )
 
 
 if __name__ == "__main__":

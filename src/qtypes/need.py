@@ -25,7 +25,3 @@ def try_parse_value_to_need_type(value: Any) -> set[NeedType]:
         raise ValueError(
             f"Needs must be a string or a list of strings, got {type(value)}: {value}"
         )
-
-
-def need_to_json_preview(need: NeedType) -> str:
-    return need

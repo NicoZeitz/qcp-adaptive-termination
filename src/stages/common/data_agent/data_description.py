@@ -3,16 +3,8 @@ from stages.common.data_agent.sql_data_agent.sql_data_agent_description import (
     sql_data_agent_query_capabilities,
     sql_data_and_nl_description,
 )
-from stages.common.data_agent.text_data_agent.text_data_agent_description import (
-    text_data_agent_query_capabilities,
-    text_data_and_nl_description,
-)
 
 mapping = {
-    "text": {
-        "query_capabilities": text_data_agent_query_capabilities,
-        "data_and_nl_description": text_data_and_nl_description,
-    },
     "sql": {
         "query_capabilities": sql_data_agent_query_capabilities,
         "data_and_nl_description": sql_data_and_nl_description,

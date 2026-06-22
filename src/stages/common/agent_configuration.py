@@ -5,9 +5,12 @@ from qtypes.data_agent import DataAgent
 
 coordinator_reasoning_mapping: dict[str, Reasoning] = {
     "Relevance": Reasoning(effort="low", summary="concise"),
-    "Draft Query Plan": Reasoning(effort="high", summary="concise"),
+    "Planning": Reasoning(effort="high", summary="concise"),
     "Code": Reasoning(effort="medium", summary="concise"),
-    "Replan Query Plan": Reasoning(effort="high", summary="concise"),
+    "Replanning": Reasoning(effort="high", summary="concise"),
+    "Align Schema First": Reasoning(effort="medium", summary="concise"),
+    "Align Schema Continue": Reasoning(effort="medium", summary="concise"),
+    "Completeness Evaluator": Reasoning(effort="medium", summary="concise"),
 }
 
 data_agent_reasoning_mapping: dict[str, Reasoning] = {

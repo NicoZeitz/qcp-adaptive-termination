@@ -1,5 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pandas as pd
 from pandas import DataFrame, MultiIndex
+from pydantic import JsonValue
+
+if TYPE_CHECKING:
+    from qtypes.additional_information import AdditionalInformation
 
 CHAR_LIMIT_LLM = 2000
 CHAR_LIMIT_LONG_LLM = 6000
@@ -40,3 +48,26 @@ def preview_text(text: str, char_limit=CHAR_LIMIT_LLM):
         + f"\n...[{omitted_count} chars]...\n"
         + text[-char_limit_end:]
     )
+
+
+def preview_additional_information(
+    additional_information: list[AdditionalInformation],
+) -> str | None:
+    if not additional_information:
+        return None
+    parts = []
+    for info in additional_information:
+        data = info.data
+        preview = preview_dataframe(data) if isinstance(data, DataFrame) else str(data)
+        parts.append(
+            f"step_id={info.step_id} | dependency={info.dependency}\n{preview}"
+        )
+    return "\n\n".join(parts)
+
+
+def result_to_json_preview(result: DataFrame) -> JsonValue:
+    return preview_dataframe(result)
+
+
+def need_to_json_preview(need: str) -> JsonValue:
+    return need

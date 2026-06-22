@@ -222,25 +222,22 @@ __marimo__/
 *.db
 *.sqlite
 
-# IMDB
-data/imdb/**/*.png
-data/imdb/**/*.svg
-data/imdb/text/*.txt
-data/imdb/**/config.txt
-data/imdb/**/*.tsv.gz
-
-# BIRD
-data/bird/**/metadata.json
-data/bird/dev/
-
-# WikiDBs
-data/wikidbs/
-
-# Runs
-data/runs/
-
+# All data — too large/generated to track
+data/
 
 # Other generated files
-A Vision for Autonomous Data Agent Collaboration From Query-by-Integration to Query-by-Collaboration CIDR2026_QCPDB.pdf
+documentation/**/*.pdf
+
 .logs/
 .cache/
+
+# Generated figures
+schema.png
+src/figure_synthetic_*.png
+src/scripts/figure_synthetic_*.png
+
+# Scratch / results
+results.md
+
+# Claude Code local settings
+.claude/

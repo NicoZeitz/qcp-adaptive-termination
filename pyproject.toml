@@ -6,11 +6,15 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "async-lru>=2.3.0",
+    "chevron>=0.14.0",
+    "faker>=40.23.0",
     "imdb-sqlite>=2.1.0",
     "langfuse>=4.5.1",
     "llama-index>=0.14.20",
+    "matplotlib>=3.10.9",
     "nest-asyncio>=1.6.0",
     "numpy>=2.4.4",
+    "openai>=2.31.0",
     "openai-agents>=0.13.6",
     "openinference-instrumentation-openai-agents>=1.4.2",
     "pandas>=3.0.2",
@@ -18,6 +22,7 @@ dependencies = [
     "pytest>=9.0.3",
     "python-dotenv>=1.2.2",
     "ruff>=0.15.11",
+    "scipy>=1.17.1",
     "sqlalchemy>=2.0.49",
 ]
 
