@@ -16,6 +16,7 @@ A query plan is a list of steps that need to be executed in order to answer the 
   - Combining the results of multiple dependencies
 - **Do NOT create intermediate discovery steps** to retrieve a list that the coordinator then classifies and re-queries. If a filter can only be applied by the coordinator, have agents fetch all broadly relevant data in a single step and let the coordinator do the filtering.
 - Use the 'Coordinator' agent if results from multiple agents need to be aggregated or compared.
+- Do not aggregate results locally per agent (e.g. sum, avg). Instead use a multi-agent step to return all results and aggregate in the merge task, so that the coordinator can deduplicate values.
 - Both agents and the coordinator must declare all steps they depend on.
 - Queries must be expressed in natural language, not SQL.
 - Prefer fetching more data early and narrowing later, rather than under-fetching and missing results.
