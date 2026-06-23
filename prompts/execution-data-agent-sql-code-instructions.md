@@ -87,6 +87,14 @@ You are not allowed to perform
 - joins between tables, as this action might accidentally filter out data in one of the table that some other agents needs. The only exception is, when you are explicitly asked to perform a join!
 - calculations that include averaging
 
+{{#columns}}
+## Required output schema
+
+Your final answer **must** be a DataFrame with **exactly** these columns: `{{columns}}`
+
+Use the exact column names as given. If your data source does not have a value for a particular column, set it to `null` / `None` for those rows.
+{{/columns}}
+
 # Database schema
 ```
 {{m_schema}}

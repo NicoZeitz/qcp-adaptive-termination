@@ -7,10 +7,12 @@ import pandas as pd
 
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.additional_information import AdditionalInformation
+from qtypes.aligned_result_list import AlignedSchemaMetadata
 from qtypes.data_agent import DataAgent
 from qtypes.need import try_parse_value_to_need_type
 from qtypes.partial_query_answer import PartialQueryAnswer
 from qtypes.result import try_parse_value_to_result_type
+from stages.execution.validation import validate_agent_output
 from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.data_description import data_agent_data_description
 from stages.common.data_agent.sql_data_agent.get_db_connection import get_db_engine
@@ -41,6 +43,7 @@ async def answer_query_sql_data_agent(
     data_agent: DataAgent,
     query: str,
     additional_information: list[AdditionalInformation],
+    schema_metadata: AlignedSchemaMetadata | None = None,
 ) -> PartialQueryAnswer:
     with own_custom_span(
         "Data Agent - answer_query",
@@ -70,7 +73,10 @@ async def answer_query_sql_data_agent(
             partial_answer.add_needs(try_parse_value_to_need_type(new_needs))
 
         def final_answer(new_answer: Any):
-            partial_answer.set_answer(try_parse_value_to_result_type(new_answer))
+            answer_df = try_parse_value_to_result_type(new_answer)
+            if schema_metadata is not None:
+                validate_agent_output(answer_df, schema_metadata)
+            partial_answer.set_answer(answer_df)
 
         code_environment = CodeExecutionEnvironment(
             variables={
@@ -104,6 +110,9 @@ async def answer_query_sql_data_agent(
                 "additional_information_preview": preview_additional_information(
                     additional_information
                 ),
+                "columns": ", ".join(schema_metadata.columns)
+                if schema_metadata is not None
+                else None,
             },
             tools=[code_environment.as_function_tool()],
             tool_use_behavior=custom_tool_handler,

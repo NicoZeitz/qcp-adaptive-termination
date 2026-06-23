@@ -1,28 +1,33 @@
-from typing import cast
+import pandas as pd
 
 from qtypes.additional_information import AdditionalInformation
-from qtypes.aligned_result_list import (
-    AlignedResultList,
-)
+from qtypes.aligned_result_list import AlignedResultList
 from qtypes.data_agent import DataAgent
 from qtypes.estimator_statistics import EstimatorStatistics
-from qtypes.multi_agent_iteration_record import (
-    MultiAgentIterationRecord,
-)
+from qtypes.multi_agent_iteration_record import MultiAgentIterationRecord
 from qtypes.outcome import FinalResultOutcome, QueryMoreAgentsOutcome, RaiseNeedOutcome
 from qtypes.partial_query_answer import PartialQueryAnswer
 from qtypes.query_plan_step import MultiAgentQueryPlanStep
 from stages.execution.answer_step_data_agent import answer_step_data_agent
 from stages.execution.answer_step_multiple_agents.align_schema import align_schema
-from stages.execution.answer_step_multiple_agents.completeness_evaluator import (
-    run_completeness_evaluator,
-)
-from stages.execution.answer_step_multiple_agents.compute_estimator import (
-    compute_estimator_statistics,
-)
+from stages.execution.answer_step_multiple_agents.completeness_evaluator import run_completeness_evaluator
+from stages.execution.answer_step_multiple_agents.compute_estimator import compute_estimator_statistics
 from utils.span import append_to_span_output, own_custom_span
 
 MULTI_AGENT_ITERATION_RECORDS: dict[str, list[MultiAgentIterationRecord]] = {}
+
+
+def merge_agent_result(
+    result_list: AlignedResultList,
+    agent_name: str,
+    agent_result: pd.DataFrame,
+) -> AlignedResultList:
+    schema = result_list.schema_metadata
+
+    agent_result[schema.source_agent_column] = agent_name
+    merged = pd.concat([result_list.data, agent_result], ignore_index=True)
+
+    return AlignedResultList(data=merged, schema_metadata=schema)
 
 
 async def run_agent_round(
@@ -64,6 +69,7 @@ async def run_agent_round(
             query=query,
             to_agent=agent_current,
             additional_information=additional_information,
+            schema_metadata=result_list.schema_metadata,
         )
 
         if (
@@ -86,10 +92,7 @@ async def run_agent_round(
             iteration_records.append(iteration_record)
             return outcome
 
-        result_list = await align_schema(
-            result_list, agent_current, result.answer, query_plan_step.merge_task
-        )
-
+        result_list = merge_agent_result(result_list, agent_current, result.answer)
         estimator_statistics = compute_estimator_statistics(
             result_list, len(agents_queried_now), agents_total, agent_current
         )
@@ -125,7 +128,6 @@ async def answer_step_multiple_agents(
 ) -> PartialQueryAnswer:
     all_agents = list(query_plan_step.to_agent)
     agents_queried: list[str] = []
-    result_list = AlignedResultList()
 
     answer = PartialQueryAnswer()
     iteration_records = []
@@ -134,6 +136,13 @@ async def answer_step_multiple_agents(
         f"Multiple Agents: {query_plan_step.id}",
         input={"query": query_plan_step.query, "agents": all_agents},
     ) as span:
+        result_list = await align_schema(
+            data_agents=data_agents,
+            agent_names=all_agents,
+            query=query_plan_step.query,
+            merge_task=query_plan_step.merge_task,
+        )
+
         for agent_name in all_agents:
             outcome = await run_agent_round(
                 data_agents=data_agents,

@@ -14,10 +14,12 @@ class AlignedSchemaMetadata(BaseModel):
     aggregation_type: AggregationType
     keys: list[str]
     value_column: str | None = None
+    columns: list[str] = []
+    source_agent_column: str
 
 
 class AlignedResultList(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     data: SerializedResultType = ResultType()
-    schema_metadata: AlignedSchemaMetadata | None = None
+    schema_metadata: AlignedSchemaMetadata

@@ -2,7 +2,6 @@ import pandas as pd
 
 from qtypes.aligned_result_list import AlignedResultList
 from qtypes.estimator_statistics import EstimatorStatistics
-from stages.execution.answer_step_multiple_agents.validation import SOURCE_AGENT_COLUMN
 from unknown_unknown import DataItem, Estimator
 from utils.span import indented_logging
 
@@ -27,17 +26,13 @@ def compute_estimator_statistics(
     schema = result_list.schema_metadata
     data = result_list.data
 
-    if schema is None:
-        indented_logging("Estimator: skipped (no schema)")
-        return None
-
-    if len(data[SOURCE_AGENT_COLUMN].unique()) < 2:
+    if len(data[schema.source_agent_column].unique()) < 2:
         indented_logging("Estimator: skipped (fewer than 2 agents with results)")
         return None
 
     source_samples: list[list[DataItem]] = []
-    for agent_name in data[SOURCE_AGENT_COLUMN].unique():
-        dataframe = data[data[SOURCE_AGENT_COLUMN] == agent_name]
+    for agent_name in data[schema.source_agent_column].unique():
+        dataframe = data[data[schema.source_agent_column] == agent_name]
         data_items = dataframe_to_data_items(
             dataframe, schema.keys, schema.value_column, agent_name
         )
@@ -46,7 +41,7 @@ def compute_estimator_statistics(
     estimator = Estimator(source_samples)
     agg = schema.aggregation_type
 
-    new_unique_count = (result_list.data[SOURCE_AGENT_COLUMN] == agent_current).sum()
+    new_unique_count = (result_list.data[schema.source_agent_column] == agent_current).sum()
 
     result = EstimatorStatistics(
         sample_coverage=estimator.sample_coverage(),
