@@ -1,3 +1,7 @@
+Kill schema alignment step
+* 1 at the start based on the output of the first agent
+* the code agents have to do the rest by themselves
+
 In Execution
 * Check iteration records works with new stuff
 * Check history how it works + implement own changes

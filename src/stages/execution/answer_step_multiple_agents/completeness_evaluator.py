@@ -22,7 +22,7 @@ from typing import Any, Callable
 def build_estimator_summary(estimator_statistics: EstimatorStatistics) -> str:
     summary = (
         f"Aggregation type: {estimator_statistics.aggregation_type}\n"
-        f"Agents queried: {estimator_statistics.agents_queried} /  {estimator_statistics.agents_total} ({estimator_statistics.agents_queried / estimator_statistics.agents_total:.2%}%)\n"
+        f"Agents queried: {estimator_statistics.agents_queried} /  {estimator_statistics.agents_total} ({estimator_statistics.agents_queried / estimator_statistics.agents_total:.2%})\n"
         f"New unique entries added by this agent: {estimator_statistics.new_unique_count}\n"
         f"Sample Coverage: {estimator_statistics.sample_coverage:.3f}\n"
     )

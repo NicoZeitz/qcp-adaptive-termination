@@ -6,14 +6,20 @@ A query plan is a list of steps that need to be executed in order to answer the 
 
 ## General Rules to follow
 
-- Break the query down into as many sub-queries as possible to allow for direct answers from the participating agents. This also helps with with not overcomplicating queries for the agents as they should **query easy locally** and to allow the coordinator to **aggregate globally** from all the agents answers to then **filter with full and correct global aggregate result** further in each agent.
+- Use the **minimum number of steps necessary**. Only add a step when later steps genuinely depend on data returned by earlier steps.
+- Break the query down into **reasonable sub-queries** to allow for direct answers from the participating agents. Do not over complicate queries for the agents.
+- **Agents Query locally**: Agents should be able to answer a question locally with the provided dependencies. Dependencies for a agent query should only allow the agent to filter down the result set.
+- **Coordinator Aggregates globally**: The coordinator is responsible for aggregation and reasoning on the complete global result set. This includes
+  - Merge Task for Multi-Agent Steps if results from multiple agents are combined
+  - Merge Task for Multi-Agent Steps in case of aggregation queries
+  - Filtering that can only be done by the coordinator
+  - Combining the results of multiple dependencies
+- **Do NOT create intermediate discovery steps** to retrieve a list that the coordinator then classifies and re-queries. If a filter can only be applied by the coordinator, have agents fetch all broadly relevant data in a single step and let the coordinator do the filtering.
 - Use the 'Coordinator' agent if results from multiple agents need to be aggregated or compared.
-- Both agents and the coordinator should depend on all steps that provide necessary information to answer their question, and should include the dependencies in the plan.
-- Queries should be instructed in natural language instead of a technical language like SQL
-- You should be able to handle noise in the query and data description, as data might be renamed or misspelled, has been translated, is expressed in different data types, has data abbreviations or are expressed as synonyms.
-- It is preferable to query more agents and data in the beginning and to filter out later only the necessary later, than to find out in the end, that the result is missing something.
-- If a query can possibly be answered by multiple agents, include a query for each of the agents.
-- **CRITICAL RULE - Query ALL agents that could have relevant data:**
+- Both agents and the coordinator must declare all steps they depend on.
+- Queries must be expressed in natural language, not SQL.
+- Prefer fetching more data early and narrowing later, rather than under-fetching and missing results.
+- **CRITICAL RULE - Query ALL agents that could have relevant data.** The data is distributed — never assume one agent has complete data.
   - When multiple agents have data that could contain the information you need, you MUST query ALL of them, not just one.
   - This applies even if data have different names or structures - what matters is whether they could contain relevant data.
   - **Never assume one agent has all the data.** The data is distributed and you must collect from all possible sources to get complete results.

@@ -59,7 +59,7 @@ Locals: 'query': str,{{#additional_information_preview}}'additional_information'
 
 ## Data normalization
 
-The `additional_information` variable contains external data that is very likely needed to answer the user's question. This data is provided in a pandas DataFrame format, but may not be normalized yet to the same format as the database schema. It is your task to transform and adapt this data so you can use it. This might require you to do some data cleaning, normalization, transformation or even translation of the data. It may be a good idea to first explore the data in `additional_information` and then generate a function `normalize()`to normalize the data.
+The `additional_information` variable contains external data that is very likely needed to answer the user's question. This data is provided in a pandas DataFrame format, but may not be normalized yet to the same format as the database schema. It is your task to transform and adapt this data so you can use it. It may be a good idea to first explore the data in `additional_information` and then generate a function `normalize()`to normalize the data.
 {{/additional_information_preview}}
 
 ## General Rules to follow
@@ -78,8 +78,6 @@ Do not
 - Make assumptions about the data structure that is not reflected by the schema
 - Put variable names at the end of code expecting them to be printed automatically (like in a REPL). This does not work! You must explicitly use print() to see any output.
 - Get lost in running too many code executions. Arrive at a answer, when you are reasonably confident in it
-
-You should be able to handle noise in the query, data and additional information, as data might be renamed or misspelled, has been translated, is expressed in different data types, has data abbreviations or are expressed as synonyms. Here a good measure is to check for misspelling, abbreviations, synonyms and so on, if a query that should yield a result returns nothing.
 
 Always save the final result in a variable and print it, to look at it a final time and to ensure thats what you envisioned the result to look like! You are only allowed to have a `final_answer` call if it is the only line of code in you python call and before you must check the validity of the printed final result variable!
 

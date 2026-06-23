@@ -103,14 +103,7 @@ async def run_agent_round(
                 estimator_statistics[1],
                 estimator_statistics[0],
                 query,
-                list(
-                    map(
-                        lambda record: cast(
-                            EstimatorStatistics, record.estimator_result
-                        ),
-                        iteration_records,
-                    )
-                ),
+                [r.estimator_result for r in iteration_records if r.estimator_result is not None],
             )
             iteration_record.evaluator_decision = outcome.decision
 

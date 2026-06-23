@@ -229,13 +229,16 @@ def cached(
                 result, found = cache.get(key=key, name_prefix=name_prefix)
 
                 if found:
-                    with own_custom_span(
-                        f"Cache Hit: {name_prefix or func.__name__}",
-                        input={"arguments": key},
-                        output={"result": result},
-                        print_start_end=False,
-                    ):
-                        pass
+                    name = name_prefix or func.__name__
+
+                    if "Schema Description" not in name:
+                        with own_custom_span(
+                            f"Cache Hit: {name}",
+                            input={"arguments": key},
+                            output={"result": result},
+                            print_start_end=False,
+                        ):
+                            pass
 
                     return _deserialize_value(result, deserializable_values)
 

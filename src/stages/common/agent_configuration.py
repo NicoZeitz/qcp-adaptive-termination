@@ -6,18 +6,18 @@ from qtypes.data_agent import DataAgent
 coordinator_reasoning_mapping: dict[str, Reasoning] = {
     "Relevance": Reasoning(effort="low", summary="concise"),
     "Planning": Reasoning(effort="high", summary="concise"),
-    "Code": Reasoning(effort="medium", summary="concise"),
+    "Code": Reasoning(effort="low", summary="concise"),
     "Replanning": Reasoning(effort="high", summary="concise"),
-    "Align Schema First": Reasoning(effort="medium", summary="concise"),
-    "Align Schema Continue": Reasoning(effort="medium", summary="concise"),
-    "Completeness Evaluator": Reasoning(effort="medium", summary="concise"),
+    "Align Schema First": Reasoning(effort="low", summary="concise"),
+    "Align Schema Continue": Reasoning(effort="low", summary="concise"),
+    "Completeness Evaluator": Reasoning(effort="low", summary="concise"),
 }
 
 data_agent_reasoning_mapping: dict[str, Reasoning] = {
     "Schema Description": Reasoning(effort="minimal", summary="concise"),
     "Relevance": Reasoning(effort="low", summary="concise"),
     "Summary": Reasoning(effort="low", summary="concise"),
-    "Code": Reasoning(effort="medium", summary="concise"),
+    "Code": Reasoning(effort="low", summary="concise"),
 }
 
 coordinator_agent_model = "gpt-5"
