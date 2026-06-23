@@ -9,7 +9,7 @@ You will receive:
 
 Call `set_schema` with the following parameters:
 
-- `columns`: all column names the unified result table should have. Choose canonical names that generalize across all agents (e.g. `employee_count` not `emp_cnt`). Include all columns useful to answer the query, not just keys and value.
+- `columns`: all column names the unified result table should have. Choose canonical names that generalize across all agents (e.g. `employee_count` not `emp_cnt`). Include columns useful to answer the query. Must include `keys` and `value_column`. Do not create columns that are similar to each other, each column should have a distinct use case.
 - `keys`: subset of `columns` that identify the entity. Used for grouping and deduplication across agents.
 - `value_column`: the column in `columns` holding the numeric value to aggregate, or `null` for count/listing queries. Must not overlap with `keys`.
 - `aggregation_type`: one of `count`, `sum`, `avg`, `min`, `max`.
@@ -18,14 +18,12 @@ Call `set_schema` until it succeeds. If it returns an error, fix the parameters 
 
 ## Determining the schema
 
-The schema determines how the data of all agents should be aggregated.
+The schema determines how the data of all agents should be aggregated. Aggregation is always applied across all data items from all data agents. So a `max` aggregation returns one maximum value across all deduplicated rows from all agents, not a per-key max.
 
-The `keys` set the keys by which the data is grouped and deduplicated across different agent sources.
+The original user query and the merge task are only provided as additional context to help you determine the schema. The user query is also given to the agents and most accurately reflects the information that the table schema should contain. Based on a table with the schema, the merge task is then performed afterwards.
 
-The `value` column tracks the column which is aggregated.
+The `keys` identify the entity — they should only contain identifier columns (Think of primary key in a database).
 
-In case data should just be listed or counted, use the `count` aggregation and do not specify a `value_column`
+The `value_column` is the single numeric column being measured or aggregated. Set it whenever the query asks for a numeric value associated with each entity.
 
-In case values across should be aggregated across a column, specify the column as `value_column` and use the corresponding aggregation type (e.g. `sum`).
-
-Aggregation is always meant as a aggregation off all data items across all data agents. So a `max` aggregation would return one maximum value across all deduplicated rows across all data agents, not a maximum aggregation/deduplication of the rows with the same key across data sources.
+The `aggregation_type` is best determined by the merge task. If the merge task is supposed to aggregate a value from the results (`sum`, `avg`, `min`, `max`), set the `aggregation_type` and the corresponding `value_column`. In case entities should only be listed/deduplicated or counted by the merge task, use `count` and do not set a `value_column`.

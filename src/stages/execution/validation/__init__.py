@@ -1,4 +1,5 @@
 from pandas import DataFrame
+import pandas as pd
 
 from qtypes.aligned_result_list import AlignedSchemaMetadata
 
@@ -6,13 +7,12 @@ from qtypes.aligned_result_list import AlignedSchemaMetadata
 def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata):
     errors = []
 
-    source_agent_column = {metadata.source_agent_column}
-    expected = set(metadata.columns) | source_agent_column
+    expected = set(metadata.columns)
     actual = set(dataframe.columns)
 
     if actual != expected:
-        missing = sorted((expected - actual) - source_agent_column)
-        extra = sorted((actual - expected) - source_agent_column)
+        missing = sorted(expected - actual)
+        extra = sorted(actual - expected)
         parts = []
         if missing:
             parts.append(f"missing columns: {missing}")
@@ -20,6 +20,16 @@ def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata)
             parts.append(f"unexpected columns: {extra}")
 
         errors.append(f"Output does not match the required schema — {'; '.join(parts)}. Expected exactly: {sorted(expected)}")
+
+    # if there is a value column, check that it is not empty and numeric
+    if metadata.value_column is not None:
+        if metadata.value_column not in dataframe.columns:
+            errors.append(f"Column '{metadata.value_column}' is missing from the output")
+        else:
+            if dataframe[metadata.value_column].isnull().all():
+                errors.append(f"Column '{metadata.value_column}' cannot be empty")
+            elif not pd.api.types.is_numeric_dtype(dataframe[metadata.value_column]):
+                errors.append(f"Column '{metadata.value_column}' has to be numeric")
 
     if len(errors) > 0:
         raise ValueError("\n".join(errors))
