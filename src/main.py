@@ -171,6 +171,39 @@ async def main(
                         default=str,
                     )
 
+                run_prefix = str(log_dir / log_filename)
+                try:
+                    from scripts.plot_iteration_records import (
+                        extract_series,
+                        load_final_result_value,
+                        load_reasoning_by_agents_queried,
+                        load_records,
+                        plot,
+                        save_reasoning_text,
+                    )
+
+                    plot_records = load_records(str(records_output_path))
+                    series = extract_series(plot_records)
+                    count_gt = series["last_observed_count"] or 0
+                    value_gt = (
+                        (extra.get("full_answer") if extra else None)
+                        or load_final_result_value(run_prefix)
+                        or series["last_observed_value"]
+                        or 0
+                    )
+
+                    traces_file = log_dir / f"{log_filename}_traces.jsonl"
+                    reasoning_by_n = None
+                    if traces_file.exists():
+                        reasoning_by_n = load_reasoning_by_agents_queried(str(traces_file))
+                        if reasoning_by_n:
+                            save_reasoning_text(series, reasoning_by_n, run_prefix + ".txt")
+
+                    plot(series, count_gt, value_gt, run_prefix)
+                    logging.info(f"Plots saved to {run_prefix}.png/.svg/.pdf")
+                except Exception as e:
+                    logging.warning(f"Plotting failed for {execution_id}: {e}")
+
 
 if __name__ == "__main__":
     import argparse
