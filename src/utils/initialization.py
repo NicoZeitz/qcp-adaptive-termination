@@ -3,15 +3,13 @@ import json
 import os
 from pathlib import Path
 import logging
-from typing import Literal
 from agents import (
     MultiProvider,
-    MultiProviderMap,
     OpenAIProvider,
-    set_default_openai_client,
     set_trace_processors,
     set_tracing_export_api_key,
 )
+from agents.models.multi_provider import MultiProviderMap
 from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
 import httpx
@@ -71,7 +69,9 @@ def add_provider(
     api_key = os.getenv(f"{prefix.upper()}_API_KEY")
 
     if not base_url:
-        logging.warning(f"{prefix.upper()}_BASE_URL not set; skipping provider registration.")
+        logging.warning(
+            f"{prefix.upper()}_BASE_URL not set; skipping provider registration."
+        )
         return
 
     client = AsyncOpenAI(
@@ -81,7 +81,7 @@ def add_provider(
         if university_hooks
         else None,
     )
-    provider =  OpenAIProvider(
+    provider = OpenAIProvider(
         openai_client=client,
         use_responses=False if university_hooks else None,
     )

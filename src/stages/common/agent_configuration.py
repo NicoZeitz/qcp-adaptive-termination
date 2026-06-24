@@ -10,9 +10,11 @@ WORK_MODEL = "work/gpt-5"
 
 _multi_provider: MultiProvider | None = None
 
+
 def set_multi_provider(provider: MultiProvider) -> None:
     global _multi_provider
     _multi_provider = provider
+
 
 def get_multi_provider() -> MultiProvider:
     if _multi_provider is None:
