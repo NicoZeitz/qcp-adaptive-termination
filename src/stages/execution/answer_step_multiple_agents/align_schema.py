@@ -106,6 +106,6 @@ async def align_schema(
 
         append_to_span_output({"schema_metadata": schema_metadata})
         return AlignedResultList(
-            data=DataFrame(columns=schema_metadata.columns + [source_agent_column]),
+            data=DataFrame(columns=schema_metadata.columns + [schema_metadata.source_agent_column]),
             schema_metadata=schema_metadata,
         )

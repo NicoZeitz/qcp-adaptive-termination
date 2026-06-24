@@ -44,43 +44,32 @@ async def query_single_agent(
     agent_name: str,
     additional_information: list[AdditionalInformation],
     result_list: AlignedResultList,
-    agents_queried: list[str],
-    agents_remaining: list[str],
 ) -> tuple[str, pd.DataFrame | None, RaiseNeedOutcome | None]:
     """Query one agent and return its raw result without touching shared state."""
     query = query_plan_step.query
 
-    with own_custom_span(
-        f"Multiple Agents - Round {len(agents_queried) + 1}: {agent_name}",
-        input={
-            "query": query,
-            "agent_name": agent_name,
-            "agents_queried": agents_queried,
-            "agents_remaining": agents_remaining,
-        },
+    result = await answer_step_data_agent(
+        data_agents=data_agents,
+        query=query,
+        to_agent=agent_name,
+        additional_information=additional_information,
+        schema_metadata=result_list.schema_metadata,
+    )
+
+    if (
+        len(result.needs) > 0
+        or result.answer is None
+        or result.has_needs
+        or not result.has_answer
     ):
-        result = await answer_step_data_agent(
-            data_agents=data_agents,
-            query=query,
-            to_agent=agent_name,
-            additional_information=additional_information,
-            schema_metadata=result_list.schema_metadata,
+        need_outcome = RaiseNeedOutcome(
+            needs=result.needs,
+            partial_answer=result.answer,
+            has_partial_answer=result.has_answer,
         )
+        return agent_name, None, need_outcome
 
-        if (
-            len(result.needs) > 0
-            or result.answer is None
-            or result.has_needs
-            or not result.has_answer
-        ):
-            need_outcome = RaiseNeedOutcome(
-                needs=result.needs,
-                partial_answer=result.answer,
-                has_partial_answer=result.has_answer,
-            )
-            return agent_name, None, need_outcome
-
-        return agent_name, result.answer, None
+    return agent_name, result.answer, None
 
 
 async def run_agent_batch(
@@ -97,92 +86,119 @@ async def run_agent_batch(
     agents_total = len(agents_queried) + len(agents_remaining)
     agents_queried_now = agents_queried + batch
     remaining_agents_now = [a for a in agents_remaining if a not in batch]
+    batch_label = ", ".join(batch)
+    round_number = len(agents_queried) + 1
 
-    results = await asyncio.gather(
-        *[
-            query_single_agent(
-                data_agents=data_agents,
-                query_plan_step=query_plan_step,
-                agent_name=agent_name,
-                additional_information=additional_information,
-                result_list=result_list,
-                agents_queried=agents_queried,
-                agents_remaining=agents_remaining,
-            )
-            for agent_name in batch
+    with own_custom_span(
+        f"Batch - Round {round_number}: [{batch_label}]",
+        input={
+            "query": query_plan_step.query,
+            "batch": batch,
+            "agents_queried": agents_queried,
+            "agents_remaining": agents_remaining,
+        },
+    ):
+        results = await asyncio.gather(
+            *[
+                query_single_agent(
+                    data_agents=data_agents,
+                    query_plan_step=query_plan_step,
+                    agent_name=agent_name,
+                    additional_information=additional_information,
+                    result_list=result_list,
+                )
+                for agent_name in batch
+            ]
+        )
+
+        # Check for needs — if any agent raised a need, merge all need outcomes and stop
+        need_results = [
+            (agent_name, need_outcome)
+            for agent_name, _, need_outcome in results
+            if need_outcome is not None
         ]
-    )
+        if need_results:
+            merged_needs: list[str] = []
+            partial_dfs: list[pd.DataFrame] = []
+            for agent_name, need_outcome in need_results:
+                merged_needs.extend(need_outcome.needs)
+                if need_outcome.has_partial_answer and need_outcome.partial_answer is not None:
+                    partial_dfs.append(need_outcome.partial_answer)
+                iteration_records.append(
+                    MultiAgentIterationRecord(
+                        step_id=query_plan_step.id,
+                        agent_name=agent_name,
+                        result_list=result_list.data,
+                        estimator_result=None,
+                        evaluator_decision=None,
+                        queried_agents=agents_queried_now,
+                        remaining_agents=remaining_agents_now,
+                    )
+                )
+            merged_partial = (
+                pd.concat(partial_dfs, ignore_index=True) if partial_dfs else None
+            )
+            combined_need_outcome = RaiseNeedOutcome(
+                needs=list(set(merged_needs)),
+                partial_answer=merged_partial,
+                has_partial_answer=merged_partial is not None,
+            )
+            append_to_span_output({"outcome": combined_need_outcome, "agents_with_needs": [a for a, _ in need_results]})
+            return combined_need_outcome
 
-    # Check for needs — any need in the batch stops processing
-    for agent_name, agent_df, need_outcome in results:
-        if need_outcome is not None:
+        # Merge and compute stats incrementally, as if agents were queried in sequence
+        per_agent_stats = []
+        current_result_list = result_list
+        for idx, (agent_name, agent_df, _) in enumerate(results):
+            assert agent_df is not None
+            current_result_list = merge_agent_result(
+                current_result_list, agent_name, agent_df
+            )
+            agent_stats, agent_estimator = compute_estimator_statistics(
+                current_result_list,
+                len(agents_queried) + idx + 1,
+                agents_total,
+                [agent_name],
+            )
+            per_agent_stats.append(
+                (agent_name, current_result_list, agent_stats, agent_estimator)
+            )
+
+        merged_result_list = current_result_list
+        final_stats, final_estimator = per_agent_stats[-1][2], per_agent_stats[-1][3]
+
+        if final_stats.sample_coverage is None:
+            outcome = QueryMoreAgentsOutcome(result_list=merged_result_list)
+        else:
+            assert final_estimator is not None
+            outcome = await run_completeness_evaluator(
+                merged_result_list,
+                final_estimator,
+                final_stats,
+                query_plan_step.query,
+                [
+                    r.estimator_result
+                    for r in iteration_records
+                    if r.estimator_result is not None
+                ],
+            )
+
+        for i, (agent_name, _, agent_stats, _) in enumerate(per_agent_stats):
+            is_last = i == len(per_agent_stats) - 1
             iteration_records.append(
                 MultiAgentIterationRecord(
                     step_id=query_plan_step.id,
                     agent_name=agent_name,
-                    result_list=result_list.data,
-                    estimator_result=None,
-                    evaluator_decision=None,
+                    result_list=merged_result_list.data,
+                    estimator_result=agent_stats,
+                    evaluator_decision=outcome.decision if is_last else "batch_query",
                     queried_agents=agents_queried_now,
                     remaining_agents=remaining_agents_now,
                 )
             )
-            append_to_span_output({"outcome": need_outcome, "agent": agent_name})
-            return need_outcome
 
-    # Merge and compute stats incrementally, as if agents were queried in sequence
-    per_agent_stats = []
-    current_result_list = result_list
-    for idx, (agent_name, agent_df, _) in enumerate(results):
-        assert agent_df is not None
-        current_result_list = merge_agent_result(
-            current_result_list, agent_name, agent_df
-        )
-        agent_stats, agent_estimator = compute_estimator_statistics(
-            current_result_list,
-            len(agents_queried) + idx + 1,
-            agents_total,
-            [agent_name],
-        )
-        per_agent_stats.append(
-            (agent_name, current_result_list, agent_stats, agent_estimator)
-        )
-
-    merged_result_list = current_result_list
-    final_stats, final_estimator = per_agent_stats[-1][2], per_agent_stats[-1][3]
-
-    if final_stats.sample_coverage is None:
-        outcome = QueryMoreAgentsOutcome(result_list=merged_result_list)
-    else:
-        assert final_estimator is not None
-        outcome = await run_completeness_evaluator(
-            merged_result_list,
-            final_estimator,
-            final_stats,
-            query_plan_step.query,
-            [
-                r.estimator_result
-                for r in iteration_records
-                if r.estimator_result is not None
-            ],
-        )
-
-    for i, (agent_name, _, agent_stats, _) in enumerate(per_agent_stats):
-        is_last = i == len(per_agent_stats) - 1
-        iteration_records.append(
-            MultiAgentIterationRecord(
-                step_id=query_plan_step.id,
-                agent_name=agent_name,
-                result_list=merged_result_list.data,
-                estimator_result=agent_stats,
-                evaluator_decision=outcome.decision if is_last else "batch_query",
-                queried_agents=agents_queried_now,
-                remaining_agents=remaining_agents_now,
-            )
-        )
-
-    append_to_span_output({"outcome": outcome, "batch": batch})
-    return outcome
+        append_to_span_output({"outcome": outcome, "batch": batch})
+        return outcome
 
 
 async def answer_step_multiple_agents(

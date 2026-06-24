@@ -58,7 +58,7 @@ def build_previous_statistics_summary(
         lines.append(
             build_estimator_summary(estimator_statistic, include_aggregation_type=False)
         )
-    return "\n".join(lines)
+    return "\n\n".join(lines)
 
 
 async def run_completeness_evaluator(

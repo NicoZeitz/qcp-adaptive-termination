@@ -1,4 +1,7 @@
-
+Multiple source agents
+agent round, pack other below it
+check batch query estimation and iteration records
+think more about query more prompt
 
 
 Kill schema alignment step
@@ -19,3 +22,10 @@ In Execution
 Split Generation
 * Data Noise (TRANSLATE, RENAME_COLUMNS, CHANGE_DATA_TYPE, USE_DATA_ABBREVIATIONS, SYNONYMS)
 * Redundancies (Multiple agents having (partially) overlapping data)
+
+```bash
+curl -s dgx02.lab.tuda.systems:13505/version
+{"version":"0.1.dev17492+g454b47db8"}
+
+curl -s dgx02.lab.tuda.systems:13505/version -H "Content-Type: application/json" -d @curl.json | python3 -m json.tool
+```
