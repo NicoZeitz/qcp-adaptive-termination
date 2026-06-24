@@ -3,12 +3,18 @@ import json
 import os
 from pathlib import Path
 import logging
-from typing import Literal, Unpack
-from agents import set_default_openai_client, set_trace_processors
+from typing import Literal
+from agents import (
+    MultiProvider,
+    MultiProviderMap,
+    OpenAIProvider,
+    set_default_openai_client,
+    set_trace_processors,
+    set_tracing_export_api_key,
+)
 from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
 import httpx
-from openai._types import HttpxSendArgs
 import nest_asyncio
 import sys
 from openai import AsyncOpenAI
@@ -17,65 +23,75 @@ from langfuse import get_client
 from opentelemetry import trace
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from stages.common.agent_configuration import set_agent_models
+from stages.common.agent_configuration import set_multi_provider
 from utils.cache import Cache
 from utils.file_span_exporter import FileSpanExporter
 from utils.openai_tracing import TruncatingBackendSpanExporter
 
 
-class APIClient(AsyncOpenAI):
-    async def _send_request(
-        self,
-        request: httpx.Request,
-        *,
-        stream: bool,
-        **kwargs: Unpack[HttpxSendArgs],
-    ) -> httpx.Response:
-        content = json.loads(request.content.decode("utf-8"))
+async def modify_request_hook(request: httpx.Request):
+    if request.method == "POST" and "application/json" in request.headers.get(
+        "content-type", ""
+    ):
+        body_bytes = await request.aread()
+        request_json = json.loads(body_bytes.decode("utf-8"))
+
+        request_json["temperature"] = 0.0
+
+        # thinking_mode needs to be disabled for correct output, otherwise it will return output in reasoning, which breaks openai sdk
+        request_json["chat_template_kwargs"] = {
+            "thinking_mode": "enabled"
+            if "reasoning_effort" in request_json
+            and request_json["reasoning_effort"] != "none"
+            else "disabled",
+        }
+        if "reasoning_effort" in request_json:
+            del request_json["reasoning_effort"]
+
+        # if tool choice required, tools not empty and response format exist, remove response format
         if (
-            "text" in content
-            and "response_format" not in content
-            and "unsloth" in content["model"]
+            request_json.get("tool_choice") == "required"
+            and request_json.get("tools")
+            and request_json.get("response_format") is not None
         ):
-            content["response_format"] = content["text"]["format"]
-            # content["input"].append(
-            #     {
-            #         "role": "system",
-            #         "content": f"JSON Schema: ```json\n{json.dumps(content['text']['format']['schema'], indent=2, ensure_ascii=False)}\n```",
-            #     }
-            # )
-            # del content["text"]
-            request._content = json.dumps(content).encode("utf-8")
+            del request_json["response_format"]
 
-        # logging.info(content)
-        response = await super()._send_request(request, stream=stream, **kwargs)
-        # logging.info(response.json())
+        # Re-encode and write back to the request stream
+        modified_bytes = json.dumps(request_json).encode("utf-8")
+        request.stream = httpx.ByteStream(modified_bytes)
+        request.headers["Content-Length"] = str(len(modified_bytes))
 
-        # strip overthing before </
-
-        return response
+    return request
 
 
-def _normalize_openai_compatible_model_name(model_name: str | None) -> str | None:
-    if model_name is None or "/" not in model_name:
-        return model_name
+def add_provider(
+    prefix: str, provider_map: MultiProviderMap, *, university_hooks: bool = False
+):
+    base_url = os.getenv(f"{prefix.upper()}_BASE_URL")
+    api_key = os.getenv(f"{prefix.upper()}_API_KEY")
 
-    known_prefixes = {"openai", "litellm", "any-llm"}
-    prefix = model_name.split("/", 1)[0]
+    if not base_url:
+        logging.warning(f"{prefix.upper()}_BASE_URL not set; skipping provider registration.")
+        return
 
-    if prefix in known_prefixes:
-        return model_name
-
-    # Route unknown prefixes through the OpenAI provider alias so OpenAI-compatible
-    # backends can still receive namespaced model IDs like "unsloth/...".
-    return f"openai/{model_name}"
+    client = AsyncOpenAI(
+        base_url=base_url,
+        api_key=api_key,
+        http_client=httpx.AsyncClient(event_hooks={"request": [modify_request_hook]})
+        if university_hooks
+        else None,
+    )
+    provider =  OpenAIProvider(
+        openai_client=client,
+        use_responses=False if university_hooks else None,
+    )
+    provider_map.register_provider(prefix.lower(), provider)
 
 
 def initialize(
     log_name: str = f"{datetime.now().strftime('%Y-%m-%d %H-%M-%S')}",
     log_dir: Path = Path("../.logs"),
     cache_dir: Path = Path("../.cache"),
-    provider: Literal["OpenAI", "University", "Work"] = "OpenAI",
     throw_on_cache_miss: bool = False,
     disable_cache: bool = False,
 ):
@@ -112,70 +128,21 @@ def initialize(
         )
         sys.exit(1)
 
-    # Set up OpenAI Client
-    if provider == "OpenAI":
-        coordinator_model = _normalize_openai_compatible_model_name(
-            os.getenv("OPENAI_COORDINATOR_MODEL")
-        )
-        data_model = _normalize_openai_compatible_model_name(
-            os.getenv("OPENAI_DATA_MODEL")
-        )
+    # Build one OpenAIProvider per backend and register them by prefix.
+    # AgentConfiguration.model strings use these prefixes (e.g. "university/unsloth/MiniMax-M3").
+    provider_map = MultiProviderMap()
+    add_provider("OPENAI", provider_map=provider_map)
+    add_provider("UNIVERSITY", provider_map=provider_map, university_hooks=True)
+    add_provider("WORK", provider_map=provider_map)
+    multi_provider = MultiProvider(provider_map=provider_map)
+    set_multi_provider(multi_provider)
 
-        custom_client = APIClient(
-            base_url=os.getenv("OPENAI_BASE_URL"), api_key=os.getenv("OPENAI_API_KEY")
-        )
-        set_agent_models(coordinator_model, data_model)
-        logging.info(f"OpenAI base URL: {os.getenv('OPENAI_BASE_URL')}")
-        logging.info(
-            f"OpenAI API key: {'set' if os.getenv('OPENAI_API_KEY') else 'not set'}"
-        )
-        logging.info(f"OpenAI coordinator model: {coordinator_model}")
-        logging.info(f"OpenAI data model: {data_model}")
-    elif provider == "University":
-        coordinator_model = _normalize_openai_compatible_model_name(
-            os.getenv("UNIVERSITY_COORDINATOR_MODEL")
-        )
-        data_model = _normalize_openai_compatible_model_name(
-            os.getenv("UNIVERSITY_DATA_MODEL")
-        )
-
-        custom_client = APIClient(
-            base_url=os.getenv("UNIVERSITY_BASE_URL"),
-            api_key=os.getenv("UNIVERSITY_API_KEY"),
-        )
-        set_agent_models(coordinator_model, data_model)
-        logging.info(f"University base URL: {os.getenv('UNIVERSITY_BASE_URL')}")
-        logging.info(
-            f"University API key: {'set' if os.getenv('UNIVERSITY_API_KEY') else 'not set'}"
-        )
-        logging.info(f"University coordinator model: {coordinator_model}")
-        logging.info(f"University data model: {data_model}")
-    elif provider == "Work":
-        coordinator_model = _normalize_openai_compatible_model_name(
-            os.getenv("WORK_COORDINATOR_MODEL")
-        )
-        data_model = _normalize_openai_compatible_model_name(
-            os.getenv("WORK_DATA_MODEL")
-        )
-
-        custom_client = APIClient(
-            base_url=os.getenv("WORK_BASE_URL"), api_key=os.getenv("WORK_API_KEY")
-        )
-        set_agent_models(coordinator_model, data_model)
-        logging.info(f"Work base URL: {os.getenv('WORK_BASE_URL')}")
-        logging.info(
-            f"Work API key: {'set' if os.getenv('WORK_API_KEY') else 'not set'}"
-        )
-        logging.info(f"Work coordinator model: {coordinator_model}")
-        logging.info(f"Work data model: {data_model}")
-    else:
-        raise ValueError(f"Unsupported provider: {provider}")
-    set_default_openai_client(custom_client)
-
+    # Set up tracing
     # Keep OpenAI trace export enabled, but trim payload fields before upload.
     # Langfuse and file exporters below still receive full, untruncated spans.
     tracing_api_key = os.getenv("OPENAI_API_KEY")
     if tracing_api_key:
+        set_tracing_export_api_key(tracing_api_key)
         max_field_bytes = int(os.getenv("OPENAI_TRACING_MAX_FIELD_BYTES", "9500"))
         openai_exporter = TruncatingBackendSpanExporter(
             api_key=tracing_api_key,
@@ -187,7 +154,6 @@ def initialize(
             "No OpenAI tracing API key found; OpenAI trace export is disabled."
         )
 
-    # Set up tracing
     tracing_log_file = log_dir / f"{log_name}_traces.jsonl"
     nest_asyncio.apply()
     trace.get_tracer_provider().add_span_processor(  # type: ignore

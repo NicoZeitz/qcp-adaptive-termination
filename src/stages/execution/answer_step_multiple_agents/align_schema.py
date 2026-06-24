@@ -1,6 +1,11 @@
 import uuid
 from collections import OrderedDict
-from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult, function_tool
+from agents import (
+    FunctionToolResult,
+    RunContextWrapper,
+    ToolsToFinalOutputResult,
+    function_tool,
+)
 from pandas import DataFrame
 
 
@@ -49,9 +54,15 @@ async def align_schema(
         keys_set = OrderedDict.fromkeys(keys)
         columns_set = OrderedDict.fromkeys(columns)
 
-        validate_schema_output(set(columns_set), set(keys_set), value_column, source_agent_column, aggregation_type)
+        validate_schema_output(
+            set(columns_set),
+            set(keys_set),
+            value_column,
+            source_agent_column,
+            aggregation_type,
+        )
 
-        schema_metadata=AlignedSchemaMetadata(
+        schema_metadata = AlignedSchemaMetadata(
             aggregation_type=aggregation_type,
             keys=list(keys_set),
             value_column=value_column,

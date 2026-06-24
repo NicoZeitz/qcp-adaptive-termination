@@ -19,12 +19,16 @@ def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata)
         if extra:
             parts.append(f"unexpected columns: {extra}")
 
-        errors.append(f"Output does not match the required schema — {'; '.join(parts)}. Expected exactly: {sorted(expected)}")
+        errors.append(
+            f"Output does not match the required schema — {'; '.join(parts)}. Expected exactly: {sorted(expected)}"
+        )
 
     # if there is a value column, check that it is not empty and numeric
     if metadata.value_column is not None:
         if metadata.value_column not in dataframe.columns:
-            errors.append(f"Column '{metadata.value_column}' is missing from the output")
+            errors.append(
+                f"Column '{metadata.value_column}' is missing from the output"
+            )
         else:
             if dataframe[metadata.value_column].isnull().all():
                 errors.append(f"Column '{metadata.value_column}' cannot be empty")
@@ -33,6 +37,7 @@ def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata)
 
     if len(errors) > 0:
         raise ValueError("\n".join(errors))
+
 
 def validate_schema_output(
     columns: set[str],

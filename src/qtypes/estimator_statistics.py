@@ -6,7 +6,7 @@ from qtypes.aligned_result_list import AggregationType
 class EstimatorStatistics(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    sample_coverage: float
+    sample_coverage: float | None = None
     new_unique_count: int
     agents_queried: int
     agents_total: int

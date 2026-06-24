@@ -19,22 +19,32 @@ from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResu
 from typing import Any, Callable
 
 
-def build_estimator_summary(estimator_statistics: EstimatorStatistics) -> str:
-    summary = (
-        f"Aggregation type: {estimator_statistics.aggregation_type}\n"
-        f"Agents queried: {estimator_statistics.agents_queried} /  {estimator_statistics.agents_total} ({estimator_statistics.agents_queried / estimator_statistics.agents_total:.2%})\n"
-        f"New unique entries added by this agent: {estimator_statistics.new_unique_count}\n"
-        f"Sample Coverage: {estimator_statistics.sample_coverage:.3f}\n"
+def build_estimator_summary(
+    estimator_statistics: EstimatorStatistics, *, include_aggregation_type: bool = True
+) -> str:
+    agg = estimator_statistics.aggregation_type
+    lines = []
+    if include_aggregation_type:
+        lines.append(f"Aggregation type: {agg}")
+    lines.append(
+        f"Agents queried: {estimator_statistics.agents_queried} /  {estimator_statistics.agents_total} ({estimator_statistics.agents_queried / estimator_statistics.agents_total:.2%})"
     )
-    summary += f"Observed {estimator_statistics.aggregation_type}: {estimator_statistics.observed_value}\n"
-    summary += f"Estimated {estimator_statistics.aggregation_type}: {estimator_statistics.estimated_value}\n"
-    if (
-        estimator_statistics.estimated_value_lower is not None
-        and estimator_statistics.estimated_value_upper is not None
-    ):
-        summary += f"Estimated {estimator_statistics.aggregation_type} confidence interval: [{estimator_statistics.estimated_value_lower}, {estimator_statistics.estimated_value_upper}]\n"
-
-    return summary
+    lines.append(
+        f"New unique entries added by this agent: {estimator_statistics.new_unique_count}"
+    )
+    if estimator_statistics.sample_coverage is not None:
+        lines.append(f"Sample Coverage: {estimator_statistics.sample_coverage:.3f}")
+    lines.append(f"Observed {agg}: {estimator_statistics.observed_value}")
+    if estimator_statistics.estimated_value is not None:
+        lines.append(f"Estimated {agg}: {estimator_statistics.estimated_value:.3f}")
+        if (
+            estimator_statistics.estimated_value_lower is not None
+            and estimator_statistics.estimated_value_upper is not None
+        ):
+            lines.append(
+                f"Estimated {agg} confidence interval: [{estimator_statistics.estimated_value_lower:.3f}, {estimator_statistics.estimated_value_upper:.3f}]"
+            )
+    return "\n".join(lines)
 
 
 def build_previous_statistics_summary(
@@ -44,10 +54,11 @@ def build_previous_statistics_summary(
         return None
 
     lines = []
-    for estimator_statistic in previous_estimator_statistics:
-        summary = build_estimator_summary(estimator_statistic)
-        lines.append(summary)
-    return "\n\n".join(lines)
+    for estimator_statistic in reversed(previous_estimator_statistics):
+        lines.append(
+            build_estimator_summary(estimator_statistic, include_aggregation_type=False)
+        )
+    return "\n".join(lines)
 
 
 async def run_completeness_evaluator(

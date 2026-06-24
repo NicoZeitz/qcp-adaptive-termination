@@ -35,7 +35,6 @@ async def main(
     log_dir: Path,
     start_stage: int,
     end_stage: int,
-    provider: Literal["OpenAI", "University", "Work"],
     throw_on_cache_miss: bool = False,
     disable_cache: bool = False,
 ):
@@ -56,13 +55,12 @@ async def main(
         log_filename,
         log_dir,
         cache_dir,
-        provider,
         throw_on_cache_miss,
         disable_cache,
     )
 
     logging.info(
-        f"NZ: Running {stages_mapping[start_stage]} - {stages_mapping[end_stage]}: for input path {input_file} with provider {provider}"
+        f"NZ: Running {stages_mapping[start_stage]} - {stages_mapping[end_stage]}: for input path {input_file}"
     )
 
     tracer = otel_trace.get_tracer(__name__)
@@ -70,7 +68,6 @@ async def main(
         trace(
             trace_label,
             metadata={
-                "provider": provider,
                 "start_stage": str(start_stage),
                 "end_stage": str(end_stage),
                 "name": name,
@@ -219,13 +216,6 @@ if __name__ == "__main__":
         help="Stage after which to end execution (default: 3)",
     )
     parser.add_argument(
-        "--provider",
-        type=str,
-        choices=["OpenAI", "University", "Work"],
-        default="OpenAI",
-        help="Provider to use for the agents (default: OpenAI)",
-    )
-    parser.add_argument(
         "--throw-on-cache-miss",
         action="store_true",
         help="Whether to throw an error if cache miss occurs",
@@ -245,7 +235,6 @@ if __name__ == "__main__":
             Path(args.log_dir),
             args.start_stage,
             args.end_stage,
-            args.provider,
             args.throw_on_cache_miss,
             args.disable_cache,
         )

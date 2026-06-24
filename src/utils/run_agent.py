@@ -4,6 +4,7 @@ from agents import (
     Agent,
     FunctionTool,
     ModelSettings,
+    RunConfig,
     Runner,
     TResponseInputItem,
     Tool,
@@ -13,6 +14,7 @@ from agents.run_config import DEFAULT_MAX_TURNS
 from pydantic import BaseModel, JsonValue
 
 from qtypes.agent_configuration import AgentConfiguration
+from stages.common.agent_configuration import get_multi_provider
 from utils.cache import CacheMode, cached
 from utils.load_prompt import load_prompt
 from utils.span import indented_logging
@@ -70,7 +72,7 @@ async def run_agent[TResult](
     )
     async def compute_value(
         agent_name: str,
-        agent_configuration: AgentConfiguration,
+        # agent_configuration: AgentConfiguration,
         instructions: str,
         prompts: list[dict[str, str]],
         context: JsonValue,
@@ -104,12 +106,13 @@ async def run_agent[TResult](
             cast(list[TResponseInputItem], prompts),
             context=context,
             max_turns=agent_configuration.max_turns or DEFAULT_MAX_TURNS,
+            run_config=RunConfig(model_provider=get_multi_provider()),
         )
         return result.final_output
 
     return await compute_value(
         agent_name,
-        agent_configuration,
+        # agent_configuration,
         instructions["content"],
         prompts=list(
             map(lambda p: {"role": p["role"], "content": p["content"]}, prompts),

@@ -1,53 +1,57 @@
+from agents import MultiProvider
 from openai.types.shared import Reasoning
 
 from qtypes.agent_configuration import AgentConfiguration
 from qtypes.data_agent import DataAgent
 
-coordinator_reasoning_mapping: dict[str, Reasoning] = {
-    "Relevance": Reasoning(effort="low", summary="concise"),
-    "Planning": Reasoning(effort="high", summary="concise"),
-    "Code": Reasoning(effort="low", summary="concise"),
-    "Replanning": Reasoning(effort="high", summary="concise"),
-    "Align Schema First": Reasoning(effort="low", summary="concise"),
-    "Align Schema Continue": Reasoning(effort="low", summary="concise"),
-    "Completeness Evaluator": Reasoning(effort="low", summary="concise"),
+OPENAI_MODEL = "openai/gpt-5"
+UNIVERSITY_MODEL = "university/unsloth/MiniMax-M3"
+WORK_MODEL = "work/gpt-5"
+
+_multi_provider: MultiProvider | None = None
+
+def set_multi_provider(provider: MultiProvider) -> None:
+    global _multi_provider
+    _multi_provider = provider
+
+def get_multi_provider() -> MultiProvider:
+    if _multi_provider is None:
+        raise RuntimeError("MultiProvider not initialized — call initialize() first")
+    return _multi_provider
+
+
+# ---------------------------------------------------------------------------
+# Per-role coordinator config
+# ---------------------------------------------------------------------------
+_coordinator_config: dict[str, tuple[str, Reasoning]] = {
+    "Default": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Relevance": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Planning": (OPENAI_MODEL, Reasoning(effort="high", summary="concise")),
+    "Code": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Replanning": (OPENAI_MODEL, Reasoning(effort="high", summary="concise")),
+    "Align Schema": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Completeness Evaluator": (UNIVERSITY_MODEL, Reasoning(effort="none")),
 }
 
-data_agent_reasoning_mapping: dict[str, Reasoning] = {
-    "Schema Description": Reasoning(effort="minimal", summary="concise"),
-    "Relevance": Reasoning(effort="low", summary="concise"),
-    "Summary": Reasoning(effort="low", summary="concise"),
-    "Code": Reasoning(effort="low", summary="concise"),
+# ---------------------------------------------------------------------------
+# Per-role data agent config
+# ---------------------------------------------------------------------------
+_data_agent_config: dict[str, tuple[str, Reasoning]] = {
+    "Default": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Schema Description": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Relevance": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Summary": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Code": (UNIVERSITY_MODEL, Reasoning(effort="none")),
 }
-
-coordinator_agent_model = "gpt-5"
-data_agent_model = "gpt-5"
-
-
-def set_agent_models(coordinator_model: str | None, data_model: str | None):
-    global coordinator_agent_model, data_agent_model
-    if coordinator_model is not None:
-        coordinator_agent_model = coordinator_model
-    if data_model is not None:
-        data_agent_model = data_model
-
-
-def get_coordinator_agent_model() -> str:
-    return coordinator_agent_model
-
-
-def get_data_agent_model() -> str:
-    return data_agent_model
 
 
 def get_coordinator_agent_configuration(name_postfix: str) -> AgentConfiguration:
-    reasoning = coordinator_reasoning_mapping.get(
-        name_postfix, Reasoning(effort="high", summary="concise")
+    model, reasoning = _coordinator_config.get(
+        name_postfix, _coordinator_config["Default"]
     )
-
     return AgentConfiguration(
         name=f"Query Coordinator - {name_postfix}",
-        model=get_coordinator_agent_model(),
+        model=model,
         reasoning=reasoning,
     )
 
@@ -55,12 +59,11 @@ def get_coordinator_agent_configuration(name_postfix: str) -> AgentConfiguration
 def get_data_agent_agent_configuration(
     data_agent: DataAgent, name_postfix: str
 ) -> AgentConfiguration:
-    reasoning = data_agent_reasoning_mapping.get(
-        name_postfix, Reasoning(effort="medium", summary="concise")
+    model, reasoning = _data_agent_config.get(
+        name_postfix, _data_agent_config["Default"]
     )
-
     return AgentConfiguration(
         name=f"{data_agent.name} - {name_postfix}",
-        model=get_data_agent_model(),
+        model=model,
         reasoning=reasoning,
     )
