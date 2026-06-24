@@ -10,7 +10,9 @@ from agents import (
     Tool,
     ToolsToFinalOutputFunction,
 )
+from agents.exceptions import ModelBehaviorError
 from agents.run_config import DEFAULT_MAX_TURNS
+from openai.types.responses import ResponseFunctionToolCall
 from pydantic import BaseModel, JsonValue
 
 from qtypes.agent_configuration import AgentConfiguration
@@ -101,13 +103,42 @@ async def run_agent[TResult](
         )
 
         indented_logging(f"Running agent: {agent_name}")
-        result = await Runner.run(
-            agent,
-            cast(list[TResponseInputItem], prompts),
-            context=context,
-            max_turns=agent_configuration.max_turns or DEFAULT_MAX_TURNS,
-            run_config=RunConfig(model_provider=get_multi_provider()),
-        )
+        available_tools = [t.name for t in tools] if tools else []
+
+        try:
+            result = await Runner.run(
+                agent,
+                cast(list[TResponseInputItem], prompts),
+                context=context,
+                max_turns=agent_configuration.max_turns or DEFAULT_MAX_TURNS,
+                run_config=RunConfig(model_provider=get_multi_provider()),
+            )
+        except ModelBehaviorError as e:
+            if e.run_data is None:
+                raise
+            last_response = e.run_data.raw_responses[-1]
+            history = [item.to_input_item() for item in e.run_data.new_items]
+            error_outputs: list[TResponseInputItem] = [
+                {
+                    "type": "function_call_output",
+                    "call_id": item.call_id,
+                    "output": (
+                        f"Error: tool '{item.name}' does not exist. "
+                        f"Available tools: {available_tools}. "
+                        f"Use only those."
+                    ),
+                }
+                for item in last_response.output
+                if isinstance(item, ResponseFunctionToolCall)
+                and item.name not in available_tools
+            ]
+            result = await Runner.run(
+                agent,
+                cast(list[TResponseInputItem], prompts) + history + error_outputs,
+                context=context,
+                max_turns=agent_configuration.max_turns or DEFAULT_MAX_TURNS,
+                run_config=RunConfig(model_provider=get_multi_provider()),
+            )
         return result.final_output
 
     return await compute_value(
