@@ -195,9 +195,13 @@ async def main(
                     traces_file = log_dir / f"{log_filename}_traces.jsonl"
                     reasoning_by_n = None
                     if traces_file.exists():
-                        reasoning_by_n = load_reasoning_by_agents_queried(str(traces_file))
+                        reasoning_by_n = load_reasoning_by_agents_queried(
+                            str(traces_file)
+                        )
                         if reasoning_by_n:
-                            save_reasoning_text(series, reasoning_by_n, run_prefix + ".txt")
+                            save_reasoning_text(
+                                series, reasoning_by_n, run_prefix + ".txt"
+                            )
 
                     plot(series, count_gt, value_gt, run_prefix)
                     logging.info(f"Plots saved to {run_prefix}.png/.svg/.pdf")

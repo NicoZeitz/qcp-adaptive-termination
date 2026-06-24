@@ -3,7 +3,7 @@ from typing import cast
 
 from agents import Span
 import pandas as pd
-from agents import CustomSpanData, Span
+from agents import CustomSpanData
 
 from qtypes.additional_information import AdditionalInformation
 from qtypes.aligned_result_list import AlignedResultList
@@ -121,7 +121,10 @@ async def run_agent_batch(
             partial_dfs: list[pd.DataFrame] = []
             for agent_name, need_outcome in need_results:
                 merged_needs.extend(need_outcome.needs)
-                if need_outcome.has_partial_answer and need_outcome.partial_answer is not None:
+                if (
+                    need_outcome.has_partial_answer
+                    and need_outcome.partial_answer is not None
+                ):
                     partial_dfs.append(need_outcome.partial_answer)
                 iteration_records.append(
                     MultiAgentIterationRecord(
@@ -142,7 +145,12 @@ async def run_agent_batch(
                 partial_answer=merged_partial,
                 has_partial_answer=merged_partial is not None,
             )
-            append_to_span_output({"outcome": combined_need_outcome, "agents_with_needs": [a for a, _ in need_results]})
+            append_to_span_output(
+                {
+                    "outcome": combined_need_outcome,
+                    "agents_with_needs": [a for a, _ in need_results],
+                }
+            )
             return combined_need_outcome
 
         # Merge and compute stats incrementally, as if agents were queried in sequence
@@ -266,7 +274,7 @@ async def answer_step_multiple_agents(
             "answer": answer,
         }
     )
-    MULTI_AGENT_ITERATION_RECORDS[f"{query_plan_step.id} {cast(Span[CustomSpanData], span_context_var.get()).span_id}"] = (
-        iteration_records
-    )
+    MULTI_AGENT_ITERATION_RECORDS[
+        f"{query_plan_step.id} {cast(Span[CustomSpanData], span_context_var.get()).span_id}"
+    ] = iteration_records
     return answer

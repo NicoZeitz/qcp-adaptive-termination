@@ -47,7 +47,11 @@ async def answer_query_sql_data_agent(
 ) -> PartialQueryAnswer:
     with own_custom_span(
         f"Data Agent {data_agent.name} - answer_query",
-        input={"query": query, "additional_information": additional_information},
+        input={
+            "query": query,
+            "additional_information": additional_information,
+            "schema_metadata": schema_metadata,
+        },
     ):
         db_engine = get_db_engine(data_agent)
         m_schema = await data_agent_data_description(data_agent)

@@ -21,6 +21,7 @@ import json
 import sys
 import textwrap
 from pathlib import Path
+import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
@@ -79,7 +80,9 @@ def load_reasoning_by_agents_queried(traces_path: str) -> dict[int, list[str]]:
         agents_queried = inp.get("estimator_statistics", {}).get("agents_queried")
         if agents_queried is None:
             continue
-        ce_windows.append((int(agents_queried), s.get("start_time", 0), s.get("end_time", 0)))
+        ce_windows.append(
+            (int(agents_queried), s.get("start_time", 0), s.get("end_time", 0))
+        )
 
     # Collect generation spans and extract reasoning from message content
     result: dict[int, list[str]] = {}
@@ -102,7 +105,9 @@ def load_reasoning_by_agents_queried(traces_path: str) -> dict[int, list[str]]:
         if not raw_output:
             continue
         try:
-            choices = json.loads(raw_output) if isinstance(raw_output, str) else raw_output
+            choices = (
+                json.loads(raw_output) if isinstance(raw_output, str) else raw_output
+            )
         except (json.JSONDecodeError, TypeError):
             continue
         for choice in choices if isinstance(choices, list) else []:
@@ -117,6 +122,7 @@ def extract_series(records: list[dict]) -> dict:
     agents_queried = []
     observed_values, estimated_values, lower_bounds, upper_bounds = [], [], [], []
     observed_counts, estimated_counts, count_lowers, count_uppers = [], [], [], []
+    sample_coverages = []
     decisions = []
 
     for rec in records:
@@ -130,6 +136,7 @@ def extract_series(records: list[dict]) -> dict:
         estimated_counts.append(est.get("estimated_count"))
         count_lowers.append(est.get("estimated_count_lower"))
         count_uppers.append(est.get("estimated_count_upper"))
+        sample_coverages.append(est.get("sample_coverage"))
         decisions.append(rec.get("evaluator_decision"))
 
     last = records[-1]["estimator_result"]
@@ -143,6 +150,7 @@ def extract_series(records: list[dict]) -> dict:
         "estimated_count": estimated_counts,
         "count_lower": count_lowers,
         "count_upper": count_uppers,
+        "sample_coverage": sample_coverages,
         "decisions": decisions,
         "aggregation_type": last.get("aggregation_type", "value"),
         "last_observed_value": last.get("observed_value"),
@@ -160,6 +168,7 @@ def human_format(value, _pos):
 
 def nice_step(range_size: float, target_ticks: int = 8) -> float:
     import math
+
     if range_size == 0:
         return 1.0
     raw = range_size / target_ticks
@@ -179,24 +188,66 @@ def draw_decision_markers(ax, x: list, decisions: list) -> None:
         if dec is None:
             continue
         color = DECISION_COLORS.get(dec, DECISION_DEFAULT_COLOR)
-        ax.plot(xi, 0.02, marker="^", markersize=7, color=color,
-                transform=trans, clip_on=False, zorder=5,
-                label=dec if dec not in seen else "_nolegend_")
+        ax.plot(
+            xi,
+            0.02,
+            marker="^",
+            markersize=7,
+            color=color,
+            transform=trans,
+            clip_on=False,
+            zorder=5,
+            label=dec if dec not in seen else "_nolegend_",
+        )
         seen.add(dec)
 
 
-def draw_estimation_panel(ax, x, ground_truth,
-                          observed, estimated, lower, upper,
-                          obs_label, est_label, y_label, title,
-                          decisions, *, clip_bands: bool = True) -> None:
-    ax.axhline(ground_truth, color="#ef4444", linewidth=1.5,
-               linestyle="--", label=f"Ground truth ({ground_truth:,.0f})", zorder=2)
+def draw_estimation_panel(
+    ax,
+    x,
+    ground_truth,
+    observed,
+    estimated,
+    lower,
+    upper,
+    y_label,
+    title,
+    decisions,
+    *,
+    clip_bands: bool = True,
+    y_formatter=None,
+) -> None:
+    ax.axhline(
+        ground_truth,
+        color="#ef4444",
+        linewidth=1.5,
+        linestyle="--",
+        label="_nolegend_",
+        zorder=2,
+    )
 
     x_obs = [x[i] for i, v in enumerate(observed) if v is not None]
     y_obs = [v for v in observed if v is not None]
     if x_obs:
-        ax.plot(x_obs, y_obs, color="#6366f1", linewidth=1.5,
-                marker="o", markersize=4, label=obs_label, zorder=3)
+        ax.plot(
+            x_obs,
+            y_obs,
+            color="#6366f1",
+            linewidth=1.5,
+            marker="o",
+            markersize=4,
+            label="Observed",
+            zorder=3,
+        )
+        fmt = y_formatter if y_formatter else human_format
+        ax.annotate(
+            fmt(y_obs[-1], None),
+            xy=(x_obs[-1], y_obs[-1]),
+            xytext=(4, 4),
+            textcoords="offset points",
+            fontsize=7,
+            color="#6366f1",
+        )
 
     est_x, est_y, est_lo, est_hi = [], [], [], []
     for i, v in enumerate(estimated):
@@ -208,10 +259,28 @@ def draw_estimation_panel(ax, x, ground_truth,
             est_hi.append(hi)
 
     if est_x:
-        ax.plot(est_x, est_y, color="#f97316", linewidth=1.5,
-                marker="s", markersize=4, label=est_label, zorder=3)
-        ax.fill_between(est_x, est_lo, est_hi,
-                        color="#f97316", alpha=0.15, label=f"{est_label} bounds")
+        ax.plot(
+            est_x,
+            est_y,
+            color="#f97316",
+            linewidth=1.5,
+            marker="s",
+            markersize=4,
+            label="Estimated",
+            zorder=3,
+        )
+        ax.fill_between(
+            est_x, est_lo, est_hi, color="#f97316", alpha=0.15, label="Estimated bounds"
+        )
+        fmt = y_formatter if y_formatter else human_format
+        ax.annotate(
+            fmt(est_y[-1], None),
+            xy=(est_x[-1], est_y[-1]),
+            xytext=(4, -10),
+            textcoords="offset points",
+            fontsize=7,
+            color="#f97316",
+        )
 
     # y-axis limits:
     # clip_bands=True  — anchor to observed+estimated only, tight margin
@@ -236,21 +305,92 @@ def draw_estimation_panel(ax, x, ground_truth,
     if anchor:
         y_min, y_max = min(anchor), max(anchor)
         span = max(abs(y_max - y_min), abs(y_max) * 0.01)
-        step = nice_step(y_max - y_min)
+        ylim_range = (y_max - y_min) + 2 * span * margin
+        step = nice_step(ylim_range)
         ax.yaxis.set_major_locator(ticker.MultipleLocator(step))
         ax.set_ylim(y_min - span * margin, y_max + span * margin)
 
     draw_decision_markers(ax, x, decisions)
 
     ax.set_xlabel("Agents queried")
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     ax.set_ylabel(y_label)
-    ax.yaxis.set_major_formatter(ticker.FuncFormatter(human_format))
-    ax.legend(loc="upper right", fontsize=8)
+    fmt = y_formatter if y_formatter else human_format
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(fmt))
+
+    # Annotate ground truth value on the right y-axis
+    ax2 = ax.twinx()
+    ax2.set_ylim(ax.get_ylim())
+    gt_fmt = y_formatter if y_formatter else human_format
+    ax2.set_yticks([ground_truth])
+    ax2.set_yticklabels([gt_fmt(ground_truth, None)], color="#ef4444", fontsize=8)
+    ax2.tick_params(axis="y", length=0)
+    ax2.yaxis.set_tick_params(pad=2)
+
     ax.grid(True, alpha=0.3)
     ax.set_title(title)
 
 
-def save_reasoning_text(series: dict, reasoning_by_n: dict[int, list[str]], output_path: str) -> None:
+def draw_coverage_panel(ax, x, coverage, observed_count, count_gt, decisions) -> None:
+    """Plot sample_coverage (0–1) and actual observed/gt coverage, y-axis fixed to [0, 1]."""
+    x_cov = [x[i] for i, v in enumerate(coverage) if v is not None]
+    y_cov = [v for v in coverage if v is not None]
+    if x_cov:
+        ax.plot(
+            x_cov,
+            y_cov,
+            color="#f97316",
+            linewidth=1.5,
+            marker="s",
+            markersize=4,
+            label="Sample coverage",
+            zorder=3,
+        )
+        ax.annotate(
+            f"{y_cov[-1]:.0%}",
+            xy=(x_cov[-1], y_cov[-1]),
+            xytext=(4, -10),
+            textcoords="offset points",
+            fontsize=7,
+            color="#f97316",
+        )
+
+    if count_gt:
+        x_act = [x[i] for i, v in enumerate(observed_count) if v is not None]
+        y_act = [v / count_gt for v in observed_count if v is not None]
+        if x_act:
+            ax.plot(
+                x_act,
+                y_act,
+                color="#6366f1",
+                linewidth=1.5,
+                marker="o",
+                markersize=4,
+                label="Observed / ground truth",
+                zorder=3,
+            )
+            ax.annotate(
+                f"{y_act[-1]:.0%}",
+                xy=(x_act[-1], y_act[-1]),
+                xytext=(4, 4),
+                textcoords="offset points",
+                fontsize=7,
+                color="#6366f1",
+            )
+
+    ax.set_ylim(0, 1)
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f"{v:.0%}"))
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    ax.set_xlabel("Agents queried")
+    ax.set_ylabel("Coverage")
+    draw_decision_markers(ax, x, decisions)
+    ax.grid(True, alpha=0.3)
+    ax.set_title("Sample coverage")
+
+
+def save_reasoning_text(
+    series: dict, reasoning_by_n: dict[int, list[str]], output_path: str
+) -> None:
     lines = []
     for n, dec in zip(series["agents_queried"], series["decisions"]):
         texts = reasoning_by_n.get(n)
@@ -258,53 +398,110 @@ def save_reasoning_text(series: dict, reasoning_by_n: dict[int, list[str]], outp
             continue
         full = "\n\n".join(texts)
         header = f"[agents_queried={n}  decision={dec}]"
-        wrapped = textwrap.fill(full, width=REASONING_WRAP_WIDTH, subsequent_indent="    ")
+        wrapped = textwrap.fill(
+            full, width=REASONING_WRAP_WIDTH, subsequent_indent="    "
+        )
         lines.append(f"{header}\n{wrapped}")
-    Path(output_path).write_text("\n\n" + ("\n\n" + "—" * 80 + "\n\n").join(lines) + "\n")
+    Path(output_path).write_text(
+        "\n\n" + ("\n\n" + "—" * 80 + "\n\n").join(lines) + "\n"
+    )
     print(f"Reasoning saved to {output_path}")
 
 
-def plot(series: dict, count_gt: float, value_gt: float, output_path: str,
-         show: bool = False) -> None:
+def plot(
+    series: dict, count_gt: float, value_gt: float, output_path: str, show: bool = False
+) -> None:
     agg = series["aggregation_type"]
     x = series["agents_queried"]
 
-    fig, axes = plt.subplots(2, 2, figsize=(18, 12))
-    fig.subplots_adjust(hspace=0.35, wspace=0.25)
+    # Layout: 2 rows × 3 columns
+    #   [0,0] coverage  |  [0,1] count full CI  |  [0,2] value full CI
+    #   [1,0] empty     |  [1,1] count zoomed    |  [1,2] value zoomed
+    fig, axes = plt.subplots(2, 3, figsize=(24, 12))
+    fig.subplots_adjust(hspace=0.35, wspace=0.3)
 
-    common = dict(
+    draw_coverage_panel(
+        axes[0, 0],
+        x,
+        series["sample_coverage"],
+        series["observed_count"],
+        count_gt,
+        series["decisions"],
+    )
+    axes[1, 0].set_visible(False)
+
+    count_common = dict(
         observed=series["observed_count"],
         estimated=series["estimated_count"],
         lower=series["count_lower"],
         upper=series["count_upper"],
-        obs_label="Observed count",
-        est_label="Estimated count",
         y_label="Count",
         decisions=series["decisions"],
     )
-    draw_estimation_panel(axes[0, 0], x, count_gt, **common,
-                          title="Count — full confidence interval", clip_bands=False)
-    draw_estimation_panel(axes[1, 0], x, count_gt, **common,
-                          title="Count — zoomed", clip_bands=True)
+    draw_estimation_panel(
+        axes[0, 1],
+        x,
+        count_gt,
+        **count_common,
+        title="Count — full confidence interval",
+        clip_bands=False,
+    )
+    draw_estimation_panel(
+        axes[1, 1], x, count_gt, **count_common, title="Count — zoomed", clip_bands=True
+    )
 
-    common = dict(
+    value_common = dict(
         observed=series["observed_value"],
         estimated=series["estimated_value"],
         lower=series["lower"],
         upper=series["upper"],
-        obs_label=f"Observed {agg}",
-        est_label=f"Estimated {agg}",
         y_label=agg.capitalize(),
         decisions=series["decisions"],
     )
-    draw_estimation_panel(axes[0, 1], x, value_gt, **common,
-                          title=f"{agg.capitalize()} — full confidence interval", clip_bands=False)
-    draw_estimation_panel(axes[1, 1], x, value_gt, **common,
-                          title=f"{agg.capitalize()} — zoomed", clip_bands=True)
+    draw_estimation_panel(
+        axes[0, 2],
+        x,
+        value_gt,
+        **value_common,
+        title=f"{agg.capitalize()} — full confidence interval",
+        clip_bands=False,
+    )
+    draw_estimation_panel(
+        axes[1, 2],
+        x,
+        value_gt,
+        **value_common,
+        title=f"{agg.capitalize()} — zoomed",
+        clip_bands=True,
+    )
 
-    fig.savefig(str(Path(output_path).with_suffix(".png")), dpi=150, bbox_inches="tight")
-    fig.savefig(str(Path(output_path).with_suffix(".svg")), dpi=150, bbox_inches="tight")
-    fig.savefig(str(Path(output_path).with_suffix(".pdf")), dpi=150, bbox_inches="tight")
+    # Single shared legend — combine coverage panel handles with estimation panel handles
+    cov_handles, cov_labels = axes[0, 0].get_legend_handles_labels()
+    est_handles, est_labels = axes[0, 1].get_legend_handles_labels()
+    gt_handle = mlines.Line2D(
+        [], [], color="#ef4444", linewidth=1.5, linestyle="--", label="Ground truth"
+    )
+    all_handles = cov_handles + est_handles + [gt_handle]
+    all_labels = cov_labels + est_labels + ["Ground truth"]
+    fig.legend(
+        all_handles,
+        all_labels,
+        loc="lower center",
+        bbox_to_anchor=(0.5, -0.03),
+        ncol=len(all_handles),
+        fontsize=9,
+        frameon=True,
+    )
+
+    fig.savefig(
+        str(Path(output_path).with_suffix(".png")), dpi=150, bbox_inches="tight"
+    )
+    fig.savefig(
+        str(Path(output_path).with_suffix(".svg")), dpi=150, bbox_inches="tight"
+    )
+    fig.savefig(
+        str(Path(output_path).with_suffix(".pdf")), dpi=150, bbox_inches="tight"
+    )
     print(f"Saved to {output_path}")
     if show:
         plt.show()
@@ -336,10 +533,16 @@ def resolve_run_files(run_prefix: str) -> tuple[Path, Path | None]:
 
     iteration_files = sorted(folder.glob(f"{stem} - iteration_records - *.json"))
     if not iteration_files:
-        print(f"Error: no iteration records file found for prefix '{stem}' in {folder}", file=sys.stderr)
+        print(
+            f"Error: no iteration records file found for prefix '{stem}' in {folder}",
+            file=sys.stderr,
+        )
         sys.exit(1)
     if len(iteration_files) > 1:
-        print(f"Warning: multiple iteration records files found, using first: {iteration_files[0].name}", file=sys.stderr)
+        print(
+            f"Warning: multiple iteration records files found, using first: {iteration_files[0].name}",
+            file=sys.stderr,
+        )
 
     traces_file = folder / f"{stem}_traces.jsonl"
     return iteration_files[0], traces_file if traces_file.exists() else None
@@ -351,14 +554,29 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument("run_prefix",
-                        help="Run prefix path, e.g. '../data/runs/foo/Stage 1-3 - 2026-06-24 12-20-04'")
-    parser.add_argument("--count-gt", type=float, default=None, metavar="N",
-                        help="Ground truth for count (default: last record's observed_count)")
-    parser.add_argument("--value-gt", type=float, default=None, metavar="V",
-                        help="Ground truth for the aggregation value (default: last record's observed_value)")
-    parser.add_argument("--show", action="store_true",
-                        help="Display the plot interactively after saving")
+    parser.add_argument(
+        "run_prefix",
+        help="Run prefix path, e.g. '../data/runs/foo/Stage 1-3 - 2026-06-24 12-20-04'",
+    )
+    parser.add_argument(
+        "--count-gt",
+        type=float,
+        default=None,
+        metavar="N",
+        help="Ground truth for count (default: last record's observed_count)",
+    )
+    parser.add_argument(
+        "--value-gt",
+        type=float,
+        default=None,
+        metavar="V",
+        help="Ground truth for the aggregation value (default: last record's observed_value)",
+    )
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Display the plot interactively after saving",
+    )
     args = parser.parse_args()
 
     iteration_file, traces_file = resolve_run_files(args.run_prefix)
@@ -379,18 +597,28 @@ def main() -> None:
         if not reasoning_by_n:
             print("Warning: no reasoning found in trace file.", file=sys.stderr)
 
-    count_gt = args.count_gt if args.count_gt is not None else series["last_observed_count"]
-    value_gt = args.value_gt if args.value_gt is not None else load_final_result_value(args.run_prefix) or series["last_observed_value"]
+    count_gt = (
+        args.count_gt if args.count_gt is not None else series["last_observed_count"]
+    )
+    value_gt = (
+        args.value_gt if args.value_gt is not None else series["last_observed_value"]
+    )
 
     if count_gt is None:
-        print("Warning: no observed_count in records and --count-gt not provided; defaulting to 0.", file=sys.stderr)
+        print(
+            "Warning: no observed_count in records and --count-gt not provided; defaulting to 0.",
+            file=sys.stderr,
+        )
         count_gt = 0
     if value_gt is None:
-        print("Warning: no observed_value in records and --value-gt not provided; defaulting to 0.", file=sys.stderr)
+        print(
+            "Warning: no observed_value in records and --value-gt not provided; defaulting to 0.",
+            file=sys.stderr,
+        )
         value_gt = 0
 
     if reasoning_by_n:
-        txt_path = str(Path(args.run_prefix).with_suffix(" - completeness reasoning.txt"))
+        txt_path = args.run_prefix + " - completeness reasoning.txt"
         save_reasoning_text(series, reasoning_by_n, txt_path)
 
     plot(series, count_gt, value_gt, args.run_prefix, show=args.show)
