@@ -87,10 +87,9 @@ async def run_agent_batch(
     agents_queried_now = agents_queried + batch
     remaining_agents_now = [a for a in agents_remaining if a not in batch]
     batch_label = ", ".join(batch)
-    round_number = len(agents_queried) + 1
 
     with own_custom_span(
-        f"Batch - Round {round_number}: [{batch_label}]",
+        f"Batch: [{batch_label}]",
         input={
             "query": query_plan_step.query,
             "batch": batch,

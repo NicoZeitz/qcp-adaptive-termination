@@ -34,16 +34,25 @@ def build_estimator_summary(
     )
     if estimator_statistics.sample_coverage is not None:
         lines.append(f"Sample Coverage: {estimator_statistics.sample_coverage:.3f}")
-    lines.append(f"Observed {agg}: {estimator_statistics.observed_value}")
-    if estimator_statistics.estimated_value is not None:
-        lines.append(f"Estimated {agg}: {estimator_statistics.estimated_value:.3f}")
-        if (
-            estimator_statistics.estimated_value_lower is not None
-            and estimator_statistics.estimated_value_upper is not None
-        ):
-            lines.append(
-                f"Estimated {agg} confidence interval: [{estimator_statistics.estimated_value_lower:.3f}, {estimator_statistics.estimated_value_upper:.3f}]"
-            )
+
+    lines.append(f"Observed count: {estimator_statistics.observed_count}")
+    if estimator_statistics.estimated_count is not None:
+        lines.append(f"Estimated count: {estimator_statistics.estimated_count:.3f}")
+        lines.append(
+            f"Estimated count confidence interval: [{estimator_statistics.estimated_count_lower:.3f}, {estimator_statistics.estimated_count_upper:.3f}]"
+        )
+
+    if estimator_statistics.observed_value is not None:
+        lines.append(f"Observed {agg}: {estimator_statistics.observed_value}")
+        if estimator_statistics.estimated_value is not None:
+            lines.append(f"Estimated {agg}: {estimator_statistics.estimated_value:.3f}")
+            if (
+                estimator_statistics.estimated_value_lower is not None
+                and estimator_statistics.estimated_value_upper is not None
+            ):
+                lines.append(
+                    f"Estimated {agg} confidence interval: [{estimator_statistics.estimated_value_lower:.3f}, {estimator_statistics.estimated_value_upper:.3f}]"
+                )
     return "\n".join(lines)
 
 

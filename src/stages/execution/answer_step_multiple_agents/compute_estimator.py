@@ -47,6 +47,7 @@ def compute_estimator_statistics(
             agents_total=agents_total,
             aggregation_type=agg,
             new_unique_count=new_unique_count,
+            observed_count=0,
         ), None
 
     if not has_overlap:
@@ -61,16 +62,16 @@ def compute_estimator_statistics(
         agents_total=agents_total,
         aggregation_type=agg,
         new_unique_count=new_unique_count,
+        observed_count=estimator.sample_count(),
     )
 
-    if agg == "count":
-        result.observed_value = estimator.sample_count()
-        if has_overlap:
-            result.estimated_value = estimator.estimated_count()
-            lower, upper = estimator.estimated_count_bounds()
-            result.estimated_value_lower = lower
-            result.estimated_value_upper = upper
-    elif agg == "sum":
+    if has_overlap:
+        result.estimated_count = estimator.estimated_count()
+        count_lower, count_upper = estimator.estimated_count_bounds()
+        result.estimated_count_lower = count_lower
+        result.estimated_count_upper = count_upper
+
+    if agg == "sum":
         result.observed_value = estimator.sample_sum()
         if has_overlap:
             result.estimated_value = estimator.estimated_sum()
