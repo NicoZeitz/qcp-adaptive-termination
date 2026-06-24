@@ -85,7 +85,7 @@ def add_provider(
         openai_client=client,
         use_responses=False if university_hooks else None,
     )
-    provider_map.register_provider(prefix.lower(), provider)
+    provider_map.add_provider(prefix.lower(), provider)
 
 
 def initialize(
