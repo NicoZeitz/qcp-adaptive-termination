@@ -29,10 +29,10 @@ _coordinator_config: dict[str, tuple[str, Reasoning]] = {
     "Default": (UNIVERSITY_MODEL, Reasoning(effort="none")),
     "Relevance": (UNIVERSITY_MODEL, Reasoning(effort="none")),
     "Planning": (OPENAI_MODEL, Reasoning(effort="high", summary="concise")),
-    "Code": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Code": (UNIVERSITY_MODEL, Reasoning(effort="high")),
     "Replanning": (OPENAI_MODEL, Reasoning(effort="high", summary="concise")),
-    "Align Schema": (UNIVERSITY_MODEL, Reasoning(effort="none")),
-    "Completeness Evaluator": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Align Schema": (UNIVERSITY_MODEL, Reasoning(effort="high")),
+    "Completeness Evaluator": (UNIVERSITY_MODEL, Reasoning(effort="high")),
 }
 
 # ---------------------------------------------------------------------------
@@ -42,8 +42,7 @@ _data_agent_config: dict[str, tuple[str, Reasoning]] = {
     "Default": (UNIVERSITY_MODEL, Reasoning(effort="none")),
     "Schema Description": (UNIVERSITY_MODEL, Reasoning(effort="none")),
     "Relevance": (UNIVERSITY_MODEL, Reasoning(effort="none")),
-    "Summary": (UNIVERSITY_MODEL, Reasoning(effort="none")),
-    "Code": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Code": (UNIVERSITY_MODEL, Reasoning(effort="high")),
 }
 
 

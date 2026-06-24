@@ -1,6 +1,9 @@
 import asyncio
+from typing import cast
 
+from agents import Span
 import pandas as pd
+from agents import CustomSpanData, Span
 
 from qtypes.additional_information import AdditionalInformation
 from qtypes.aligned_result_list import AlignedResultList
@@ -17,7 +20,7 @@ from stages.execution.answer_step_multiple_agents.completeness_evaluator import 
 from stages.execution.answer_step_multiple_agents.compute_estimator import (
     compute_estimator_statistics,
 )
-from utils.span import append_to_span_output, own_custom_span
+from utils.span import append_to_span_output, own_custom_span, span_context_var
 
 MULTI_AGENT_ITERATION_RECORDS: dict[str, list[MultiAgentIterationRecord]] = {}
 
@@ -195,64 +198,60 @@ async def answer_step_multiple_agents(
     answer = PartialQueryAnswer()
     iteration_records = []
 
-    with own_custom_span(
-        f"Multiple Agents: {query_plan_step.id}",
-        input={"query": query_plan_step.query, "agents": all_agents},
-    ) as span:
-        result_list = await align_schema(
+    result_list = await align_schema(
+        data_agents=data_agents,
+        agent_names=all_agents,
+        query=query_plan_step.query,
+        merge_task=query_plan_step.merge_task,
+    )
+
+    remaining = list(all_agents)
+    first_batch_size = max(2, batch_size)
+    batch = remaining[:first_batch_size]
+    remaining = remaining[first_batch_size:]
+    while batch:
+        outcome = await run_agent_batch(
             data_agents=data_agents,
-            agent_names=all_agents,
-            query=query_plan_step.query,
-            merge_task=query_plan_step.merge_task,
+            query_plan_step=query_plan_step,
+            batch=batch,
+            additional_information=additional_information,
+            result_list=result_list,
+            agents_queried=agents_queried,
+            agents_remaining=batch + remaining,
+            iteration_records=iteration_records,
         )
+        agents_queried.extend(batch)
+        batch = remaining[:batch_size]
+        remaining = remaining[batch_size:]
 
-        remaining = list(all_agents)
-        first_batch_size = max(2, batch_size)
-        batch = remaining[:first_batch_size]
-        remaining = remaining[first_batch_size:]
-        while batch:
-            outcome = await run_agent_batch(
-                data_agents=data_agents,
-                query_plan_step=query_plan_step,
-                batch=batch,
-                additional_information=additional_information,
-                result_list=result_list,
-                agents_queried=agents_queried,
-                agents_remaining=batch + remaining,
-                iteration_records=iteration_records,
-            )
-            agents_queried.extend(batch)
-            batch = remaining[:batch_size]
-            remaining = remaining[batch_size:]
+        if isinstance(outcome, RaiseNeedOutcome):
+            answer.add_needs(outcome.needs)
 
-            if isinstance(outcome, RaiseNeedOutcome):
-                answer.add_needs(outcome.needs)
+            if len(result_list.data) > 0:
+                answer.set_answer(result_list.data)
+            elif outcome.partial_answer is not None:
+                answer.set_answer(outcome.partial_answer)
 
-                if len(result_list.data) > 0:
-                    answer.set_answer(result_list.data)
-                elif outcome.partial_answer is not None:
-                    answer.set_answer(outcome.partial_answer)
+            break
 
+        if isinstance(outcome, FinalResultOutcome):
+            answer.set_answer(outcome.result)
+
+            if not continue_after_final_result:
                 break
 
-            if isinstance(outcome, FinalResultOutcome):
-                answer.set_answer(outcome.result)
+            continue
 
-                if not continue_after_final_result:
-                    break
+        result_list = outcome.result_list
 
-                continue
-
-            result_list = outcome.result_list
-
-        append_to_span_output(
-            {
-                "iteration_records_count": len(iteration_records),
-                "iteration_records": iteration_records,
-                "answer": answer,
-            }
-        )
-        MULTI_AGENT_ITERATION_RECORDS[f"{query_plan_step.id} {span.span_id}"] = (
-            iteration_records
-        )
-        return answer
+    append_to_span_output(
+        {
+            "iteration_records_count": len(iteration_records),
+            "iteration_records": iteration_records,
+            "answer": answer,
+        }
+    )
+    MULTI_AGENT_ITERATION_RECORDS[f"{query_plan_step.id} {cast(Span[CustomSpanData], span_context_var.get()).span_id}"] = (
+        iteration_records
+    )
+    return answer
