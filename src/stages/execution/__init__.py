@@ -26,7 +26,6 @@ async def execute_query_plan_attempt(
     replan_attempt: int,
     query_plan: QueryPlan,
     current_data_agents: list[DataAgent],
-    continue_after_final_result: bool = False,
 ) -> ExecutionResult:
     with own_custom_span(
         f"{replan_attempt} - {STAGE_NAME}",
@@ -39,7 +38,6 @@ async def execute_query_plan_attempt(
             execution_result = await execute_query_plan_next_step(
                 current_data_agents,
                 query_plan,
-                continue_after_final_result,
             )
 
             if (
@@ -114,7 +112,6 @@ async def execute_query_plan(
     query_plan: QueryPlan,
     relevant_data_agents: list[DataAgent],
     data_agents: list[DataAgent],
-    continue_after_final_result: bool = False,
 ) -> CollaborativeQueryAnsweringResult:
     MAX_REPLAN_ATTEMPTS = 2
 
@@ -123,7 +120,6 @@ async def execute_query_plan(
             replan_attempt=replan_attempt,
             query_plan=query_plan,
             current_data_agents=relevant_data_agents,
-            continue_after_final_result=continue_after_final_result,
         )
 
         if execution_result.success:

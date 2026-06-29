@@ -29,7 +29,6 @@ from utils.span import append_to_span_output, own_custom_span
 async def execute_query_plan_next_step(
     data_agents: list[DataAgent],
     query_plan: QueryPlan,
-    continue_after_final_result: bool = False,
 ) -> QueryPlanStepExecutionResult:
     step_to_execute = None
     step_id_to_answer: dict[str, ResultType] = {}
@@ -63,7 +62,6 @@ async def execute_query_plan_next_step(
             data_agents,
             step_to_execute,
             additional_information,
-            continue_after_final_result,
         )
 
         step_to_execute.answer = result.answer
@@ -98,7 +96,6 @@ async def execute_query_plan_step(
     data_agents: list[DataAgent],
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
-    continue_after_final_result: bool = False,
 ) -> PartialQueryAnswer:
     with own_custom_span(
         f"Execute Step: {query_plan_step.id}",
@@ -119,7 +116,6 @@ async def execute_query_plan_step(
                 data_agents=data_agents,
                 query_plan_step=cast(MultiAgentQueryPlanStep, query_plan_step),
                 additional_information=additional_information,
-                continue_after_final_result=continue_after_final_result,
             )
 
         append_to_span_output({"partial_answer": result})

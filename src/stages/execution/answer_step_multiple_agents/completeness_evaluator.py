@@ -1,6 +1,7 @@
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.aligned_result_list import AlignedResultList
 from qtypes.estimator_statistics import EstimatorStatistics
+from qtypes.execution_config import ExecutionConfig
 from qtypes.outcome import EvaluatorDecision
 from qtypes.outcome import FinalResultOutcome
 from qtypes.outcome import QueryMoreAgentsOutcome
@@ -20,8 +21,11 @@ from typing import Any, Callable
 
 
 def build_estimator_summary(
-    estimator_statistics: EstimatorStatistics, *, include_aggregation_type: bool = True
+    estimator_statistics: EstimatorStatistics,
+    *,
+    include_aggregation_type: bool = True,
 ) -> str:
+    include_confidence_intervals = ExecutionConfig.get().include_confidence_intervals
     agg = estimator_statistics.aggregation_type
     lines = []
     if include_aggregation_type:
@@ -38,16 +42,22 @@ def build_estimator_summary(
     lines.append(f"Observed count: {estimator_statistics.observed_count}")
     if estimator_statistics.estimated_count is not None:
         lines.append(f"Estimated count: {estimator_statistics.estimated_count:.3f}")
-        lines.append(
-            f"Estimated count confidence interval: [{estimator_statistics.estimated_count_lower:.3f}, {estimator_statistics.estimated_count_upper:.3f}]"
-        )
+        if (
+            include_confidence_intervals
+            and estimator_statistics.estimated_count_lower is not None
+            and estimator_statistics.estimated_count_upper is not None
+        ):
+            lines.append(
+                f"Estimated count confidence interval: [{estimator_statistics.estimated_count_lower:.3f}, {estimator_statistics.estimated_count_upper:.3f}]"
+            )
 
     if estimator_statistics.observed_value is not None:
         lines.append(f"Observed {agg}: {estimator_statistics.observed_value}")
         if estimator_statistics.estimated_value is not None:
             lines.append(f"Estimated {agg}: {estimator_statistics.estimated_value:.3f}")
             if (
-                estimator_statistics.estimated_value_lower is not None
+                include_confidence_intervals
+                and estimator_statistics.estimated_value_lower is not None
                 and estimator_statistics.estimated_value_upper is not None
             ):
                 lines.append(

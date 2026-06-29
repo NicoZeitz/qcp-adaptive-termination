@@ -7,6 +7,7 @@ from datetime import datetime
 from agents import trace
 from opentelemetry import trace as otel_trace
 
+from qtypes.execution_config import ExecutionConfig
 from utils.preview import result_to_json_preview
 from stages.planning import draft_query_plan, STAGE_NAME as PLANNING_STAGE_NAME
 from qtypes.drafted_query_plan import DraftedQueryPlan
@@ -37,6 +38,7 @@ async def main(
     end_stage: int,
     throw_on_cache_miss: bool = False,
     disable_cache: bool = False,
+    execution_config: ExecutionConfig | None = None,
 ):
     if start_stage > end_stage:
         raise Exception
@@ -58,6 +60,12 @@ async def main(
         throw_on_cache_miss,
         disable_cache,
     )
+
+    if execution_config is not None:
+        ExecutionConfig.set(**execution_config.model_dump())
+    config = ExecutionConfig.get()
+
+    logging.info(f"ExecutionConfig: {config.model_dump_json()}")
 
     logging.info(
         f"NZ: Running {stages_mapping[start_stage]} - {stages_mapping[end_stage]}: for input path {input_file}"
@@ -138,7 +146,6 @@ async def main(
                 data.query_plan,
                 data.relevant_data_agents,
                 data.data_agents,
-                continue_after_final_result=True,  # TODO: remove
             )
             data = cast(CollaborativeQueryAnsweringResult, data)
 
@@ -148,6 +155,10 @@ async def main(
             output_path = log_dir / f"{log_filename} - final_result.json"
             with open(output_path, "w") as f:
                 f.write(data.model_dump_json(indent=4, ensure_ascii=False))
+
+            config_output_path = log_dir / f"{log_filename} - execution_config.json"
+            with open(config_output_path, "w") as f:
+                f.write(config.model_dump_json(indent=4))
 
             # TODO: remove iteration records
             from stages.execution.answer_step_multiple_agents import (
@@ -262,7 +273,17 @@ if __name__ == "__main__":
         action="store_true",
         help="Disable caching completely (WRITE_ONLY mode)",
     )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Execution config as JSON, e.g. '{\"include_confidence_intervals\": false}'",
+    )
     args = parser.parse_args()
+
+    execution_config = (
+        ExecutionConfig.model_validate_json(args.config) if args.config else None
+    )
 
     asyncio.run(
         main(
@@ -274,5 +295,6 @@ if __name__ == "__main__":
             args.end_stage,
             args.throw_on_cache_miss,
             args.disable_cache,
+            execution_config,
         )
     )

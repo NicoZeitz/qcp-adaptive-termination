@@ -8,6 +8,7 @@ from agents import CustomSpanData
 from qtypes.additional_information import AdditionalInformation
 from qtypes.aligned_result_list import AlignedResultList
 from qtypes.data_agent import DataAgent
+from qtypes.execution_config import ExecutionConfig
 from qtypes.multi_agent_iteration_record import MultiAgentIterationRecord
 from qtypes.outcome import FinalResultOutcome, QueryMoreAgentsOutcome, RaiseNeedOutcome
 from qtypes.partial_query_answer import PartialQueryAnswer
@@ -212,7 +213,6 @@ async def answer_step_multiple_agents(
     data_agents: list[DataAgent],
     query_plan_step: MultiAgentQueryPlanStep,
     additional_information: list[AdditionalInformation],
-    continue_after_final_result: bool = False,
     batch_size: int = 1,
 ) -> PartialQueryAnswer:
     all_agents = list(query_plan_step.to_agent)
@@ -260,7 +260,7 @@ async def answer_step_multiple_agents(
         if isinstance(outcome, FinalResultOutcome):
             answer.set_answer(outcome.result)
 
-            if not continue_after_final_result:
+            if not ExecutionConfig.get().continue_after_final_result:
                 break
 
             continue
