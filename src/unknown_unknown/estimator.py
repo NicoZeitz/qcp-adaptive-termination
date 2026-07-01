@@ -467,19 +467,20 @@ class Estimator:
 
         Uses the log-normal approximation for N - c, which gives a tighter interval
         than the symmetric normal approximation. Falls back to the Good-Turing interval
-        when there are no doubletons.
+        when there are no doubletons (variance formula requires f2 > 0). When variance
+        is zero (f1 == 0), the CI collapses to the point estimate.
         """
         f1 = self._freq[0]
         f2 = self._freq[1] if len(self._freq) > 1 else 0
         c = self._c
 
-        if f2 == 0:
-            return self.good_turing_confidence_interval(confidence_epsilon)
-
         N_hat = self.chao84()
         N_hat_minus_c = N_hat - c
         if N_hat_minus_c == 0:
             return (c, c)
+
+        if f2 == 0:
+            return self.good_turing_confidence_interval(confidence_epsilon)
 
         z_prime = float(norm.ppf(1.0 - confidence_epsilon / 2.0))
 
@@ -1028,7 +1029,7 @@ class Estimator:
         from the observed frequency statistics. Fits an RBF surface over the grid
         and returns the N at the minimum.
         """
-        n_estimated = self.estimated_count(count_estimator)
+        n_estimated = self.estimated_count(count_estimator, use_bucket=False)
         n_ub = (
             self._c * 2
             if not math.isfinite(n_estimated)
