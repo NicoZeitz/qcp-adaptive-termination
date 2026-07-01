@@ -1,13 +1,12 @@
 from code_execution.code_execution_environment import CodeExecutionEnvironment
 from qtypes.aligned_result_list import AlignedResultList
 from qtypes.estimator_statistics import EstimatorStatistics
-from qtypes.execution_config import ExecutionConfig
+from qtypes.execution_config import EstimatorMode, ExecutionConfig
 from qtypes.outcome import EvaluatorDecision
 from qtypes.outcome import FinalResultOutcome
 from qtypes.outcome import QueryMoreAgentsOutcome
 from qtypes.result import ResultType, try_parse_value_to_result_type
 from stages.common.agent_configuration import get_coordinator_agent_configuration
-from unknown_unknown.estimator import Estimator
 from utils.preview import preview_dataframe, result_to_json_preview
 from utils.run_agent import run_agent
 from utils.span import append_to_span_output, own_custom_span
@@ -24,8 +23,18 @@ def build_estimator_summary(
     estimator_statistics: EstimatorStatistics,
     *,
     include_aggregation_type: bool = True,
-) -> str:
-    include_confidence_intervals = ExecutionConfig.get().include_confidence_intervals
+) -> str | None:
+    config = ExecutionConfig.get()
+    mode = config.estimator_mode
+    if mode == EstimatorMode.NONE:
+        return None
+
+    include_ci = config.include_confidence_intervals
+    include_est_count = mode in (EstimatorMode.FULL, EstimatorMode.COUNT_ONLY)
+    include_obs_count = include_est_count or mode == EstimatorMode.OBSERVED_ONLY
+    include_est_value = mode in (EstimatorMode.FULL, EstimatorMode.VALUE_ONLY)
+    include_obs_value = include_est_value or mode == EstimatorMode.OBSERVED_ONLY
+
     agg = estimator_statistics.aggregation_type
     lines = []
     if include_aggregation_type:
@@ -39,11 +48,12 @@ def build_estimator_summary(
     if estimator_statistics.sample_coverage is not None:
         lines.append(f"Sample Coverage: {estimator_statistics.sample_coverage:.3f}")
 
-    lines.append(f"Observed count: {estimator_statistics.observed_count}")
-    if estimator_statistics.estimated_count is not None:
+    if include_obs_count:
+        lines.append(f"Observed count: {estimator_statistics.observed_count}")
+    if include_est_count and estimator_statistics.estimated_count is not None:
         lines.append(f"Estimated count: {estimator_statistics.estimated_count:.3f}")
         if (
-            include_confidence_intervals
+            include_ci
             and estimator_statistics.estimated_count_lower is not None
             and estimator_statistics.estimated_count_upper is not None
         ):
@@ -51,38 +61,41 @@ def build_estimator_summary(
                 f"Estimated count confidence interval: [{estimator_statistics.estimated_count_lower:.3f}, {estimator_statistics.estimated_count_upper:.3f}]"
             )
 
-    if estimator_statistics.observed_value is not None:
+    if include_obs_value and estimator_statistics.observed_value is not None:
         lines.append(f"Observed {agg}: {estimator_statistics.observed_value}")
-        if estimator_statistics.estimated_value is not None:
-            lines.append(f"Estimated {agg}: {estimator_statistics.estimated_value:.3f}")
-            if (
-                include_confidence_intervals
-                and estimator_statistics.estimated_value_lower is not None
-                and estimator_statistics.estimated_value_upper is not None
-            ):
-                lines.append(
-                    f"Estimated {agg} confidence interval: [{estimator_statistics.estimated_value_lower:.3f}, {estimator_statistics.estimated_value_upper:.3f}]"
-                )
+    if include_est_value and estimator_statistics.estimated_value is not None:
+        lines.append(f"Estimated {agg}: {estimator_statistics.estimated_value:.3f}")
+        if (
+            include_ci
+        ):
+            estimated_value_lower = estimator_statistics.estimated_value_lower or float('-inf')
+            estimated_value_upper = estimator_statistics.estimated_value_upper or float('inf')
+            lines.append(
+                f"Estimated {agg} confidence interval: [{estimated_value_lower:.3f}, {estimated_value_upper:.3f}]"
+            )
     return "\n".join(lines)
 
 
 def build_previous_statistics_summary(
     previous_estimator_statistics: list[EstimatorStatistics],
 ) -> str | None:
-    if not previous_estimator_statistics:
+    if (
+        not previous_estimator_statistics
+        or ExecutionConfig.get().estimator_mode == EstimatorMode.NONE
+    ):
         return None
 
     lines = []
     for estimator_statistic in reversed(previous_estimator_statistics):
-        lines.append(
-            build_estimator_summary(estimator_statistic, include_aggregation_type=False)
+        summary = build_estimator_summary(
+            estimator_statistic, include_aggregation_type=False
         )
+        lines.append(summary)
     return "\n\n".join(lines)
 
 
 async def run_completeness_evaluator(
     aligned_result_list: AlignedResultList,
-    estimator: Estimator,
     estimator_statistics: EstimatorStatistics,
     query: str,
     previous_estimator_statistics: list[EstimatorStatistics],
@@ -112,7 +125,6 @@ async def run_completeness_evaluator(
         variables={
             "query": query,
             "result_list": aligned_result_list.data,
-            "estimator": estimator,
             "pd": pd,
         },
         tools=tools,

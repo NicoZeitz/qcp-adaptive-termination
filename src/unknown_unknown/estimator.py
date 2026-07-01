@@ -97,6 +97,9 @@ class Estimator:
         Δ       — estimated SUM contribution of missing entities
     """
 
+    DEFAULT_COUNT_ESTIMATOR: CountEstimator = CountEstimator.CHAO92
+    DEFAULT_VALUE_ESTIMATOR: ValueEstimator = ValueEstimator.NAIVE
+
     # ── Class-level attribute annotations (typed, for IDE support) ───────────
 
     _all_samples: list[DataItem]
@@ -253,11 +256,11 @@ class Estimator:
 
     def estimated_count(
         self,
-        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
         *,
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
-        bucket_value_estimator: ValueEstimator = ValueEstimator.NAIVE,
+        bucket_value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
     ) -> float:
         """Estimated total unique entity count (observed + missing)."""
         if use_bucket:
@@ -492,8 +495,8 @@ class Estimator:
 
     def estimated_sum(
         self,
-        value_estimator: ValueEstimator = ValueEstimator.NAIVE,
-        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
         *,
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
@@ -512,8 +515,8 @@ class Estimator:
 
     def delta(
         self,
-        value_estimator: ValueEstimator = ValueEstimator.NAIVE,
-        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
         *,
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
@@ -561,7 +564,7 @@ class Estimator:
 
     def _naive_delta(
         self,
-        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
         *,
         use_monte_carlo: bool = False,
         use_bucket: bool = True,
@@ -580,7 +583,7 @@ class Estimator:
 
     def _frequency_delta(
         self,
-        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
         *,
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
@@ -619,7 +622,7 @@ class Estimator:
 
     def _frequency_f12_delta(
         self,
-        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
         *,
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
@@ -685,8 +688,8 @@ class Estimator:
         self,
         use_bucket: bool = True,
         *,
-        bucket_count_estimator: CountEstimator = CountEstimator.CHAO92,
-        bucket_value_estimator: ValueEstimator = ValueEstimator.NAIVE,
+        bucket_count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
+        bucket_value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
         bucket_use_monte_carlo: bool = False,
     ) -> float:
         """Estimated average across all entities (observed + missing).
@@ -758,9 +761,9 @@ class Estimator:
 
     def estimated_min(
         self,
-        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
         *,
-        bucket_value_estimator: ValueEstimator = ValueEstimator.NAIVE,
+        bucket_value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
         use_monte_carlo: bool = False,
     ) -> float | None:
         """Confirmed minimum value, or None if unknown unknowns may lie below it.
@@ -784,9 +787,9 @@ class Estimator:
 
     def estimated_max(
         self,
-        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
         *,
-        bucket_value_estimator: ValueEstimator = ValueEstimator.NAIVE,
+        bucket_value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
         use_monte_carlo: bool = False,
     ) -> float | None:
         """Confirmed maximum value, or None if unknown unknowns may lie above it.
@@ -1015,7 +1018,7 @@ class Estimator:
 
     def _mc_count(
         self,
-        count_estimator: CountEstimator = CountEstimator.CHAO92,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
     ) -> int:
         """Estimate total unique entity count via Monte Carlo simulation.
 

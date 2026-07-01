@@ -19,7 +19,6 @@ Usage:
 import argparse
 import json
 import sys
-import textwrap
 from pathlib import Path
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
@@ -37,7 +36,6 @@ Y_MARGIN_FACTOR = 1.1
 Y_MARGIN_FULL = 1.15
 BAND_CLIP_PERCENTILE = 97  # ignore band values above this percentile for the top panel
 ERROR_ZOOM_PERCENTILE = 75  # y-axis cap for zoomed error panels
-REASONING_WRAP_WIDTH = 110
 
 
 def load_records(path: str) -> list[dict]:
@@ -265,11 +263,11 @@ def draw_estimation_panel(
             est_x.append(x[i])
             est_y.append(v)
 
-    est_lo, est_hi = [], []
+    est_ci = []
     for i, v in enumerate(estimated):
         lo, hi = lower[i], upper[i]
         if v is not None and lo is not None and hi is not None:
-            est_lo.append((x[i], v, lo, hi))
+            est_ci.append((x[i], v, lo, hi))
 
     if est_x:
         ax.plot(
@@ -282,11 +280,13 @@ def draw_estimation_panel(
             label="Estimated",
             zorder=3,
         )
-        if est_lo:
-            bx = [t[0] for t in est_lo]
-            bl = [t[2] for t in est_lo]
-            bh = [t[3] for t in est_lo]
-            ax.fill_between(bx, bl, bh, color="#f97316", alpha=0.15, label="Estimated bounds")
+        if est_ci:
+            bx = [t[0] for t in est_ci]
+            bl = [t[2] for t in est_ci]
+            bh = [t[3] for t in est_ci]
+            ax.fill_between(
+                bx, bl, bh, color="#f97316", alpha=0.15, label="Estimated bounds"
+            )
         fmt = y_formatter if y_formatter else human_format
         ax.annotate(
             fmt(est_y[-1], None),
@@ -305,7 +305,7 @@ def draw_estimation_panel(
     all_values = [
         v for v in y_obs + est_y + [ground_truth] if v is not None and math.isfinite(v)
     ]
-    band_values = [t[2] for t in est_lo] + [t[3] for t in est_lo]
+    band_values = [t[2] for t in est_ci] + [t[3] for t in est_ci]
     all_with_bands = sorted(
         v for v in all_values + band_values if v is not None and math.isfinite(v)
     )
@@ -562,10 +562,7 @@ def save_reasoning_text(
 
         if texts:
             full = "\n\n".join(texts)
-            wrapped = textwrap.fill(
-                full, width=REASONING_WRAP_WIDTH, subsequent_indent="    "
-            )
-            parts.append(wrapped)
+            parts.append(full)
 
         lines.append("\n".join(parts))
 

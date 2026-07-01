@@ -8,6 +8,7 @@ from agents import CustomSpanData
 from qtypes.additional_information import AdditionalInformation
 from qtypes.aligned_result_list import AlignedResultList
 from qtypes.data_agent import DataAgent
+from qtypes.estimator_statistics import EstimatorStatistics
 from qtypes.execution_config import ExecutionConfig
 from qtypes.multi_agent_iteration_record import MultiAgentIterationRecord
 from qtypes.outcome import FinalResultOutcome, QueryMoreAgentsOutcome, RaiseNeedOutcome
@@ -155,33 +156,31 @@ async def run_agent_batch(
             return combined_need_outcome
 
         # Merge and compute stats incrementally, as if agents were queried in sequence
-        per_agent_stats = []
+        per_agent_stats: list[tuple[str, AlignedResultList, EstimatorStatistics]] = []
         current_result_list = result_list
         for idx, (agent_name, agent_df, _) in enumerate(results):
             assert agent_df is not None
             current_result_list = merge_agent_result(
                 current_result_list, agent_name, agent_df
             )
-            agent_stats, agent_estimator = compute_estimator_statistics(
+            agent_stats = compute_estimator_statistics(
                 current_result_list,
                 len(agents_queried) + idx + 1,
                 agents_total,
                 [agent_name],
             )
             per_agent_stats.append(
-                (agent_name, current_result_list, agent_stats, agent_estimator)
+                (agent_name, current_result_list, agent_stats)
             )
 
         merged_result_list = current_result_list
-        final_stats, final_estimator = per_agent_stats[-1][2], per_agent_stats[-1][3]
+        final_stats = per_agent_stats[-1][2]
 
         if final_stats.sample_coverage is None:
             outcome = QueryMoreAgentsOutcome(result_list=merged_result_list)
         else:
-            assert final_estimator is not None
             outcome = await run_completeness_evaluator(
                 merged_result_list,
-                final_estimator,
                 final_stats,
                 query_plan_step.query,
                 [
@@ -191,7 +190,7 @@ async def run_agent_batch(
                 ],
             )
 
-        for i, (agent_name, _, agent_stats, _) in enumerate(per_agent_stats):
+        for i, (agent_name, _, agent_stats) in enumerate(per_agent_stats):
             is_last = i == len(per_agent_stats) - 1
             iteration_records.append(
                 MultiAgentIterationRecord(
