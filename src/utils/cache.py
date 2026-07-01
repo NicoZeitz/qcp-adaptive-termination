@@ -6,6 +6,7 @@ import inspect
 import json
 import logging
 from pathlib import Path
+import uuid
 from typing import Any, Awaitable, Callable, Literal, ParamSpec, Sequence, TypeVar
 
 from pydantic import BaseModel, JsonValue
@@ -75,8 +76,11 @@ class Cache:
 
         payload = {"key": key, "value": value}
 
-        temporary_file = cache_file.with_suffix(".tmp")
+        temporary_file = cache_file.with_name(
+            f"{cache_file.stem}_{uuid.uuid4().hex}.tmp"
+        )
         try:
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
             with temporary_file.open("w", encoding="utf-8") as f:
                 # keep indent for readability, but remove extra spaces for smaller file size
                 json.dump(
