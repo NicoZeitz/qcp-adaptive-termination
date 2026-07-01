@@ -217,7 +217,7 @@ class Estimator:
         C_hat = self.sample_coverage()
         if C_hat == 0:
             return math.inf
-        moment = sum((idx + 1) * idx * f for idx, f in enumerate(self._freq[: self._c]))
+        moment = sum((idx + 1) * idx * f for idx, f in enumerate(self._freq))
         γ_sq = (self._c / C_hat) * (moment / (self._n * (self._n - 1))) - 1.0
         return max(γ_sq, 0.0)
 
@@ -752,7 +752,7 @@ class Estimator:
         φ_K_over_c = self._φ_K / self._c
         σ_K = math.sqrt(
             sum((v[1] - φ_K_over_c) ** 2 for v in self._entities.values()) / self._c
-        )
+        ) / math.sqrt(self._c)
 
         lower = φ_K_over_c - z * σ_K
         upper = φ_K_over_c + z * σ_K

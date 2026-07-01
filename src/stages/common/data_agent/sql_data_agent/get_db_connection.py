@@ -12,7 +12,6 @@ def get_db_engine(data_agent: DataAgent) -> Engine:
     with db_engine.connect() as connection:
         connection.execute(text("PRAGMA journal_mode=WAL;"))
         connection.execute(text("PRAGMA foreign_keys=OFF;"))
-        connection.execute(text("PRAGMA journal_mode=MEMORY;"))
         connection.execute(text("PRAGMA temp_store=MEMORY;"))
         connection.execute(text("PRAGMA synchronous=OFF;"))
         connection.execute(text("PRAGMA query_only = ON;"))

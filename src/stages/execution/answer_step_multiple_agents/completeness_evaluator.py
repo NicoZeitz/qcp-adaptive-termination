@@ -101,6 +101,7 @@ async def run_completeness_evaluator(
     estimator_statistics: EstimatorStatistics,
     query: str,
     previous_estimator_statistics: list[EstimatorStatistics],
+    merge_task: str,
 ) -> QueryMoreAgentsOutcome | FinalResultOutcome:
     decision: EvaluatorDecision | None = None
     final_result_value: ResultType | None = None
@@ -167,6 +168,7 @@ async def run_completeness_evaluator(
                 "estimator_summary": estimator_summary,
                 "previous_statistics_summary": previous_statistics_summary,
                 "force_result": force_result,
+                "merge_task": merge_task,
             },
             tools=[code_environment.as_function_tool()],
             tool_use_behavior=custom_tool_handler,

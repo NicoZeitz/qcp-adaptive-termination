@@ -186,6 +186,7 @@ async def run_agent_batch(
                     for r in iteration_records
                     if r.estimator_result is not None
                 ],
+                query_plan_step.merge_task,
             )
 
         for i, (agent_name, _, agent_stats) in enumerate(per_agent_stats):

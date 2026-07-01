@@ -31,6 +31,8 @@ Your decision whether to continue should be based on the result list and the est
 {{^estimator_summary}}
 Your decision whether to continue should be based on the result list.
 - Look at the entries in the result list. Take into account the number of queried agents, duplicates in the list etc.
+- When you think, the result is consistent and likely complete create a `final_result`.
+- When in doubt, prefer `query_more_agents` over returning early.
 {{/estimator_summary}}
 - Querying all agents and never deciding to return is also not the way to go (Over-querying is **disallowed**).
 
@@ -41,7 +43,12 @@ The decision to continue is always a tradeoff. Querying more agents costs more r
 
 For producing the final result you should use the result_list, which contains the results from all the queried agents{{#estimator_summary}}, as well as the provided estimator statistics{{/estimator_summary}}.
 
-Aggregate, deduplicate, and answer the query as best as possible from the result list{{#estimator_summary}} and the provided estimator statistics{{/estimator_summary}}. Any filtering was already done by the agents — `result_list` only contains relevant data for the user query.
+Answer the query as best as possible from the result list{{#estimator_summary}} and the provided estimator statistics{{/estimator_summary}}. Any filtering was already done by the agents — `result_list` only contains relevant data for the user query. Make sure your aggregation matches what the query asks for: deduplicate and merge entries where appropriate, but apply any final aggregation (e.g. summing, counting) across the full deduplicated result, not per entry if requested.
+
+{{#merge_task}}
+Use the following merge task as guidance for how to combine the results:
+> {{merge_task}}
+{{/merge_task}}
 
 ## Python environment
 
