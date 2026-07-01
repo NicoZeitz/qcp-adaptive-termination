@@ -171,6 +171,8 @@ async def run_completeness_evaluator(
         )
 
     if decision == "final_result":
-        return FinalResultOutcome(result=final_result_value)
+        return FinalResultOutcome(
+            result=final_result_value, result_list=aligned_result_list
+        )
     else:
         return QueryMoreAgentsOutcome(result_list=aligned_result_list)

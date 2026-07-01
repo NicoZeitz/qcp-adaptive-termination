@@ -25,6 +25,7 @@ class FinalResultOutcome(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     result: SerializedResultType
+    result_list: AlignedResultList
     decision: EvaluatorDecision = "final_result"
 
 

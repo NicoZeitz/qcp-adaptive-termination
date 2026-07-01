@@ -257,6 +257,8 @@ async def answer_step_multiple_agents(
 
             break
 
+        result_list = outcome.result_list
+
         if isinstance(outcome, FinalResultOutcome):
             answer.set_answer(outcome.result)
 
@@ -264,8 +266,6 @@ async def answer_step_multiple_agents(
                 break
 
             continue
-
-        result_list = outcome.result_list
 
     append_to_span_output(
         {

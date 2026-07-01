@@ -36,7 +36,11 @@ def compute_estimator_statistics(
         if items:
             source_samples.append(items)
 
-    new_unique_count = data[schema.source_agent_column].isin(agents_current).sum()
+    key_series = data[schema.keys].astype(str).agg("|".join, axis=1)
+    is_current = data[schema.source_agent_column].isin(agents_current)
+    prev_keys = set(key_series[~is_current])
+    current_keys = set(key_series[is_current])
+    new_unique_count = len(current_keys - prev_keys)
     has_data = len(source_samples) >= 1
     has_overlap = len(source_samples) >= 2
 

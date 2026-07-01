@@ -81,6 +81,48 @@ Default assumption: If in doubt, assume tables are distributed and avoid local j
 2. Coordinator aggregates the results of different agents to create a complete global information
 3. Only after global aggregation, use the complete global information for further potential queries in the agents
 
+**CRITICAL RULE**
+Do not create a create a query plan like this (split steps for querying and aggregation):
+```json
+{
+  "id":"s1",
+  "query":"Return the the product name and price for all products",
+  "to_agent":[
+    "A1",
+    "A2",
+    "A3",
+    "A4"
+  ],
+  "merge_task":"Merge all results from all agents, deduplicate by product name (keeping the maximum price value for each name)",
+  "dependencies":[]
+},
+{
+  "id":"s2",
+  "query":"What is the total price of all produces in the database?",
+  "to_agent":"Coordinator",
+  "dependencies":[
+    {
+      "step_id":"s1",
+      "dependency":"All produces in the databases together with their prices"
+    }
+  ]
+}
+```
+Instead create a plan like this (combine query and aggregation in one step):
+```json
+{
+  "id":"s1",
+  "query":"Return the the product name and price for all products",
+  "to_agent":[
+    "A1",
+    "A2",
+    "A3",
+    "A4"
+  ],
+  "merge_task":"Merge all results from all agents, deduplicate by product name (keeping the maximum price value for each name), then sum the prices across all unique products to get the total price of all produces in the database",
+  "dependencies":[]
+}
+```
 
 ## Important Rules regarding Replanning
 

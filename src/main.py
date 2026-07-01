@@ -47,12 +47,6 @@ async def main(
 
     log_filename = f"Stage {start_stage}-{end_stage} - {datetime.now().strftime('%Y-%m-%d %H-%M-%S')}"
 
-    name_prefix = f"{name.strip()[:max_trace_label_len]} - " if name else ""
-    input_file_prefix = input_file.stem[:max_trace_label_len]
-    trace_label = (
-        f"[NZ] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}"
-    )
-
     initialize(
         log_filename,
         log_dir,
@@ -66,6 +60,13 @@ async def main(
     config = ExecutionConfig.get()
 
     logging.info(f"ExecutionConfig: {config.model_dump_json()}")
+    config_output_path = log_dir / f"{log_filename} - execution_config.json"
+    with open(config_output_path, "w") as f:
+        f.write(config.model_dump_json(indent=4))
+
+    name_prefix = f"{name.strip()[:max_trace_label_len]} - " if name else ""
+    input_file_prefix = input_file.stem[:max_trace_label_len]
+    trace_label = f"[NZ] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage} [{config.model_dump_json()}]"
 
     logging.info(
         f"NZ: Running {stages_mapping[start_stage]} - {stages_mapping[end_stage]}: for input path {input_file}"
@@ -82,6 +83,7 @@ async def main(
                 "input_file": str(input_file),
                 "cache_dir": str(cache_dir),
                 "log_dir": str(log_dir),
+                "execution_config": config.model_dump_json(),
             },
         ) as trace_ctx,
         tracer.start_as_current_span(trace_label),
@@ -156,10 +158,6 @@ async def main(
             with open(output_path, "w") as f:
                 f.write(data.model_dump_json(indent=4, ensure_ascii=False))
 
-            config_output_path = log_dir / f"{log_filename} - execution_config.json"
-            with open(config_output_path, "w") as f:
-                f.write(config.model_dump_json(indent=4))
-
             # TODO: remove iteration records
             from stages.execution.answer_step_multiple_agents import (
                 MULTI_AGENT_ITERATION_RECORDS,
@@ -214,7 +212,13 @@ async def main(
                                 series, reasoning_by_n, run_prefix + ".txt"
                             )
 
-                    plot(series, count_gt, value_gt, run_prefix)
+                    plot(
+                        series,
+                        count_gt,
+                        value_gt,
+                        run_prefix,
+                        include_confidence_intervals=config.include_confidence_intervals,
+                    )
                     logging.info(f"Plots saved to {run_prefix}.png/.svg/.pdf")
                 except Exception as e:
                     logging.warning(f"Plotting failed for {execution_id}: {e}")
