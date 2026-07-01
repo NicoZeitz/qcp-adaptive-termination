@@ -6,7 +6,6 @@ from datetime import datetime
 
 from agents import trace
 from langfuse import get_client
-from opentelemetry import trace as otel_trace
 
 from qtypes.execution_config import ExecutionConfig
 from utils.preview import result_to_json_preview
@@ -90,13 +89,12 @@ async def main(
     }
 
     langfuse = get_client()
-    tracer = otel_trace.get_tracer(__name__)
     with (
+        langfuse.start_as_current_observation(
+            name=trace_label, input=langfuse_input, metadata=trace_metadata
+        ),
         trace(trace_label, metadata=trace_metadata) as trace_ctx,
-        tracer.start_as_current_span(trace_label),
     ):
-        langfuse.update_current_span(input=langfuse_input)
-
         data, extra = load_cache_file(
             input_file,
             deserializable_classes=[
