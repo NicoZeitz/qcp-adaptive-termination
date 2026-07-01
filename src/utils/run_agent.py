@@ -12,7 +12,6 @@ from agents import (
 )
 from agents.exceptions import ModelBehaviorError
 from agents.run_config import DEFAULT_MAX_TURNS
-from openai.types.responses import ResponseFunctionToolCall
 from pydantic import BaseModel, JsonValue
 
 from qtypes.agent_configuration import AgentConfiguration

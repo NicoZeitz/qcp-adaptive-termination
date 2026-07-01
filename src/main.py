@@ -216,7 +216,9 @@ async def main(
                         )
                         if reasoning_by_n:
                             save_reasoning_text(
-                                series, reasoning_by_n, run_prefix + " - completeness reasoning.txt"
+                                series,
+                                reasoning_by_n,
+                                run_prefix + " - completeness reasoning.txt",
                             )
 
                     plot(

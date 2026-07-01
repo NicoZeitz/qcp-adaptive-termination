@@ -5,7 +5,8 @@ from qtypes.execution_config import EstimatorMode, ExecutionConfig
 from qtypes.outcome import EvaluatorDecision
 from qtypes.outcome import FinalResultOutcome
 from qtypes.outcome import QueryMoreAgentsOutcome
-from qtypes.result import ResultType, try_parse_value_to_result_type
+from qtypes.result import try_parse_value_to_result_type
+from qtypes.serializers import SerializedOptionalResultType
 from stages.common.agent_configuration import get_coordinator_agent_configuration
 from utils.preview import preview_dataframe, result_to_json_preview
 from utils.run_agent import run_agent
@@ -14,9 +15,16 @@ from utils.span import append_to_span_output, own_custom_span
 
 import pandas as pd
 from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
-
+from pydantic import BaseModel, ConfigDict
 
 from typing import Any, Callable
+
+
+class CompletenessEvaluatorResult(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
+    decision: EvaluatorDecision | None = None
+    result: SerializedOptionalResultType = None
 
 
 def build_estimator_summary(
@@ -103,20 +111,18 @@ async def run_completeness_evaluator(
     previous_estimator_statistics: list[EstimatorStatistics],
     merge_task: str,
 ) -> QueryMoreAgentsOutcome | FinalResultOutcome:
-    decision: EvaluatorDecision | None = None
-    final_result_value: ResultType | None = None
     force_result = (
         estimator_statistics.agents_queried == estimator_statistics.agents_total
     )
 
+    evaluator_result = CompletenessEvaluatorResult()
+
     def final_result(result: Any):
-        nonlocal decision, final_result_value
-        final_result_value = try_parse_value_to_result_type(result)
-        decision = "final_result"
+        evaluator_result.decision = "final_result"
+        evaluator_result.result = try_parse_value_to_result_type(result)
 
     def query_more_agents():
-        nonlocal decision
-        decision = "query_more_agents"
+        evaluator_result.decision = "query_more_agents"
 
     tools: dict[str, Callable] = {
         "final_result": final_result,
@@ -138,8 +144,8 @@ async def run_completeness_evaluator(
         _tool_results: list[FunctionToolResult],
     ) -> ToolsToFinalOutputResult:
         return ToolsToFinalOutputResult(
-            is_final_output=decision is not None,
-            final_output=decision == "final_result",
+            is_final_output=evaluator_result.decision is not None,
+            final_output=evaluator_result,
         )
 
     estimator_summary = build_estimator_summary(estimator_statistics)
@@ -157,7 +163,7 @@ async def run_completeness_evaluator(
             "previous_estimator_statistics_count": len(previous_estimator_statistics),
         },
     ):
-        await run_agent(
+        evaluator_result = await run_agent(
             agent_configuration=get_coordinator_agent_configuration(
                 "Completeness Evaluator"
             ),
@@ -175,20 +181,22 @@ async def run_completeness_evaluator(
             reset_tool_choice=False,
             parallel_tool_calls=False,
             tool_choice="required",
-            output_type=bool,
+            output_type=CompletenessEvaluatorResult,
         )
         append_to_span_output(
             {
-                "decision": decision,
-                "final_result": result_to_json_preview(final_result_value)
-                if final_result_value is not None
+                "decision": evaluator_result.decision,
+                "final_result": result_to_json_preview(evaluator_result.result)
+                if evaluator_result.result is not None
                 else None,
             }
         )
 
-    if decision == "final_result":
+    if evaluator_result.decision == "final_result":
+        assert evaluator_result.result is not None
         return FinalResultOutcome(
-            result=final_result_value, result_list=aligned_result_list
+            result=evaluator_result.result,
+            result_list=aligned_result_list,
         )
     else:
         return QueryMoreAgentsOutcome(result_list=aligned_result_list)
