@@ -5,6 +5,7 @@ from typing import cast
 from datetime import datetime
 
 from agents import trace
+from langfuse import get_client
 from opentelemetry import trace as otel_trace
 
 from qtypes.execution_config import ExecutionConfig
@@ -66,28 +67,36 @@ async def main(
 
     name_prefix = f"{name.strip()[:max_trace_label_len]} - " if name else ""
     input_file_prefix = input_file.stem[:max_trace_label_len]
-    trace_label = f"[NZ] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage} [{config.model_dump_json()}]"
+    trace_label = (
+        f"[NZ] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}"
+    )
 
     logging.info(
         f"NZ: Running {stages_mapping[start_stage]} - {stages_mapping[end_stage]}: for input path {input_file}"
     )
 
+    trace_metadata = {
+        "start_stage": str(start_stage),
+        "end_stage": str(end_stage),
+        "name": name,
+        "input_file": str(input_file),
+        "cache_dir": str(cache_dir),
+        "log_dir": str(log_dir),
+        "execution_config": config.model_dump_json(),
+    }
+    langfuse_input = {
+        **trace_metadata,
+        "execution_config": config.model_dump(),
+    }
+
+    langfuse = get_client()
     tracer = otel_trace.get_tracer(__name__)
     with (
-        trace(
-            trace_label,
-            metadata={
-                "start_stage": str(start_stage),
-                "end_stage": str(end_stage),
-                "name": name,
-                "input_file": str(input_file),
-                "cache_dir": str(cache_dir),
-                "log_dir": str(log_dir),
-                "execution_config": config.model_dump_json(),
-            },
-        ) as trace_ctx,
+        trace(trace_label, metadata=trace_metadata) as trace_ctx,
         tracer.start_as_current_span(trace_label),
     ):
+        langfuse.update_current_span(input=langfuse_input)
+
         data, extra = load_cache_file(
             input_file,
             deserializable_classes=[

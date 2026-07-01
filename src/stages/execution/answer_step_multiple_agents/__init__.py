@@ -169,9 +169,7 @@ async def run_agent_batch(
                 agents_total,
                 [agent_name],
             )
-            per_agent_stats.append(
-                (agent_name, current_result_list, agent_stats)
-            )
+            per_agent_stats.append((agent_name, current_result_list, agent_stats))
 
         merged_result_list = current_result_list
         final_stats = per_agent_stats[-1][2]

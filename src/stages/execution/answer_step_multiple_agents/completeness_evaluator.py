@@ -65,11 +65,13 @@ def build_estimator_summary(
         lines.append(f"Observed {agg}: {estimator_statistics.observed_value}")
     if include_est_value and estimator_statistics.estimated_value is not None:
         lines.append(f"Estimated {agg}: {estimator_statistics.estimated_value:.3f}")
-        if (
-            include_ci
-        ):
-            estimated_value_lower = estimator_statistics.estimated_value_lower or float('-inf')
-            estimated_value_upper = estimator_statistics.estimated_value_upper or float('inf')
+        if include_ci:
+            estimated_value_lower = estimator_statistics.estimated_value_lower or float(
+                "-inf"
+            )
+            estimated_value_upper = estimator_statistics.estimated_value_upper or float(
+                "inf"
+            )
             lines.append(
                 f"Estimated {agg} confidence interval: [{estimated_value_lower:.3f}, {estimated_value_upper:.3f}]"
             )
