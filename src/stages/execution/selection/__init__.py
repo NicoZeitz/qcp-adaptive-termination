@@ -111,7 +111,7 @@ class AgentSelector:
         precomputed = await strategy.precompute(agents, table_name, column_name, query)
         state = strategy.init_state()
         selections = [
-            AgentSelection(agent=a, table_name=table_name, column_name=column_name)
+            AgentSelection(agent=a, table_name=table_name, column_name=column_name, score=None)
             for a in agents
         ]
         return cls(strategy, precomputed, state, selections)

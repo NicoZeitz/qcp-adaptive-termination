@@ -45,15 +45,16 @@ async def _create_text_embedding(text: str) -> list[float]:
     with own_custom_span("Text Embedding", input={"text": text}):
         return await _create_embedding(text)
 
-
-@cached(name_prefix="Agent Embedding")
 async def _create_agent_embedding(
     data_agent: DataAgent, agent_registry_type: AgentRegistryType
 ) -> list[float]:
-    with own_custom_span("Agent Embeddings", input={"agent": data_agent.name}):
+    @cached(name_prefix=f"{data_agent.name} - Agent Embedding")
+    async def compute_embedding(data_agent: DataAgent, agent_registry_type: AgentRegistryType) -> list[float]:
         registry_text = await build_agent_registry([data_agent], agent_registry_type)
         return await _create_embedding(registry_text)
 
+    with own_custom_span("Agent Embeddings", input={"agent": data_agent.name}):
+        return await compute_embedding(data_agent, agent_registry_type)
 
 @dataclass
 class EmbeddingStrategy(StaticSelectionStrategy[float]):

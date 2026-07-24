@@ -26,6 +26,7 @@ stages_mapping = {
     1: DISCOVERY_STAGE_NAME,
     2: PLANNING_STAGE_NAME,
     3: EXECUTION_STAGE_NAME,
+    99: "DEBUG",
 }
 
 
@@ -113,6 +114,24 @@ async def main(
                 logging.info(f"  {k}: {v}")
         else:
             logging.info("  No extra entries found.")
+
+        if start_stage == 99:
+            logging.info(f"Starting stage {start_stage}, ENTERING DEBUG CODE")
+            from stages.execution.selection import AgentSelector
+            from qtypes.selection_type import SelectionType
+
+            with ExecutionConfig.override(selection_type=SelectionType.THETA_SKETCH_UCB):
+                selector = await AgentSelector.create(
+                    data.data_agents,
+                    data.query,
+                    table_name="gdp",
+                    column_name="GDP",
+                )
+                ranked = selector.rank(selector.selections)
+                for i, ranked_item in enumerate(ranked):
+                    logging.info(f"Ranked {i}: {ranked_item.agent.name} - {ranked_item.score}")
+
+            return
 
         if start_stage == 1:
             logging.info(f"Starting {stages_mapping[start_stage]}")
@@ -265,14 +284,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--start_stage",
         type=int,
-        choices=[1, 2, 3],
+        choices=[1, 2, 3, 99],
         default=1,
         help="Stage to start execution from (default: 1)",
     )
     parser.add_argument(
         "--end_stage",
         type=int,
-        choices=[1, 2, 3],
+        choices=[1, 2, 3, 99],
         default=3,
         help="Stage after which to end execution (default: 3)",
     )

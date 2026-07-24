@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import cast
 
 from datasketch import MinHash
 from datasketches import (
@@ -88,7 +89,10 @@ class HllSketchStrategy:
             )
             return max(0.0, estimate - state.get_estimate())
 
-        return sorted(remaining, key=score, reverse=True)
+        for s in remaining:
+            s.score = score(s)
+
+        return sorted(remaining, key=lambda s: cast(float, s.score), reverse=True)
 
     def update(self, state: hll_sketch, values: list[str]) -> hll_sketch:
         for v in values:
@@ -145,7 +149,10 @@ class ThetaSketchStrategy:
                 return a_not_b.get_upper_bound(DEFAULT_NUM_STD)
             return a_not_b.get_estimate()
 
-        return sorted(remaining, key=score, reverse=True)
+        for s in remaining:
+            s.score = score(s)
+
+        return sorted(remaining, key=lambda s: cast(float, s.score), reverse=True)
 
     def update(
         self, state: update_theta_sketch, values: list[str]
@@ -215,7 +222,10 @@ class MinHashStrategy:
             )
             return max(0.0, cardinality - intersection_est)
 
-        return sorted(remaining, key=score, reverse=True)
+        for s in remaining:
+            s.score = score(s)
+
+        return sorted(remaining, key=lambda s: cast(float, s.score), reverse=True)
 
     def update(self, state: MinHashState, values: list[str]) -> MinHashState:
         for v in values:

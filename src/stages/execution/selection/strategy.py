@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Generic, Protocol, TypeVar
+from typing import Generic, Protocol, TypeVar, cast
 
 from qtypes.data_agent import DataAgent
 from stages.execution.selection.agent_selection import AgentSelection
@@ -78,9 +78,12 @@ class StaticSelectionStrategy(ABC, Generic[PS]):
         precomputed: dict[str, PS],
         state: None,
     ) -> list[AgentSelection]:
+        for s in remaining:
+            s.score = precomputed.get(s.agent.name, 0.0)
+
         return sorted(
             remaining,
-            key=lambda s: precomputed.get(s.agent.name, 0.0),
+            key=lambda s: cast(float, s.score),
             reverse=not self.ascending,
         )
 

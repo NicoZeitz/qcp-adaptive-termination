@@ -8,6 +8,7 @@ OPENAI_MODEL = "openai/gpt-5"
 UNIVERSITY_MODEL = "university/unsloth/MiniMax-M3"
 WORK_MODEL = "work/gpt-5"
 EMBEDDING_MODEL = "openai/text-embedding-3-large"
+EMBEDDING_MODEL = "work/text-embedding-3-large"
 
 _multi_provider: MultiProvider | None = None
 
