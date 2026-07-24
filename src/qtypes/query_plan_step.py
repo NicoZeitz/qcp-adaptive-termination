@@ -30,6 +30,8 @@ class SingleAgentQueryPlanStep(BaseQueryPlanStep):
 class MultiAgentQueryPlanStep(BaseQueryPlanStep):
     to_agent: list[str] = Field(min_length=2)
     merge_task: str
+    table_name: str
+    column_name: str
 
     @property
     def has_multiple_to_agents(self) -> bool:

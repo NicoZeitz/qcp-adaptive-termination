@@ -22,6 +22,7 @@ from stages.execution.answer_step_multiple_agents.completeness_evaluator import 
 from stages.execution.answer_step_multiple_agents.compute_estimator import (
     compute_estimator_statistics,
 )
+from stages.execution.selection import AgentSelector
 from utils.span import append_to_span_output, own_custom_span, span_context_var
 
 MULTI_AGENT_ITERATION_RECORDS: dict[str, list[MultiAgentIterationRecord]] = {}
@@ -213,24 +214,44 @@ async def answer_step_multiple_agents(
     additional_information: list[AdditionalInformation],
     batch_size: int = 1,
 ) -> PartialQueryAnswer:
-    all_agents = list(query_plan_step.to_agent)
+    agents_by_name = {a.name: a for a in data_agents}
+    agents_in_step = [
+        agents_by_name[name]
+        for name in query_plan_step.to_agent
+        if name in agents_by_name
+    ]
+
+    selector = await AgentSelector.create(
+        agents=agents_in_step,
+        query=query_plan_step.query,
+        table_name=query_plan_step.table_name,
+        column_name=query_plan_step.column_name,
+    )
     agents_queried: list[str] = []
 
     answer = PartialQueryAnswer()
     iteration_records = []
 
+    # Rank upfront so align_schema sees agents in priority order, capped to limit
+    ranked_all = selector.rank(selector.selections)
+    align_schema_names = [
+        s.agent.name
+        for s in ranked_all[: ExecutionConfig.get().align_schema_agent_limit]
+    ]
+
     result_list = await align_schema(
         data_agents=data_agents,
-        agent_names=all_agents,
+        agent_names=align_schema_names,
         query=query_plan_step.query,
         merge_task=query_plan_step.merge_task,
     )
 
-    remaining = list(all_agents)
     first_batch_size = max(2, batch_size)
-    batch = remaining[:first_batch_size]
-    remaining = remaining[first_batch_size:]
-    while batch:
+    batch_selections = ranked_all[:first_batch_size]
+    remaining_selections = ranked_all[first_batch_size:]
+
+    while batch_selections:
+        batch = [s.agent.name for s in batch_selections]
         outcome = await run_agent_batch(
             data_agents=data_agents,
             query_plan_step=query_plan_step,
@@ -238,12 +259,12 @@ async def answer_step_multiple_agents(
             additional_information=additional_information,
             result_list=result_list,
             agents_queried=agents_queried,
-            agents_remaining=batch + remaining,
+            agents_remaining=[
+                s.agent.name for s in batch_selections + remaining_selections
+            ],
             iteration_records=iteration_records,
         )
         agents_queried.extend(batch)
-        batch = remaining[:batch_size]
-        remaining = remaining[batch_size:]
 
         if isinstance(outcome, RaiseNeedOutcome):
             answer.add_needs(outcome.needs)
@@ -263,7 +284,10 @@ async def answer_step_multiple_agents(
             if not ExecutionConfig.get().continue_after_final_result:
                 break
 
-            continue
+        selector.update(result_list)
+        ranked = selector.rank(remaining_selections)
+        batch_selections = ranked[:batch_size]
+        remaining_selections = ranked[batch_size:]
 
     append_to_span_output(
         {

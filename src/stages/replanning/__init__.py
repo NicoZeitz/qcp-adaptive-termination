@@ -37,7 +37,11 @@ def create_query_plan_prompt_context(query_plan: QueryPlan) -> str:
                     "query": step.query,
                     "to_agent": step.to_agent,
                     **(
-                        {"merge_task": step.merge_task}
+                        {
+                            "merge_task": step.merge_task,
+                            "table_name": step.table_name,
+                            "column_name": step.column_name,
+                        }
                         if isinstance(step, MultiAgentQueryPlanStep)
                         else {}
                     ),

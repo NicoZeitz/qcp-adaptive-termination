@@ -57,6 +57,18 @@ def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseMode
         ),
         merge_task=(str, FieldDefinitions.step_merge_task),
         dependencies=(list[QueryDependency], FieldDefinitions.step_dependencies),
+        table_name=(
+            str,
+            Field(
+                description="The table name agents will primarily query in this step. ",
+            ),
+        ),
+        column_name=(
+            str,
+            Field(
+                description="The column name agents will primarily query in this step in the table specified by table_name.",
+            ),
+        ),
         __config__=StrictModelConfig,
     )
 
@@ -102,6 +114,8 @@ def map_query_plan_model_to_query_plan(
                 merge_task=step_model.merge_task,
                 dependencies=dependencies,
                 answer=None,
+                table_name=step_model.table_name,
+                column_name=step_model.column_name,
             )
         else:
             query_plan_step = SingleAgentQueryPlanStep(

@@ -4,6 +4,7 @@ from typing import Generator
 
 from pydantic import BaseModel, ConfigDict
 
+from qtypes.selection_type import SelectionType
 from unknown_unknown import CountEstimator, Estimator, ValueEstimator
 
 
@@ -80,6 +81,9 @@ class ExecutionConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     continue_after_final_result: bool = False
+
+    selection_type: SelectionType = SelectionType.SEQUENTIAL
+    align_schema_agent_limit: int = 1000
 
     estimator_mode: EstimatorMode = EstimatorMode.FULL
     count_estimator: CountEstimator = Estimator.DEFAULT_COUNT_ESTIMATOR

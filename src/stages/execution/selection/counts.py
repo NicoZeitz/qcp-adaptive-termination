@@ -1,0 +1,53 @@
+from dataclasses import dataclass
+
+from sqlalchemy import text
+
+from qtypes.data_agent import DataAgent
+from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
+from stages.execution.selection.strategy import StaticSelectionStrategy
+
+
+def _fetch_count(data_agent: DataAgent, table_name: str) -> int:
+    db_engine = get_db_engine(data_agent)
+    with db_engine.connect() as conn:
+        result = conn.execute(text(f'SELECT COUNT(*) FROM "{table_name}"')).scalar()
+    return int(result or 0)
+
+
+def _fetch_distinct_count(
+    data_agent: DataAgent, table_name: str, column_name: str
+) -> int:
+    db_engine = get_db_engine(data_agent)
+    with db_engine.connect() as conn:
+        result = conn.execute(
+            text(f'SELECT COUNT(DISTINCT "{column_name}") FROM "{table_name}"')
+        ).scalar()
+    return int(result or 0)
+
+
+@dataclass
+class CountStrategy(StaticSelectionStrategy[int]):
+    async def precompute(
+        self,
+        agents: list[DataAgent],
+        table_name: str | None,
+        column_name: str | None,
+        query: str = "",
+    ) -> dict[str, int]:
+        assert table_name
+        return {a.name: _fetch_count(a, table_name) for a in agents}
+
+
+@dataclass
+class DistinctCountStrategy(StaticSelectionStrategy[int]):
+    async def precompute(
+        self,
+        agents: list[DataAgent],
+        table_name: str | None,
+        column_name: str | None,
+        query: str = "",
+    ) -> dict[str, int]:
+        assert table_name and column_name
+        return {
+            a.name: _fetch_distinct_count(a, table_name, column_name) for a in agents
+        }

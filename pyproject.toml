@@ -7,8 +7,9 @@ requires-python = ">=3.12"
 dependencies = [
     "async-lru>=2.3.0",
     "chevron>=0.14.0",
-    "faker>=40.23.0",
-    "imdb-sqlite>=2.1.0",
+    "datasketch>=2.0.0",
+    "datasketches>=5.2.0",
+    "faiss-cpu>=1.14.3",
     "langfuse>=4.5.1",
     "llama-index>=0.14.20",
     "matplotlib>=3.10.9",
@@ -18,13 +19,24 @@ dependencies = [
     "openai-agents>=0.13.6",
     "openinference-instrumentation-openai-agents>=1.4.2",
     "pandas>=3.0.2",
-    "pylint>=4.0.5",
-    "pytest>=9.0.3",
     "python-dotenv>=1.2.2",
-    "ruff>=0.15.11",
+    "rbloom>=1.5.4",
     "scipy>=1.17.1",
+    "sourmash>=4.9.4",
     "sqlalchemy>=2.0.49",
 ]
 
 [pytest]
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "faker>=40.23.0",
+    "imdb-sqlite>=2.1.0",
+    "ipykernel>=7.3.0",
+    "ipython>=9.15.0",
+    "ipywidgets>=8.1.8",
+    "pylint>=4.0.5",
+    "pytest>=9.0.3",
+    "ruff>=0.15.11",
+]
