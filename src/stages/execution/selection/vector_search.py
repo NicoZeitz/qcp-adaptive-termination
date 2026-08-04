@@ -1,23 +1,25 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import TypeVar
 
 from faiss import Index, IndexFlatL2
 import numpy as np
 
+T = TypeVar("T")
+
 
 @dataclass
-class VectorIndex:
+class VectorIndex[T]:
     index: Index
-    mapping: dict[int, Any]
+    mapping: dict[int, T]
 
 
-def build_index(data: list[tuple[Any, list[float]]]) -> VectorIndex:
+def build_index(data: list[tuple[T, list[float]]]) -> VectorIndex[T]:
     if not data:
         raise ValueError("Data cannot be empty")
 
     dimension = len(data[0][1])
     index = IndexFlatL2(dimension)
-    mapping: dict[int, Any] = {}
+    mapping: dict[int, T] = {}
 
     for i, (item, vector) in enumerate(data):
         index.add(np.array([vector], dtype="float32"))
@@ -27,8 +29,8 @@ def build_index(data: list[tuple[Any, list[float]]]) -> VectorIndex:
 
 
 def search_index_top_k(
-    index: VectorIndex, query: list[float], k: int
-) -> list[tuple[Any, float]]:
+    index: VectorIndex[T], query: list[float], k: int
+) -> list[tuple[T, float]]:
     query_vector = np.array([query], dtype="float32")
     distances, indices = index.index.search(
         query_vector, k

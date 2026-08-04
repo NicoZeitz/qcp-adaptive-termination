@@ -83,9 +83,9 @@ class Bucket:
         """Add one observation to this bucket and rebuild the frequency vector."""
         self.samples.append(sample)
         self.histogram[sample.name].add_sample(sample.value)
-        self._rebuild_frequency_vector()
+        self.rebuild_frequency_vector()
 
-    def _rebuild_frequency_vector(self) -> None:
+    def rebuild_frequency_vector(self) -> None:
         """Recompute f, number_of_samples, and number_of_unique_samples from the histogram."""
         n = len(self.samples)
         f = [0] * n

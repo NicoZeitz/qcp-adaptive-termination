@@ -120,7 +120,9 @@ async def main(
             from stages.execution.selection import AgentSelector
             from qtypes.selection_type import SelectionType
 
-            with ExecutionConfig.override(selection_type=SelectionType.THETA_SKETCH_UCB):
+            with ExecutionConfig.override(
+                selection_type=SelectionType.THETA_SKETCH_UCB
+            ):
                 selector = await AgentSelector.create(
                     data.data_agents,
                     data.query,
@@ -129,7 +131,9 @@ async def main(
                 )
                 ranked = selector.rank(selector.selections)
                 for i, ranked_item in enumerate(ranked):
-                    logging.info(f"Ranked {i}: {ranked_item.agent.name} - {ranked_item.score}")
+                    logging.info(
+                        f"Ranked {i}: {ranked_item.agent.name} - {ranked_item.score}"
+                    )
 
             return
 

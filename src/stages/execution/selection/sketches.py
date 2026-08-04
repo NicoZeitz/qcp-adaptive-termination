@@ -20,7 +20,7 @@ DEFAULT_NUM_STD = 2
 DEFAULT_MIN_HASH_NUM_PERM = 128
 
 
-def _fetch_column_values(
+def fetch_column_values(
     data_agent: DataAgent, table_name: str, column_name: str
 ) -> list[str]:
     db_engine = get_db_engine(data_agent)
@@ -63,7 +63,7 @@ class HllSketchStrategy:
         result: dict[str, hll_sketch] = {}
         for agent in agents:
             sketch = hll_sketch(self.lg_k)
-            for v in _fetch_column_values(agent, table_name, column_name):
+            for v in fetch_column_values(agent, table_name, column_name):
                 sketch.update(v)
             result[agent.name] = sketch
         return result
@@ -129,7 +129,7 @@ class ThetaSketchStrategy:
         result: dict[str, compact_theta_sketch] = {}
         for agent in agents:
             sketch = update_theta_sketch(self.lg_k)
-            for v in _fetch_column_values(agent, table_name, column_name):
+            for v in fetch_column_values(agent, table_name, column_name):
                 sketch.update(v)
             result[agent.name] = sketch.compact()
         return result
@@ -195,7 +195,7 @@ class MinHashStrategy:
         assert table_name and column_name
         result: dict[str, tuple[MinHash, int]] = {}
         for agent in agents:
-            values = _fetch_column_values(agent, table_name, column_name)
+            values = fetch_column_values(agent, table_name, column_name)
             mh = MinHash(num_perm=self.num_perm)
             for v in values:
                 mh.update(v.encode("utf8"))

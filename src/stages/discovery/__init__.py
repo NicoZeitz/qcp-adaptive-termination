@@ -2,8 +2,8 @@ from enum import Enum
 from typing import Any
 
 from stages.common.data_agent.agent_registry import (
+    AgentRegistry,
     AgentRegistryType,
-    build_agent_registry,
 )
 from stages.discovery.filter_with_reasoning import (
     filter_coordinator_with_reasoning,
@@ -67,7 +67,9 @@ async def filter_relevant_agents_internal(
             "data_agents": data_agents,
         },
     ):
-        agent_registry = await build_agent_registry(data_agents, agent_registry_type)
+        agent_registry = await AgentRegistry.build_registry_string(
+            data_agents, agent_registry_type
+        )
         append_to_span_input({"agent_registry": agent_registry})
 
     with own_custom_span(

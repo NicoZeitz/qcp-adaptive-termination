@@ -10,8 +10,8 @@ from qtypes.result import ResultType
 from utils.preview import need_to_json_preview, result_to_json_preview
 from stages.common.agent_configuration import get_coordinator_agent_configuration
 from stages.common.data_agent.agent_registry import (
+    AgentRegistry,
     AgentRegistryType,
-    build_agent_registry,
 )
 from stages.planning import (
     create_draft_query_plan_model,
@@ -101,7 +101,7 @@ async def replan_query_plan(
     query_plan: QueryPlan,
     reason: FailedExecution,
 ) -> QueryPlan:
-    agent_registry = await build_agent_registry(
+    agent_registry = await AgentRegistry.build_registry_string(
         relevant_data_agents, AgentRegistryType.TECHNICAL
     )
     answer_map = create_answer_map_from_query_plan(query_plan)

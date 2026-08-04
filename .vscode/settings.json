@@ -51,8 +51,10 @@
         "pytest",
         "qtypes",
         "Segoe",
+        "siliconvalley",
         "sqlalchemy",
         "testpaths",
+        "vldbsigmod",
         "yearfirst"
     ],
     "python.testing.pytestArgs": [

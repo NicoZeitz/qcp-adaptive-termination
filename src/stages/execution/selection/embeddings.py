@@ -1,24 +1,21 @@
 import asyncio
-from dataclasses import dataclass
-from typing import cast
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Protocol, cast, overload
 
 from agents import OpenAIProvider
 from openai import AsyncOpenAI
 
 from qtypes.data_agent import DataAgent
 from stages.common.agent_configuration import EMBEDDING_MODEL, get_multi_provider
-from stages.common.data_agent.agent_registry import (
-    AgentRegistryType,
-    build_agent_registry,
-)
-from stages.execution.selection.agent_selection import AgentSelection
+from stages.common.data_agent.agent_registry import AgentRegistry
 from stages.execution.selection.strategy import StaticSelectionStrategy
 from stages.execution.selection.vector_search import build_index, search_index_top_k
 from utils.cache import cached
 from utils.span import own_custom_span
 
 
-def _get_client_and_model() -> tuple[AsyncOpenAI, str]:
+def get_client_and_model() -> tuple[AsyncOpenAI, str]:
     multi_provider = get_multi_provider()
     prefix, stripped = cast(
         tuple[str, str], multi_provider._get_prefix_and_model_name(EMBEDDING_MODEL)
@@ -34,39 +31,43 @@ def _get_client_and_model() -> tuple[AsyncOpenAI, str]:
     return provider._get_client(), model_name
 
 
-async def _create_embedding(text: str) -> list[float]:
-    client, model = _get_client_and_model()
-    result = await client.embeddings.create(model=model, input=text)
-    return result.data[0].embedding
+@overload
+async def create_embedding(text: str) -> list[float]: ...
+@overload
+async def create_embedding(text: list[str]) -> list[list[float]]: ...
+@cached(name_prefix="Embedding")
+async def create_embedding(text):
+    with own_custom_span("Embedding", input={"text": text}):
+        client, model = get_client_and_model()
+        result = await client.embeddings.create(model=model, input=text)
+
+        if isinstance(text, list):
+            return [
+                item.embedding for item in sorted(result.data, key=lambda x: x.index)
+            ]
+        else:
+            return result.data[0].embedding
 
 
-@cached(name_prefix="Text Embedding")
-async def _create_text_embedding(text: str) -> list[float]:
-    with own_custom_span("Text Embedding", input={"text": text}):
-        return await _create_embedding(text)
+class EmbeddingScorer(Protocol):
+    def __call__(self, distances: list[float]) -> float: ...
 
-async def _create_agent_embedding(
-    data_agent: DataAgent, agent_registry_type: AgentRegistryType
-) -> list[float]:
-    @cached(name_prefix=f"{data_agent.name} - Agent Embedding")
-    async def compute_embedding(data_agent: DataAgent, agent_registry_type: AgentRegistryType) -> list[float]:
-        registry_text = await build_agent_registry([data_agent], agent_registry_type)
-        return await _create_embedding(registry_text)
 
-    with own_custom_span("Agent Embeddings", input={"agent": data_agent.name}):
-        return await compute_embedding(data_agent, agent_registry_type)
+def min_distance_scorer(distances: list[float]) -> float:
+    return min(distances)
+
 
 @dataclass
 class EmbeddingStrategy(StaticSelectionStrategy[float]):
     """
-    Ranks agents by L2 distance of their registry embedding to the query.
+    Ranks agents by embedding distance to the query.
 
-    ascending=True: lower distance = better rank.
-    Precomputed: raw L2 distance per agent (cached on disk).
+    Each agent's tables are embedded separately; scores are collapsed
+    per-agent using `scorer` (default: min distance across tables).
     """
 
-    registry_type: AgentRegistryType = AgentRegistryType.NATURAL_LANGUAGE
     ascending: bool = True
+    scorer: EmbeddingScorer = field(default=min_distance_scorer)
 
     async def precompute(
         self,
@@ -75,14 +76,29 @@ class EmbeddingStrategy(StaticSelectionStrategy[float]):
         column_name: str | None,
         query: str = "",
     ) -> dict[str, float]:
-        agent_embeddings = await asyncio.gather(
-            *[_create_agent_embedding(a, self.registry_type) for a in agents]
+        per_agent_texts: list[list[str]] = await AgentRegistry.embedding_descriptions(
+            agents
         )
-        query_embedding = await _create_text_embedding(query)
+        per_agent_vectors: list[list[list[float]]] = list(
+            await asyncio.gather(
+                *[create_embedding(texts) for texts in per_agent_texts]
+            )
+        )
 
-        selections = [
-            AgentSelection(agent=a, table_name=None, column_name=None) for a in agents
-        ]
-        index = build_index(list(zip(selections, agent_embeddings)))
-        ranked = search_index_top_k(index, query_embedding, k=len(agents))
-        return {s.agent.name: dist for s, dist in ranked}
+        query_embedding = await create_embedding(query)
+
+        flat_data: list[tuple[DataAgent, list[float]]] = []
+        for agent, vectors in zip(agents, per_agent_vectors):
+            for vec in vectors:
+                flat_data.append((agent, vec))
+
+        index = build_index(flat_data)
+        ranked = search_index_top_k(index, query_embedding, k=len(flat_data))
+
+        agent_distances: defaultdict[str, list[float]] = defaultdict(list)
+        for agent, dist in ranked:
+            agent_distances[agent.name].append(dist)
+
+        return {
+            name: self.scorer(distances) for name, distances in agent_distances.items()
+        }

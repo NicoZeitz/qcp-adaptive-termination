@@ -16,7 +16,7 @@ from qtypes.aligned_result_list import (
 )
 from qtypes.data_agent import DataAgent
 from stages.common.agent_configuration import get_coordinator_agent_configuration
-from stages.common.data_agent.data_description import data_agent_data_description
+from stages.common.data_agent.agent_registry import AgentRegistry, AgentRegistryType
 from stages.execution.validation import validate_schema_output
 from utils.run_agent import run_agent
 from utils.span import append_to_span_output, own_custom_span
@@ -28,14 +28,9 @@ async def align_schema(
     query: str,
     merge_task: str,
 ) -> AlignedResultList:
-    agent_descriptions: list[dict[str, str]] = []
-    for name in agent_names:
-        agent = next(a for a in data_agents if a.name == name)
-        description = await data_agent_data_description(agent)
-        agent_descriptions.append({"name": name, "description": description})
-
-    agents_description_text = "\n\n".join(
-        f"Agent: {a['name']}\n{a['description']}" for a in agent_descriptions
+    agents = [a for a in data_agents if a.name in agent_names]
+    agents_description_text = await AgentRegistry.build_registry_string(
+        agents, AgentRegistryType.TECHNICAL, include_capabilities=False
     )
 
     source_agent_column = f"source_agent_{uuid.uuid4().hex[:8]}"

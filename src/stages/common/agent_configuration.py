@@ -30,8 +30,8 @@ def get_multi_provider() -> MultiProvider:
 _coordinator_config: dict[str, tuple[str, Reasoning]] = {
     "Default": (UNIVERSITY_MODEL, Reasoning(effort="none")),
     "Relevance": (UNIVERSITY_MODEL, Reasoning(effort="none")),
-    # "Planning": (OPENAI_MODEL, Reasoning(effort="high", summary="concise")),
-    "Planning": (UNIVERSITY_MODEL, Reasoning(effort="none")),
+    "Planning": (OPENAI_MODEL, Reasoning(effort="high", summary="concise")),
+    # "Planning": (UNIVERSITY_MODEL, Reasoning(effort="none")),
     "Code": (UNIVERSITY_MODEL, Reasoning(effort="high")),
     # "Replanning": (OPENAI_MODEL, Reasoning(effort="high", summary="concise")),
     "Replanning": (UNIVERSITY_MODEL, Reasoning(effort="none")),

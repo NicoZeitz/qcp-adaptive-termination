@@ -7,7 +7,7 @@ from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
 from stages.execution.selection.strategy import StaticSelectionStrategy
 
 
-def _scalar(data_agent: DataAgent, query: str) -> float:
+def scalar(data_agent: DataAgent, query: str) -> float:
     db_engine = get_db_engine(data_agent)
     with db_engine.connect() as conn:
         result = conn.execute(text(query)).scalar()
@@ -27,7 +27,7 @@ class NullCoverageStrategy(StaticSelectionStrategy[float]):
     ) -> dict[str, float]:
         assert table_name and column_name
         return {
-            a.name: _scalar(
+            a.name: scalar(
                 a,
                 f'SELECT COUNT("{column_name}") * 1.0 / NULLIF(COUNT(*), 0)'
                 f' FROM "{table_name}"',
@@ -49,7 +49,7 @@ class ValueRangeStrategy(StaticSelectionStrategy[float]):
     ) -> dict[str, float]:
         assert table_name and column_name
         return {
-            a.name: _scalar(
+            a.name: scalar(
                 a,
                 f'SELECT MAX("{column_name}") - MIN("{column_name}")'
                 f' FROM "{table_name}" WHERE "{column_name}" IS NOT NULL',

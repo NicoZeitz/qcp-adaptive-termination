@@ -7,14 +7,14 @@ from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
 from stages.execution.selection.strategy import StaticSelectionStrategy
 
 
-def _fetch_count(data_agent: DataAgent, table_name: str) -> int:
+def fetch_count(data_agent: DataAgent, table_name: str) -> int:
     db_engine = get_db_engine(data_agent)
     with db_engine.connect() as conn:
         result = conn.execute(text(f'SELECT COUNT(*) FROM "{table_name}"')).scalar()
     return int(result or 0)
 
 
-def _fetch_distinct_count(
+def fetch_distinct_count(
     data_agent: DataAgent, table_name: str, column_name: str
 ) -> int:
     db_engine = get_db_engine(data_agent)
@@ -35,7 +35,7 @@ class CountStrategy(StaticSelectionStrategy[int]):
         query: str = "",
     ) -> dict[str, int]:
         assert table_name
-        return {a.name: _fetch_count(a, table_name) for a in agents}
+        return {a.name: fetch_count(a, table_name) for a in agents}
 
 
 @dataclass
@@ -49,5 +49,5 @@ class DistinctCountStrategy(StaticSelectionStrategy[int]):
     ) -> dict[str, int]:
         assert table_name and column_name
         return {
-            a.name: _fetch_distinct_count(a, table_name, column_name) for a in agents
+            a.name: fetch_distinct_count(a, table_name, column_name) for a in agents
         }

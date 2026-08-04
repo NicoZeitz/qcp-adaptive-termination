@@ -21,12 +21,12 @@ from stages.execution.selection.statistics import (
 from stages.execution.selection.strategy import SelectionStrategy
 
 
-def _requires_table(selection_type: SelectionType, table_name: str | None) -> None:
+def requires_table(selection_type: SelectionType, table_name: str | None) -> None:
     if table_name is None:
         raise ValueError(f"SelectionType.{selection_type.value} requires table_name")
 
 
-def _requires_column(
+def requires_column(
     selection_type: SelectionType, table_name: str | None, column_name: str | None
 ) -> None:
     if table_name is None or column_name is None:
@@ -35,7 +35,7 @@ def _requires_column(
         )
 
 
-def _build_strategy(
+def build_strategy(
     selection_type: SelectionType,
     table_name: str | None,
     column_name: str | None,
@@ -47,31 +47,31 @@ def _build_strategy(
     elif selection_type == SelectionType.EMBEDDING_MSCHEMA:
         return EmbeddingStrategy(registry_type=AgentRegistryType.TECHNICAL)
     elif selection_type == SelectionType.COUNT:
-        _requires_table(selection_type, table_name)
+        requires_table(selection_type, table_name)
         return CountStrategy()
     elif selection_type == SelectionType.DISTINCT_COUNT:
-        _requires_column(selection_type, table_name, column_name)
+        requires_column(selection_type, table_name, column_name)
         return DistinctCountStrategy()
     elif selection_type == SelectionType.HLL_SKETCH:
-        _requires_column(selection_type, table_name, column_name)
+        requires_column(selection_type, table_name, column_name)
         return HllSketchStrategy()
     elif selection_type == SelectionType.HLL_SKETCH_UCB:
-        _requires_column(selection_type, table_name, column_name)
+        requires_column(selection_type, table_name, column_name)
         return HllSketchStrategy(use_ucb=True)
     elif selection_type == SelectionType.THETA_SKETCH:
-        _requires_column(selection_type, table_name, column_name)
+        requires_column(selection_type, table_name, column_name)
         return ThetaSketchStrategy()
     elif selection_type == SelectionType.THETA_SKETCH_UCB:
-        _requires_column(selection_type, table_name, column_name)
+        requires_column(selection_type, table_name, column_name)
         return ThetaSketchStrategy(use_ucb=True)
     elif selection_type == SelectionType.MIN_HASH:
-        _requires_column(selection_type, table_name, column_name)
+        requires_column(selection_type, table_name, column_name)
         return MinHashStrategy()
     elif selection_type == SelectionType.NULL_COVERAGE:
-        _requires_column(selection_type, table_name, column_name)
+        requires_column(selection_type, table_name, column_name)
         return NullCoverageStrategy()
     elif selection_type == SelectionType.VALUE_RANGE:
-        _requires_column(selection_type, table_name, column_name)
+        requires_column(selection_type, table_name, column_name)
         return ValueRangeStrategy()
     else:
         raise ValueError(f"Unsupported SelectionType: {selection_type}")
@@ -107,11 +107,13 @@ class AgentSelector:
         column_name: str | None = None,
     ) -> "AgentSelector":
         selection_type = ExecutionConfig.get().selection_type
-        strategy = _build_strategy(selection_type, table_name, column_name)
+        strategy = build_strategy(selection_type, table_name, column_name)
         precomputed = await strategy.precompute(agents, table_name, column_name, query)
         state = strategy.init_state()
         selections = [
-            AgentSelection(agent=a, table_name=table_name, column_name=column_name, score=None)
+            AgentSelection(
+                agent=a, table_name=table_name, column_name=column_name, score=None
+            )
             for a in agents
         ]
         return cls(strategy, precomputed, state, selections)

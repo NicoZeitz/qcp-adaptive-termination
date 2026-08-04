@@ -1,5 +1,6 @@
 from pydantic import BaseModel, create_model, Field
 
+from qtypes.agent_data import AgentData
 from stages.common.agent_configuration import get_data_agent_agent_configuration
 from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
 from utils.run_agent import run_llm
@@ -22,11 +23,7 @@ def create_database_description_model(schema_engine: SchemaEngine) -> type[BaseM
     return create_model("DatabaseDescriptionModel", **schema_dict)
 
 
-async def sql_data_agent_query_capabilities(data_agent: DataAgent) -> list[str]:
-    return ["Text-to-SQL"]
-
-
-async def sql_data_and_nl_description(data_agent: DataAgent) -> tuple[str, str]:
+async def sql_load_agent_data(data_agent: DataAgent) -> AgentData:
     db_engine = get_db_engine(data_agent)
     schema_engine = SchemaEngine(db_engine, db_name=data_agent.name)
     m_schema_without_comments = schema_engine.mschema.to_mschema()
@@ -44,7 +41,6 @@ async def sql_data_and_nl_description(data_agent: DataAgent) -> tuple[str, str]:
         output_type=DatabaseDescriptionModel,
     )
 
-    # Update the schema with the generated descriptions
     for table_name, table_info in schema_engine.mschema.tables.items():
         for col_name, field_info in table_info["fields"].items():
             description = getattr(getattr(result, table_name, {}), col_name, None)
@@ -52,4 +48,10 @@ async def sql_data_and_nl_description(data_agent: DataAgent) -> tuple[str, str]:
                 field_info["comment"] = description
 
     natural_language_description = getattr(result, "database_description")
-    return schema_engine.mschema.to_mschema(), natural_language_description
+
+    return AgentData(
+        technical_description=schema_engine.mschema.to_mschema(),
+        natural_language_description=natural_language_description,
+        query_capabilities=["Text-to-SQL"],
+        embedding_descriptions=schema_engine.mschema.table_embedding_texts(),
+    )

@@ -13,8 +13,8 @@ from qtypes.query_plan_step import (
 )
 from stages.common.agent_configuration import get_coordinator_agent_configuration
 from stages.common.data_agent.agent_registry import (
+    AgentRegistry,
     AgentRegistryType,
-    build_agent_registry,
 )
 from utils.cache import cached
 from utils.run_agent import run_llm
@@ -66,7 +66,7 @@ def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseMode
         column_name=(
             str,
             Field(
-                description="The column name agents will primarily query in this step in the table specified by table_name.",
+                description="The column name agents will primarily query in this step in the table specified by table_name. ONLY INCLUDE A SINGLE COLUMN NAME",
             ),
         ),
         __config__=StrictModelConfig,
@@ -145,8 +145,8 @@ async def draft_query_plan(
             "relevant_data_agents": relevant_data_agents,
         },
     ):
-        agent_registry = await build_agent_registry(
-            relevant_data_agents, agent_registry_type=AgentRegistryType.TECHNICAL
+        agent_registry = await AgentRegistry.build_registry_string(
+            relevant_data_agents, registry_type=AgentRegistryType.TECHNICAL
         )
         QueryPlanModel = create_draft_query_plan_model(relevant_data_agents)
 

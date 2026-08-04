@@ -84,6 +84,7 @@ async def run_agent_batch(
     agents_queried: list[str],
     agents_remaining: list[str],
     iteration_records: list[MultiAgentIterationRecord],
+    rankings: list[tuple[str, float | None]],
 ) -> FinalResultOutcome | QueryMoreAgentsOutcome | RaiseNeedOutcome:
     """Query all agents in batch in parallel, merge results, then run evaluator once."""
     agents_total = len(agents_queried) + len(agents_remaining)
@@ -98,6 +99,7 @@ async def run_agent_batch(
             "batch": batch,
             "agents_queried": agents_queried,
             "agents_remaining": agents_remaining,
+            "rankings": rankings,
         },
     ):
         results = await asyncio.gather(
@@ -199,8 +201,8 @@ async def run_agent_batch(
                     result_list=merged_result_list.data,
                     estimator_result=agent_stats,
                     evaluator_decision=outcome.decision if is_last else "batch_query",
-                    queried_agents=agents_queried_now,
-                    remaining_agents=remaining_agents_now,
+                    queried_agents=agents_queried + batch[: i + 1],
+                    remaining_agents=batch[i + 1 :] + remaining_agents_now,
                 )
             )
 
@@ -234,6 +236,7 @@ async def answer_step_multiple_agents(
 
     # Rank upfront so align_schema sees agents in priority order, capped to limit
     ranked_all = selector.rank(selector.selections)
+    rankings = [(s.agent.name, s.score) for s in ranked_all]
     align_schema_names = [
         s.agent.name
         for s in ranked_all[: ExecutionConfig.get().align_schema_agent_limit]
@@ -263,6 +266,7 @@ async def answer_step_multiple_agents(
                 s.agent.name for s in batch_selections + remaining_selections
             ],
             iteration_records=iteration_records,
+            rankings=rankings,
         )
         agents_queried.extend(batch)
 
@@ -286,6 +290,7 @@ async def answer_step_multiple_agents(
 
         selector.update(result_list)
         ranked = selector.rank(remaining_selections)
+        rankings = [(s.agent.name, s.score) for s in ranked]
         batch_selections = ranked[:batch_size]
         remaining_selections = ranked[batch_size:]
 

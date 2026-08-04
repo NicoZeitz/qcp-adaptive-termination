@@ -14,7 +14,7 @@ from qtypes.partial_query_answer import PartialQueryAnswer
 from qtypes.result import try_parse_value_to_result_type
 from stages.execution.validation import validate_agent_output
 from stages.common.agent_configuration import get_data_agent_agent_configuration
-from stages.common.data_agent.data_description import data_agent_data_description
+from stages.common.data_agent.agent_registry import AgentRegistry, AgentRegistryType
 from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
 from utils.preview import preview_additional_information, result_to_json_preview
 from utils.run_agent import run_agent
@@ -54,7 +54,9 @@ async def answer_query_sql_data_agent(
         },
     ):
         db_engine = get_db_engine(data_agent)
-        m_schema = await data_agent_data_description(data_agent)
+        m_schema = await AgentRegistry.build_registry_string(
+            data_agent, AgentRegistryType.TECHNICAL, include_capabilities=False
+        )
         sql_queries: list[SqlQuery] = []
         partial_answer = PartialQueryAnswer()
 

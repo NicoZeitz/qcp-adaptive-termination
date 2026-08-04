@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping, cast
 from langfuse.model import ChatMessageDict
 
 import chevron
@@ -11,7 +11,8 @@ _prompt_cache: dict[str, str] = {
 }
 
 
-def load_prompt(name: str, parameters: dict[str, Any]) -> list[ChatMessageDict]:
+def load_prompt(name: str, parameters: Mapping[str, Any]) -> list[ChatMessageDict]:
+    parameters = cast(dict[str, Any], parameters)
     instructions = chevron.render(_prompt_cache[f"{name}-instructions"], parameters)
     user = chevron.render(_prompt_cache[f"{name}-user"], parameters)
     return [

@@ -165,49 +165,69 @@ class MSchema:
         selected_tables: 默认为None，表示选择所有的表
         selected_columns: 默认为None，表示所有列全选，格式['table_name.column_name']
         """
-        output = []
+        output = [f"【DB_ID】 {self.db_id}", "【Schema】"]
+        output.extend(
+            self.table_embedding_texts(
+                selected_tables, selected_columns, example_num, show_type_detail
+            )
+        )
 
-        output.append(f"【DB_ID】 {self.db_id}")
-        output.append("【Schema】")
+        # 添加外键信息，选择table_type为view时不展示外键
+        if self.foreign_keys:
+            normalized_tables = (
+                [s.split(".")[0].lower() for s in selected_columns]
+                if selected_columns is not None
+                else (
+                    [s.lower() for s in selected_tables]
+                    if selected_tables is not None
+                    else None
+                )
+            )
+            output.append("【Foreign keys】")
+            for fk in self.foreign_keys:
+                ref_schema = fk[2]
+                table1, column1, _, table2, column2 = fk
+                if normalized_tables is None or (
+                    table1.lower() in normalized_tables
+                    and table2.lower() in normalized_tables
+                ):
+                    if ref_schema == self.schema:
+                        output.append(f"{fk[0]}.{fk[1]}={fk[3]}.{fk[4]}")
 
+        return "\n".join(output)
+
+    def table_embedding_texts(
+        self,
+        selected_tables: list | None = None,
+        selected_columns: list | None = None,
+        example_num: int = 3,
+        show_type_detail: bool = False,
+    ) -> list[str]:
         if selected_tables is not None:
             selected_tables = [s.lower() for s in selected_tables]
         if selected_columns is not None:
             selected_columns = [s.lower() for s in selected_columns]
             selected_tables = [s.split(".")[0].lower() for s in selected_columns]
 
-        # 依次处理每一个表
+        result = []
         for table_name, table_info in self.tables.items():
             if selected_tables is None or table_name.lower() in selected_tables:
                 column_names = list(table_info["fields"].keys())
-                if selected_columns is not None:
-                    cur_selected_columns = [
+                cur_cols = (
+                    [
                         c.lower()
                         for c in column_names
                         if f"{table_name}.{c}".lower() in selected_columns
                     ]
-                else:
-                    cur_selected_columns = selected_columns
-                output.append(
+                    if selected_columns is not None
+                    else None
+                )
+                result.append(
                     self.single_table_mschema(
-                        table_name, cur_selected_columns, example_num, show_type_detail
+                        table_name, cur_cols, example_num, show_type_detail
                     )
                 )
-
-        # 添加外键信息，选择table_type为view时不展示外键
-        if self.foreign_keys:
-            output.append("【Foreign keys】")
-            for fk in self.foreign_keys:
-                ref_schema = fk[2]
-                table1, column1, _, table2, column2 = fk
-                if selected_tables is None or (
-                    table1.lower() in selected_tables
-                    and table2.lower() in selected_tables
-                ):
-                    if ref_schema == self.schema:
-                        output.append(f"{fk[0]}.{fk[1]}={fk[3]}.{fk[4]}")
-
-        return "\n".join(output)
+        return result
 
     def dump(self):
         schema_dict = {

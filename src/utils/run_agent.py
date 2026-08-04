@@ -1,4 +1,4 @@
-from typing import Literal, Type, cast
+from typing import Literal, Mapping, Type, cast
 
 from agents import (
     Agent,
@@ -24,7 +24,7 @@ from utils.span import indented_logging
 async def run_agent[TResult](
     agent_configuration: AgentConfiguration,
     prompt_name: str,
-    prompt_parameters: dict[str, str | int | float | bool | None],
+    prompt_parameters: Mapping[str, str | int | float | bool | None],
     *,
     context: JsonValue = None,
     output_type: Type[TResult] | None = str,
@@ -146,7 +146,7 @@ async def run_agent[TResult](
 async def run_llm[TResult](
     agent_configuration: AgentConfiguration,
     prompt_name: str,
-    prompt_parameters: dict[str, str | int | float | bool | None],
+    prompt_parameters: Mapping[str, str | int | float | bool | None],
     *,
     output_type: Type[TResult] | None = str,
     context: JsonValue = None,
