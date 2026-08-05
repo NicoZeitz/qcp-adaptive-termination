@@ -26,7 +26,7 @@ from stages.execution.answer_step_multiple_agents.completeness_evaluator import 
 from stages.execution.answer_step_multiple_agents.compute_estimator import (
     compute_estimator_statistics,
 )
-from stages.execution.selection import AgentSelector
+from common.selection_strategy import AgentSelector
 from common.span import append_to_span_output, own_custom_span, span_context_var
 
 MULTI_AGENT_ITERATION_RECORDS: dict[str, list[MultiAgentIterationRecord]] = {}

@@ -1,5 +1,5 @@
 from common.model.agent.data_agent import DataAgent
-from stages.execution.selection.strategy import StaticSelectionStrategy
+from common.selection_strategy.strategy import StaticSelectionStrategy
 
 
 class SequentialStrategy(StaticSelectionStrategy[float]):

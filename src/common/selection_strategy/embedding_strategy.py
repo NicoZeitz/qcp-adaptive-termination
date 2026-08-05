@@ -5,7 +5,7 @@ from typing import Protocol
 
 from common.model.agent.data_agent import DataAgent
 from common.agent_registry.agent_registry import AgentRegistry
-from stages.execution.selection.strategy import StaticSelectionStrategy
+from common.selection_strategy.strategy import StaticSelectionStrategy
 from common.embeddings import create_embedding
 from common.vector_search import build_index, search_index_top_k
 

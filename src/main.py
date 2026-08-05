@@ -119,8 +119,8 @@ async def main(
 
         if start_stage == 99:
             logging.info(f"Starting stage {start_stage}, ENTERING DEBUG CODE")
-            from stages.execution.selection import AgentSelector
-            from common.model.selection.selection_type import SelectionType
+            from common.selection_strategy import AgentSelector
+            from common.model.selection_strategy.selection_type import SelectionType
 
             with ExecutionConfig.override(
                 selection_type=SelectionType.THETA_SKETCH_UCB

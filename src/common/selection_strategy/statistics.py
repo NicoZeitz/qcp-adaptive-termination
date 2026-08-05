@@ -4,7 +4,7 @@ from sqlalchemy import text
 
 from common.model.agent.data_agent import DataAgent
 from common.data_agent.get_db_engine import get_db_engine
-from stages.execution.selection.strategy import StaticSelectionStrategy
+from common.selection_strategy.strategy import StaticSelectionStrategy
 
 
 def scalar(data_agent: DataAgent, query: str) -> float:
