@@ -2,7 +2,7 @@ import pandas as pd
 
 from model.estimation.aligned_result_list import AlignedResultList
 from model.estimation.estimator_statistics import EstimatorStatistics
-from common.model.execution_config import ExecutionConfig
+from model.execution_config import ExecutionConfig
 from common.unknown_unknown import DataItem, Estimator
 from common.span import indented_logging
 

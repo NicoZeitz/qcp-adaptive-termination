@@ -1,10 +1,10 @@
 from typing import Any
 
-from common.model.estimation.aligned_result_list import AlignedResultList
-from common.model.agent.data_agent import DataAgent
-from common.model.execution_config import ExecutionConfig
-from common.model.selection_strategy.selection_type import SelectionType
-from common.model.selection_strategy.agent_selection import AgentSelection
+from model.estimation.aligned_result_list import AlignedResultList
+from model.agent.data_agent import DataAgent
+from model.execution_config import ExecutionConfig
+from model.selection_strategy.selection_type import SelectionType
+from model.selection_strategy.agent_selection import AgentSelection
 from common.selection_strategy.counts import CountStrategy, DistinctCountStrategy
 from common.selection_strategy.embedding_strategy import EmbeddingStrategy
 from common.selection_strategy.resolve import (

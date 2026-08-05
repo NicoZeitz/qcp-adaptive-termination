@@ -9,7 +9,7 @@ from model.execution.additional_information import AdditionalInformation
 from model.estimation.aligned_result_list import AlignedResultList
 from model.agent.data_agent import DataAgent
 from model.estimation.estimator_statistics import EstimatorStatistics
-from common.model.execution_config import ExecutionConfig
+from model.execution_config import ExecutionConfig
 from model.multi_agent_iteration_record import MultiAgentIterationRecord
 from model.execution.outcome import (
     FinalResultOutcome,

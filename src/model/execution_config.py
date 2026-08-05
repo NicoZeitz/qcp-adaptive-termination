@@ -3,8 +3,8 @@ from typing import Generator
 
 from pydantic import BaseModel, ConfigDict
 
-from common.model.estimation.estimator_mode import EstimatorMode
-from common.model.selection_strategy.selection_type import SelectionType
+from model.estimation.estimator_mode import EstimatorMode
+from model.selection_strategy.selection_type import SelectionType
 from common.unknown_unknown import CountEstimator, Estimator, ValueEstimator
 
 

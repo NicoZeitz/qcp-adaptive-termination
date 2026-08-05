@@ -6,12 +6,12 @@ from pydantic import JsonValue
 import pandas as pd
 
 from common.code_execution.code_execution_environment import CodeExecutionEnvironment
-from common.model.execution.additional_information import AdditionalInformation
-from common.model.estimation.aligned_result_list import AlignedSchemaMetadata
-from common.model.agent.data_agent import DataAgent
-from common.model.need import try_parse_value_to_need_type
-from common.model.execution.partial_query_answer import PartialQueryAnswer
-from common.model.result import try_parse_value_to_result_type
+from model.execution.additional_information import AdditionalInformation
+from model.estimation.aligned_result_list import AlignedSchemaMetadata
+from model.agent.data_agent import DataAgent
+from model.need import try_parse_value_to_need_type
+from model.execution.partial_query_answer import PartialQueryAnswer
+from model.result import try_parse_value_to_result_type
 from stages.execution.validation import validate_agent_output
 from common.agent_configuration import get_data_agent_agent_configuration
 from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType

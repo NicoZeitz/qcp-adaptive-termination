@@ -2,7 +2,7 @@ from common.code_execution.code_execution_environment import CodeExecutionEnviro
 from model.estimation.estimator_mode import EstimatorMode
 from model.estimation.aligned_result_list import AlignedResultList
 from model.estimation.estimator_statistics import EstimatorStatistics
-from common.model.execution_config import ExecutionConfig
+from model.execution_config import ExecutionConfig
 from model.execution.outcome import EvaluatorDecision
 from model.execution.outcome import FinalResultOutcome
 from model.execution.outcome import QueryMoreAgentsOutcome

@@ -7,7 +7,7 @@ from datetime import datetime
 from agents import trace
 from langfuse import get_client
 
-from common.model.execution_config import ExecutionConfig
+from model.execution_config import ExecutionConfig
 from common.preview import result_to_json_preview
 from stages.planning import draft_query_plan, STAGE_NAME as PLANNING_STAGE_NAME
 from model.stages.drafted_query_plan import DraftedQueryPlan
