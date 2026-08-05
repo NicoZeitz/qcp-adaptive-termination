@@ -2,7 +2,7 @@ import asyncio
 from enum import Enum
 from typing import Callable, overload
 
-from model.agent.agent_data import load_agent_data
+from common.data_agent.data_agent import load_agent_data
 from model.agent.agent_data import AgentData
 from model.agent.data_agent import DataAgent
 

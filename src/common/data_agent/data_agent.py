@@ -23,7 +23,7 @@ def create_database_description_model(schema_engine: SchemaEngine) -> type[BaseM
     return create_model("DatabaseDescriptionModel", **schema_dict)
 
 
-async def sql_load_agent_data(data_agent: DataAgent) -> AgentData:
+async def load_agent_data(data_agent: DataAgent) -> AgentData:
     db_engine = get_db_engine(data_agent)
     schema_engine = SchemaEngine(db_engine, db_name=data_agent.name)
     m_schema_without_comments = schema_engine.mschema.to_mschema()

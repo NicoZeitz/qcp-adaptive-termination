@@ -1,11 +1,11 @@
 from model.agent.data_agent import DataAgent
 from common.agent_registry.agent_registry import AgentRegistry
-from common.embeddings import create_embedding
-from common.vector_search import build_index, search_index_top_k
+from common.embedding.embeddings import create_embedding
+from common.embedding.vector_search import build_index, search_index_top_k
 
 
 async def resolve_table(agents: list[DataAgent], query: str) -> dict[str, str]:
-    agent_data = await AgentRegistry.load_all(agents)
+    agent_data = await AgentRegistry.load(agents)
     query_vec = await create_embedding(query)
 
     result: dict[str, str] = {}
@@ -27,7 +27,7 @@ async def resolve_column(
     table_per_agent: dict[str, str],
     query: str,
 ) -> dict[str, str]:
-    agent_data = await AgentRegistry.load_all(agents)
+    agent_data = await AgentRegistry.load(agents)
     query_vec = await create_embedding(query)
 
     result: dict[str, str] = {}

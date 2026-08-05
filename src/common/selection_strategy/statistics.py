@@ -5,6 +5,7 @@ from sqlalchemy import text
 from model.agent.data_agent import DataAgent
 from common.data_agent.get_db_engine import get_db_engine
 from common.selection_strategy.strategy import StaticSelectionStrategy
+from common.selection_strategy.sql_utils import quote_col, quote_table
 
 
 def scalar(data_agent: DataAgent, query: str) -> float:
@@ -29,8 +30,8 @@ class NullCoverageStrategy(StaticSelectionStrategy[float]):
         return {
             a.name: scalar(
                 a,
-                f'SELECT COUNT("{column_per_agent[a.name]}") * 1.0 / NULLIF(COUNT(*), 0)'
-                f' FROM "{table_per_agent[a.name]}"',
+                f"SELECT COUNT({quote_col(column_per_agent[a.name])}) * 1.0 / NULLIF(COUNT(*), 0)"
+                f" FROM {quote_table(table_per_agent[a.name])}",
             )
             for a in agents
             if a.name in table_per_agent and a.name in column_per_agent
@@ -52,9 +53,9 @@ class ValueRangeStrategy(StaticSelectionStrategy[float]):
         return {
             a.name: scalar(
                 a,
-                f'SELECT MAX("{column_per_agent[a.name]}") - MIN("{column_per_agent[a.name]}")'
-                f' FROM "{table_per_agent[a.name]}"'
-                f' WHERE "{column_per_agent[a.name]}" IS NOT NULL',
+                f"SELECT MAX({quote_col(column_per_agent[a.name])}) - MIN({quote_col(column_per_agent[a.name])})"
+                f" FROM {quote_table(table_per_agent[a.name])}"
+                f" WHERE {quote_col(column_per_agent[a.name])} IS NOT NULL",
             )
             for a in agents
             if a.name in table_per_agent and a.name in column_per_agent

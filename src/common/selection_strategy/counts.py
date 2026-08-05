@@ -5,12 +5,15 @@ from sqlalchemy import text
 from model.agent.data_agent import DataAgent
 from common.data_agent.get_db_engine import get_db_engine
 from common.selection_strategy.strategy import StaticSelectionStrategy
+from common.selection_strategy.sql_utils import quote_col, quote_table
 
 
 def fetch_count(data_agent: DataAgent, table_name: str) -> int:
     db_engine = get_db_engine(data_agent)
     with db_engine.connect() as conn:
-        result = conn.execute(text(f'SELECT COUNT(*) FROM "{table_name}"')).scalar()
+        result = conn.execute(
+            text(f"SELECT COUNT(*) FROM {quote_table(table_name)}")
+        ).scalar()
     return int(result or 0)
 
 
@@ -20,7 +23,9 @@ def fetch_distinct_count(
     db_engine = get_db_engine(data_agent)
     with db_engine.connect() as conn:
         result = conn.execute(
-            text(f'SELECT COUNT(DISTINCT "{column_name}") FROM "{table_name}"')
+            text(
+                f"SELECT COUNT(DISTINCT {quote_col(column_name)}) FROM {quote_table(table_name)}"
+            )
         ).scalar()
     return int(result or 0)
 

@@ -5,10 +5,11 @@ from model.agent.agent_configuration import AgentConfiguration
 from model.agent.data_agent import DataAgent
 
 OPENAI_MODEL = "openai/gpt-5"
-UNIVERSITY_MODEL = "university/unsloth/MiniMax-M3"
+# UNIVERSITY_MODEL = "university/unsloth/MiniMax-M3"
+UNIVERSITY_MODEL = "university/unsloth/DeepSeek-V4-Flash-0731"
 WORK_MODEL = "work/gpt-5"
+# EMBEDDING_MODEL = "work/text-embedding-3-large"
 EMBEDDING_MODEL = "openai/text-embedding-3-large"
-EMBEDDING_MODEL = "work/text-embedding-3-large"
 
 _multi_provider: MultiProvider | None = None
 

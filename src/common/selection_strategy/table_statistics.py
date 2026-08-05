@@ -7,6 +7,7 @@ from sqlalchemy import bindparam, text
 
 from model.agent.data_agent import DataAgent
 from common.data_agent.get_db_engine import get_db_engine
+from common.selection_strategy.sql_utils import quote_col, quote_table
 
 
 DEFAULT_HISTOGRAM_BINS = 100
@@ -64,20 +65,24 @@ def fetch_table_statistics(
     db_engine = get_db_engine(data_agent)
     with db_engine.connect() as conn:
         if columns is None:
-            rows = conn.execute(text(f'PRAGMA table_info("{table_name}")')).fetchall()
+            rows = conn.execute(
+                text(f"PRAGMA table_info({quote_table(table_name)})")
+            ).fetchall()
             columns = [row[1] for row in rows]
 
         # Base Statistics: total rows, non-null counts, distinct counts, min/max
         col_exprs = ["COUNT(*) AS total_rows"]
         for i, col in enumerate(columns):
             col_exprs += [
-                f'COUNT("{col}") AS non_null_{i}',
-                f'COUNT(DISTINCT "{col}") AS distinct_{i}',
-                f'MIN("{col}") AS min_{i}',
-                f'MAX("{col}") AS max_{i}',
+                f"COUNT({quote_col(col)}) AS non_null_{i}",
+                f"COUNT(DISTINCT {quote_col(col)}) AS distinct_{i}",
+                f"MIN({quote_col(col)}) AS min_{i}",
+                f"MAX({quote_col(col)}) AS max_{i}",
             ]
         base_row = (
-            conn.execute(text(f'SELECT {", ".join(col_exprs)} FROM "{table_name}"'))
+            conn.execute(
+                text(f"SELECT {', '.join(col_exprs)} FROM {quote_table(table_name)}")
+            )
             .mappings()
             .one()
         )
@@ -96,10 +101,10 @@ def fetch_table_statistics(
                 mcv_rows = conn.execute(
                     text(
                         textwrap.dedent(f"""
-                        SELECT "{col}" AS value, COUNT(*) * 1.0 / :n AS frequency
-                        FROM "{table_name}"
-                        WHERE "{col}" IS NOT NULL
-                        GROUP BY "{col}"
+                        SELECT {quote_col(col)} AS value, COUNT(*) * 1.0 / :n AS frequency
+                        FROM {quote_table(table_name)}
+                        WHERE {quote_col(col)} IS NOT NULL
+                        GROUP BY {quote_col(col)}
                         HAVING COUNT(*) * 1.0 / :n > 1.0 / :k + SQRT((1.0 - 1.0 / :k) / :n)
                         ORDER BY COUNT(*) DESC
                         LIMIT :max_mcv
@@ -114,12 +119,12 @@ def fetch_table_statistics(
             mcv_values = mcv["value"].tolist()
 
             # Histogram over non-MCV, non-null values via NTILE bucketing
-            not_in = f'AND "{col}" NOT IN :mcv_values' if mcv_values else ""
+            not_in = f"AND {quote_col(col)} NOT IN :mcv_values" if mcv_values else ""
             hist_sql = textwrap.dedent(f"""
                 WITH non_mcv AS (
-                    SELECT "{col}" AS val
-                    FROM "{table_name}"
-                    WHERE "{col}" IS NOT NULL {not_in}
+                    SELECT {quote_col(col)} AS val
+                    FROM {quote_table(table_name)}
+                    WHERE {quote_col(col)} IS NOT NULL {not_in}
                 ),
                 bucketed AS (
                     SELECT val, NTILE(:bins) OVER (ORDER BY val) AS bucket

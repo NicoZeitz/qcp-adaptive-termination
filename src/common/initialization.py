@@ -37,11 +37,15 @@ async def modify_request_hook(request: httpx.Request):
         request_json["temperature"] = 0.0
 
         # thinking_mode needs to be disabled for correct output, otherwise it will return output in reasoning, which breaks openai sdk
-        request_json["chat_template_kwargs"] = {
-            "thinking_mode": "enabled"
-            if "reasoning_effort" in request_json
+        thinking_enabled = (
+            "reasoning_effort" in request_json
             and request_json["reasoning_effort"] != "none"
-            else "disabled",
+        )
+
+        request_json["chat_template_kwargs"] = {
+            "thinking_mode": "enabled" if thinking_enabled else "disabled",
+            "thinking": True if thinking_enabled else False,
+            "reasoning_effort": request_json.get("reasoning_effort", "none"),
         }
         if "reasoning_effort" in request_json:
             del request_json["reasoning_effort"]

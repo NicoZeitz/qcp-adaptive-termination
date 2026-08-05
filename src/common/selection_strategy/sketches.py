@@ -13,6 +13,7 @@ from sqlalchemy import text
 
 from model.agent.data_agent import DataAgent
 from common.data_agent.get_db_engine import get_db_engine
+from common.selection_strategy.sql_utils import quote_col, quote_table
 from model.selection_strategy.agent_selection import AgentSelection
 
 DEFAULT_LG_K = 12
@@ -27,7 +28,7 @@ def fetch_column_values(
     with db_engine.connect() as conn:
         rows = conn.execute(
             text(
-                f'SELECT "{column_name}" FROM "{table_name}" WHERE "{column_name}" IS NOT NULL'
+                f"SELECT {quote_col(column_name)} FROM {quote_table(table_name)} WHERE {quote_col(column_name)} IS NOT NULL"
             )
         ).fetchall()
     return [str(row[0]) for row in rows]
