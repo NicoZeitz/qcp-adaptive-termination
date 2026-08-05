@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from common.model.serializers import SerializedResultType
+from model.serializers import SerializedResultType
 
 
 class CollaborativeQueryAnsweringResult(BaseModel):

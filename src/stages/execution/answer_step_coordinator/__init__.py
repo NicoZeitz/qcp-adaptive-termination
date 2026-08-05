@@ -8,11 +8,11 @@ from agents import (
 import pandas as pd
 
 from common.code_execution.code_execution_environment import CodeExecutionEnvironment
-from common.model.execution.additional_information import AdditionalInformation
-from common.model.need import try_parse_value_to_need_type
-from common.model.execution.partial_query_answer import PartialQueryAnswer
-from common.model.query_plan.query_plan_step import QueryPlanStep
-from common.model.result import try_parse_value_to_result_type
+from model.execution.additional_information import AdditionalInformation
+from model.need import try_parse_value_to_need_type
+from model.execution.partial_query_answer import PartialQueryAnswer
+from model.query_plan.query_plan_step import QueryPlanStep
+from model.result import try_parse_value_to_result_type
 from common.agent_configuration import get_coordinator_agent_configuration
 from common.preview import preview_additional_information
 from common.run_agent import run_agent

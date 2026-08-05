@@ -3,7 +3,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from common.model.agent.data_agent import DataAgent
+from model.agent.data_agent import DataAgent
 from common.agent_registry.agent_registry import AgentRegistry
 from common.selection_strategy.strategy import StaticSelectionStrategy
 from common.embeddings import create_embedding

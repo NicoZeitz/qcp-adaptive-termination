@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from common.model.estimation.aligned_result_list import AggregationType
+from model.estimation.aligned_result_list import AggregationType
 
 
 class EstimatorStatistics(BaseModel):

@@ -7,7 +7,7 @@ from pandas import DataFrame, MultiIndex
 from pydantic import JsonValue
 
 if TYPE_CHECKING:
-    from common.model.execution.additional_information import AdditionalInformation
+    from model.execution.additional_information import AdditionalInformation
 
 CHAR_LIMIT_LLM = 2000
 CHAR_LIMIT_LONG_LLM = 6000

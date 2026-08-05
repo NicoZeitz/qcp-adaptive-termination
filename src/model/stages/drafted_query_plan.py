@@ -1,5 +1,5 @@
-from common.model.agent.data_agent import DataAgent
-from common.model.query_plan.query_plan import QueryPlan
+from model.agent.data_agent import DataAgent
+from model.query_plan.query_plan import QueryPlan
 
 
 from pydantic import BaseModel, ConfigDict

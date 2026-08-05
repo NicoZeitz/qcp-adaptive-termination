@@ -2,8 +2,8 @@ from typing import TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from common.model.query_plan.query_dependency import QueryDependency
-from common.model.serializers import SerializedOptionalResultType
+from model.query_plan.query_dependency import QueryDependency
+from model.serializers import SerializedOptionalResultType
 
 
 class BaseQueryPlanStep(BaseModel):

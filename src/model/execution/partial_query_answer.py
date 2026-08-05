@@ -2,9 +2,9 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict
 
-from common.model.need import NeedType
-from common.model.serializers import SerializedNeedList, SerializedOptionalResultType
-from common.model.result import ResultType
+from model.need import NeedType
+from model.serializers import SerializedNeedList, SerializedOptionalResultType
+from model.result import ResultType
 
 
 class PartialQueryAnswer(BaseModel):

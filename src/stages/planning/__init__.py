@@ -2,11 +2,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
-from common.model.stages.drafted_query_plan import DraftedQueryPlan
-from common.model.agent.data_agent import DataAgent
-from common.model.query_plan.query_dependency import QueryDependency
-from common.model.query_plan.query_plan import FieldDefinitions, QueryPlan
-from common.model.query_plan.query_plan_step import (
+from model.stages.drafted_query_plan import DraftedQueryPlan
+from model.agent.data_agent import DataAgent
+from model.query_plan.query_dependency import QueryDependency
+from model.query_plan.query_plan import FieldDefinitions, QueryPlan
+from model.query_plan.query_plan_step import (
     MultiAgentQueryPlanStep,
     QueryPlanStep,
     SingleAgentQueryPlanStep,

@@ -5,7 +5,7 @@ from typing import Any
 import pandas as pd
 from sqlalchemy import bindparam, text
 
-from common.model.agent.data_agent import DataAgent
+from model.agent.data_agent import DataAgent
 from common.data_agent.get_db_engine import get_db_engine
 
 

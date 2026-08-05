@@ -1,4 +1,4 @@
-from common.model.agent.data_agent import DataAgent
+from model.agent.data_agent import DataAgent
 from common.agent_registry.agent_registry import AgentRegistry
 from common.embeddings import create_embedding
 from common.vector_search import build_index, search_index_top_k

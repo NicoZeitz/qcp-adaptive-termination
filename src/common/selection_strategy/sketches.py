@@ -11,9 +11,9 @@ from datasketches import (
 )
 from sqlalchemy import text
 
-from common.model.agent.data_agent import DataAgent
+from model.agent.data_agent import DataAgent
 from common.data_agent.get_db_engine import get_db_engine
-from common.model.selection_strategy.agent_selection import AgentSelection
+from model.selection_strategy.agent_selection import AgentSelection
 
 DEFAULT_LG_K = 12
 DEFAULT_NUM_STD = 2

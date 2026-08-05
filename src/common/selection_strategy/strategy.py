@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Generic, Protocol, TypeVar, cast
 
-from common.model.agent.data_agent import DataAgent
-from common.model.selection_strategy.agent_selection import AgentSelection
+from model.agent.data_agent import DataAgent
+from model.selection_strategy.agent_selection import AgentSelection
 
 P = TypeVar("P")  # precomputed value type (per-agent mapping value)
 S = TypeVar("S")  # running state type

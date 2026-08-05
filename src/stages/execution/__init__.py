@@ -1,17 +1,17 @@
 from typing import cast
 
-from common.model.stages.collaborative_query_answering_result import (
+from model.stages.collaborative_query_answering_result import (
     CollaborativeQueryAnsweringResult,
 )
-from common.model.agent.data_agent import DataAgent
-from common.model.execution.execution_result import ExecutionResult
-from common.model.need import serialize_need
-from common.model.query_plan.query_plan import QueryPlan
-from common.model.execution.query_plan_step_execution_result import (
+from model.agent.data_agent import DataAgent
+from model.execution.execution_result import ExecutionResult
+from model.need import serialize_need
+from model.query_plan.query_plan import QueryPlan
+from model.execution.query_plan_step_execution_result import (
     FailedExecution,
     SuccessfulExecution,
 )
-from common.model.result import ResultType, get_failed_result
+from model.result import ResultType, get_failed_result
 from common.agent_registry.agent_registry import AgentRegistryType
 from stages.execution.execute_query_plan_next_step import (
     execute_query_plan_next_step,

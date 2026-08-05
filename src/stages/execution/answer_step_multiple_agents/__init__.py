@@ -5,19 +5,19 @@ from agents import Span
 import pandas as pd
 from agents import CustomSpanData
 
-from common.model.execution.additional_information import AdditionalInformation
-from common.model.estimation.aligned_result_list import AlignedResultList
-from common.model.agent.data_agent import DataAgent
-from common.model.estimation.estimator_statistics import EstimatorStatistics
+from model.execution.additional_information import AdditionalInformation
+from model.estimation.aligned_result_list import AlignedResultList
+from model.agent.data_agent import DataAgent
+from model.estimation.estimator_statistics import EstimatorStatistics
 from common.model.execution_config import ExecutionConfig
-from common.model.multi_agent_iteration_record import MultiAgentIterationRecord
-from common.model.execution.outcome import (
+from model.multi_agent_iteration_record import MultiAgentIterationRecord
+from model.execution.outcome import (
     FinalResultOutcome,
     QueryMoreAgentsOutcome,
     RaiseNeedOutcome,
 )
-from common.model.execution.partial_query_answer import PartialQueryAnswer
-from common.model.query_plan.query_plan_step import MultiAgentQueryPlanStep
+from model.execution.partial_query_answer import PartialQueryAnswer
+from model.query_plan.query_plan_step import MultiAgentQueryPlanStep
 from stages.execution.answer_step_data_agent import answer_step_data_agent
 from stages.execution.answer_step_multiple_agents.align_schema import align_schema
 from stages.execution.answer_step_multiple_agents.completeness_evaluator import (

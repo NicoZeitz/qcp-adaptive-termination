@@ -2,8 +2,8 @@ from abc import ABC
 
 from pydantic import BaseModel, ConfigDict
 
-from common.model.query_plan.query_plan_step import QueryPlanStep
-from common.model.serializers import (
+from model.query_plan.query_plan_step import QueryPlanStep
+from model.serializers import (
     SerializedNeedList,
     SerializedOptionalResultType,
     SerializedResultType,

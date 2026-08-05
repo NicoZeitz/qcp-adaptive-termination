@@ -1,7 +1,7 @@
-from common.model.execution.additional_information import AdditionalInformation
-from common.model.estimation.aligned_result_list import AlignedSchemaMetadata
-from common.model.agent.data_agent import DataAgent
-from common.model.execution.partial_query_answer import PartialQueryAnswer
+from model.execution.additional_information import AdditionalInformation
+from model.estimation.aligned_result_list import AlignedSchemaMetadata
+from model.agent.data_agent import DataAgent
+from model.execution.partial_query_answer import PartialQueryAnswer
 from stages.execution.answer_step_data_agent.answer_query_data_agent import (
     answer_query_data_agent,
 )

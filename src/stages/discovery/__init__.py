@@ -11,8 +11,8 @@ from common.span import (
     append_to_span_output,
     own_custom_span,
 )
-from common.model.stages.filtered_relevant_agents import FilteredRelevantAgents
-from common.model.agent.data_agent import DataAgent
+from model.stages.filtered_relevant_agents import FilteredRelevantAgents
+from model.agent.data_agent import DataAgent
 from common.cache import cached
 
 STAGE_NAME = "Stage 1: Discovery"

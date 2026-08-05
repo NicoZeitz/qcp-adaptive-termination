@@ -3,7 +3,7 @@ import os
 
 from sqlalchemy import Engine, create_engine, text
 
-from common.model.agent.data_agent import DataAgent
+from model.agent.data_agent import DataAgent
 
 
 @lru_cache(maxsize=None)

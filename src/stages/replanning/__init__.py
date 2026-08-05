@@ -2,11 +2,11 @@ import json
 
 from pydantic import BaseModel
 
-from common.model.agent.data_agent import DataAgent
-from common.model.query_plan.query_plan import QueryPlan
-from common.model.query_plan.query_plan_step import MultiAgentQueryPlanStep
-from common.model.execution.query_plan_step_execution_result import FailedExecution
-from common.model.result import ResultType
+from model.agent.data_agent import DataAgent
+from model.query_plan.query_plan import QueryPlan
+from model.query_plan.query_plan_step import MultiAgentQueryPlanStep
+from model.execution.query_plan_step_execution_result import FailedExecution
+from model.result import ResultType
 from common.preview import need_to_json_preview, result_to_json_preview
 from common.agent_configuration import get_coordinator_agent_configuration
 from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType

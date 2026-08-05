@@ -2,22 +2,22 @@ from typing import cast
 
 from agents import AgentsException, MaxTurnsExceeded
 
-from common.model.execution.additional_information import AdditionalInformation
-from common.model.agent.data_agent import DataAgent
-from common.model.need import exception_to_need
-from common.model.execution.partial_query_answer import PartialQueryAnswer
-from common.model.query_plan.query_plan import QueryPlan
-from common.model.query_plan.query_plan_step import (
+from model.execution.additional_information import AdditionalInformation
+from model.agent.data_agent import DataAgent
+from model.need import exception_to_need
+from model.execution.partial_query_answer import PartialQueryAnswer
+from model.query_plan.query_plan import QueryPlan
+from model.query_plan.query_plan_step import (
     MultiAgentQueryPlanStep,
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
-from common.model.execution.query_plan_step_execution_result import (
+from model.execution.query_plan_step_execution_result import (
     FailedExecution,
     QueryPlanStepExecutionResult,
     SuccessfulExecution,
 )
-from common.model.result import ResultType
+from model.result import ResultType
 from stages.execution.answer_step_coordinator import answer_step_coordinator
 from stages.execution.answer_step_data_agent import answer_step_data_agent
 from stages.execution.answer_step_multiple_agents import (

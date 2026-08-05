@@ -1,4 +1,4 @@
-from common.model.agent.data_agent import DataAgent
+from model.agent.data_agent import DataAgent
 
 
 from dataclasses import dataclass

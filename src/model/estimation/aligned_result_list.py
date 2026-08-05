@@ -2,8 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from common.model.result import ResultType
-from common.model.serializers import SerializedResultType
+from model.result import ResultType
+from model.serializers import SerializedResultType
 
 AggregationType = Literal["count", "min", "max", "sum", "avg"]
 

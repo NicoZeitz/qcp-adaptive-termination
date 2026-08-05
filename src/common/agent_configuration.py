@@ -1,8 +1,8 @@
 from agents import MultiProvider
 from openai.types.shared import Reasoning
 
-from common.model.agent.agent_configuration import AgentConfiguration
-from common.model.agent.data_agent import DataAgent
+from model.agent.agent_configuration import AgentConfiguration
+from model.agent.data_agent import DataAgent
 
 OPENAI_MODEL = "openai/gpt-5"
 UNIVERSITY_MODEL = "university/unsloth/MiniMax-M3"

@@ -9,12 +9,12 @@ from agents import (
 from pandas import DataFrame
 
 
-from common.model.estimation.aligned_result_list import (
+from model.estimation.aligned_result_list import (
     AggregationType,
     AlignedResultList,
     AlignedSchemaMetadata,
 )
-from common.model.agent.data_agent import DataAgent
+from model.agent.data_agent import DataAgent
 from common.agent_configuration import get_coordinator_agent_configuration
 from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
 from stages.execution.validation import validate_schema_output

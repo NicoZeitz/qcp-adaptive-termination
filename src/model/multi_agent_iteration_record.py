@@ -2,9 +2,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from common.model.estimation.estimator_statistics import EstimatorStatistics
-from common.model.execution.outcome import EvaluatorDecision
-from common.model.serializers import SerializedResultType
+from model.estimation.estimator_statistics import EstimatorStatistics
+from model.execution.outcome import EvaluatorDecision
+from model.serializers import SerializedResultType
 
 IterationDecision = EvaluatorDecision | Literal["batch_query"]
 

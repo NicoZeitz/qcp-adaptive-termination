@@ -3,8 +3,8 @@ from typing import Annotated, Any
 from pydantic import BeforeValidator, JsonValue, PlainSerializer, SerializationInfo
 from pydantic.json_schema import SkipJsonSchema
 
-from common.model.need import NeedType, deserialize_need, serialize_need
-from common.model.result import (
+from model.need import NeedType, deserialize_need, serialize_need
+from model.result import (
     ResultType,
     deserialize_result,
     serialize_result as serialize_result_type,

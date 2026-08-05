@@ -2,9 +2,9 @@ import asyncio
 from enum import Enum
 from typing import Callable, overload
 
-from common.model.agent.agent_data import load_agent_data
-from common.model.agent.agent_data import AgentData
-from common.model.agent.data_agent import DataAgent
+from model.agent.agent_data import load_agent_data
+from model.agent.agent_data import AgentData
+from model.agent.data_agent import DataAgent
 
 
 class AgentRegistryType(Enum):

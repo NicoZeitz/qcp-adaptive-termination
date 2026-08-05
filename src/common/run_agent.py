@@ -14,7 +14,7 @@ from agents.exceptions import ModelBehaviorError
 from agents.run_config import DEFAULT_MAX_TURNS
 from pydantic import BaseModel, JsonValue
 
-from common.model.agent.agent_configuration import AgentConfiguration
+from model.agent.agent_configuration import AgentConfiguration
 from common.agent_configuration import get_multi_provider
 from common.cache import CacheMode, cached
 from common.load_prompt import load_prompt

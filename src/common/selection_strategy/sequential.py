@@ -1,4 +1,4 @@
-from common.model.agent.data_agent import DataAgent
+from model.agent.data_agent import DataAgent
 from common.selection_strategy.strategy import StaticSelectionStrategy
 
 

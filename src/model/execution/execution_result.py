@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
-from common.model.execution.query_plan_step_execution_result import FailedExecution
-from common.model.serializers import SerializedOptionalResultType
+from model.execution.query_plan_step_execution_result import FailedExecution
+from model.serializers import SerializedOptionalResultType
 
 
 class ExecutionResult(BaseModel):

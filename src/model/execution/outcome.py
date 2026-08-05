@@ -1,7 +1,7 @@
 from typing import Literal
 
-from common.model.estimation.aligned_result_list import AlignedResultList
-from common.model.serializers import (
+from model.estimation.aligned_result_list import AlignedResultList
+from model.serializers import (
     SerializedNeedList,
     SerializedOptionalResultType,
     SerializedResultType,

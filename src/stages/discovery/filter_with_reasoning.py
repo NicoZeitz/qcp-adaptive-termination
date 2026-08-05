@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, create_model
 
-from common.model.agent.data_agent import DataAgent
+from model.agent.data_agent import DataAgent
 from common.agent_configuration import (
     get_coordinator_agent_configuration,
     get_data_agent_agent_configuration,

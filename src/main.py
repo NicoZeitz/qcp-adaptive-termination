@@ -10,16 +10,16 @@ from langfuse import get_client
 from common.model.execution_config import ExecutionConfig
 from common.preview import result_to_json_preview
 from stages.planning import draft_query_plan, STAGE_NAME as PLANNING_STAGE_NAME
-from common.model.stages.drafted_query_plan import DraftedQueryPlan
+from model.stages.drafted_query_plan import DraftedQueryPlan
 from stages.execution import execute_query_plan, STAGE_NAME as EXECUTION_STAGE_NAME
-from common.model.stages.collaborative_query_answering_result import (
+from model.stages.collaborative_query_answering_result import (
     CollaborativeQueryAnsweringResult,
 )
 from stages.discovery import filter_relevant_agents, STAGE_NAME as DISCOVERY_STAGE_NAME
-from common.model.stages.collaborative_query_answering import (
+from model.stages.collaborative_query_answering import (
     CollaborativeQueryAnswering,
 )
-from common.model.stages.filtered_relevant_agents import FilteredRelevantAgents
+from model.stages.filtered_relevant_agents import FilteredRelevantAgents
 from common.cache import load_cache_file
 from common.initialization import initialize
 
@@ -120,7 +120,7 @@ async def main(
         if start_stage == 99:
             logging.info(f"Starting stage {start_stage}, ENTERING DEBUG CODE")
             from common.selection_strategy import AgentSelector
-            from common.model.selection_strategy.selection_type import SelectionType
+            from model.selection_strategy.selection_type import SelectionType
 
             with ExecutionConfig.override(
                 selection_type=SelectionType.THETA_SKETCH_UCB

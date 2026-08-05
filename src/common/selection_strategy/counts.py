@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import text
 
-from common.model.agent.data_agent import DataAgent
+from model.agent.data_agent import DataAgent
 from common.data_agent.get_db_engine import get_db_engine
 from common.selection_strategy.strategy import StaticSelectionStrategy
 

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from common.model.query_plan.query_plan_step import QueryPlanStep
+from model.query_plan.query_plan_step import QueryPlanStep
 
 
 class FieldDefinitions:
