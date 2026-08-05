@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic, Protocol, TypeVar, cast
 
-from qtypes.data_agent import DataAgent
+from common.model.agent.data_agent import DataAgent
 from stages.execution.selection.agent_selection import AgentSelection
 
 P = TypeVar("P")  # precomputed value type (per-agent mapping value)
@@ -23,8 +23,8 @@ class SelectionStrategy(Protocol[P, S]):
     async def precompute(
         self,
         agents: list[DataAgent],
-        table_name: str | None,
-        column_name: str | None,
+        table_per_agent: dict[str, str] | None,
+        column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, P]:
         """Return a per-agent-name mapping of precomputed data (sketches, scores, …)."""
@@ -63,8 +63,8 @@ class StaticSelectionStrategy(ABC, Generic[PS]):
     async def precompute(
         self,
         agents: list[DataAgent],
-        table_name: str | None,
-        column_name: str | None,
+        table_per_agent: dict[str, str] | None,
+        column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, PS]:
         raise NotImplementedError

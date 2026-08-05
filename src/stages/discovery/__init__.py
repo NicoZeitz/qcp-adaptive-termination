@@ -1,22 +1,19 @@
 from enum import Enum
 from typing import Any
 
-from stages.common.data_agent.agent_registry import (
-    AgentRegistry,
-    AgentRegistryType,
-)
+from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
 from stages.discovery.filter_with_reasoning import (
     filter_coordinator_with_reasoning,
     filter_data_agent_with_reasoning,
 )
-from utils.span import (
+from common.span import (
     append_to_span_input,
     append_to_span_output,
     own_custom_span,
 )
-from qtypes.filtered_relevant_agents import FilteredRelevantAgents
-from qtypes.data_agent import DataAgent
-from utils.cache import cached
+from common.model.stages.filtered_relevant_agents import FilteredRelevantAgents
+from common.model.agent.data_agent import DataAgent
+from common.cache import cached
 
 STAGE_NAME = "Stage 1: Discovery"
 
@@ -39,7 +36,7 @@ async def filter_relevant_agents(
         result = await filter_relevant_agents_internal(
             query=query,
             data_agents=data_agents,
-            agent_registry_type=AgentRegistryType.NATURAL_LANGUAGE,
+            registry_type=AgentRegistryType.NATURAL_LANGUAGE,
             filter_type=FilterType.REASONING,
         )
 
@@ -54,7 +51,7 @@ async def filter_relevant_agents(
 async def filter_relevant_agents_internal(
     query: str,
     data_agents: list[DataAgent],
-    agent_registry_type: AgentRegistryType,
+    registry_type: AgentRegistryType,
     filter_type: FilterType,
     additional_context: str | None = None,
 ) -> FilteredRelevantAgents:
@@ -63,12 +60,12 @@ async def filter_relevant_agents_internal(
     with own_custom_span(
         "Building Agent Registry",
         input={
-            "agent_registry_type": agent_registry_type.value,
+            "registry_type": registry_type.value,
             "data_agents": data_agents,
         },
     ):
         agent_registry = await AgentRegistry.build_registry_string(
-            data_agents, agent_registry_type
+            data_agents, registry_type
         )
         append_to_span_input({"agent_registry": agent_registry})
 

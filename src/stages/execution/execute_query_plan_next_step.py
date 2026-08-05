@@ -2,28 +2,28 @@ from typing import cast
 
 from agents import AgentsException, MaxTurnsExceeded
 
-from qtypes.additional_information import AdditionalInformation
-from qtypes.data_agent import DataAgent
-from qtypes.need import exception_to_need
-from qtypes.partial_query_answer import PartialQueryAnswer
-from qtypes.query_plan import QueryPlan
-from qtypes.query_plan_step import (
+from common.model.execution.additional_information import AdditionalInformation
+from common.model.agent.data_agent import DataAgent
+from common.model.need import exception_to_need
+from common.model.execution.partial_query_answer import PartialQueryAnswer
+from common.model.query_plan.query_plan import QueryPlan
+from common.model.query_plan.query_plan_step import (
     MultiAgentQueryPlanStep,
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
-from qtypes.query_plan_step_execution_result import (
+from common.model.execution.query_plan_step_execution_result import (
     FailedExecution,
     QueryPlanStepExecutionResult,
     SuccessfulExecution,
 )
-from qtypes.result import ResultType
+from common.model.result import ResultType
 from stages.execution.answer_step_coordinator import answer_step_coordinator
 from stages.execution.answer_step_data_agent import answer_step_data_agent
 from stages.execution.answer_step_multiple_agents import (
     answer_step_multiple_agents,
 )
-from utils.span import append_to_span_output, own_custom_span
+from common.span import append_to_span_output, own_custom_span
 
 
 async def execute_query_plan_next_step(

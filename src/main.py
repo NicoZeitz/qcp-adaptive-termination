@@ -7,19 +7,21 @@ from datetime import datetime
 from agents import trace
 from langfuse import get_client
 
-from qtypes.execution_config import ExecutionConfig
-from utils.preview import result_to_json_preview
+from common.model.execution_config import ExecutionConfig
+from common.preview import result_to_json_preview
 from stages.planning import draft_query_plan, STAGE_NAME as PLANNING_STAGE_NAME
-from qtypes.drafted_query_plan import DraftedQueryPlan
+from common.model.stages.drafted_query_plan import DraftedQueryPlan
 from stages.execution import execute_query_plan, STAGE_NAME as EXECUTION_STAGE_NAME
-from qtypes.collaborative_query_answering_result import (
+from common.model.stages.collaborative_query_answering_result import (
     CollaborativeQueryAnsweringResult,
 )
 from stages.discovery import filter_relevant_agents, STAGE_NAME as DISCOVERY_STAGE_NAME
-from qtypes.collaborative_query_answering import CollaborativeQueryAnswering
-from qtypes.filtered_relevant_agents import FilteredRelevantAgents
-from utils.cache import load_cache_file
-from utils.initialization import initialize
+from common.model.stages.collaborative_query_answering import (
+    CollaborativeQueryAnswering,
+)
+from common.model.stages.filtered_relevant_agents import FilteredRelevantAgents
+from common.cache import load_cache_file
+from common.initialization import initialize
 
 
 stages_mapping = {
@@ -118,7 +120,7 @@ async def main(
         if start_stage == 99:
             logging.info(f"Starting stage {start_stage}, ENTERING DEBUG CODE")
             from stages.execution.selection import AgentSelector
-            from qtypes.selection_type import SelectionType
+            from common.model.selection.selection_type import SelectionType
 
             with ExecutionConfig.override(
                 selection_type=SelectionType.THETA_SKETCH_UCB
@@ -126,8 +128,6 @@ async def main(
                 selector = await AgentSelector.create(
                     data.data_agents,
                     data.query,
-                    table_name="gdp",
-                    column_name="GDP",
                 )
                 ranked = selector.rank(selector.selections)
                 for i, ranked_item in enumerate(ranked):

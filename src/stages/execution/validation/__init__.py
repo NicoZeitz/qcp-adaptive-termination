@@ -1,7 +1,7 @@
 from pandas import DataFrame
 import pandas as pd
 
-from qtypes.aligned_result_list import AlignedSchemaMetadata
+from common.model.estimation.aligned_result_list import AlignedSchemaMetadata
 
 
 def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata):

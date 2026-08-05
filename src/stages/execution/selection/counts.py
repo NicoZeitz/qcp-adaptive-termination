@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 from sqlalchemy import text
 
-from qtypes.data_agent import DataAgent
-from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
+from common.model.agent.data_agent import DataAgent
+from common.data_agent.get_db_engine import get_db_engine
 from stages.execution.selection.strategy import StaticSelectionStrategy
 
 
@@ -30,12 +30,16 @@ class CountStrategy(StaticSelectionStrategy[int]):
     async def precompute(
         self,
         agents: list[DataAgent],
-        table_name: str | None,
-        column_name: str | None,
+        table_per_agent: dict[str, str] | None,
+        column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, int]:
-        assert table_name
-        return {a.name: fetch_count(a, table_name) for a in agents}
+        assert table_per_agent
+        return {
+            a.name: fetch_count(a, table_per_agent[a.name])
+            for a in agents
+            if a.name in table_per_agent
+        }
 
 
 @dataclass
@@ -43,11 +47,15 @@ class DistinctCountStrategy(StaticSelectionStrategy[int]):
     async def precompute(
         self,
         agents: list[DataAgent],
-        table_name: str | None,
-        column_name: str | None,
+        table_per_agent: dict[str, str] | None,
+        column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, int]:
-        assert table_name and column_name
+        assert table_per_agent and column_per_agent
         return {
-            a.name: fetch_distinct_count(a, table_name, column_name) for a in agents
+            a.name: fetch_distinct_count(
+                a, table_per_agent[a.name], column_per_agent[a.name]
+            )
+            for a in agents
+            if a.name in table_per_agent and a.name in column_per_agent
         }

@@ -2,22 +2,19 @@ import json
 
 from pydantic import BaseModel
 
-from qtypes.data_agent import DataAgent
-from qtypes.query_plan import QueryPlan
-from qtypes.query_plan_step import MultiAgentQueryPlanStep
-from qtypes.query_plan_step_execution_result import FailedExecution
-from qtypes.result import ResultType
-from utils.preview import need_to_json_preview, result_to_json_preview
-from stages.common.agent_configuration import get_coordinator_agent_configuration
-from stages.common.data_agent.agent_registry import (
-    AgentRegistry,
-    AgentRegistryType,
-)
+from common.model.agent.data_agent import DataAgent
+from common.model.query_plan.query_plan import QueryPlan
+from common.model.query_plan.query_plan_step import MultiAgentQueryPlanStep
+from common.model.execution.query_plan_step_execution_result import FailedExecution
+from common.model.result import ResultType
+from common.preview import need_to_json_preview, result_to_json_preview
+from common.agent_configuration import get_coordinator_agent_configuration
+from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
 from stages.planning import (
     create_draft_query_plan_model,
     map_query_plan_model_to_query_plan,
 )
-from utils.run_agent import run_llm
+from common.run_agent import run_llm
 
 
 def create_answer_map_from_query_plan(query_plan: QueryPlan) -> dict[str, ResultType]:
@@ -39,8 +36,6 @@ def create_query_plan_prompt_context(query_plan: QueryPlan) -> str:
                     **(
                         {
                             "merge_task": step.merge_task,
-                            "table_name": step.table_name,
-                            "column_name": step.column_name,
                         }
                         if isinstance(step, MultiAgentQueryPlanStep)
                         else {}

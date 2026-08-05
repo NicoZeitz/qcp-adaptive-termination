@@ -9,17 +9,17 @@ from agents import (
 from pandas import DataFrame
 
 
-from qtypes.aligned_result_list import (
+from common.model.estimation.aligned_result_list import (
     AggregationType,
     AlignedResultList,
     AlignedSchemaMetadata,
 )
-from qtypes.data_agent import DataAgent
-from stages.common.agent_configuration import get_coordinator_agent_configuration
-from stages.common.data_agent.agent_registry import AgentRegistry, AgentRegistryType
+from common.model.agent.data_agent import DataAgent
+from common.agent_configuration import get_coordinator_agent_configuration
+from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
 from stages.execution.validation import validate_schema_output
-from utils.run_agent import run_agent
-from utils.span import append_to_span_output, own_custom_span
+from common.run_agent import run_agent
+from common.span import append_to_span_output, own_custom_span
 
 
 async def align_schema(

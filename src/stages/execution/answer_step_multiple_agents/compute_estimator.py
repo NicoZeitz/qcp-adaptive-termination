@@ -1,10 +1,10 @@
 import pandas as pd
 
-from qtypes.aligned_result_list import AlignedResultList
-from qtypes.estimator_statistics import EstimatorStatistics
-from qtypes.execution_config import ExecutionConfig
-from unknown_unknown import DataItem, Estimator
-from utils.span import indented_logging
+from common.model.estimation.aligned_result_list import AlignedResultList
+from common.model.estimation.estimator_statistics import EstimatorStatistics
+from common.model.execution_config import ExecutionConfig
+from common.unknown_unknown import DataItem, Estimator
+from common.span import indented_logging
 
 
 def dataframe_to_data_items(

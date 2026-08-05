@@ -5,8 +5,8 @@ from typing import Any
 import pandas as pd
 from sqlalchemy import bindparam, text
 
-from qtypes.data_agent import DataAgent
-from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
+from common.model.agent.data_agent import DataAgent
+from common.data_agent.get_db_engine import get_db_engine
 
 
 DEFAULT_HISTOGRAM_BINS = 100

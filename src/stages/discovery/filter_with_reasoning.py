@@ -2,14 +2,14 @@ from typing import Any
 
 from pydantic import BaseModel, Field, create_model
 
-from qtypes.data_agent import DataAgent
-from stages.common.agent_configuration import (
+from common.model.agent.data_agent import DataAgent
+from common.agent_configuration import (
     get_coordinator_agent_configuration,
     get_data_agent_agent_configuration,
 )
-from stages.common.data_agent.agent_registry import AgentRegistry, AgentRegistryType
-from utils.run_agent import run_llm
-from utils.span import append_to_span_output
+from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
+from common.run_agent import run_llm
+from common.span import append_to_span_output
 
 
 def build_relevance_model(data_agents: list[DataAgent]) -> type[BaseModel]:
@@ -81,19 +81,14 @@ async def filter_data_agent_with_reasoning(
         "query": query,
         "reasoning": reasoning,
         "additional_context": additional_context,
-    }
-
-    if data_agent.type == "sql":
-        prompt_name = "discovery-data-agent-sql-relevance"
-        prompt_parameters["m_schema"] = await AgentRegistry.build_registry_string(
+        "m_schema": await AgentRegistry.build_registry_string(
             data_agent, AgentRegistryType.TECHNICAL, include_capabilities=False
-        )
-    else:
-        raise ValueError(f"Unsupported agent type: {data_agent.type}")
+        ),
+    }
 
     is_relevant = await run_llm(
         agent_configuration=get_data_agent_agent_configuration(data_agent, "Relevance"),
-        prompt_name=prompt_name,
+        prompt_name="discovery-data-agent-sql-relevance",
         prompt_parameters=prompt_parameters,
         output_type=bool,
     )

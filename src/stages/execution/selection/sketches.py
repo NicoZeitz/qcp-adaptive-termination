@@ -11,8 +11,8 @@ from datasketches import (
 )
 from sqlalchemy import text
 
-from qtypes.data_agent import DataAgent
-from stages.common.data_agent.sql_data_agent.get_db_engine import get_db_engine
+from common.model.agent.data_agent import DataAgent
+from common.data_agent.get_db_engine import get_db_engine
 from stages.execution.selection.agent_selection import AgentSelection
 
 DEFAULT_LG_K = 12
@@ -55,15 +55,17 @@ class HllSketchStrategy:
     async def precompute(
         self,
         agents: list[DataAgent],
-        table_name: str | None,
-        column_name: str | None,
+        table_per_agent: dict[str, str] | None,
+        column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, hll_sketch]:
-        assert table_name and column_name
+        assert table_per_agent and column_per_agent
         result: dict[str, hll_sketch] = {}
         for agent in agents:
             sketch = hll_sketch(self.lg_k)
-            for v in fetch_column_values(agent, table_name, column_name):
+            for v in fetch_column_values(
+                agent, table_per_agent[agent.name], column_per_agent[agent.name]
+            ):
                 sketch.update(v)
             result[agent.name] = sketch
         return result
@@ -121,15 +123,19 @@ class ThetaSketchStrategy:
     async def precompute(
         self,
         agents: list[DataAgent],
-        table_name: str | None,
-        column_name: str | None,
+        table_per_agent: dict[str, str] | None,
+        column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, compact_theta_sketch]:
-        assert table_name and column_name
+        assert table_per_agent and column_per_agent
         result: dict[str, compact_theta_sketch] = {}
         for agent in agents:
+            if agent.name not in table_per_agent or agent.name not in column_per_agent:
+                continue
             sketch = update_theta_sketch(self.lg_k)
-            for v in fetch_column_values(agent, table_name, column_name):
+            for v in fetch_column_values(
+                agent, table_per_agent[agent.name], column_per_agent[agent.name]
+            ):
                 sketch.update(v)
             result[agent.name] = sketch.compact()
         return result
@@ -188,14 +194,18 @@ class MinHashStrategy:
     async def precompute(
         self,
         agents: list[DataAgent],
-        table_name: str | None,
-        column_name: str | None,
+        table_per_agent: dict[str, str] | None,
+        column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, tuple[MinHash, int]]:
-        assert table_name and column_name
+        assert table_per_agent and column_per_agent
         result: dict[str, tuple[MinHash, int]] = {}
         for agent in agents:
-            values = fetch_column_values(agent, table_name, column_name)
+            if agent.name not in table_per_agent or agent.name not in column_per_agent:
+                continue
+            values = fetch_column_values(
+                agent, table_per_agent[agent.name], column_per_agent[agent.name]
+            )
             mh = MinHash(num_perm=self.num_perm)
             for v in values:
                 mh.update(v.encode("utf8"))

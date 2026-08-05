@@ -1,22 +1,25 @@
 from typing import cast
 
-from qtypes.collaborative_query_answering_result import (
+from common.model.stages.collaborative_query_answering_result import (
     CollaborativeQueryAnsweringResult,
 )
-from qtypes.data_agent import DataAgent
-from qtypes.execution_result import ExecutionResult
-from qtypes.need import serialize_need
-from qtypes.query_plan import QueryPlan
-from qtypes.query_plan_step_execution_result import FailedExecution, SuccessfulExecution
-from qtypes.result import ResultType, get_failed_result
-from stages.common.data_agent.agent_registry import AgentRegistryType
+from common.model.agent.data_agent import DataAgent
+from common.model.execution.execution_result import ExecutionResult
+from common.model.need import serialize_need
+from common.model.query_plan.query_plan import QueryPlan
+from common.model.execution.query_plan_step_execution_result import (
+    FailedExecution,
+    SuccessfulExecution,
+)
+from common.model.result import ResultType, get_failed_result
+from common.agent_registry.agent_registry import AgentRegistryType
 from stages.execution.execute_query_plan_next_step import (
     execute_query_plan_next_step,
 )
 from stages.discovery import FilterType, filter_relevant_agents_internal
 from stages.replanning import replan_query_plan
-from utils.cache import cached
-from utils.span import append_to_span_output, own_custom_span
+from common.cache import cached
+from common.span import append_to_span_output, own_custom_span
 
 STAGE_NAME = "Stage 3: Execution"
 REPLAN_STAGE_NAME = "Stage 4: Replan"
@@ -84,7 +87,7 @@ async def replan(
                 result = await filter_relevant_agents_internal(
                     query=query_plan.query,
                     data_agents=remaining_agents,
-                    agent_registry_type=AgentRegistryType.NATURAL_LANGUAGE,
+                    registry_type=AgentRegistryType.NATURAL_LANGUAGE,
                     filter_type=FilterType.REASONING,
                     additional_context=needs_context,
                 )

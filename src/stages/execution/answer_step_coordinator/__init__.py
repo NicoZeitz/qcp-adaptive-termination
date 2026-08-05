@@ -7,16 +7,16 @@ from agents import (
 )
 import pandas as pd
 
-from code_execution.code_execution_environment import CodeExecutionEnvironment
-from qtypes.additional_information import AdditionalInformation
-from qtypes.need import try_parse_value_to_need_type
-from qtypes.partial_query_answer import PartialQueryAnswer
-from qtypes.query_plan_step import QueryPlanStep
-from qtypes.result import try_parse_value_to_result_type
-from stages.common.agent_configuration import get_coordinator_agent_configuration
-from utils.preview import preview_additional_information
-from utils.run_agent import run_agent
-from utils.span import append_to_span_output, own_custom_span
+from common.code_execution.code_execution_environment import CodeExecutionEnvironment
+from common.model.execution.additional_information import AdditionalInformation
+from common.model.need import try_parse_value_to_need_type
+from common.model.execution.partial_query_answer import PartialQueryAnswer
+from common.model.query_plan.query_plan_step import QueryPlanStep
+from common.model.result import try_parse_value_to_result_type
+from common.agent_configuration import get_coordinator_agent_configuration
+from common.preview import preview_additional_information
+from common.run_agent import run_agent
+from common.span import append_to_span_output, own_custom_span
 
 
 async def answer_step_coordinator(

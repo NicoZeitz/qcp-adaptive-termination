@@ -5,15 +5,19 @@ from agents import Span
 import pandas as pd
 from agents import CustomSpanData
 
-from qtypes.additional_information import AdditionalInformation
-from qtypes.aligned_result_list import AlignedResultList
-from qtypes.data_agent import DataAgent
-from qtypes.estimator_statistics import EstimatorStatistics
-from qtypes.execution_config import ExecutionConfig
-from qtypes.multi_agent_iteration_record import MultiAgentIterationRecord
-from qtypes.outcome import FinalResultOutcome, QueryMoreAgentsOutcome, RaiseNeedOutcome
-from qtypes.partial_query_answer import PartialQueryAnswer
-from qtypes.query_plan_step import MultiAgentQueryPlanStep
+from common.model.execution.additional_information import AdditionalInformation
+from common.model.estimation.aligned_result_list import AlignedResultList
+from common.model.agent.data_agent import DataAgent
+from common.model.estimation.estimator_statistics import EstimatorStatistics
+from common.model.execution_config import ExecutionConfig
+from common.model.multi_agent_iteration_record import MultiAgentIterationRecord
+from common.model.execution.outcome import (
+    FinalResultOutcome,
+    QueryMoreAgentsOutcome,
+    RaiseNeedOutcome,
+)
+from common.model.execution.partial_query_answer import PartialQueryAnswer
+from common.model.query_plan.query_plan_step import MultiAgentQueryPlanStep
 from stages.execution.answer_step_data_agent import answer_step_data_agent
 from stages.execution.answer_step_multiple_agents.align_schema import align_schema
 from stages.execution.answer_step_multiple_agents.completeness_evaluator import (
@@ -23,7 +27,7 @@ from stages.execution.answer_step_multiple_agents.compute_estimator import (
     compute_estimator_statistics,
 )
 from stages.execution.selection import AgentSelector
-from utils.span import append_to_span_output, own_custom_span, span_context_var
+from common.span import append_to_span_output, own_custom_span, span_context_var
 
 MULTI_AGENT_ITERATION_RECORDS: dict[str, list[MultiAgentIterationRecord]] = {}
 
@@ -226,8 +230,6 @@ async def answer_step_multiple_agents(
     selector = await AgentSelector.create(
         agents=agents_in_step,
         query=query_plan_step.query,
-        table_name=query_plan_step.table_name,
-        column_name=query_plan_step.column_name,
     )
     agents_queried: list[str] = []
 

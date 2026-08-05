@@ -2,23 +2,20 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
-from qtypes.drafted_query_plan import DraftedQueryPlan
-from qtypes.data_agent import DataAgent
-from qtypes.query_dependency import QueryDependency
-from qtypes.query_plan import FieldDefinitions, QueryPlan
-from qtypes.query_plan_step import (
+from common.model.stages.drafted_query_plan import DraftedQueryPlan
+from common.model.agent.data_agent import DataAgent
+from common.model.query_plan.query_dependency import QueryDependency
+from common.model.query_plan.query_plan import FieldDefinitions, QueryPlan
+from common.model.query_plan.query_plan_step import (
     MultiAgentQueryPlanStep,
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
-from stages.common.agent_configuration import get_coordinator_agent_configuration
-from stages.common.data_agent.agent_registry import (
-    AgentRegistry,
-    AgentRegistryType,
-)
-from utils.cache import cached
-from utils.run_agent import run_llm
-from utils.span import append_to_span_output, own_custom_span
+from common.agent_configuration import get_coordinator_agent_configuration
+from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
+from common.cache import cached
+from common.run_agent import run_llm
+from common.span import append_to_span_output, own_custom_span
 
 STAGE_NAME = "Stage 2: Planning"
 
@@ -57,18 +54,6 @@ def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseMode
         ),
         merge_task=(str, FieldDefinitions.step_merge_task),
         dependencies=(list[QueryDependency], FieldDefinitions.step_dependencies),
-        table_name=(
-            str,
-            Field(
-                description="The table name agents will primarily query in this step. ",
-            ),
-        ),
-        column_name=(
-            str,
-            Field(
-                description="The column name agents will primarily query in this step in the table specified by table_name. ONLY INCLUDE A SINGLE COLUMN NAME",
-            ),
-        ),
         __config__=StrictModelConfig,
     )
 
@@ -114,8 +99,6 @@ def map_query_plan_model_to_query_plan(
                 merge_task=step_model.merge_task,
                 dependencies=dependencies,
                 answer=None,
-                table_name=step_model.table_name,
-                column_name=step_model.column_name,
             )
         else:
             query_plan_step = SingleAgentQueryPlanStep(
