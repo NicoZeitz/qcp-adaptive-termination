@@ -129,6 +129,9 @@ class SchemaEngine(SQLDatabase):
         db_path = self._engine.url.database
         if not db_path:
             return {}
+        if db_path.startswith("file:"):
+            db_path = db_path[len("file:") :]
+        db_path = os.path.abspath(db_path)
         comments_path = os.path.splitext(db_path)[0] + ".comments.yaml"
         if not os.path.exists(comments_path):
             return {}

@@ -13,7 +13,7 @@ from model.need import try_parse_value_to_need_type
 from model.execution.partial_query_answer import PartialQueryAnswer
 from model.result import try_parse_value_to_result_type
 from stages.execution.validation import validate_agent_output
-from common.agent_configuration import get_data_agent_agent_configuration
+from common.agent_configuration import AgentRole, get_agent_configuration
 from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
 from common.data_agent.get_db_engine import get_db_engine
 from common.preview import preview_additional_information, result_to_json_preview
@@ -108,7 +108,9 @@ async def answer_query_data_agent(
             )
 
         result = await run_agent(
-            agent_configuration=get_data_agent_agent_configuration(data_agent, "Code"),
+            agent_configuration=get_agent_configuration(
+                AgentRole.DATA_AGENT_CODE, data_agent.name
+            ),
             prompt_name="execution-data-agent-sql-code",
             prompt_parameters={
                 "m_schema": m_schema,

@@ -8,7 +8,7 @@ from model.execution.outcome import FinalResultOutcome
 from model.execution.outcome import QueryMoreAgentsOutcome
 from model.result import try_parse_value_to_result_type
 from model.serializers import SerializedOptionalResultType
-from common.agent_configuration import get_coordinator_agent_configuration
+from common.agent_configuration import AgentRole, get_agent_configuration
 from common.preview import preview_dataframe, result_to_json_preview
 from common.run_agent import run_agent
 from common.span import append_to_span_output, own_custom_span
@@ -165,8 +165,8 @@ async def run_completeness_evaluator(
         },
     ):
         evaluator_result = await run_agent(
-            agent_configuration=get_coordinator_agent_configuration(
-                "Completeness Evaluator"
+            agent_configuration=get_agent_configuration(
+                AgentRole.COORDINATOR_COMPLETENESS_EVALUATOR
             ),
             prompt_name="execution-coordinator-completeness-evaluator",
             prompt_parameters={

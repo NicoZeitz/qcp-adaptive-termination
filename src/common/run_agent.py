@@ -42,7 +42,7 @@ async def run_agent[TResult](
     prompts = load_prompt(prompt_name, prompt_parameters)
     # use 1st message as instructions, rest as part of prompt
     instructions, prompts = prompts[0], prompts[1:]
-    agent_name = agent_configuration.name
+    display_name = agent_configuration.display_name
     tool_use = (
         tool_use_behavior
         if isinstance(tool_use_behavior, str)
@@ -67,13 +67,11 @@ async def run_agent[TResult](
         raise ValueError(f"Unsupported output type: {output_type}")
 
     @cached(
-        name_prefix=agent_name,
+        name_prefix=agent_configuration.role,
         mode=cache_mode,
         deserializable_classes=deserializable_classes,
     )
     async def compute_value(
-        agent_name: str,
-        # agent_configuration: AgentConfiguration,
         instructions: str,
         prompts: list[dict[str, str]],
         context: JsonValue,
@@ -86,7 +84,7 @@ async def run_agent[TResult](
     ):
         nonlocal tool_use_behavior
         agent = Agent[JsonValue](
-            name=agent_name,
+            name=display_name,
             model=agent_configuration.model,
             model_settings=ModelSettings(
                 reasoning=agent_configuration.reasoning,
@@ -101,7 +99,7 @@ async def run_agent[TResult](
             output_type=output_type,
         )
 
-        indented_logging(f"Running agent: {agent_name}")
+        indented_logging(f"Running agent: {display_name}")
 
         try:
             result = await Runner.run(
@@ -117,8 +115,6 @@ async def run_agent[TResult](
         return result.final_output
 
     return await compute_value(
-        agent_name,
-        # agent_configuration,
         instructions["content"],
         prompts=list(
             map(lambda p: {"role": p["role"], "content": p["content"]}, prompts),
@@ -153,7 +149,8 @@ async def run_llm[TResult](
     cache_mode: CacheMode | None = None,
 ) -> TResult:
     single_turn_config = AgentConfiguration(
-        name=agent_configuration.name,
+        role=agent_configuration.role,
+        agent_name=agent_configuration.agent_name,
         model=agent_configuration.model,
         reasoning=agent_configuration.reasoning,
         max_turns=1,

@@ -15,7 +15,7 @@ from model.estimation.aligned_result_list import (
     AlignedSchemaMetadata,
 )
 from model.agent.data_agent import DataAgent
-from common.agent_configuration import get_coordinator_agent_configuration
+from common.agent_configuration import AgentRole, get_agent_configuration
 from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
 from stages.execution.validation import validate_schema_output
 from common.run_agent import run_agent
@@ -84,7 +84,9 @@ async def align_schema(
         },
     ):
         schema_metadata = await run_agent(
-            agent_configuration=get_coordinator_agent_configuration("Align Schema"),
+            agent_configuration=get_agent_configuration(
+                AgentRole.COORDINATOR_ALIGN_SCHEMA
+            ),
             prompt_name="execution-coordinator-align-schema",
             prompt_parameters={
                 "query": query,

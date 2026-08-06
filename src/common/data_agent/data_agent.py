@@ -2,8 +2,9 @@ from typing import Any
 
 from pydantic import BaseModel, create_model, Field
 
-from common.agent_configuration import get_data_agent_agent_configuration
+from common.agent_configuration import AgentRole, get_agent_configuration
 from common.data_agent.get_db_engine import get_db_engine
+from common.span import own_custom_span
 from model.agent.agent_registry_data import (
     AgentRegistryData,
     ColumnDescription,
@@ -90,19 +91,19 @@ async def load_agent_registry_data(data_agent: DataAgent) -> AgentRegistryData:
     db_engine = get_db_engine(data_agent)
     schema_engine = SchemaEngine(db_engine, db_name=data_agent.name)
 
-    missing_tables, missing_fields, db_missing = missing_comments(
-        schema_engine.mschema
-    )
+    missing_tables, missing_fields, db_missing = missing_comments(schema_engine.mschema)
     needs_llm = missing_tables or missing_fields or db_missing
 
     if needs_llm:
-        m_schema_without_comments = schema_engine.mschema.to_mschema()
+        m_schema_without_comments = schema_engine.mschema.to_mschema(
+            include_db_id=False
+        )
         DatabaseDescriptionModel = create_database_description_model(
             schema_engine, missing_tables, missing_fields, db_missing
         )
         result = await run_llm(
-            agent_configuration=get_data_agent_agent_configuration(
-                data_agent, "Schema Description"
+            agent_configuration=get_agent_configuration(
+                AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION, data_agent.name
             ),
             prompt_name="discovery-data-agent-sql-schema-description",
             prompt_parameters={
@@ -130,6 +131,14 @@ async def load_agent_registry_data(data_agent: DataAgent) -> AgentRegistryData:
         if db_missing:
             natural_language_description = getattr(result, "database_description")
             schema_engine.mschema.database_comment = natural_language_description
+    else:
+        with own_custom_span(
+            "No missing comments in MSchema, skipping LLM call",
+            input={
+                "agent_name": data_agent.name,
+            },
+        ):
+            pass
 
     natural_language_description = schema_engine.mschema.database_comment
 

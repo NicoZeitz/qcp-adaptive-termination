@@ -4,12 +4,18 @@ import os
 from sqlalchemy import Engine, create_engine, text
 
 from model.agent.data_agent import DataAgent
+from model.execution_config import ExecutionConfig
 
 
 @lru_cache(maxsize=None)
-def get_db_engine(data_agent: DataAgent) -> Engine:
-    path = os.path.abspath(data_agent.path)
-    db_engine = create_engine(f"sqlite:///file:{path}?mode=ro&uri=true")
-    with db_engine.connect() as connection:
+def get_db_engine_for_path(resolved_path: str) -> Engine:
+    engine = create_engine(f"sqlite:///file:{resolved_path}?mode=ro&uri=true")
+    with engine.connect() as connection:
         connection.execute(text("PRAGMA temp_store=MEMORY;"))
-    return db_engine
+    return engine
+
+
+def get_db_engine(data_agent: DataAgent) -> Engine:
+    prefix = ExecutionConfig.get().data_path_prefix
+    resolved_path = os.path.abspath(os.path.join(prefix, data_agent.path))
+    return get_db_engine_for_path(resolved_path)

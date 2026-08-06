@@ -11,7 +11,7 @@ from model.query_plan.query_plan_step import (
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
-from common.agent_configuration import get_coordinator_agent_configuration
+from common.agent_configuration import AgentRole, get_agent_configuration
 from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
 from common.cache import cached
 from common.run_agent import run_llm
@@ -134,7 +134,7 @@ async def draft_query_plan(
         QueryPlanModel = create_draft_query_plan_model(relevant_data_agents)
 
         result = await run_llm(
-            agent_configuration=get_coordinator_agent_configuration("Planning"),
+            agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_PLANNING),
             prompt_name="planning-coordinator-planning",
             prompt_parameters={
                 "agent_registry": agent_registry,

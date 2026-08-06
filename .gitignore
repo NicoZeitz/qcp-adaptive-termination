@@ -241,3 +241,4 @@ results.md
 
 # Claude Code local settings
 .claude/
+logs/

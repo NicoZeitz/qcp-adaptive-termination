@@ -3,10 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field, create_model
 
 from model.agent.data_agent import DataAgent
-from common.agent_configuration import (
-    get_coordinator_agent_configuration,
-    get_data_agent_agent_configuration,
-)
+from common.agent_configuration import AgentRole, get_agent_configuration
 from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
 from common.run_agent import run_llm
 from common.span import append_to_span_output
@@ -43,7 +40,7 @@ async def filter_coordinator_with_reasoning(
     RelevanceModel = build_relevance_model(data_agents)
 
     relevances = await run_llm(
-        agent_configuration=get_coordinator_agent_configuration("Relevance"),
+        agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_RELEVANCE),
         prompt_name="discovery-coordinator-relevance",
         prompt_parameters={
             "agent_registry": agent_registry,
@@ -87,7 +84,9 @@ async def filter_data_agent_with_reasoning(
     }
 
     is_relevant = await run_llm(
-        agent_configuration=get_data_agent_agent_configuration(data_agent, "Relevance"),
+        agent_configuration=get_agent_configuration(
+            AgentRole.DATA_AGENT_RELEVANCE, data_agent.name
+        ),
         prompt_name="discovery-data-agent-sql-relevance",
         prompt_parameters=prompt_parameters,
         output_type=bool,

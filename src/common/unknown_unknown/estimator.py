@@ -1,3 +1,4 @@
+import bisect
 from functools import lru_cache
 import math
 import random
@@ -1005,14 +1006,28 @@ class Estimator:
 
     @staticmethod
     def _split_bucket(bucket: Bucket, split_value: float) -> tuple[Bucket, Bucket]:
-        """Split a bucket at split_value into left (≤ split_value) and right (> split_value)."""
+        """Split a bucket at split_value into left (≤ split_value) and right (> split_value).
+
+        Assumes bucket.samples is sorted by value ascending (guaranteed by _dynamic_buckets).
+        Uses bisect to find the partition point in O(log n), then bulk-loads each half and
+        rebuilds the frequency vector once per child instead of once per sample.
+        """
+        samples = bucket.samples
+        keys = [s.value for s in samples]
+        cut = bisect.bisect_right(keys, split_value)
+
         left = Bucket(bucket.lower_bound, split_value)
         right = Bucket(split_value, bucket.upper_bound)
-        for s in bucket.samples:
-            if bucket.lower_bound <= s.value <= split_value:
-                left.add_sample(s)
-            else:
-                right.add_sample(s)
+
+        for s in samples[:cut]:
+            left.samples.append(s)
+            left.histogram[s.name].add_sample(s.value)
+        for s in samples[cut:]:
+            right.samples.append(s)
+            right.histogram[s.name].add_sample(s.value)
+
+        left.rebuild_frequency_vector()
+        right.rebuild_frequency_vector()
         return left, right
 
     # ── Private Helpers: Monte-Carlo ───────────────────────────────────────────

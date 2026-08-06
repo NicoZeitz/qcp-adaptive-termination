@@ -13,7 +13,7 @@ from model.need import try_parse_value_to_need_type
 from model.execution.partial_query_answer import PartialQueryAnswer
 from model.query_plan.query_plan_step import QueryPlanStep
 from model.result import try_parse_value_to_result_type
-from common.agent_configuration import get_coordinator_agent_configuration
+from common.agent_configuration import AgentRole, get_agent_configuration
 from common.preview import preview_additional_information
 from common.run_agent import run_agent
 from common.span import append_to_span_output, own_custom_span
@@ -60,7 +60,7 @@ async def answer_step_coordinator(
             )
 
         result = await run_agent(
-            agent_configuration=get_coordinator_agent_configuration("Code"),
+            agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_CODE),
             prompt_name="execution-coordinator-aggregate",
             prompt_parameters={
                 "query": query,

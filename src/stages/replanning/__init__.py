@@ -8,7 +8,7 @@ from model.query_plan.query_plan_step import MultiAgentQueryPlanStep
 from model.execution.query_plan_step_execution_result import FailedExecution
 from model.result import ResultType
 from common.preview import need_to_json_preview, result_to_json_preview
-from common.agent_configuration import get_coordinator_agent_configuration
+from common.agent_configuration import AgentRole, get_agent_configuration
 from common.agent_registry.agent_registry import AgentRegistry, AgentRegistryType
 from stages.planning import (
     create_draft_query_plan_model,
@@ -103,7 +103,7 @@ async def replan_query_plan(
     QueryReplanModel = create_query_replan_model(relevant_data_agents)
 
     result = await run_llm(
-        agent_configuration=get_coordinator_agent_configuration("Replanning"),
+        agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_REPLANNING),
         prompt_name="execution-coordinator-replanning",
         prompt_parameters={
             "agent_registry": agent_registry,

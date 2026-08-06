@@ -110,8 +110,8 @@ class AgentRegistry:
             return text
 
         entries = await AgentRegistry.load(agent)
-        if isinstance(entries, list):
-            return [format_entry(a, e) for a, e in zip(agent, entries)]
+        if isinstance(agent, list):
+            return [format_entry(a, entries[a.name]) for a in agent]
         return format_entry(agent, entries)
 
     @staticmethod

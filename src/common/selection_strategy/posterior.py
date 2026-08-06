@@ -14,6 +14,7 @@ from model.selection_strategy.agent_selection import AgentSelection
 DEFAULT_EPS = 0.5
 DEFAULT_MIN_SAMPLES = 1
 
+
 @dataclass
 class PosteriorPrecomputedState:
     embedding: list[float]
@@ -24,6 +25,7 @@ class PosteriorPrecomputedState:
 class PosteriorState:
     theta: update_theta_sketch
     queried_embeddings: list[list[float]] = field(default_factory=list)
+
 
 def normalize_probability(values: list[float]) -> list[float]:
     total = sum(values)
@@ -90,7 +92,6 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         for lbl in set(labels):
             mask = labels == lbl
             centroids[lbl] = agent_embeddings[mask].mean(axis=0)
-
 
         prior_raw: list[float] = []
         for i in range(len(remaining)):

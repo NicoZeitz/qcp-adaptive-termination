@@ -1,3 +1,4 @@
+import os
 from contextlib import contextmanager
 from typing import Generator
 
@@ -10,6 +11,8 @@ from common.unknown_unknown import CountEstimator, Estimator, ValueEstimator
 
 class ExecutionConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+    data_path_prefix: str = os.environ.get("DATA_PATH_PREFIX", "../data/")
 
     continue_after_final_result: bool = False
 

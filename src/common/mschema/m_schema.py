@@ -184,6 +184,7 @@ class MSchema:
         selected_columns: list | None = None,
         example_num=3,
         show_type_detail=False,
+        include_db_id: bool = True,
     ) -> str:
         """
         convert to a MSchema string.
@@ -201,7 +202,7 @@ class MSchema:
                 else None
             )
 
-        output = [f"【DB_ID】 {self.db_id}", "【Schema】"]
+        output = ([f"【DB_ID】 {self.db_id}"] if include_db_id else []) + ["【Schema】"]
         for table_name in self.tables:
             if (
                 selected_tables_lower is not None
