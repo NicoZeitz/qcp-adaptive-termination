@@ -5,6 +5,7 @@ from model.agent.data_agent import DataAgent
 from model.execution_config import ExecutionConfig
 from model.selection_strategy.selection_type import SelectionType
 from model.selection_strategy.agent_selection import AgentSelection
+from common.selection_strategy.posterior import PosteriorStrategy
 from common.selection_strategy.counts import CountStrategy, DistinctCountStrategy
 from common.selection_strategy.embedding_strategy import EmbeddingStrategy
 from common.selection_strategy.resolve import (
@@ -38,6 +39,7 @@ def needs_column(selection_type: SelectionType) -> bool:
         SelectionType.MIN_HASH,
         SelectionType.NULL_COVERAGE,
         SelectionType.VALUE_RANGE,
+        SelectionType.POSTERIOR,
     )
 
 
@@ -64,6 +66,8 @@ def build_strategy(selection_type: SelectionType) -> SelectionStrategy:
         return NullCoverageStrategy()
     elif selection_type == SelectionType.VALUE_RANGE:
         return ValueRangeStrategy()
+    elif selection_type == SelectionType.POSTERIOR:
+        return PosteriorStrategy()
     else:
         raise ValueError(f"Unsupported SelectionType: {selection_type}")
 
@@ -117,11 +121,15 @@ class AgentSelector:
     def rank(self, remaining: list[AgentSelection]) -> list[AgentSelection]:
         return self._strategy.rank(remaining, self._precomputed, self._state)
 
-    def update(self, result_list: AlignedResultList) -> None:
+    def update(
+        self, result_list: AlignedResultList, agent_names: list[str] | None = None
+    ) -> None:
         col = (
             result_list.schema_metadata.value_column
             or result_list.schema_metadata.keys[0]
         )
         df = result_list.data
         values = df[col].dropna().astype(str).tolist()
-        self._state = self._strategy.update(self._state, values)
+        self._state = self._strategy.update(
+            self._state, values, agent_names=agent_names, precomputed=self._precomputed
+        )

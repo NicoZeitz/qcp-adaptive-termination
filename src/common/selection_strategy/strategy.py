@@ -43,7 +43,13 @@ class SelectionStrategy(Protocol[P, S]):
         """Return remaining agents sorted best-first given the current running state."""
         ...
 
-    def update(self, state: S, values: list[str]) -> S:
+    def update(
+        self,
+        state: S,
+        values: list[str],
+        agent_names: list[str],
+        precomputed: dict[str, P],
+    ) -> S:
         """Fold the column values seen so far into the running state and return it."""
         ...
 

@@ -23,3 +23,6 @@ class SelectionType(Enum):
     # Statistics-based
     NULL_COVERAGE = "null_coverage"  # Needs: Table, Column
     VALUE_RANGE = "value_range"  # Needs: Table, Column
+
+    # Posterior (embedding prior + sketch likelihood)
+    POSTERIOR = "posterior"  # Needs: Table, Column

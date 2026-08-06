@@ -1,4 +1,3 @@
-import asyncio
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -37,28 +36,20 @@ class EmbeddingStrategy(StaticSelectionStrategy[float]):
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, float]:
-        per_agent_texts: list[list[str]] = await AgentRegistry.embedding_descriptions(
-            agents
-        )
-        per_agent_vectors: list[list[list[float]]] = list(
-            await asyncio.gather(
-                *[create_embedding(texts) for texts in per_agent_texts]
-            )
-        )
-
+        agent_vectors = await AgentRegistry.embedding_vectors_for_all_tables(agents)
         query_embedding = await create_embedding(query)
 
-        flat_data: list[tuple[DataAgent, list[float]]] = []
-        for agent, vectors in zip(agents, per_agent_vectors):
-            for vec in vectors:
-                flat_data.append((agent, vec))
+        flat_data: list[tuple[str, list[float]]] = []
+        for agent_name, table_vectors in agent_vectors.items():
+            for vec in table_vectors.values():
+                flat_data.append((agent_name, vec))
 
         index = build_index(flat_data)
         ranked = search_index_top_k(index, query_embedding, k=len(flat_data))
 
         agent_distances: defaultdict[str, list[float]] = defaultdict(list)
-        for agent, dist in ranked:
-            agent_distances[agent.name].append(dist)
+        for agent_name, dist in ranked:
+            agent_distances[agent_name].append(dist)
 
         return {
             name: self.scorer(distances) for name, distances in agent_distances.items()

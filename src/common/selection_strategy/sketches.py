@@ -15,6 +15,7 @@ from model.agent.data_agent import DataAgent
 from common.data_agent.get_db_engine import get_db_engine
 from common.selection_strategy.sql_utils import quote_col, quote_table
 from model.selection_strategy.agent_selection import AgentSelection
+from common.selection_strategy.strategy import SelectionStrategy
 
 DEFAULT_LG_K = 12
 DEFAULT_NUM_STD = 2
@@ -40,7 +41,7 @@ def fetch_column_values(
 
 
 @dataclass
-class HllSketchStrategy:
+class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
     """
     Ranks by estimated new unique values each remaining agent would contribute.
 
@@ -109,7 +110,7 @@ class HllSketchStrategy:
 
 
 @dataclass
-class ThetaSketchStrategy:
+class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_sketch]):
     """
     Ranks by estimated new unique values (A NOT B: agent sketch minus seen state).
 
@@ -181,7 +182,7 @@ class MinHashState:
 
 
 @dataclass
-class MinHashStrategy:
+class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
     """
     Ranks by estimated new unique values via containment estimation.
 

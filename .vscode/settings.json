@@ -35,6 +35,7 @@
         "chao",
         "datasketches",
         "dayfirst",
+        "DBSCAN",
         "dotenv",
         "faiss",
         "getlogin",

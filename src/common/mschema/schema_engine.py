@@ -1,4 +1,6 @@
+import os
 from typing import Optional
+import yaml
 from sqlalchemy import (
     MetaData,
     Table,
@@ -8,6 +10,33 @@ from sqlalchemy.engine import Engine
 from llama_index.core import SQLDatabase
 from .utils import examples_to_str
 from .m_schema import MSchema
+
+# .comments.yaml sidecar format (placed next to the .db file, same stem)
+#
+# Full format (all keys optional — omit any you don't need):
+#
+#   __database__: "Natural language description of the whole database."
+#   <table_name>:
+#     __table__: "Natural language description of the table."
+#     <column_name>: "Natural language description of the column."
+#     <column_name>: "..."
+#   <table_name>:
+#     ...
+#
+# Legacy format (table comment only, still supported):
+#
+#   <table_name>: "Natural language description of the table."
+#
+# Any comment present in the YAML skips the LLM for that field.
+# If all comments are present, the LLM call is skipped entirely.
+#
+# Example:
+#
+#   __database__: "Database of companies in Europe with employee counts and revenue."
+#   companies:
+#     __table__: "Table listing all companies in Europe."
+#     companyLabel: "Human-readable name of the company."
+#     employees: "Number of employees reported for the company."
 
 
 class SchemaEngine(SQLDatabase):
@@ -72,10 +101,16 @@ class SchemaEngine(SQLDatabase):
             self._usable_tables = all_tables
 
         self._dialect = engine.dialect.name
+        self._sqlite_comments = self.load_sqlite_comments()
+        if self._engine.dialect.name == "sqlite":
+            db_comment = self._sqlite_comments.get("__database__", "")
+        else:
+            db_comment = ""
         if mschema is not None:
             self._mschema = mschema
         else:
             self._mschema = MSchema(db_id=db_name, schema=schema)
+            self._mschema.database_comment = db_comment
             self.init_mschema()
 
     @property
@@ -88,13 +123,41 @@ class SchemaEngine(SQLDatabase):
             table_name, self._tables_schemas[table_name]
         )["constrained_columns"]
 
+    def load_sqlite_comments(self) -> dict:
+        if self._engine.dialect.name != "sqlite":
+            return {}
+        db_path = self._engine.url.database
+        if not db_path:
+            return {}
+        comments_path = os.path.splitext(db_path)[0] + ".comments.yaml"
+        if not os.path.exists(comments_path):
+            return {}
+        try:
+            with open(comments_path) as f:
+                data = yaml.safe_load(f) or {}
+            return data
+        except Exception:
+            return {}
+
     def get_table_comment(self, table_name: str):
+        if self._engine.dialect.name == "sqlite":
+            entry = self._sqlite_comments.get(table_name)
+            if isinstance(entry, dict):
+                return entry.get("__table__", "")
+            return entry or ""
         try:
             return self._inspector.get_table_comment(
                 table_name, self._tables_schemas[table_name]
             )["text"]
-        except Exception:  # sqlite does not support comments
+        except Exception:
             return ""
+
+    def get_field_comment(self, table_name: str, field_name: str) -> str:
+        if self._engine.dialect.name == "sqlite":
+            entry = self._sqlite_comments.get(table_name)
+            if isinstance(entry, dict):
+                return entry.get(field_name, "")
+        return ""
 
     def default_schema_name(self) -> Optional[str]:
         return self._inspector.default_schema_name
@@ -172,6 +235,9 @@ class SchemaEngine(SQLDatabase):
                 primary_key = field_name in pks
                 field_comment = field.get("comment", None)
                 field_comment = "" if field_comment is None else field_comment.strip()
+                yaml_field_comment = self.get_field_comment(table_name, field_name)
+                if yaml_field_comment:
+                    field_comment = yaml_field_comment
                 autoincrement = field.get("autoincrement", False)
                 default = field.get("default", None)
                 if default is not None:

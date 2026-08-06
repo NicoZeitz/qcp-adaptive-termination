@@ -290,7 +290,7 @@ async def answer_step_multiple_agents(
             if not ExecutionConfig.get().continue_after_final_result:
                 break
 
-        selector.update(result_list)
+        selector.update(result_list, agent_names=batch)
         ranked = selector.rank(remaining_selections)
         rankings = [(s.agent.name, s.score) for s in ranked]
         batch_selections = ranked[:batch_size]
