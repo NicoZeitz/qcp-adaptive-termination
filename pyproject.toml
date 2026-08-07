@@ -1,7 +1,7 @@
 [project]
-name = "qcp-prototype"
+name = "qcp-adaptive-termination"
 version = "0.1.0"
-description = "Add your description here"
+description = "Collaborative Query Processing with Adaptive Termination"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -28,7 +28,17 @@ dependencies = [
     "umap-learn>=0.5.12",
 ]
 
-[pytest]
+[project.scripts]
+qcp-adaptive-termination = "qcp_adaptive_termination.cli:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/qcp_adaptive_termination"]
+
+[tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [dependency-groups]

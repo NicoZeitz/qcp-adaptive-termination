@@ -1,5 +1,5 @@
 {
-    "python.defaultInterpreterPath": "/Users/I550817/SAPDevelop/Lectures/qcp-prototype/.venv/bin/python",
+    "python.defaultInterpreterPath": "/Users/I550817/TUDevelop/qcp-adaptive-termination/.venv/bin/python",
     "python.terminal.useEnvFile": true,
     "files.exclude": {
         "**/.git": true,

@@ -20,8 +20,8 @@ import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-from common.unknown_unknown import Estimator, ValueEstimator, CountEstimator
-from common.unknown_unknown.data_item import DataItem
+from qcp_adaptive_termination.estimator import Estimator, ValueEstimator, CountEstimator
+from qcp_adaptive_termination.estimator.data_item import DataItem
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
