@@ -103,7 +103,7 @@ def fetch_table_statistics(
                         textwrap.dedent(f"""
                         SELECT {quote_col(col)} AS value, COUNT(*) * 1.0 / :n AS frequency
                         FROM {quote_table(table_name)}
-                        WHERE {quote_col(col)} IS NOT NULL
+                        WHERE {quote_col(col)} IS NOT NULL AND {quote_col(col)} <> ''
                         GROUP BY {quote_col(col)}
                         HAVING COUNT(*) * 1.0 / :n > 1.0 / :k + SQRT((1.0 - 1.0 / :k) / :n)
                         ORDER BY COUNT(*) DESC
@@ -124,7 +124,7 @@ def fetch_table_statistics(
                 WITH non_mcv AS (
                     SELECT {quote_col(col)} AS val
                     FROM {quote_table(table_name)}
-                    WHERE {quote_col(col)} IS NOT NULL {not_in}
+                    WHERE {quote_col(col)} IS NOT NULL AND {quote_col(col)} <> '' {not_in}
                 ),
                 bucketed AS (
                     SELECT val, NTILE(:bins) OVER (ORDER BY val) AS bucket

@@ -29,7 +29,7 @@ def fetch_column_values(
     with db_engine.connect() as conn:
         rows = conn.execute(
             text(
-                f"SELECT {quote_col(column_name)} FROM {quote_table(table_name)} WHERE {quote_col(column_name)} IS NOT NULL"
+                f"SELECT {quote_col(column_name)} FROM {quote_table(table_name)} WHERE {quote_col(column_name)} IS NOT NULL AND {quote_col(column_name)} <> ''"
             )
         ).fetchall()
     return [str(row[0]) for row in rows]

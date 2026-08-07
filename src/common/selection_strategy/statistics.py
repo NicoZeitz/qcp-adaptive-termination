@@ -30,7 +30,7 @@ class NullCoverageStrategy(StaticSelectionStrategy[float]):
         return {
             a.name: scalar(
                 a,
-                f"SELECT COUNT({quote_col(column_per_agent[a.name])}) * 1.0 / NULLIF(COUNT(*), 0)"
+                f"SELECT COUNT(CASE WHEN {quote_col(column_per_agent[a.name])} IS NOT NULL AND {quote_col(column_per_agent[a.name])} <> '' THEN 1 END) * 1.0 / NULLIF(COUNT(*), 0)"
                 f" FROM {quote_table(table_per_agent[a.name])}",
             )
             for a in agents
@@ -55,7 +55,7 @@ class ValueRangeStrategy(StaticSelectionStrategy[float]):
                 a,
                 f"SELECT MAX({quote_col(column_per_agent[a.name])}) - MIN({quote_col(column_per_agent[a.name])})"
                 f" FROM {quote_table(table_per_agent[a.name])}"
-                f" WHERE {quote_col(column_per_agent[a.name])} IS NOT NULL",
+                f" WHERE {quote_col(column_per_agent[a.name])} IS NOT NULL AND {quote_col(column_per_agent[a.name])} <> ''",
             )
             for a in agents
             if a.name in table_per_agent and a.name in column_per_agent
