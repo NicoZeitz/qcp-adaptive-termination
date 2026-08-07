@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import cast
 from datetime import datetime
 
+import yaml
+
 from agents import trace
 from langfuse import get_client
 
@@ -313,13 +315,18 @@ if __name__ == "__main__":
         "--config",
         type=str,
         default=None,
-        help="Execution config as JSON, e.g. '{\"include_confidence_intervals\": false}'",
+        help="Execution config as a YAML file path or inline YAML string",
     )
     args = parser.parse_args()
 
-    execution_config = (
-        ExecutionConfig.model_validate_json(args.config) if args.config else None
-    )
+    execution_config = None
+    if args.config:
+        config_path = Path(args.config)
+        if config_path.exists():
+            raw = yaml.safe_load(config_path.read_text())
+        else:
+            raw = yaml.safe_load(args.config)
+        execution_config = ExecutionConfig.model_validate(raw)
 
     asyncio.run(
         main(

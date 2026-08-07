@@ -1,18 +1,27 @@
-import os
 from contextlib import contextmanager
-from typing import Generator
+from typing import ClassVar, Generator
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from model.estimation.estimator_mode import EstimatorMode
 from model.selection_strategy.selection_type import SelectionType
 from common.unknown_unknown import CountEstimator, Estimator, ValueEstimator
 
 
+class RoleConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    model: str
+    reasoning_effort: str = "none"
+    reasoning_summary: str | None = None
+
+
 class ExecutionConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    data_path_prefix: str = os.environ.get("DATA_PATH_PREFIX", "../data/")
+    _instance: ClassVar["ExecutionConfig | None"] = None
+
+    data_path_prefix: str = "../data/"
 
     continue_after_final_result: bool = False
 
@@ -26,7 +35,8 @@ class ExecutionConfig(BaseModel):
     use_monte_carlo: bool = False
     include_confidence_intervals: bool = True
 
-    _instance: "ExecutionConfig | None" = None
+    embedding_model: str = "openai/text-embedding-3-large"
+    agent_configs: dict[str, RoleConfig] = Field(default_factory=dict)
 
     @classmethod
     def set(cls, **kwargs) -> "ExecutionConfig":

@@ -7,17 +7,18 @@ source ../.venv/bin/activate
 BASE_DATA="../data/wikidata/companies/split_overlap_employees"
 BASE_RUNS="../logs/wikidata/companies/split_overlap_employees"
 
-CONFIG=$(cat <<EOF
-{
-  "estimator_mode": "full",
-  "include_confidence_intervals": true,
-  "use_bucket": true,
-  "use_monte_carlo": false,
-  "continue_after_final_result": true,
-  "selection_type": "theta_sketch_ucb",
-  "data_path_prefix": "${BASE_DATA}/"
-}
-EOF
+CONFIG=$(python3 - <<'PYEOF'
+import yaml, sys
+with open("../config.yaml") as f:
+    cfg = yaml.safe_load(f)
+
+cfg["estimator_mode"] = "full"
+cfg["selection_type"] = "theta_sketch_ucb"
+cfg["data_path_prefix"] = "../data/wikidata/companies/split_overlap_employees/"
+cfg["continue_after_final_result"] = True
+
+print(yaml.dump(cfg, default_flow_style=False))
+PYEOF
 )
 
 (cd ../src && uv run main.py \

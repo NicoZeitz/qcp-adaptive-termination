@@ -1,4 +1,5 @@
 import pandas as pd
+from typing import cast
 
 from model.estimation.aligned_result_list import AlignedResultList
 from model.estimation.estimator_statistics import EstimatorStatistics
@@ -13,7 +14,7 @@ def dataframe_to_data_items(
     items = []
     for _, row in dataframe.iterrows():
         name = "|".join(str(row[k]) for k in key_cols if k in row)
-        value = float(row[value_col]) if value_col and value_col in row else 1.0
+        value = float(row[value_col]) if value_col and value_col in row else 1.0  # type: ignore[arg-type]
         items.append(DataItem(name=name, value=value, source_id=source_id))
     return items
 
@@ -31,7 +32,9 @@ def compute_estimator_statistics(
 
     source_samples: list[list[DataItem]] = []
     for agent_name in data[schema.source_agent_column].unique():
-        dataframe = data[data[schema.source_agent_column] == agent_name]
+        dataframe = cast(
+            pd.DataFrame, data[data[schema.source_agent_column] == agent_name]
+        )
         items = dataframe_to_data_items(
             dataframe, schema.keys, schema.value_column, agent_name
         )

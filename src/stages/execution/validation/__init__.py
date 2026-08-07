@@ -30,7 +30,7 @@ def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata)
                 f"Column '{metadata.value_column}' is missing from the output"
             )
         else:
-            if dataframe[metadata.value_column].isnull().all():
+            if bool(dataframe[metadata.value_column].isnull().all()):
                 errors.append(f"Column '{metadata.value_column}' cannot be empty")
             elif not pd.api.types.is_numeric_dtype(dataframe[metadata.value_column]):
                 errors.append(f"Column '{metadata.value_column}' has to be numeric")

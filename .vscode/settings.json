@@ -12,6 +12,7 @@
         "**/.ruff_cache": true,
         // "**/.cache": true,
         "**/.logs": true,
+        "**/.claude": true,
     },
     "explorer.fileNesting.patterns": {
         "README.md": "TODO.md",

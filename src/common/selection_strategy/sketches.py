@@ -98,7 +98,13 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
 
         return sorted(remaining, key=lambda s: cast(float, s.score), reverse=True)
 
-    def update(self, state: hll_sketch, values: list[str]) -> hll_sketch:
+    def update(
+        self,
+        state: hll_sketch,
+        values: list[str],
+        agent_names: list[str] | None = None,
+        precomputed: dict[str, hll_sketch] | None = None,
+    ) -> hll_sketch:
         for v in values:
             state.update(v)
         return state
@@ -163,7 +169,11 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
         return sorted(remaining, key=lambda s: cast(float, s.score), reverse=True)
 
     def update(
-        self, state: update_theta_sketch, values: list[str]
+        self,
+        state: update_theta_sketch,
+        values: list[str],
+        agent_names: list[str] | None = None,
+        precomputed: dict[str, compact_theta_sketch] | None = None,
     ) -> update_theta_sketch:
         for v in values:
             state.update(v)
@@ -239,7 +249,13 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
 
         return sorted(remaining, key=lambda s: cast(float, s.score), reverse=True)
 
-    def update(self, state: MinHashState, values: list[str]) -> MinHashState:
+    def update(
+        self,
+        state: MinHashState,
+        values: list[str],
+        agent_names: list[str] | None = None,
+        precomputed: dict[str, tuple[MinHash, int]] | None = None,
+    ) -> MinHashState:
         for v in values:
             state.minhash.update(v.encode("utf8"))
             state.seen.add(v)

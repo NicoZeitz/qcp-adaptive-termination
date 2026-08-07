@@ -398,15 +398,15 @@ def plot_scenario(
     rg = fh(right_gap)
     bot = fh((total_h - right_total_h) / 2 + right_bot)
 
-    ax_val = fig.add_axes([rx, bot, rw, rh])
-    ax_cnt = fig.add_axes([rx, bot + rh + rg, rw, rh], sharex=ax_val)
-    ax_cov = fig.add_axes([rx, bot + 2 * (rh + rg), rw, rh], sharex=ax_val)
+    ax_val = fig.add_axes((rx, bot, rw, rh))
+    ax_cnt = fig.add_axes((rx, bot + rh + rg, rw, rh), sharex=ax_val)
+    ax_cov = fig.add_axes((rx, bot + 2 * (rh + rg), rw, rh), sharex=ax_val)
 
     # Left: heatmap axes centered on the same midpoint as the right content block
     right_content_mid = bot + fh(right_content_h) / 2
     heat_bottom = right_content_mid - fh(heat_content_h_in) / 2
     ax_heat = fig.add_axes(
-        [fw(margin_l), heat_bottom, fw(col_w_in), fh(heat_content_h_in)]
+        (fw(margin_l), heat_bottom, fw(col_w_in), fh(heat_content_h_in))
     )
 
     # ── Draw ─────────────────────────────────────────────────────────────────

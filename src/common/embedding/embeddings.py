@@ -3,20 +3,22 @@ from typing import cast, overload
 from agents import OpenAIProvider
 from openai import AsyncOpenAI
 
-from common.agent_configuration import EMBEDDING_MODEL, get_multi_provider
+from common.agent_configuration import get_multi_provider
 from common.cache import cached
 from common.span import own_custom_span
+from model.execution_config import ExecutionConfig
 
 
 def get_client_and_model() -> tuple[AsyncOpenAI, str]:
+    embedding_model = ExecutionConfig.get().embedding_model
     multi_provider = get_multi_provider()
     prefix, stripped = cast(
-        tuple[str, str], multi_provider._get_prefix_and_model_name(EMBEDDING_MODEL)
+        tuple[str, str], multi_provider._get_prefix_and_model_name(embedding_model)
     )
     provider, model_name = cast(
         tuple[OpenAIProvider, str],
         multi_provider._resolve_prefixed_model(
-            original_model_name=EMBEDDING_MODEL,
+            original_model_name=embedding_model,
             prefix=prefix,
             stripped_model_name=stripped,
         ),

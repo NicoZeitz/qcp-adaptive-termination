@@ -91,7 +91,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         centroids: dict[int, np.ndarray] = {}
         for lbl in set(labels):
             mask = labels == lbl
-            centroids[lbl] = agent_embeddings[mask].mean(axis=0)
+            centroids[int(lbl)] = agent_embeddings[mask].mean(axis=0)
 
         prior_raw: list[float] = []
         for i in range(len(remaining)):

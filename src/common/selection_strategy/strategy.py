@@ -93,5 +93,11 @@ class StaticSelectionStrategy(ABC, Generic[PS]):
             reverse=not self.ascending,
         )
 
-    def update(self, state: None, values: list[str]) -> None:
+    def update(
+        self,
+        state: None,
+        values: list[str],
+        agent_names: list[str] | None = None,
+        precomputed: dict[str, PS] | None = None,
+    ) -> None:
         return None

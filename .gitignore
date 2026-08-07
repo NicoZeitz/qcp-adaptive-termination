@@ -224,6 +224,7 @@ __marimo__/
 
 # All data — too large/generated to track
 data/
+dataset/
 
 # Other generated files
 documentation/**/*.pdf

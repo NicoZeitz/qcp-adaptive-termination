@@ -131,5 +131,8 @@ class AgentSelector:
         df = result_list.data
         values = df[col].dropna().astype(str).tolist()
         self._state = self._strategy.update(
-            self._state, values, agent_names=agent_names, precomputed=self._precomputed
+            self._state,
+            values,
+            agent_names=agent_names or [],
+            precomputed=self._precomputed,
         )
