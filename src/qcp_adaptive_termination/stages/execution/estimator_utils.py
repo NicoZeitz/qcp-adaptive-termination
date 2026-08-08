@@ -2,11 +2,11 @@ import pandas as pd
 
 from qcp_adaptive_termination.estimator import DataItem, Estimator
 from qcp_adaptive_termination.models import (
-    Config,
     AlignedResultList,
+    Config,
     EstimatorStatistics,
 )
-from qcp_adaptive_termination.tracing.span import indented_logging
+from qcp_adaptive_termination.observability import tracing
 
 
 def dataframe_to_data_items(
@@ -44,7 +44,9 @@ def compute_estimator_statistics(
     has_overlap = len(source_samples) >= 2
 
     if not has_data:
-        indented_logging("Estimator: no data (all agents returned empty results)")
+        tracing.indented_logging(
+            "Estimator: no data (all agents returned empty results)"
+        )
         return EstimatorStatistics(
             agents_queried=agents_queried,
             agents_total=agents_total,
@@ -54,7 +56,7 @@ def compute_estimator_statistics(
         )
 
     if not has_overlap:
-        indented_logging(
+        tracing.indented_logging(
             "Estimator: no overlap data (fewer than 2 agents with results)"
         )
 

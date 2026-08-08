@@ -20,6 +20,7 @@ from qcp_adaptive_termination.models.query_plan import (
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
+from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.stages.execution.coordinator import (
     answer_step_coordinator,
 )
@@ -27,7 +28,6 @@ from qcp_adaptive_termination.stages.execution.data_agent import answer_step_dat
 from qcp_adaptive_termination.stages.execution.multi_agent import (
     answer_step_multiple_agents,
 )
-from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
 async def execute_query_plan_next_step(
@@ -101,7 +101,7 @@ async def execute_query_plan_step(
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
 ) -> PartialQueryAnswer:
-    with own_custom_span(
+    with tracing.own_span(
         f"Execute Step: {query_plan_step.id}",
         input={
             "step": query_plan_step,
@@ -122,7 +122,7 @@ async def execute_query_plan_step(
                 additional_information=additional_information,
             )
 
-        append_to_span_output({"partial_answer": result})
+        tracing.append_to_span_output({"partial_answer": result})
         return result
 
 

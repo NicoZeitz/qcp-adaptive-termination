@@ -23,13 +23,13 @@ from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
     PartialQueryAnswer,
 )
+from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.preview import (
     preview_additional_information,
     result_to_json_preview,
 )
 from qcp_adaptive_termination.serialize_value import serialize_value
 from qcp_adaptive_termination.stages.execution.validation import validate_agent_output
-from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
 @dataclass(slots=True)
@@ -55,7 +55,7 @@ async def answer_query_data_agent(
     additional_information: list[AdditionalInformation],
     schema_metadata: AlignedSchemaMetadata | None = None,
 ) -> PartialQueryAnswer:
-    with own_custom_span(
+    with tracing.own_span(
         f"Data Agent {data_agent.name} - answer_query",
         input={
             "query": query,
@@ -137,7 +137,7 @@ async def answer_query_data_agent(
             output_type=PartialQueryAnswer,
         )
 
-        append_to_span_output(
+        tracing.append_to_span_output(
             {
                 "code": code_environment.to_span_data(),
                 "partial_answer": result,

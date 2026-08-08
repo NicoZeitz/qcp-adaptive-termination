@@ -11,9 +11,9 @@ from pydantic import BaseModel, ConfigDict
 from qcp_adaptive_termination import hooks
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import (
+    AlignedResultList,
     Config,
     DataAgent,
-    AlignedResultList,
     EstimatorStatistics,
 )
 from qcp_adaptive_termination.models.execution import (
@@ -26,6 +26,7 @@ from qcp_adaptive_termination.models.execution import (
 )
 from qcp_adaptive_termination.models.query_plan import MultiAgentQueryPlanStep
 from qcp_adaptive_termination.models.serializers import SerializedResultType
+from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.selection_strategy import AgentSelector
 from qcp_adaptive_termination.stages.execution.align_schema import align_schema
 from qcp_adaptive_termination.stages.execution.completeness_evaluator import (
@@ -34,11 +35,6 @@ from qcp_adaptive_termination.stages.execution.completeness_evaluator import (
 from qcp_adaptive_termination.stages.execution.data_agent import answer_step_data_agent
 from qcp_adaptive_termination.stages.execution.estimator_utils import (
     compute_estimator_statistics,
-)
-from qcp_adaptive_termination.tracing.span import (
-    append_to_span_output,
-    own_custom_span,
-    span_context_var,
 )
 
 
@@ -128,7 +124,7 @@ async def run_agent_batch(
     remaining_agents_now = [a for a in agents_remaining if a not in batch]
     batch_label = ", ".join(batch)
 
-    with own_custom_span(
+    with tracing.own_span(
         f"Batch: [{batch_label}]",
         input={
             "query": query_plan_step.query,
@@ -185,7 +181,7 @@ async def run_agent_batch(
                 partial_answer=merged_partial,
                 has_partial_answer=merged_partial is not None,
             )
-            append_to_span_output(
+            tracing.append_to_span_output(
                 {
                     "outcome": combined_need_outcome,
                     "agents_with_needs": [a for a, _ in need_results],
@@ -240,7 +236,7 @@ async def run_agent_batch(
                 )
             )
 
-        append_to_span_output({"outcome": outcome, "batch": batch})
+        tracing.append_to_span_output({"outcome": outcome, "batch": batch})
         return outcome
 
 
@@ -324,7 +320,7 @@ async def answer_step_multiple_agents(
         batch_selections = ranked[:batch_size]
         remaining_selections = ranked[batch_size:]
 
-    append_to_span_output(
+    tracing.append_to_span_output(
         {
             "iteration_records_count": len(iteration_records),
             "iteration_records": iteration_records,
@@ -333,7 +329,7 @@ async def answer_step_multiple_agents(
     )
     hooks.emit(
         HookEvent.ITERATION_RECORDS,
-        execution_id=f"{query_plan_step.id} {cast(Span[CustomSpanData], span_context_var.get()).span_id}",
+        execution_id=f"{query_plan_step.id} {cast(Span[CustomSpanData], tracing.get_current_span()).span_id}",
         records=iteration_records,
     )
     return answer

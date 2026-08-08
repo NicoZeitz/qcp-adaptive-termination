@@ -15,7 +15,7 @@ from qcp_adaptive_termination.models.query_plan import (
     SingleAgentQueryPlanStep,
 )
 from qcp_adaptive_termination.models.stages import DraftedQueryPlan
-from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
+from qcp_adaptive_termination.observability import tracing
 
 STAGE_NAME = "Stage 2: Planning"
 
@@ -120,7 +120,7 @@ def map_query_plan_model_to_query_plan(
 async def draft_query_plan(
     query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
 ) -> DraftedQueryPlan:
-    with own_custom_span(
+    with tracing.own_span(
         STAGE_NAME,
         input={
             "query": query,
@@ -143,7 +143,7 @@ async def draft_query_plan(
         )
 
         query_plan = map_query_plan_model_to_query_plan(result, query)
-        append_to_span_output({"query_plan": query_plan})
+        tracing.append_to_span_output({"query_plan": query_plan})
 
         return DraftedQueryPlan(
             relevant_data_agents=relevant_data_agents,

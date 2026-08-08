@@ -8,14 +8,14 @@ from agents import (
 )
 from pydantic import BaseModel, ConfigDict
 
-from qcp_adaptive_termination.models import AgentRole
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
-    Config,
+    AgentRole,
     AlignedResultList,
+    Config,
     EstimatorMode,
     EstimatorStatistics,
     SerializedOptionalResultType,
@@ -26,8 +26,8 @@ from qcp_adaptive_termination.models.execution import (
     FinalResultOutcome,
     QueryMoreAgentsOutcome,
 )
+from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.preview import preview_dataframe, result_to_json_preview
-from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
 class CompletenessEvaluatorResult(BaseModel):
@@ -164,7 +164,7 @@ async def run_completeness_evaluator(
     )
     result_list_preview = preview_dataframe(aligned_result_list.data)
 
-    with own_custom_span(
+    with tracing.own_span(
         "Query Coordinator - Completeness Evaluator",
         input={
             "query": query,
@@ -190,7 +190,7 @@ async def run_completeness_evaluator(
             tool_choice="required",
             output_type=CompletenessEvaluatorResult,
         )
-        append_to_span_output(
+        tracing.append_to_span_output(
             {
                 "decision": evaluator_result.decision,
                 "final_result": result_to_json_preview(evaluator_result.result)

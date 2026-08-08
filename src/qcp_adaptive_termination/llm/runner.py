@@ -19,19 +19,20 @@ import qcp_adaptive_termination.llm.model_provider as model_provider
 import qcp_adaptive_termination.llm.prompt as prompt
 from qcp_adaptive_termination.cache import CacheMode, cached
 from qcp_adaptive_termination.models import AgentRole, Config, RoleConfig
-from qcp_adaptive_termination.tracing.span import indented_logging
+from qcp_adaptive_termination.observability import tracing
 
 
-def _resolve_model_config(
-    role: AgentRole
-)-> tuple[str, Reasoning]:
+def _resolve_model_config(role: AgentRole) -> tuple[str, Reasoning]:
     role_cfg: RoleConfig = Config.get().agent_configs[role.value]
     reasoning = Reasoning(
         effort=role_cfg.reasoning_effort, summary=role_cfg.reasoning_summary
     )
     return role_cfg.model, reasoning
 
-def _get_output_and_deserializable_classes(output_type: Type | None) -> tuple[JsonValue, list[type[BaseModel]]]:
+
+def _get_output_and_deserializable_classes(
+    output_type: Type | None,
+) -> tuple[JsonValue, list[type[BaseModel]]]:
     output: JsonValue = None
     deserializable_classes: list[type[BaseModel]] = []
 
@@ -50,6 +51,7 @@ def _get_output_and_deserializable_classes(output_type: Type | None) -> tuple[Js
         raise ValueError(f"Unsupported output type: {output_type}")
 
     return output, deserializable_classes
+
 
 async def run_agent[TResult](
     role: AgentRole,
@@ -72,7 +74,6 @@ async def run_agent[TResult](
     model, reasoning = _resolve_model_config(role)
     if max_turns is None:
         max_turns = DEFAULT_MAX_TURNS * 2
-
 
     prompts = prompt.load_prompt(role.prompt_name, prompt_parameters)
     # use 1st message as instructions, rest as part of prompt
@@ -120,7 +121,7 @@ async def run_agent[TResult](
             output_type=output_type,
         )
 
-        indented_logging(f"Running agent: {display_name}")
+        tracing.indented_logging(f"Running agent: {display_name}")
 
         try:
             result = await Runner.run(
@@ -133,7 +134,7 @@ async def run_agent[TResult](
                 ),
             )
         except ModelBehaviorError as e:
-            indented_logging(f"Model behavior error: {e}")
+            tracing.indented_logging(f"Model behavior error: {e}")
             raise e
         return result.final_output
 

@@ -25,7 +25,7 @@ import qcp_adaptive_termination.agent_registry as agent_registry
 from qcp_adaptive_termination.cache import setup_cache
 from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.models.config import Config, _config_var
-from qcp_adaptive_termination.tracing import setup_logging
+from qcp_adaptive_termination.observability import setup_logging
 
 INPUT_FILE = Path("../data/wikidata/companies/split_overlap_employees/employees.json")
 OUTPUT_DIR = Path("../logs")

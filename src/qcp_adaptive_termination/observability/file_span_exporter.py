@@ -1,6 +1,6 @@
-from pathlib import Path
-import threading
 import json
+import threading
+from pathlib import Path
 from typing import IO, Sequence
 
 from opentelemetry.sdk.trace import ReadableSpan
@@ -35,7 +35,7 @@ class FileSpanExporter(SpanExporter):
                         "description": span.status.description,
                     },
                 }
-                self._file.write(  # ty: ignore
+                self._file.write(  # type: ignore
                     json.dumps(span_dict, default=lambda x: dict(x)) + "\n"
                 )
         return SpanExportResult.SUCCESS

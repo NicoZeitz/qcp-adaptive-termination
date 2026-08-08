@@ -37,8 +37,7 @@ from qcp_adaptive_termination.stages.planning import (
 from qcp_adaptive_termination.stages.planning import (
     draft_query_plan,
 )
-from qcp_adaptive_termination.tracing import (
-    setup_langfuse,
+from qcp_adaptive_termination.observability import (
     setup_logging,
     setup_tracing,
 )
@@ -48,6 +47,14 @@ STAGES = {
     2: PLANNING_STAGE_NAME,
     3: EXECUTION_STAGE_NAME,
 }
+
+
+def setup_langfuse() -> bool:
+    langfuse = get_client()
+    if not langfuse.auth_check():
+        logging.error("Langfuse authentication failed. Check credentials and host.")
+        return False
+    return True
 
 
 async def run_pipeline(

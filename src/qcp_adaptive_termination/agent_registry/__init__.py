@@ -32,7 +32,9 @@ async def natural_language_info(agent: DataAgent) -> str: ...
 @overload
 async def natural_language_info(agent: list[DataAgent]) -> list[str]: ...
 async def natural_language_info(agent):
-    return utils.map_entries(await load(agent), lambda e: e.natural_language_description)
+    return utils.map_entries(
+        await load(agent), lambda e: e.natural_language_description
+    )
 
 
 @overload
@@ -230,6 +232,7 @@ async def embedding_vectors_for_all_tables(agents):
     if single:
         return result[agents.name]
     return result
+
 
 __all__ = [
     "build_registry",

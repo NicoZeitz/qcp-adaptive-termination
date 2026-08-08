@@ -11,7 +11,7 @@ from qcp_adaptive_termination.models import (
     DataAgent,
     TableDescription,
 )
-from qcp_adaptive_termination.tracing.span import own_custom_span
+from qcp_adaptive_termination.observability import tracing
 
 
 def _missing_comments(
@@ -72,7 +72,7 @@ def _create_database_description_model(
         }
         TableDescriptionsModel = create_model(  # ty: ignore[no-matching-overload]
             "TableDescriptionsModel",
-            **table_desc_fields,  # type: ignore
+            **table_desc_fields,  # type: ignore[reportArgumentType, reportCallIssue]
         )
         schema_dict["table_descriptions"] = (TableDescriptionsModel, Field(...))
 
@@ -130,7 +130,7 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
             natural_language_description = getattr(result, "database_description")
             schema_engine.mschema.database_comment = natural_language_description
     else:
-        with own_custom_span(
+        with tracing.own_span(
             "No missing comments in MSchema, skipping LLM call",
             input={
                 "agent_name": data_agent.name,
@@ -169,6 +169,7 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
         query_capabilities=["Text-to-SQL"],
         individual_descriptions=individual_descriptions,
     )
+
 
 @overload
 def map_entries[T](

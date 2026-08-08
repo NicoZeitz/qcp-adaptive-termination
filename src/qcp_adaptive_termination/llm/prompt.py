@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, Mapping, cast
 
 import chevron
-from langfuse.model import ChatMessageDict
+from openai.types.responses import EasyInputMessageParam
 
 PROMPTS_DIR = Path(__file__).parents[3] / "prompts"
 
@@ -16,7 +16,9 @@ def _get_prompt(name: str) -> str:
     return _prompt_cache[name]
 
 
-def load_prompt(name: str, parameters: Mapping[str, Any]) -> list[ChatMessageDict]:
+def load_prompt(
+    name: str, parameters: Mapping[str, Any]
+) -> list[EasyInputMessageParam]:
     parameters = cast(dict[str, Any], parameters)
     instructions = chevron.render(_get_prompt(f"{name}-instructions"), parameters)
     user = chevron.render(_get_prompt(f"{name}-user"), parameters)

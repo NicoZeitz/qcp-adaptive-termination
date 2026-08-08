@@ -18,6 +18,12 @@ from qcp_adaptive_termination.estimator.count_estimator import CountEstimator
 from qcp_adaptive_termination.estimator.data_item import DataItem
 from qcp_adaptive_termination.estimator.value_estimator import ValueEstimator
 
+MC_DEFAULT_NB_RUNS = 200
+MC_DEFAULT_LAMBDA_GRID = tuple(round(v * 0.1, 1) for v in range(-4, 5))
+MC_RANDOM_SEED = None
+MC_DEFAULT_MAX_THETA_POINTS = 7
+MC_LAPLACE_ALPHA = 0.1
+
 
 class Estimator:
     """Unknown-unknowns estimators for correcting aggregate query results.
@@ -43,13 +49,9 @@ class Estimator:
 
     DEFAULT_COUNT_ESTIMATOR: CountEstimator = CountEstimator.CHAO92
     DEFAULT_VALUE_ESTIMATOR: ValueEstimator = ValueEstimator.NAIVE
-    DEFAULT_CONFIDENCE_INTERVAL_TYPE: ConfidenceIntervalType = ConfidenceIntervalType.CHAO84
-
-    MC_DEFAULT_NB_RUNS = 200
-    MC_DEFAULT_LAMBDA_GRID = tuple(round(v * 0.1, 1) for v in range(-4, 5))
-    MC_RANDOM_SEED = None
-    MC_DEFAULT_MAX_THETA_POINTS = 7
-    MC_LAPLACE_ALPHA = 0.1
+    DEFAULT_CONFIDENCE_INTERVAL_TYPE: ConfidenceIntervalType = (
+        ConfidenceIntervalType.CHAO84
+    )
 
     # ── Class-level attribute annotations (typed, for IDE support) ───────────
 

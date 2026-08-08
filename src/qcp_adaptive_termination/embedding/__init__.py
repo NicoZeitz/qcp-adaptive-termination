@@ -14,7 +14,7 @@ from qcp_adaptive_termination.cache import cached
 from qcp_adaptive_termination.embedding.vector_index import VectorIndex
 from qcp_adaptive_termination.llm import model_provider
 from qcp_adaptive_termination.models import Config
-from qcp_adaptive_termination.tracing.span import own_custom_span
+from qcp_adaptive_termination.observability import tracing
 
 
 def _get_embedding_client_and_model() -> tuple[AsyncOpenAI, str]:
@@ -40,7 +40,7 @@ async def create(text: str) -> list[float]: ...
 async def create(text: list[str]) -> list[list[float]]: ...
 @cached(name_prefix="Embedding")
 async def create(text):
-    with own_custom_span("Embedding", input={"text": text}):
+    with tracing.own_span("Embedding", input={"text": text}):
         client, model = _get_embedding_client_and_model()
         result = await client.embeddings.create(model=model, input=text)
 

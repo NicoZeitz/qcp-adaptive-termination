@@ -8,11 +8,7 @@ from qcp_adaptive_termination.cache import CacheMode, cached
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
 from qcp_adaptive_termination.models.stages import FilteredRelevantAgents
-from qcp_adaptive_termination.tracing.span import (
-    append_to_span_input,
-    append_to_span_output,
-    own_custom_span,
-)
+from qcp_adaptive_termination.observability import tracing
 
 STAGE_NAME = "Stage 1: Discovery"
 
@@ -66,7 +62,7 @@ async def filter_coordinator_with_reasoning(
         relevant = getattr(getattr(relevances, agent.name), "is_relevant")
         reasoning = getattr(getattr(relevances, agent.name), "reasoning")
 
-        append_to_span_output(
+        tracing.append_to_span_output(
             {
                 f"{agent.name}_relevant": relevant,
                 f"{agent.name}_reasoning": reasoning,
@@ -101,7 +97,7 @@ async def filter_data_agent_with_reasoning(
         output_type=bool,
     )
 
-    append_to_span_output({f"{data_agent.name}_relevant": is_relevant})
+    tracing.append_to_span_output({f"{data_agent.name}_relevant": is_relevant})
     return data_agent if is_relevant else None
 
 
@@ -109,7 +105,7 @@ async def filter_data_agent_with_reasoning(
 async def filter_relevant_agents(
     query: str, data_agents: list[DataAgent]
 ) -> FilteredRelevantAgents:
-    with own_custom_span(
+    with tracing.own_span(
         STAGE_NAME,
         input={
             "query": query,
@@ -123,7 +119,7 @@ async def filter_relevant_agents(
             filter_type=FilterType.REASONING,
         )
 
-        append_to_span_output(
+        tracing.append_to_span_output(
             {
                 "relevant_data_agents": result.relevant_data_agents,
             }
@@ -140,7 +136,7 @@ async def filter_relevant_agents_internal(
 ) -> FilteredRelevantAgents:
     result: Any
 
-    with own_custom_span(
+    with tracing.own_span(
         "Building Agent Registry",
         input={
             "registry_type": registry_type.value,
@@ -150,9 +146,9 @@ async def filter_relevant_agents_internal(
         registry_string = await agent_registry.build_registry_string(
             data_agents, registry_type
         )
-        append_to_span_input({"agent_registry": registry_string})
+        tracing.append_to_span_input({"agent_registry": registry_string})
 
-    with own_custom_span(
+    with tracing.own_span(
         "Filtering with Coordinator",
         input={
             "query": query,
@@ -167,7 +163,7 @@ async def filter_relevant_agents_internal(
         else:
             raise ValueError(f"Unsupported filter type: {filter_type}")
 
-    with own_custom_span(
+    with tracing.own_span(
         "Filtering with Agents",
         input={"query": query, "filter_type": filter_type.value},
     ):

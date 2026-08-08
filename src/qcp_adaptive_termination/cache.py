@@ -1,17 +1,17 @@
-from contextlib import contextmanager
-from enum import Enum, StrEnum
-from functools import wraps
 import hashlib
 import inspect
 import json
 import logging
-from pathlib import Path
 import uuid
-from typing import Any, Awaitable, Callable, cast, ParamSpec, Sequence, TypeVar
+from contextlib import contextmanager
+from enum import Enum, StrEnum
+from functools import wraps
+from pathlib import Path
+from typing import Any, Awaitable, Callable, ParamSpec, Sequence, TypeVar, cast
 
 from pydantic import BaseModel, JsonValue
 
-from qcp_adaptive_termination.tracing.span import indented_logging, own_custom_span
+from qcp_adaptive_termination.observability import tracing
 
 
 class CacheMode(StrEnum):
@@ -62,7 +62,7 @@ class Cache:
         try:
             with cache_file.open("r", encoding="utf-8") as f:
                 payload = json.load(f)
-                indented_logging(f"Cache: HIT ({cache_file})")
+                tracing.indented_logging(f"Cache: HIT ({cache_file})")
                 return payload.get("value"), True
         except (FileNotFoundError, Exception):
             self._throw_on_miss(key)
@@ -90,10 +90,10 @@ class Cache:
                 json.dump(
                     payload, f, separators=(",", ":"), ensure_ascii=False, indent=2
                 )
-            indented_logging(f"Cache: STORE ({cache_file})")
+            tracing.indented_logging(f"Cache: STORE ({cache_file})")
             temporary_file.replace(cache_file)
         except Exception as exc:
-            indented_logging(
+            tracing.indented_logging(
                 f"Cache: ERROR storing cache file {cache_file}: {exc}",
                 log_level=logging.ERROR,
             )
@@ -259,14 +259,12 @@ def cached(
                 if found:
                     name = resolved_prefix or getattr(func, "__name__", "")
 
-                    if "Schema Description" not in name:
-                        with own_custom_span(
-                            f"Cache Hit: {name}",
-                            input={"arguments": key},
-                            output={"result": result},
-                            print_start_end=False,
-                        ):
-                            pass
+                    with tracing.own_span(
+                        f"Cache Hit: {name}",
+                        input={"arguments": key},
+                        output={"result": result},
+                    ):
+                        pass
 
                     return _deserialize_value(result, deserializable_values)
 

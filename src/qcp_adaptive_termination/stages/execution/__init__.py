@@ -7,7 +7,7 @@ Drives the step-by-step execution loop, handles replanning on failure
 
 from typing import cast
 
-from qcp_adaptive_termination.models.stages import CollaborativeQueryAnsweringResult
+from qcp_adaptive_termination.cache import CacheMode, cached
 from qcp_adaptive_termination.models import (
     AgentRegistryType,
     DataAgent,
@@ -21,16 +21,16 @@ from qcp_adaptive_termination.models.execution import (
     SuccessfulExecution,
 )
 from qcp_adaptive_termination.models.query_plan import QueryPlan
-from qcp_adaptive_termination.stages.execution.execute_query_plan_next_step import (
-    execute_query_plan_next_step,
-)
+from qcp_adaptive_termination.models.stages import CollaborativeQueryAnsweringResult
+from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.stages.discovery import (
     FilterType,
     filter_relevant_agents_internal,
 )
+from qcp_adaptive_termination.stages.execution.execute_query_plan_next_step import (
+    execute_query_plan_next_step,
+)
 from qcp_adaptive_termination.stages.replanning import replan_query_plan
-from qcp_adaptive_termination.cache import CacheMode, cached
-from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 STAGE_NAME = "Stage 3: Execution"
 REPLAN_STAGE_NAME = "Stage 4: Replan"
@@ -41,7 +41,7 @@ async def execute_query_plan_attempt(
     query_plan: QueryPlan,
     current_data_agents: list[DataAgent],
 ) -> ExecutionResult:
-    with own_custom_span(
+    with tracing.own_span(
         f"{replan_attempt} - {STAGE_NAME}",
         input={
             "query_plan": query_plan,
@@ -74,7 +74,7 @@ async def replan(
     query_plan: QueryPlan,
     failed_execution: FailedExecution,
 ) -> tuple[list[DataAgent], QueryPlan]:
-    with own_custom_span(
+    with tracing.own_span(
         f"{replan_attempt} - {REPLAN_STAGE_NAME}",
         input={
             "replan_attempt": replan_attempt,
@@ -111,7 +111,7 @@ async def replan(
             reason=failed_execution,
         )
 
-        append_to_span_output(
+        tracing.append_to_span_output(
             {
                 "updated_data_agents": updated_data_agents,
                 "new_query_plan": new_query_plan,

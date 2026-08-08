@@ -19,8 +19,8 @@ from qcp_adaptive_termination.models import (
     AlignedSchemaMetadata,
     DataAgent,
 )
+from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.stages.execution.validation import validate_schema_output
-from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
 async def align_schema(
@@ -76,7 +76,7 @@ async def align_schema(
             final_output=schema_metadata,
         )
 
-    with own_custom_span(
+    with tracing.own_span(
         "Query Coordinator - Align Schema",
         input={
             "query": query,
@@ -99,7 +99,7 @@ async def align_schema(
             output_type=AlignedSchemaMetadata,
         )
 
-        append_to_span_output({"schema_metadata": schema_metadata})
+        tracing.append_to_span_output({"schema_metadata": schema_metadata})
         return AlignedResultList(
             data=pd.DataFrame(
                 columns=schema_metadata.columns + [schema_metadata.source_agent_column]
