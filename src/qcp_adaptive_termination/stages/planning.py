@@ -18,13 +18,11 @@ from qcp_adaptive_termination.agent_configuration import (
     AgentRole,
     get_agent_configuration,
 )
-from qcp_adaptive_termination.agent_registry import (
-    AgentRegistry,
-    AgentRegistryType,
-)
+import qcp_adaptive_termination.agent_registry as agent_registry
+from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.cache import cached
 from qcp_adaptive_termination.run_agent import run_llm
-from qcp_adaptive_termination.span import append_to_span_output, own_custom_span
+from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 STAGE_NAME = "Stage 2: Planning"
 
@@ -137,7 +135,7 @@ async def draft_query_plan(
             "relevant_data_agents": relevant_data_agents,
         },
     ):
-        agent_registry = await AgentRegistry.build_registry_string(
+        registry_string = await agent_registry.build_registry_string(
             relevant_data_agents, registry_type=AgentRegistryType.TECHNICAL
         )
         QueryPlanModel = create_draft_query_plan_model(relevant_data_agents)
@@ -146,7 +144,7 @@ async def draft_query_plan(
             agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_PLANNING),
             prompt_name="planning-coordinator-planning",
             prompt_parameters={
-                "agent_registry": agent_registry,
+                "agent_registry": registry_string,
                 "query": query,
             },
             output_type=QueryPlanModel,

@@ -3,10 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, create_model
 
-from qcp_adaptive_termination.agent_registry import (
-    AgentRegistry,
-    AgentRegistryType,
-)
+import qcp_adaptive_termination.agent_registry as agent_registry
+from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.model.agent.data_agent import DataAgent
 from qcp_adaptive_termination.model.stages.filtered_relevant_agents import (
     FilteredRelevantAgents,
@@ -17,7 +15,7 @@ from qcp_adaptive_termination.agent_configuration import (
 )
 from qcp_adaptive_termination.cache import cached
 from qcp_adaptive_termination.run_agent import run_llm
-from qcp_adaptive_termination.span import (
+from qcp_adaptive_termination.tracing.span import (
     append_to_span_input,
     append_to_span_output,
     own_custom_span,
@@ -55,7 +53,7 @@ def build_relevance_model(data_agents: list[DataAgent]) -> type[BaseModel]:
 async def filter_coordinator_with_reasoning(
     query: str,
     data_agents: list[DataAgent],
-    agent_registry: str,
+    registry_string: str,
     additional_context: str | None = None,
 ) -> list[tuple[DataAgent, str]]:
     RelevanceModel = build_relevance_model(data_agents)
@@ -64,7 +62,7 @@ async def filter_coordinator_with_reasoning(
         agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_RELEVANCE),
         prompt_name="discovery-coordinator-relevance",
         prompt_parameters={
-            "agent_registry": agent_registry,
+            "agent_registry": registry_string,
             "query": query,
             "additional_context": additional_context,
         },
@@ -99,7 +97,7 @@ async def filter_data_agent_with_reasoning(
         "query": query,
         "reasoning": reasoning,
         "additional_context": additional_context,
-        "m_schema": await AgentRegistry.build_registry_string(
+        "m_schema": await agent_registry.build_registry_string(
             data_agent, AgentRegistryType.TECHNICAL, include_capabilities=False
         ),
     }
@@ -159,10 +157,10 @@ async def filter_relevant_agents_internal(
             "data_agents": data_agents,
         },
     ):
-        agent_registry = await AgentRegistry.build_registry_string(
+        registry_string = await agent_registry.build_registry_string(
             data_agents, registry_type
         )
-        append_to_span_input({"agent_registry": agent_registry})
+        append_to_span_input({"agent_registry": registry_string})
 
     with own_custom_span(
         "Filtering with Coordinator",
@@ -174,7 +172,7 @@ async def filter_relevant_agents_internal(
     ):
         if filter_type == FilterType.REASONING:
             result = await filter_coordinator_with_reasoning(
-                query, data_agents, agent_registry, additional_context
+                query, data_agents, registry_string, additional_context
             )
         else:
             raise ValueError(f"Unsupported filter type: {filter_type}")

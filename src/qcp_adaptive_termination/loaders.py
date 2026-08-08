@@ -3,12 +3,12 @@ from typing import Any
 
 import yaml
 
-from qcp_adaptive_termination.model.execution_config import ExecutionConfig
+from qcp_adaptive_termination.model.config import Config
 
 
-def load_config(source: str | Path | None) -> ExecutionConfig:
+def load_config(source: str | Path | None) -> Config:
     if source is None:
-        return ExecutionConfig()
+        return Config()
 
     path = Path(source)
     if path.exists():
@@ -16,7 +16,7 @@ def load_config(source: str | Path | None) -> ExecutionConfig:
     else:
         raw = yaml.safe_load(str(source))
 
-    return ExecutionConfig.model_validate(raw)
+    return Config.model_validate(raw)
 
 
 def load_input(path: str | Path) -> Any:

@@ -1,7 +1,11 @@
 import json
+import logging
 import os
 from pathlib import Path
-import logging
+
+import httpx
+import nest_asyncio
+import sys
 from agents import (
     MultiProvider,
     OpenAIProvider,
@@ -11,21 +15,30 @@ from agents import (
 from agents.models.multi_provider import MultiProviderMap
 from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
-import httpx
-import nest_asyncio
-import sys
 from openai import AsyncOpenAI
 from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
 from langfuse import get_client
 from opentelemetry import trace
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from qcp_adaptive_termination.agent_configuration import set_multi_provider
 from qcp_adaptive_termination.cache import Cache
 from qcp_adaptive_termination.tracing import (
     FileSpanExporter,
     TruncatingBackendSpanExporter,
 )
+
+_multi_provider: MultiProvider | None = None
+
+
+def set_multi_provider(provider: MultiProvider) -> None:
+    global _multi_provider
+    _multi_provider = provider
+
+
+def get_multi_provider() -> MultiProvider:
+    if _multi_provider is None:
+        raise RuntimeError("MultiProvider not initialized — call initialize() first")
+    return _multi_provider
 
 
 async def modify_request_hook(request: httpx.Request):
@@ -93,28 +106,19 @@ def add_provider(
     provider_map.add_provider(prefix.lower(), provider)
 
 
-def initialize(
-    log_name: str,
-    log_dir: Path,
-    cache_dir: Path,
-    throw_on_cache_miss: bool = False,
-    disable_cache: bool = False,
-):
-    # Load env
-    load_dotenv(override=True)
-
-    # Set up logging FIRST (before any logging.info() calls)
+def setup_logging(log_name: str, log_dir: Path) -> None:
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / f"{log_name}.log"
     logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
-    rootLogger = logging.getLogger()
-
-    fileHandler = logging.FileHandler(log_file)
-    rootLogger.addHandler(fileHandler)
-
+    logging.getLogger().addHandler(logging.FileHandler(log_file))
     logging.info(f"Logging initialized. Log file: {log_file}")
 
-    # Set up cache
+
+def setup_cache(
+    cache_dir: Path,
+    throw_on_cache_miss: bool = False,
+    disable_cache: bool = False,
+) -> None:
     cache_dir.mkdir(parents=True, exist_ok=True)
     Cache.instance().set_cache_folder(cache_dir)
     if disable_cache:
@@ -125,26 +129,24 @@ def initialize(
     else:
         Cache.instance().set_mode("READ_AND_WRITE")
 
-    # Set up langfuse
-    langfuse = get_client()
-    if not langfuse.auth_check():
-        logging.error(
-            "Langfuse Authentication failed. Please check your credentials and host."
-        )
-        sys.exit(1)
 
-    # Build one OpenAIProvider per backend and register them by prefix.
-    # AgentConfiguration.model strings use these prefixes (e.g. "university/unsloth/MiniMax-M3").
+def setup_providers() -> None:
     provider_map = MultiProviderMap()
     add_provider("OPENAI", provider_map=provider_map)
     add_provider("UNIVERSITY", provider_map=provider_map, university_hooks=True)
     add_provider("WORK", provider_map=provider_map)
-    multi_provider = MultiProvider(provider_map=provider_map)
-    set_multi_provider(multi_provider)
+    set_multi_provider(MultiProvider(provider_map=provider_map))
 
-    # Set up tracing
-    # Keep OpenAI trace export enabled, but trim payload fields before upload.
-    # Langfuse and file exporters below still receive full, untruncated spans.
+
+def setup_langfuse() -> bool:
+    langfuse = get_client()
+    if not langfuse.auth_check():
+        logging.error("Langfuse authentication failed. Check credentials and host.")
+        return False
+    return True
+
+
+def setup_tracing(log_name: str, log_dir: Path) -> None:
     tracing_api_key = os.getenv("OPENAI_API_KEY")
     if tracing_api_key:
         set_tracing_export_api_key(tracing_api_key)
@@ -166,3 +168,19 @@ def initialize(
     )
     OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
     logging.info(f"Tracing initialized. Trace file: {tracing_log_file}")
+
+
+def initialize(
+    log_name: str,
+    log_dir: Path,
+    cache_dir: Path,
+    throw_on_cache_miss: bool = False,
+    disable_cache: bool = False,
+) -> None:
+    load_dotenv(override=True)
+    setup_logging(log_name, log_dir)
+    setup_cache(cache_dir, throw_on_cache_miss, disable_cache)
+    setup_providers()
+    if not setup_langfuse():
+        sys.exit(1)
+    setup_tracing(log_name, log_dir)

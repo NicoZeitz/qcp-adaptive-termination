@@ -26,7 +26,7 @@ import umap
 from qcp_adaptive_termination.initialization import initialize
 import qcp_adaptive_termination.agent_registry as agent_registry
 from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.execution_config import ExecutionConfig
+from qcp_adaptive_termination.model.config import Config, config_var
 
 
 INPUT_FILE = Path("../data/wikidata/companies/split_overlap_employees/employees.json")
@@ -80,8 +80,8 @@ async def run() -> None:
     raw_agents = data["value"]["data_agents"]
     agents = [DataAgent(**a) for a in raw_agents]
 
-    ExecutionConfig.set(
-        data_path_prefix="../data/wikidata/companies/split_overlap_employees/"
+    config_var.set(
+        Config(data_path_prefix="../data/wikidata/companies/split_overlap_employees/")
     )
 
     print(f"Loading embeddings for {len(agents)} agents …")

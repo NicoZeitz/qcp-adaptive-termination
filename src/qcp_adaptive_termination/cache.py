@@ -11,7 +11,7 @@ from typing import Any, Awaitable, Callable, Literal, ParamSpec, Sequence, TypeV
 
 from pydantic import BaseModel, JsonValue
 
-from qcp_adaptive_termination.span import indented_logging, own_custom_span
+from qcp_adaptive_termination.tracing.span import indented_logging, own_custom_span
 
 CacheMode = Literal[
     "READ_AND_WRITE",

@@ -25,7 +25,7 @@ from qcp_adaptive_termination.agent_configuration import (
 )
 from qcp_adaptive_termination.preview import preview_additional_information
 from qcp_adaptive_termination.run_agent import run_agent
-from qcp_adaptive_termination.span import append_to_span_output, own_custom_span
+from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
 async def answer_step_coordinator(

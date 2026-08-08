@@ -29,7 +29,7 @@ from qcp_adaptive_termination.stages.execution.data_agent import answer_step_dat
 from qcp_adaptive_termination.stages.execution.multi_agent import (
     answer_step_multiple_agents,
 )
-from qcp_adaptive_termination.span import append_to_span_output, own_custom_span
+from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
 async def execute_query_plan_next_step(

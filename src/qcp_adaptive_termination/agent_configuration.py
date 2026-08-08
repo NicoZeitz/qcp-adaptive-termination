@@ -1,26 +1,10 @@
 from enum import Enum
 from typing import cast, Literal
 
-from agents import MultiProvider
 from openai.types.shared import Reasoning
 
 from qcp_adaptive_termination.model.agent.agent_configuration import AgentConfiguration
-from qcp_adaptive_termination.model.execution_config import ExecutionConfig, RoleConfig
-
-EMBEDDING_MODEL = "openai/text-embedding-3-large"
-
-_multi_provider: MultiProvider | None = None
-
-
-def set_multi_provider(provider: MultiProvider) -> None:
-    global _multi_provider
-    _multi_provider = provider
-
-
-def get_multi_provider() -> MultiProvider:
-    if _multi_provider is None:
-        raise RuntimeError("MultiProvider not initialized — call initialize() first")
-    return _multi_provider
+from qcp_adaptive_termination.model.config import config_var, RoleConfig
 
 
 class AgentRole(Enum):
@@ -38,7 +22,7 @@ class AgentRole(Enum):
 def get_agent_configuration(
     role: AgentRole, agent_name: str | None = None
 ) -> AgentConfiguration:
-    roles = ExecutionConfig.get().agent_configs
+    roles = config_var.get().agent_configs
     role_cfg: RoleConfig = roles[role.value]
     effort = cast(
         Literal["none", "minimal", "low", "medium", "high", "xhigh"],

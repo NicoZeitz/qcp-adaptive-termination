@@ -12,7 +12,7 @@ from qcp_adaptive_termination.model.execution.query_plan_step_execution_result i
     SuccessfulExecution,
 )
 from qcp_adaptive_termination.model.result import ResultType, get_failed_result
-from qcp_adaptive_termination.agent_registry import AgentRegistryType
+from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.stages.execution.execute_query_plan_next_step import (
     execute_query_plan_next_step,
 )
@@ -22,7 +22,7 @@ from qcp_adaptive_termination.stages.discovery import (
 )
 from qcp_adaptive_termination.stages.replanning import replan_query_plan
 from qcp_adaptive_termination.cache import cached
-from qcp_adaptive_termination.span import append_to_span_output, own_custom_span
+from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 STAGE_NAME = "Stage 3: Execution"
 REPLAN_STAGE_NAME = "Stage 4: Replan"

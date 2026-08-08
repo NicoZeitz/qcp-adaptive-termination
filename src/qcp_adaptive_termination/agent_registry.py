@@ -1,16 +1,11 @@
 import asyncio
-from enum import Enum
 from typing import Callable, overload
 
 from qcp_adaptive_termination.data_agent.data_agent import load_agent_registry_data
 from qcp_adaptive_termination.embedding.embeddings import create_embedding
 from qcp_adaptive_termination.model.agent.agent_registry_data import AgentRegistryData
+from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-
-
-class AgentRegistryType(Enum):
-    NATURAL_LANGUAGE = "natural_language"
-    TECHNICAL = "technical"
 
 
 @overload
@@ -241,18 +236,3 @@ async def embedding_vectors_for_all_tables(agents):
     if single:
         return result[agents.name]
     return result
-
-
-# Backwards-compat shim: code that used AgentRegistry.build_registry_string(...)
-# can be migrated to the module-level function above.
-class AgentRegistry:
-    load = staticmethod(load)
-    natural_language_info = staticmethod(natural_language_info)
-    query_capabilities = staticmethod(query_capabilities)
-    technical_description = staticmethod(technical_description)
-    build_registry = staticmethod(build_registry)
-    build_registry_string = staticmethod(build_registry_string)
-    embedding_vector_for_column = staticmethod(embedding_vector_for_column)
-    embedding_vectors_for_all_columns = staticmethod(embedding_vectors_for_all_columns)
-    embedding_vector_for_table = staticmethod(embedding_vector_for_table)
-    embedding_vectors_for_all_tables = staticmethod(embedding_vectors_for_all_tables)

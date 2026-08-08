@@ -27,12 +27,12 @@ from qcp_adaptive_termination.model.execution.outcome import (
     FinalResultOutcome,
     QueryMoreAgentsOutcome,
 )
-from qcp_adaptive_termination.model.execution_config import ExecutionConfig
+from qcp_adaptive_termination.model.config import config_var
 from qcp_adaptive_termination.model.result import try_parse_value_to_result_type
 from qcp_adaptive_termination.model.serializers import SerializedOptionalResultType
 from qcp_adaptive_termination.preview import preview_dataframe, result_to_json_preview
 from qcp_adaptive_termination.run_agent import run_agent
-from qcp_adaptive_termination.span import append_to_span_output, own_custom_span
+from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
 class CompletenessEvaluatorResult(BaseModel):
@@ -47,7 +47,7 @@ def build_estimator_summary(
     *,
     include_aggregation_type: bool = True,
 ) -> str | None:
-    config = ExecutionConfig.get()
+    config = config_var.get()
     mode = config.estimator_mode
     if mode == EstimatorMode.NONE:
         return None
@@ -106,7 +106,7 @@ def build_previous_statistics_summary(
 ) -> str | None:
     if (
         not previous_estimator_statistics
-        or ExecutionConfig.get().estimator_mode == EstimatorMode.NONE
+        or config_var.get().estimator_mode == EstimatorMode.NONE
     ):
         return None
 

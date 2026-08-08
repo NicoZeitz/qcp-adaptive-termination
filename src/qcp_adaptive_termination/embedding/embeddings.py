@@ -3,14 +3,14 @@ from typing import cast, overload
 from agents import OpenAIProvider
 from openai import AsyncOpenAI
 
-from qcp_adaptive_termination.agent_configuration import get_multi_provider
+from qcp_adaptive_termination.initialization import get_multi_provider
 from qcp_adaptive_termination.cache import cached
-from qcp_adaptive_termination.span import own_custom_span
-from qcp_adaptive_termination.model.execution_config import ExecutionConfig
+from qcp_adaptive_termination.tracing.span import own_custom_span
+from qcp_adaptive_termination.model.config import config_var
 
 
 def get_client_and_model() -> tuple[AsyncOpenAI, str]:
-    embedding_model = ExecutionConfig.get().embedding_model
+    embedding_model = config_var.get().embedding_model
     multi_provider = get_multi_provider()
     prefix, stripped = cast(
         tuple[str, str], multi_provider._get_prefix_and_model_name(embedding_model)

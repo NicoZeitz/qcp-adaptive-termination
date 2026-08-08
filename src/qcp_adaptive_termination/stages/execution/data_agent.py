@@ -9,10 +9,8 @@ from qcp_adaptive_termination.agent_configuration import (
     AgentRole,
     get_agent_configuration,
 )
-from qcp_adaptive_termination.agent_registry import (
-    AgentRegistry,
-    AgentRegistryType,
-)
+import qcp_adaptive_termination.agent_registry as agent_registry
+from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
@@ -35,7 +33,7 @@ from qcp_adaptive_termination.preview import (
 )
 from qcp_adaptive_termination.run_agent import run_agent
 from qcp_adaptive_termination.serialize_value import serialize_value
-from qcp_adaptive_termination.span import append_to_span_output, own_custom_span
+from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 from qcp_adaptive_termination.stages.execution.validation import validate_agent_output
 
 
@@ -71,7 +69,7 @@ async def answer_query_data_agent(
         },
     ):
         db_engine = get_db_engine(data_agent)
-        m_schema = await AgentRegistry.build_registry_string(
+        m_schema = await agent_registry.build_registry_string(
             data_agent, AgentRegistryType.TECHNICAL, include_capabilities=False
         )
         sql_queries: list[SqlQuery] = []

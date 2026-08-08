@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     )
 
 CHAR_LIMIT_LLM = 2000
-CHAR_LIMIT_LONG_LLM = 6000
 
 
 def preview_dataframe(

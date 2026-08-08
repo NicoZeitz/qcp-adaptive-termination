@@ -15,10 +15,8 @@ from qcp_adaptive_termination.agent_configuration import (
     AgentRole,
     get_agent_configuration,
 )
-from qcp_adaptive_termination.agent_registry import (
-    AgentRegistry,
-    AgentRegistryType,
-)
+import qcp_adaptive_termination.agent_registry as agent_registry
+from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.run_agent import run_llm
 from qcp_adaptive_termination.stages.planning import (
     create_draft_query_plan_model,
@@ -106,7 +104,7 @@ async def replan_query_plan(
     query_plan: QueryPlan,
     reason: FailedExecution,
 ) -> QueryPlan:
-    agent_registry = await AgentRegistry.build_registry_string(
+    registry_string = await agent_registry.build_registry_string(
         relevant_data_agents, AgentRegistryType.TECHNICAL
     )
     answer_map = create_answer_map_from_query_plan(query_plan)
@@ -116,7 +114,7 @@ async def replan_query_plan(
         agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_REPLANNING),
         prompt_name="execution-coordinator-replanning",
         prompt_parameters={
-            "agent_registry": agent_registry,
+            "agent_registry": registry_string,
             "old_query_plan": create_query_plan_prompt_context(query_plan),
             "query": query_plan.query,
             "reason": create_reason_prompt_context(reason),

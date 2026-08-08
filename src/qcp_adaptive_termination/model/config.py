@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import ClassVar, Generator
+from typing import Generator
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -19,10 +19,8 @@ class RoleConfig(BaseModel):
     reasoning_summary: str | None = None
 
 
-class ExecutionConfig(BaseModel):
+class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
-    _var: ClassVar[ContextVar["ExecutionConfig"]]
 
     data_path_prefix: str = "../data/"
 
@@ -45,25 +43,14 @@ class ExecutionConfig(BaseModel):
     cache_dir: str | None = None
     log_name: str | None = None
 
-    @classmethod
-    def get(cls) -> "ExecutionConfig":
-        return cls._var.get()
 
-    @classmethod
-    def set(cls, **kwargs) -> "ExecutionConfig":
-        cfg = cls(**kwargs)
-        cls._var.set(cfg)
-        return cfg
-
-    @classmethod
-    @contextmanager
-    def override(cls, **kwargs) -> Generator["ExecutionConfig", None, None]:
-        cfg = cls.get().model_copy(update=kwargs)
-        token = cls._var.set(cfg)
-        try:
-            yield cfg
-        finally:
-            cls._var.reset(token)
+config_var: ContextVar[Config] = ContextVar("config", default=Config())
 
 
-ExecutionConfig._var = ContextVar("execution_config", default=ExecutionConfig())
+@contextmanager
+def config_context(cfg: Config) -> Generator[Config, None, None]:
+    token = config_var.set(cfg)
+    try:
+        yield cfg
+    finally:
+        config_var.reset(token)

@@ -7,7 +7,7 @@ from qcp_adaptive_termination.agent_configuration import (
     get_agent_configuration,
 )
 from qcp_adaptive_termination.data_agent.get_db_engine import get_db_engine
-from qcp_adaptive_termination.span import own_custom_span
+from qcp_adaptive_termination.tracing.span import own_custom_span
 from qcp_adaptive_termination.model.agent.agent_registry_data import (
     AgentRegistryData,
     ColumnDescription,

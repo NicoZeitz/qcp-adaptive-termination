@@ -15,10 +15,10 @@ from agents.run_config import DEFAULT_MAX_TURNS
 from pydantic import BaseModel, JsonValue
 
 from qcp_adaptive_termination.model.agent.agent_configuration import AgentConfiguration
-from qcp_adaptive_termination.agent_configuration import get_multi_provider
+from qcp_adaptive_termination.initialization import get_multi_provider
 from qcp_adaptive_termination.cache import CacheMode, cached
 from qcp_adaptive_termination.load_prompt import load_prompt
-from qcp_adaptive_termination.span import indented_logging
+from qcp_adaptive_termination.tracing.span import indented_logging
 
 
 async def run_agent[TResult](

@@ -2,12 +2,12 @@ from dataclasses import dataclass, field
 from typing import cast
 
 from datasketch import MinHash
-from datasketches import (
-    compact_theta_sketch,
-    hll_sketch,
-    hll_union,
-    theta_a_not_b,
-    update_theta_sketch,
+from datasketches import (  # type: ignore
+    compact_theta_sketch,  # type: ignore
+    hll_sketch,  # type: ignore
+    hll_union,  # type: ignore
+    theta_a_not_b,  # type: ignore
+    update_theta_sketch,  # type: ignore
 )
 from sqlalchemy import text
 

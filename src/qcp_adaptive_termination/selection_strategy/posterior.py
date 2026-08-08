@@ -2,12 +2,10 @@ from dataclasses import dataclass, field
 from typing import cast
 
 import numpy as np
-from datasketches import compact_theta_sketch, theta_a_not_b, update_theta_sketch
+from datasketches import compact_theta_sketch, theta_a_not_b, update_theta_sketch  # type: ignore
 from sklearn.cluster import DBSCAN
 
-from qcp_adaptive_termination.agent_registry import (
-    embedding_vector_for_table,
-)
+import qcp_adaptive_termination.agent_registry as agent_registry
 from qcp_adaptive_termination.selection_strategy.sketches import (
     DEFAULT_LG_K,
     fetch_column_values,
@@ -57,7 +55,9 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
     ) -> dict[str, PosteriorPrecomputedState]:
         assert table_per_agent and column_per_agent
 
-        vectors = await embedding_vector_for_table(agents, table_per_agent)
+        vectors = await agent_registry.embedding_vector_for_table(
+            agents, table_per_agent
+        )
 
         result: dict[str, PosteriorPrecomputedState] = {}
         for agent in agents:

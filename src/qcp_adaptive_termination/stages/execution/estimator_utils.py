@@ -7,8 +7,8 @@ from qcp_adaptive_termination.model.estimation.aligned_result_list import (
 from qcp_adaptive_termination.model.estimation.estimator_statistics import (
     EstimatorStatistics,
 )
-from qcp_adaptive_termination.model.execution_config import ExecutionConfig
-from qcp_adaptive_termination.span import indented_logging
+from qcp_adaptive_termination.model.config import config_var
+from qcp_adaptive_termination.tracing.span import indented_logging
 
 
 def dataframe_to_data_items(
@@ -28,7 +28,7 @@ def compute_estimator_statistics(
     agents_total: int,
     agents_current: list[str],
 ) -> EstimatorStatistics:
-    config = ExecutionConfig.get()
+    config = config_var.get()
     schema = result_list.schema_metadata
     data = result_list.data
     agg = schema.aggregation_type

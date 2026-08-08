@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from qcp_adaptive_termination.model.execution_config import ExecutionConfig
+from qcp_adaptive_termination.model.config import Config
 from qcp_adaptive_termination.pipeline import run_pipeline
 
 
@@ -44,14 +44,14 @@ def cli() -> None:
     )
     args = parser.parse_args()
 
-    config: ExecutionConfig | None = None
+    config: Config | None = None
     if args.config:
         config_path = Path(args.config)
         if config_path.exists():
             raw = yaml.safe_load(config_path.read_text())
         else:
             raw = yaml.safe_load(args.config)
-        config = ExecutionConfig.model_validate(raw)
+        config = Config.model_validate(raw)
 
     result = asyncio.run(
         run_pipeline(

@@ -4,7 +4,7 @@ from qcp_adaptive_termination.model.estimation.aligned_result_list import (
     AlignedResultList,
 )
 from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.execution_config import ExecutionConfig
+from qcp_adaptive_termination.model.config import config_var
 from qcp_adaptive_termination.model.selection_strategy.selection_type import (
     SelectionType,
 )
@@ -110,7 +110,7 @@ class AgentSelector:
         agents: list[DataAgent],
         query: str,
     ) -> "AgentSelector":
-        selection_type = ExecutionConfig.get().selection_type
+        selection_type = config_var.get().selection_type
         strategy = build_strategy(selection_type)
 
         table_per_agent: dict[str, str] | None = None
