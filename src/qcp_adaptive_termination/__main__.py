@@ -1,3 +1,3 @@
-from qcp_adaptive_termination.cli import cli
+import qcp_adaptive_termination.cli as cli
 
-cli()
+cli.main()

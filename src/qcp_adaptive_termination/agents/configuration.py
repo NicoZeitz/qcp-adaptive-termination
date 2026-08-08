@@ -3,8 +3,8 @@ from typing import cast, Literal
 
 from openai.types.shared import Reasoning
 
-from qcp_adaptive_termination.model.agent.agent_configuration import AgentConfiguration
-from qcp_adaptive_termination.model.config import RoleConfig, config_var
+from qcp_adaptive_termination.models.agent.agent_configuration import AgentConfiguration
+from qcp_adaptive_termination.models.config import RoleConfig, config_var
 
 
 class AgentRole(Enum):

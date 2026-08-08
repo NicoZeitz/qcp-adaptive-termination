@@ -1,37 +1,37 @@
 import asyncio
-from typing import cast
+from typing import Literal, cast
 
 import pandas as pd
 from agents import (
     CustomSpanData,
     Span,
 )
+from pydantic import BaseModel, ConfigDict
 
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.estimation.aligned_result_list import (
     AlignedResultList,
 )
-from qcp_adaptive_termination.model.estimation.estimator_statistics import (
+from qcp_adaptive_termination.models.estimation.estimator_statistics import (
     EstimatorStatistics,
 )
-from qcp_adaptive_termination.model.execution.additional_information import (
+from qcp_adaptive_termination.models.execution.additional_information import (
     AdditionalInformation,
 )
-from qcp_adaptive_termination.model.execution.outcome import (
+from qcp_adaptive_termination.models.execution.outcome import (
+    EvaluatorDecision,
     FinalResultOutcome,
     QueryMoreAgentsOutcome,
     RaiseNeedOutcome,
 )
-from qcp_adaptive_termination.model.execution.partial_query_answer import (
+from qcp_adaptive_termination.models.execution.partial_query_answer import (
     PartialQueryAnswer,
 )
-from qcp_adaptive_termination.model.config import config_var
-from qcp_adaptive_termination.model.multi_agent_iteration_record import (
-    MultiAgentIterationRecord,
-)
-from qcp_adaptive_termination.model.query_plan.query_plan_step import (
+from qcp_adaptive_termination.models.config import config_var
+from qcp_adaptive_termination.models.query_plan.query_plan_step import (
     MultiAgentQueryPlanStep,
 )
+from qcp_adaptive_termination.models.serializers import SerializedResultType
 from qcp_adaptive_termination.selection_strategy import AgentSelector
 from qcp_adaptive_termination.tracing.span import (
     append_to_span_output,
@@ -48,6 +48,19 @@ from qcp_adaptive_termination.stages.execution.estimator_utils import (
 )
 from qcp_adaptive_termination import hooks
 from qcp_adaptive_termination.hooks import HookEvent
+
+
+class MultiAgentIterationRecord(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
+    step_id: str
+    agent_name: str
+    result_list: SerializedResultType
+    estimator_result: EstimatorStatistics | None
+    evaluator_decision: EvaluatorDecision | Literal["batch_query"] | None
+    queried_agents: list[str] = []
+    remaining_agents: list[str] = []
+
 
 MULTI_AGENT_ITERATION_RECORDS: dict[str, list[MultiAgentIterationRecord]] = {}
 

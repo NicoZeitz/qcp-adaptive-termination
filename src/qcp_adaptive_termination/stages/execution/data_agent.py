@@ -10,28 +10,28 @@ from qcp_adaptive_termination.agents.configuration import (
     get_agent_configuration,
 )
 import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
+from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
-from qcp_adaptive_termination.data_agent.get_db_engine import get_db_engine
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.estimation.aligned_result_list import (
+from qcp_adaptive_termination.db.get_db_engine import get_db_engine
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.estimation.aligned_result_list import (
     AlignedSchemaMetadata,
 )
-from qcp_adaptive_termination.model.execution.additional_information import (
+from qcp_adaptive_termination.models.execution.additional_information import (
     AdditionalInformation,
 )
-from qcp_adaptive_termination.model.execution.partial_query_answer import (
+from qcp_adaptive_termination.models.execution.partial_query_answer import (
     PartialQueryAnswer,
 )
-from qcp_adaptive_termination.model.need import try_parse_value_to_need_type
-from qcp_adaptive_termination.model.result import try_parse_value_to_result_type
+from qcp_adaptive_termination.models.need import try_parse_value_to_need_type
+from qcp_adaptive_termination.models.result import try_parse_value_to_result_type
 from qcp_adaptive_termination.preview import (
     preview_additional_information,
     result_to_json_preview,
 )
-from qcp_adaptive_termination.agents.runner import run_agent
+from qcp_adaptive_termination.llm.runner import run_agent
 from qcp_adaptive_termination.serialize_value import serialize_value
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 from qcp_adaptive_termination.stages.execution.validation import validate_agent_output

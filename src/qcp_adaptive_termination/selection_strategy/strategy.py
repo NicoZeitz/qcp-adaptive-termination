@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Generic, Protocol, TypeVar, cast
 
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.selection_strategy.agent_selection import (
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.selection_strategy import (
     AgentSelection,
 )
 

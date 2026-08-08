@@ -24,9 +24,9 @@ import umap
 
 from qcp_adaptive_termination.cache import setup_cache
 from qcp_adaptive_termination.tracing import setup_logging
-import qcp_adaptive_termination.agent_registry as agent_registry
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.config import Config, config_var
+import qcp_adaptive_termination.agents.registry as agent_registry
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.config import Config, config_var
 
 
 INPUT_FILE = Path("../data/wikidata/companies/split_overlap_employees/employees.json")
@@ -70,7 +70,7 @@ async def run() -> None:
     log_dir = Path("../logs")
     cache_dir = Path("../.cache")
     setup_logging("visualize_embeddings", log_dir)
-    setup_cache(cache_dir, disable_cache=False)
+    setup_cache(cache_dir)
 
     with open(INPUT_FILE) as f:
         data = json.load(f)

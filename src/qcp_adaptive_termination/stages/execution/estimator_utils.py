@@ -1,13 +1,13 @@
 import pandas as pd
 
 from qcp_adaptive_termination.estimator import DataItem, Estimator
-from qcp_adaptive_termination.model.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.estimation.aligned_result_list import (
     AlignedResultList,
 )
-from qcp_adaptive_termination.model.estimation.estimator_statistics import (
+from qcp_adaptive_termination.models.estimation.estimator_statistics import (
     EstimatorStatistics,
 )
-from qcp_adaptive_termination.model.config import config_var
+from qcp_adaptive_termination.models.config import config_var
 from qcp_adaptive_termination.tracing.span import indented_logging
 
 

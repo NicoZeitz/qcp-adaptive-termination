@@ -8,35 +8,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.engine import Engine
 from llama_index.core import SQLDatabase
+
 from .utils import examples_to_str
 from .m_schema import MSchema
-
-# .comments.yaml sidecar format (placed next to the .db file, same stem)
-#
-# Full format (all keys optional — omit any you don't need):
-#
-#   __database__: "Natural language description of the whole database."
-#   <table_name>:
-#     __table__: "Natural language description of the table."
-#     <column_name>: "Natural language description of the column."
-#     <column_name>: "..."
-#   <table_name>:
-#     ...
-#
-# Legacy format (table comment only, still supported):
-#
-#   <table_name>: "Natural language description of the table."
-#
-# Any comment present in the YAML skips the LLM for that field.
-# If all comments are present, the LLM call is skipped entirely.
-#
-# Example:
-#
-#   __database__: "Database of companies in Europe with employee counts and revenue."
-#   companies:
-#     __table__: "Table listing all companies in Europe."
-#     companyLabel: "Human-readable name of the company."
-#     employees: "Number of employees reported for the company."
 
 
 class SchemaEngine(SQLDatabase):
@@ -199,12 +173,6 @@ class SchemaEngine(SQLDatabase):
         return values
 
     def init_mschema(self):
-        # print(f"Debug: Database dialect = {self._engine.dialect.name}")
-        # print(f"Debug: DB name = {self._db_name}")
-        # print(f"Debug: Available schemas = {self.get_schema_names()}")
-        # print(f"Debug: Usable tables = {self._usable_tables}")
-        # print(f"Debug: Tables schemas mapping = {self._tables_schemas}")
-
         for table_name in self._usable_tables:
             table_comment = self.get_table_comment(table_name)
             table_comment = (

@@ -1,36 +1,34 @@
-import argparse
 import asyncio
-import sys
+import json
+from argparse import ArgumentParser
 from pathlib import Path
 
-import yaml
 
-from qcp_adaptive_termination.model.config import Config
+from qcp_adaptive_termination.loaders import load_config
 from qcp_adaptive_termination.pipeline import run_pipeline
+from qcp_adaptive_termination.preview import result_to_json_preview
 
 
-def cli() -> None:
-    parser = argparse.ArgumentParser(
+def main() -> None:
+    parser = ArgumentParser(
         prog="qcp-adaptive-termination",
         description="Collaborative Query Processing with Adaptive Termination",
     )
-    parser.add_argument("--name", type=str, default="")
-    parser.add_argument(
-        "--input",
-        type=str,
-        default="../data/imdb/queries/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json",
-    )
+    parser.add_argument("--name", type=str, default="", help="Name of the run")
+    parser.add_argument("--input", type=str, help="Input file path")
     parser.add_argument(
         "--start-stage",
         type=int,
-        choices=[1, 2, 3, 99],
+        choices=[1, 2, 3],
         default=1,
+        help="Stage to start the pipeline from (1, 2, or 3)",
     )
     parser.add_argument(
         "--end-stage",
         type=int,
-        choices=[1, 2, 3, 99],
+        choices=[1, 2, 3],
         default=3,
+        help="Stage after which to end the pipeline at (1, 2, or 3)",
     )
     parser.add_argument(
         "--config",
@@ -40,14 +38,7 @@ def cli() -> None:
     )
     args = parser.parse_args()
 
-    config: Config | None = None
-    if args.config:
-        config_path = Path(args.config)
-        raw = yaml.safe_load(
-            config_path.read_text() if config_path.exists() else args.config
-        )
-        config = Config.model_validate(raw)
-
+    config = load_config(args.config)
     result = asyncio.run(
         run_pipeline(
             name=args.name,
@@ -58,18 +49,16 @@ def cli() -> None:
         )
     )
 
+    print("Pipeline completed successfully. Result preview:")
     if result is not None:
-        import json
-        from qcp_adaptive_termination.preview import result_to_json_preview
-
         print(
             json.dumps(
                 result_to_json_preview(result.result), indent=2, ensure_ascii=False
             )
         )
-
-    sys.exit(0)
+    else:
+        print("No result produced.")
 
 
 if __name__ == "__main__":
-    cli()
+    main()

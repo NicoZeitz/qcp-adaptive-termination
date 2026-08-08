@@ -2,26 +2,26 @@ from typing import cast
 
 from agents import AgentsException, MaxTurnsExceeded
 
-from qcp_adaptive_termination.model.execution.additional_information import (
+from qcp_adaptive_termination.models.execution.additional_information import (
     AdditionalInformation,
 )
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.need import exception_to_need
-from qcp_adaptive_termination.model.execution.partial_query_answer import (
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.need import exception_to_need
+from qcp_adaptive_termination.models.execution.partial_query_answer import (
     PartialQueryAnswer,
 )
-from qcp_adaptive_termination.model.query_plan.query_plan import QueryPlan
-from qcp_adaptive_termination.model.query_plan.query_plan_step import (
+from qcp_adaptive_termination.models.query_plan.query_plan import QueryPlan
+from qcp_adaptive_termination.models.query_plan.query_plan_step import (
     MultiAgentQueryPlanStep,
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
-from qcp_adaptive_termination.model.execution.query_plan_step_execution_result import (
+from qcp_adaptive_termination.models.execution.query_plan_step_execution_result import (
     FailedExecution,
     QueryPlanStepExecutionResult,
     SuccessfulExecution,
 )
-from qcp_adaptive_termination.model.result import ResultType
+from qcp_adaptive_termination.models.result import ResultType
 from qcp_adaptive_termination.stages.execution.coordinator import (
     answer_step_coordinator,
 )

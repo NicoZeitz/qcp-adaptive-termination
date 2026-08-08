@@ -1,4 +1,4 @@
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import StaticSelectionStrategy
 
 

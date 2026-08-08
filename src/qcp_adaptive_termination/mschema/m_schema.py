@@ -1,5 +1,7 @@
-from .utils import examples_to_str, read_json, write_json
+import json
 from typing import Any, Optional
+
+from .utils import examples_to_str
 
 
 class MSchema:
@@ -254,10 +256,12 @@ class MSchema:
 
     def save(self, file_path: str):
         schema_dict = self.dump()
-        write_json(file_path, schema_dict)
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(schema_dict, f, ensure_ascii=False, indent=2)
 
     def load(self, file_path: str):
-        data = read_json(file_path)
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
         self.db_id = data.get("db_id", "Anonymous")
         self.schema = data.get("schema", None)
         self.tables = data.get("tables", {})

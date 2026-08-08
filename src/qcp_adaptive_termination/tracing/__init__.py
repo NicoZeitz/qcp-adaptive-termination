@@ -1,3 +1,11 @@
+"""
+Logging, tracing, and Langfuse integration.
+
+Sets up Python logging to file, OpenTelemetry span export (to JSONL via
+`FileSpanExporter` and optionally to OpenAI's tracing backend), and
+Langfuse observability.
+"""
+
 import logging
 import os
 from pathlib import Path

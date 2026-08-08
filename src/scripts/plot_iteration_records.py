@@ -18,6 +18,7 @@ Usage:
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 import matplotlib.lines as mlines
@@ -161,8 +162,6 @@ def extract_series(records: list[dict]) -> dict:
 
 
 def human_format(value, _pos):
-    import math
-
     if not math.isfinite(value):
         return str(value)
     for threshold, suffix in ((1e9, "G"), (1e6, "M"), (1e3, "k")):
@@ -175,8 +174,6 @@ def human_format(value, _pos):
 
 
 def nice_step(range_size: float, target_ticks: int = 8) -> float:
-    import math
-
     if range_size == 0 or not math.isfinite(range_size):
         return 1.0
     raw = range_size / target_ticks
@@ -300,8 +297,6 @@ def draw_estimation_panel(
     # y-axis limits:
     # clip_bands=True  — anchor to observed+estimated only, tight margin
     # clip_bands=False — anchor to band extent but clip extreme outliers via percentile
-    import math
-
     all_values = [
         v for v in y_obs + est_y + [ground_truth] if v is not None and math.isfinite(v)
     ]
@@ -412,8 +407,6 @@ def draw_coverage_panel(ax, x, coverage, observed_count, count_gt, decisions) ->
 
 def compute_error_series(series: dict, count_gt: float, value_gt: float) -> dict:
     """Per-step |observed - gt| and |estimated - gt| for value and count."""
-    import math
-
     value_obs_err, value_est_err = [], []
     count_obs_err, count_est_err = [], []
     for obs_v, est_v, obs_c, est_c in zip(
@@ -450,8 +443,6 @@ def draw_error_panel(
     clip_bands=False — full range (all steps including inf-est outliers skipped)
     clip_bands=True  — zoom: y-axis anchored to finite observed errors only
     """
-    import math
-
     x_obs = [x[i] for i, v in enumerate(obs_err) if v is not None]
     y_obs = [v for v in obs_err if v is not None]
     if x_obs:
@@ -521,7 +512,6 @@ def save_reasoning_text(
         series["observed_count"],
         series["estimated_count"],
     ):
-        import math
 
         def fmt(v: float) -> str:
             if not math.isfinite(v):

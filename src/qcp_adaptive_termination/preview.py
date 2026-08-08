@@ -7,7 +7,7 @@ from pandas import DataFrame, MultiIndex
 from pydantic import JsonValue
 
 if TYPE_CHECKING:
-    from qcp_adaptive_termination.model.execution.additional_information import (
+    from qcp_adaptive_termination.models.execution.additional_information import (
         AdditionalInformation,
     )
 

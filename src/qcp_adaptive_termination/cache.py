@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from enum import Enum
+from enum import Enum, StrEnum
 from functools import wraps
 import hashlib
 import inspect
@@ -7,27 +7,27 @@ import json
 import logging
 from pathlib import Path
 import uuid
-from typing import Any, Awaitable, Callable, cast, Literal, ParamSpec, Sequence, TypeVar
+from typing import Any, Awaitable, Callable, cast, ParamSpec, Sequence, TypeVar
 
 from pydantic import BaseModel, JsonValue
 
 from qcp_adaptive_termination.tracing.span import indented_logging, own_custom_span
 
-CacheMode = Literal[
-    "READ_AND_WRITE",
-    "READ_AND_WRITE_THROW_ON_MISS",
-    "READ_ONLY",
-    "READ_ONLY_THROW_ON_MISS",
-    "WRITE_ONLY",
-    "DISABLED",
-]
+
+class CacheMode(StrEnum):
+    READ_AND_WRITE = "READ_AND_WRITE"
+    READ_AND_WRITE_THROW_ON_MISS = "READ_AND_WRITE_THROW_ON_MISS"
+    READ_ONLY = "READ_ONLY"
+    READ_ONLY_THROW_ON_MISS = "READ_ONLY_THROW_ON_MISS"
+    WRITE_ONLY = "WRITE_ONLY"
+    DISABLED = "DISABLED"
 
 
 class Cache:
     _instance: "Cache | None" = None
     _cache_folder: Path | None = None
 
-    mode: CacheMode = "READ_AND_WRITE"
+    mode: CacheMode = CacheMode.READ_AND_WRITE
 
     @classmethod
     def instance(cls: type["Cache"]) -> "Cache":
@@ -55,7 +55,7 @@ class Cache:
     def get(
         self, key: JsonValue, name_prefix: str = ""
     ) -> tuple[JsonValue | None, bool]:
-        if self.mode in ["WRITE_ONLY", "DISABLED"]:
+        if self.mode in [CacheMode.WRITE_ONLY, CacheMode.DISABLED]:
             return None, False
 
         cache_file = self.cache_file_for_key(key, name_prefix)
@@ -69,7 +69,11 @@ class Cache:
             return None, False
 
     def store(self, key: JsonValue, value: JsonValue, name_prefix: str = ""):
-        if self.mode in ["READ_ONLY", "READ_ONLY_THROW_ON_MISS", "DISABLED"]:
+        if self.mode in [
+            CacheMode.READ_ONLY,
+            CacheMode.READ_ONLY_THROW_ON_MISS,
+            CacheMode.DISABLED,
+        ]:
             return None
 
         cache_file = self.cache_file_for_key(key, name_prefix)
@@ -110,7 +114,10 @@ class Cache:
         return self._cache_folder / filename
 
     def _throw_on_miss(self, key: JsonValue):
-        if self.mode in ["READ_ONLY_THROW_ON_MISS", "READ_AND_WRITE_THROW_ON_MISS"]:
+        if self.mode in [
+            CacheMode.READ_ONLY_THROW_ON_MISS,
+            CacheMode.READ_AND_WRITE_THROW_ON_MISS,
+        ]:
             raise KeyError(f"Cache miss for key: {json.dumps(key, sort_keys=True)}")
 
 
@@ -187,18 +194,13 @@ def load_cache_file(
 
 def setup_cache(
     cache_dir: Path,
-    throw_on_cache_miss: bool = False,
-    disable_cache: bool = False,
+    mode: CacheMode = CacheMode.READ_AND_WRITE,
 ) -> None:
     cache_dir.mkdir(parents=True, exist_ok=True)
     Cache.instance().set_cache_folder(cache_dir)
-    if disable_cache:
-        Cache.instance().set_mode("DISABLED")
+    Cache.instance().set_mode(mode)
+    if mode == CacheMode.DISABLED:
         logging.info("Cache completely disabled")
-    elif throw_on_cache_miss:
-        Cache.instance().set_mode("READ_AND_WRITE_THROW_ON_MISS")
-    else:
-        Cache.instance().set_mode("READ_AND_WRITE")
 
 
 Param = ParamSpec("Param")

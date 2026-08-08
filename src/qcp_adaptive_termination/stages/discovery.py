@@ -4,17 +4,17 @@ from typing import Any
 from pydantic import BaseModel, Field, create_model
 
 import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.stages.filtered_relevant_agents import (
+from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.stages.filtered_relevant_agents import (
     FilteredRelevantAgents,
 )
 from qcp_adaptive_termination.agents.configuration import (
     AgentRole,
     get_agent_configuration,
 )
-from qcp_adaptive_termination.cache import cached
-from qcp_adaptive_termination.agents.runner import run_llm
+from qcp_adaptive_termination.cache import CacheMode, cached
+from qcp_adaptive_termination.llm.runner import run_llm
 from qcp_adaptive_termination.tracing.span import (
     append_to_span_input,
     append_to_span_output,
@@ -115,7 +115,7 @@ async def filter_data_agent_with_reasoning(
     return data_agent if is_relevant else None
 
 
-@cached(name_prefix=STAGE_NAME, mode="WRITE_ONLY")
+@cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
 async def filter_relevant_agents(
     query: str, data_agents: list[DataAgent]
 ) -> FilteredRelevantAgents:

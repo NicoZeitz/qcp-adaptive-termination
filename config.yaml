@@ -2,8 +2,7 @@ data_path_prefix: "../data/"
 
 log_dir: "../logs/"
 cache_dir: "../cache/"
-throw_on_cache_miss: false
-disable_cache: false
+cache_mode: READ_AND_WRITE
 
 estimator_mode: full
 count_estimator: chao92

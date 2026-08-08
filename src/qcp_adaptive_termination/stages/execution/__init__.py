@@ -1,18 +1,25 @@
+"""
+Execution stage: runs a query plan against selected data agents.
+
+Drives the step-by-step execution loop, handles replanning on failure
+(up to `MAX_REPLAN_ATTEMPTS`), and returns a `CollaborativeQueryAnsweringResult`.
+"""
+
 from typing import cast
 
-from qcp_adaptive_termination.model.stages.collaborative_query_answering_result import (
+from qcp_adaptive_termination.models.stages.collaborative_query_answering_result import (
     CollaborativeQueryAnsweringResult,
 )
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.execution.execution_result import ExecutionResult
-from qcp_adaptive_termination.model.need import serialize_need
-from qcp_adaptive_termination.model.query_plan.query_plan import QueryPlan
-from qcp_adaptive_termination.model.execution.query_plan_step_execution_result import (
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.execution.execution_result import ExecutionResult
+from qcp_adaptive_termination.models.need import serialize_need
+from qcp_adaptive_termination.models.query_plan.query_plan import QueryPlan
+from qcp_adaptive_termination.models.execution.query_plan_step_execution_result import (
     FailedExecution,
     SuccessfulExecution,
 )
-from qcp_adaptive_termination.model.result import ResultType, get_failed_result
-from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
+from qcp_adaptive_termination.models.result import ResultType, get_failed_result
+from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.stages.execution.execute_query_plan_next_step import (
     execute_query_plan_next_step,
 )
@@ -21,7 +28,7 @@ from qcp_adaptive_termination.stages.discovery import (
     filter_relevant_agents_internal,
 )
 from qcp_adaptive_termination.stages.replanning import replan_query_plan
-from qcp_adaptive_termination.cache import cached
+from qcp_adaptive_termination.cache import CacheMode, cached
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 STAGE_NAME = "Stage 3: Execution"
@@ -113,7 +120,7 @@ async def replan(
         return updated_data_agents, new_query_plan
 
 
-@cached(name_prefix=STAGE_NAME, mode="WRITE_ONLY")
+@cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
 async def execute_query_plan(
     query_plan: QueryPlan,
     relevant_data_agents: list[DataAgent],

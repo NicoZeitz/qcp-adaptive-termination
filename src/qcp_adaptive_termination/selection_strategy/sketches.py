@@ -11,10 +11,10 @@ from datasketches import (
 )
 from sqlalchemy import text
 
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.data_agent.get_db_engine import get_db_engine
-from qcp_adaptive_termination.selection_strategy.sql_utils import quote_col, quote_table
-from qcp_adaptive_termination.model.selection_strategy.agent_selection import (
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.db.get_db_engine import get_db_engine
+from qcp_adaptive_termination.db.sql_utils import quote_col, quote_table
+from qcp_adaptive_termination.models.selection_strategy import (
     AgentSelection,
 )
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy

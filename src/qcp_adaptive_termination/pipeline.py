@@ -1,20 +1,25 @@
 import json
 import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import cast
 
+from dotenv import load_dotenv
+from agents import trace
+from langfuse import get_client
+
 from qcp_adaptive_termination.cache import load_cache_file, setup_cache
 from qcp_adaptive_termination.llm.providers import setup_providers
-from qcp_adaptive_termination.model.config import Config, config_context, config_var
-from qcp_adaptive_termination.model.stages.collaborative_query_answering import (
+from qcp_adaptive_termination.models.config import Config, config_context, config_var
+from qcp_adaptive_termination.models.stages.collaborative_query_answering import (
     CollaborativeQueryAnswering,
 )
-from qcp_adaptive_termination.model.stages.collaborative_query_answering_result import (
+from qcp_adaptive_termination.models.stages.collaborative_query_answering_result import (
     CollaborativeQueryAnsweringResult,
 )
-from qcp_adaptive_termination.model.stages.drafted_query_plan import DraftedQueryPlan
-from qcp_adaptive_termination.model.stages.filtered_relevant_agents import (
+from qcp_adaptive_termination.models.stages.drafted_query_plan import DraftedQueryPlan
+from qcp_adaptive_termination.models.stages.filtered_relevant_agents import (
     FilteredRelevantAgents,
 )
 from qcp_adaptive_termination.preview import result_to_json_preview
@@ -40,7 +45,6 @@ STAGES = {
     1: DISCOVERY_STAGE_NAME,
     2: PLANNING_STAGE_NAME,
     3: EXECUTION_STAGE_NAME,
-    99: "DEBUG",
 }
 
 
@@ -67,12 +71,9 @@ async def run_pipeline(
 
     log_filename = f"Stage {start_stage}-{end_stage} - {log_name}"
 
-    from dotenv import load_dotenv
-    import sys
-
     load_dotenv(override=True)
     setup_logging(log_filename, log_dir)
-    setup_cache(cache_dir, cfg.throw_on_cache_miss, cfg.disable_cache)
+    setup_cache(cache_dir, cfg.cache_mode)
     setup_providers()
     if not setup_langfuse():
         sys.exit(1)
@@ -123,9 +124,6 @@ async def _run_stages(
     config_output_path = log_dir / f"{log_filename} - execution_config.json"
     with open(config_output_path, "w") as f:
         f.write(cfg.model_dump_json(indent=4))
-
-    from agents import trace
-    from langfuse import get_client
 
     trace_metadata = {
         "start_stage": str(start_stage),

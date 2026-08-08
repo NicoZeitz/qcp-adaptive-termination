@@ -1,5 +1,12 @@
+"""
+Top-level package for qcp-adaptive-termination.
+
+Exposes the main pipeline entry points, configuration, per-stage functions,
+LLM provider setup, caching, and tracing/logging utilities.
+"""
+
 from qcp_adaptive_termination.pipeline import run_pipeline, run_query
-from qcp_adaptive_termination.model.config import Config, config_var, config_context
+from qcp_adaptive_termination.models.config import Config, config_var, config_context
 from qcp_adaptive_termination.stages.discovery import filter_relevant_agents
 from qcp_adaptive_termination.stages.planning import draft_query_plan
 from qcp_adaptive_termination.stages.execution import execute_query_plan

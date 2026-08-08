@@ -2,14 +2,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
-from qcp_adaptive_termination.model.stages.drafted_query_plan import DraftedQueryPlan
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.query_plan.query_dependency import QueryDependency
-from qcp_adaptive_termination.model.query_plan.query_plan import (
+from qcp_adaptive_termination.models.stages.drafted_query_plan import DraftedQueryPlan
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.query_plan.query_dependency import QueryDependency
+from qcp_adaptive_termination.models.query_plan.query_plan import (
     FieldDefinitions,
     QueryPlan,
 )
-from qcp_adaptive_termination.model.query_plan.query_plan_step import (
+from qcp_adaptive_termination.models.query_plan.query_plan_step import (
     MultiAgentQueryPlanStep,
     QueryPlanStep,
     SingleAgentQueryPlanStep,
@@ -19,9 +19,9 @@ from qcp_adaptive_termination.agents.configuration import (
     get_agent_configuration,
 )
 import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
-from qcp_adaptive_termination.cache import cached
-from qcp_adaptive_termination.agents.runner import run_llm
+from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
+from qcp_adaptive_termination.cache import CacheMode, cached
+from qcp_adaptive_termination.llm.runner import run_llm
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 STAGE_NAME = "Stage 2: Planning"
@@ -123,7 +123,7 @@ def map_query_plan_model_to_query_plan(
     return query_plan
 
 
-@cached(name_prefix=STAGE_NAME, mode="WRITE_ONLY")
+@cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
 async def draft_query_plan(
     query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
 ) -> DraftedQueryPlan:

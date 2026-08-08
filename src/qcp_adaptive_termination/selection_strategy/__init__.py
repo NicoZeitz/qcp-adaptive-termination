@@ -1,14 +1,21 @@
+"""
+Agent selection strategies and `AgentSelector`.
+
+Implements multiple ranking strategies (sequential, embedding-based,
+count/distinct-count, sketch-based, posterior, null-coverage, value-range)
+and `AgentSelector`, which precomputes strategy data and ranks agents at
+each iteration of the multi-agent loop.
+"""
+
 from typing import Any
 
-from qcp_adaptive_termination.model.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.estimation.aligned_result_list import (
     AlignedResultList,
 )
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.config import config_var
-from qcp_adaptive_termination.model.selection_strategy.selection_type import (
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.config import config_var
+from qcp_adaptive_termination.models.selection_strategy import (
     SelectionType,
-)
-from qcp_adaptive_termination.model.selection_strategy.agent_selection import (
     AgentSelection,
 )
 from qcp_adaptive_termination.selection_strategy.posterior import PosteriorStrategy
@@ -29,10 +36,6 @@ from qcp_adaptive_termination.selection_strategy.sketches import (
     MinHashStrategy,
     ThetaSketchStrategy,
 )
-from qcp_adaptive_termination.selection_strategy.statistics import (
-    NullCoverageStrategy,
-    ValueRangeStrategy,
-)
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
 
 
@@ -48,8 +51,6 @@ def needs_column(selection_type: SelectionType) -> bool:
         SelectionType.THETA_SKETCH,
         SelectionType.THETA_SKETCH_UCB,
         SelectionType.MIN_HASH,
-        SelectionType.NULL_COVERAGE,
-        SelectionType.VALUE_RANGE,
         SelectionType.POSTERIOR,
     )
 
@@ -73,10 +74,6 @@ def build_strategy(selection_type: SelectionType) -> SelectionStrategy:
         return ThetaSketchStrategy(use_ucb=True)
     elif selection_type == SelectionType.MIN_HASH:
         return MinHashStrategy()
-    elif selection_type == SelectionType.NULL_COVERAGE:
-        return NullCoverageStrategy()
-    elif selection_type == SelectionType.VALUE_RANGE:
-        return ValueRangeStrategy()
     elif selection_type == SelectionType.POSTERIOR:
         return PosteriorStrategy()
     else:

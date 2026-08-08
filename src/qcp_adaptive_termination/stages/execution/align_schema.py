@@ -1,6 +1,7 @@
 import uuid
 from collections import OrderedDict
 
+import pandas as pd
 from agents import (
     FunctionToolResult,
     RunContextWrapper,
@@ -13,14 +14,14 @@ from qcp_adaptive_termination.agents.configuration import (
     get_agent_configuration,
 )
 import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
-from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-from qcp_adaptive_termination.model.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
+from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.estimation.aligned_result_list import (
     AggregationType,
     AlignedResultList,
     AlignedSchemaMetadata,
 )
-from qcp_adaptive_termination.agents.runner import run_agent
+from qcp_adaptive_termination.llm.runner import run_agent
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 from qcp_adaptive_termination.stages.execution.validation import validate_schema_output
 
@@ -31,8 +32,6 @@ async def align_schema(
     query: str,
     merge_task: str,
 ) -> AlignedResultList:
-    import pandas as pd
-
     agents = [a for a in data_agents if a.name in agent_names]
     agents_description_text = await agent_registry.build_registry_string(
         agents, AgentRegistryType.TECHNICAL, include_capabilities=False

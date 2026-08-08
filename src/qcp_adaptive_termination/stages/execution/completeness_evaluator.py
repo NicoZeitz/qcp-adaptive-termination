@@ -15,23 +15,23 @@ from qcp_adaptive_termination.agents.configuration import (
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
-from qcp_adaptive_termination.model.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.estimation.aligned_result_list import (
     AlignedResultList,
 )
-from qcp_adaptive_termination.model.estimation.estimator_mode import EstimatorMode
-from qcp_adaptive_termination.model.estimation.estimator_statistics import (
+from qcp_adaptive_termination.models.estimation.estimator_mode import EstimatorMode
+from qcp_adaptive_termination.models.estimation.estimator_statistics import (
     EstimatorStatistics,
 )
-from qcp_adaptive_termination.model.execution.outcome import (
+from qcp_adaptive_termination.models.execution.outcome import (
     EvaluatorDecision,
     FinalResultOutcome,
     QueryMoreAgentsOutcome,
 )
-from qcp_adaptive_termination.model.config import config_var
-from qcp_adaptive_termination.model.result import try_parse_value_to_result_type
-from qcp_adaptive_termination.model.serializers import SerializedOptionalResultType
+from qcp_adaptive_termination.models.config import config_var
+from qcp_adaptive_termination.models.result import try_parse_value_to_result_type
+from qcp_adaptive_termination.models.serializers import SerializedOptionalResultType
 from qcp_adaptive_termination.preview import preview_dataframe, result_to_json_preview
-from qcp_adaptive_termination.agents.runner import run_agent
+from qcp_adaptive_termination.llm.runner import run_agent
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
