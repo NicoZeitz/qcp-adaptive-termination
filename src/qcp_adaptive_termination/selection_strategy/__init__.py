@@ -9,16 +9,13 @@ each iteration of the multi-agent loop.
 
 from typing import Any
 
-from qcp_adaptive_termination.models.estimation import (
-    AlignedResultList,
-)
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.models.config import config_var
-from qcp_adaptive_termination.models.selection_strategy import (
-    SelectionType,
+from qcp_adaptive_termination.models import (
     AgentSelection,
+    AlignedResultList,
+    Config,
+    DataAgent,
+    SelectionType,
 )
-from qcp_adaptive_termination.selection_strategy.posterior import PosteriorStrategy
 from qcp_adaptive_termination.selection_strategy.counts import (
     CountStrategy,
     DistinctCountStrategy,
@@ -26,6 +23,7 @@ from qcp_adaptive_termination.selection_strategy.counts import (
 from qcp_adaptive_termination.selection_strategy.embedding_strategy import (
     EmbeddingStrategy,
 )
+from qcp_adaptive_termination.selection_strategy.posterior import PosteriorStrategy
 from qcp_adaptive_termination.selection_strategy.resolve import (
     resolve_column,
     resolve_table,
@@ -107,7 +105,7 @@ class AgentSelector:
         agents: list[DataAgent],
         query: str,
     ) -> "AgentSelector":
-        selection_type = config_var.get().selection_type
+        selection_type = Config.get().selection_type
         strategy = build_strategy(selection_type)
 
         table_per_agent: dict[str, str] | None = None

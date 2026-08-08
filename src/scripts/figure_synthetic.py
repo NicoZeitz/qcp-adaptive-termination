@@ -12,16 +12,20 @@ Usage:
 """
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor, as_completed
 import math
 import random
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-from qcp_adaptive_termination.estimator import Estimator, ValueEstimator, CountEstimator
-from qcp_adaptive_termination.estimator.data_item import DataItem
+from qcp_adaptive_termination.estimator import (
+    CountEstimator,
+    DataItem,
+    Estimator,
+    ValueEstimator,
+)
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 

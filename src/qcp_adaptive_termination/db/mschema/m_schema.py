@@ -1,7 +1,7 @@
 import json
 from typing import Any, Optional
 
-from .utils import examples_to_str
+from qcp_adaptive_termination.db.mschema.utils import examples_to_str
 
 
 class MSchema:

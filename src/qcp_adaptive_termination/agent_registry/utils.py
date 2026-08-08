@@ -1,25 +1,20 @@
-from typing import Any
+from typing import Any, Callable, overload
 
-from pydantic import BaseModel, create_model, Field
+from pydantic import BaseModel, Field, create_model
 
-from qcp_adaptive_termination.agents.configuration import (
-    AgentRole,
-    get_agent_configuration,
-)
-from qcp_adaptive_termination.db.get_db_engine import get_db_engine
-from qcp_adaptive_termination.tracing.span import own_custom_span
-from qcp_adaptive_termination.models.agent import (
+from qcp_adaptive_termination.db import MSchema, SchemaEngine, get_db_engine
+from qcp_adaptive_termination.llm import runner
+from qcp_adaptive_termination.models import (
     AgentRegistryData,
+    AgentRole,
     ColumnDescription,
+    DataAgent,
     TableDescription,
 )
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.mschema.schema_engine import SchemaEngine
-from qcp_adaptive_termination.mschema.m_schema import MSchema
-from qcp_adaptive_termination.llm.runner import run_llm
+from qcp_adaptive_termination.tracing.span import own_custom_span
 
 
-def missing_comments(
+def _missing_comments(
     mschema: MSchema,
 ) -> tuple[list[str], list[tuple[str, str]], bool]:
     """Return (table_names_missing, (table,col) pairs missing, database_missing)."""
@@ -35,7 +30,7 @@ def missing_comments(
     return missing_tables, missing_fields, db_missing
 
 
-def create_database_description_model(
+def _create_database_description_model(
     schema_engine: SchemaEngine,
     missing_tables: list[str],
     missing_fields: list[tuple[str, str]],
@@ -77,7 +72,7 @@ def create_database_description_model(
         }
         TableDescriptionsModel = create_model(  # ty: ignore[no-matching-overload]
             "TableDescriptionsModel",
-            **table_desc_fields,
+            **table_desc_fields,  # type: ignore
         )
         schema_dict["table_descriptions"] = (TableDescriptionsModel, Field(...))
 
@@ -90,25 +85,25 @@ def create_database_description_model(
     return create_model("DatabaseDescriptionModel", **schema_dict)
 
 
-async def load_agent_registry_data(data_agent: DataAgent) -> AgentRegistryData:
+async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
     db_engine = get_db_engine(data_agent)
     schema_engine = SchemaEngine(db_engine, db_name=data_agent.name)
 
-    missing_tables, missing_fields, db_missing = missing_comments(schema_engine.mschema)
+    missing_tables, missing_fields, db_missing = _missing_comments(
+        schema_engine.mschema
+    )
     needs_llm = missing_tables or missing_fields or db_missing
 
     if needs_llm:
         m_schema_without_comments = schema_engine.mschema.to_mschema(
             include_db_id=False
         )
-        DatabaseDescriptionModel = create_database_description_model(
+        DatabaseDescriptionModel = _create_database_description_model(
             schema_engine, missing_tables, missing_fields, db_missing
         )
-        result = await run_llm(
-            agent_configuration=get_agent_configuration(
-                AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION, data_agent.name
-            ),
-            prompt_name="discovery-data-agent-sql-schema-description",
+        result = await runner.run_llm(
+            role=AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION,
+            agent_name=data_agent.name,
             prompt_parameters={
                 "m_schema_without_comments": m_schema_without_comments,
             },
@@ -174,3 +169,16 @@ async def load_agent_registry_data(data_agent: DataAgent) -> AgentRegistryData:
         query_capabilities=["Text-to-SQL"],
         individual_descriptions=individual_descriptions,
     )
+
+@overload
+def map_entries[T](
+    data_agents: list[AgentRegistryData], mapping: Callable[[AgentRegistryData], T]
+) -> list[T]: ...
+@overload
+def map_entries[T](
+    data_agents: AgentRegistryData, mapping: Callable[[AgentRegistryData], T]
+) -> T: ...
+def map_entries(data_agents, mapping):
+    if isinstance(data_agents, list):
+        return [mapping(agent) for agent in data_agents]
+    return mapping(data_agents)

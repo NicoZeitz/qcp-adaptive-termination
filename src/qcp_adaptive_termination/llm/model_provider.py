@@ -8,6 +8,7 @@ from agents import (
     OpenAIProvider,
 )
 from agents.models.multi_provider import MultiProviderMap
+from httpx import AsyncClient
 from openai import AsyncOpenAI
 
 _multi_provider: MultiProvider | None = None
@@ -20,11 +21,13 @@ def set_multi_provider(provider: MultiProvider) -> None:
 
 def get_multi_provider() -> MultiProvider:
     if _multi_provider is None:
-        raise RuntimeError("MultiProvider not initialized — call initialize() first")
+        raise RuntimeError(
+            "MultiProvider not initialized — call setup_multi_provider() first"
+        )
     return _multi_provider
 
 
-async def modify_request_hook(request: httpx.Request):
+async def _modify_request_hook(request: httpx.Request):
     if request.method == "POST" and "application/json" in request.headers.get(
         "content-type", ""
     ):
@@ -62,8 +65,12 @@ async def modify_request_hook(request: httpx.Request):
     return request
 
 
-def add_provider(
-    prefix: str, provider_map: MultiProviderMap, *, university_hooks: bool = False
+def _add_provider(
+    prefix: str,
+    provider_map: MultiProviderMap,
+    *,
+    responses_api: bool = True,
+    http_client: AsyncClient | None = None,
 ):
     base_url = os.getenv(f"{prefix.upper()}_BASE_URL")
     api_key = os.getenv(f"{prefix.upper()}_API_KEY")
@@ -77,20 +84,23 @@ def add_provider(
     client = AsyncOpenAI(
         base_url=base_url,
         api_key=api_key,
-        http_client=httpx.AsyncClient(event_hooks={"request": [modify_request_hook]})
-        if university_hooks
-        else None,
+        http_client=http_client,
     )
     provider = OpenAIProvider(
         openai_client=client,
-        use_responses=False if university_hooks else None,
+        use_responses=responses_api,
     )
     provider_map.add_provider(prefix.lower(), provider)
 
 
-def setup_providers() -> None:
+def setup_multi_provider() -> None:
     provider_map = MultiProviderMap()
-    add_provider("OPENAI", provider_map=provider_map)
-    add_provider("UNIVERSITY", provider_map=provider_map, university_hooks=True)
-    add_provider("WORK", provider_map=provider_map)
+    _add_provider("OPENAI", provider_map=provider_map)
+    _add_provider(
+        "UNIVERSITY",
+        provider_map=provider_map,
+        responses_api=False,
+        http_client=AsyncClient(event_hooks={"request": [_modify_request_hook]}),
+    )
+    _add_provider("LOCAL", provider_map=provider_map)
     set_multi_provider(MultiProvider(provider_map=provider_map))

@@ -9,21 +9,18 @@ from agents import (
     function_tool,
 )
 
-from qcp_adaptive_termination.agents.configuration import (
+import qcp_adaptive_termination.agent_registry as agent_registry
+from qcp_adaptive_termination.llm import runner
+from qcp_adaptive_termination.models import (
+    AgentRegistryType,
     AgentRole,
-    get_agent_configuration,
-)
-import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.models.agent import AgentRegistryType
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.models.estimation import (
     AggregationType,
     AlignedResultList,
     AlignedSchemaMetadata,
+    DataAgent,
 )
-from qcp_adaptive_termination.llm.runner import run_agent
-from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 from qcp_adaptive_termination.stages.execution.validation import validate_schema_output
+from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
 async def align_schema(
@@ -87,11 +84,8 @@ async def align_schema(
             "agent_names": agent_names,
         },
     ):
-        schema_metadata = await run_agent(
-            agent_configuration=get_agent_configuration(
-                AgentRole.COORDINATOR_ALIGN_SCHEMA
-            ),
-            prompt_name="execution-coordinator-align-schema",
+        schema_metadata = await runner.run_agent(
+            role=AgentRole.COORDINATOR_ALIGN_SCHEMA,
             prompt_parameters={
                 "query": query,
                 "merge_task": merge_task,

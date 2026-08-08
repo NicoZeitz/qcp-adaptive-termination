@@ -5,16 +5,12 @@ Manages a multi-provider LLM backend (setup, get, set) and exposes
 `load_prompt` for loading prompt templates from disk.
 """
 
-from qcp_adaptive_termination.llm.providers import (
-    get_multi_provider,
-    set_multi_provider,
-    setup_providers,
-)
-from qcp_adaptive_termination.llm.prompt import load_prompt
+import qcp_adaptive_termination.llm.model_provider as model_provider
+import qcp_adaptive_termination.llm.prompt as prompt
+import qcp_adaptive_termination.llm.runner as runner
 
 __all__ = [
-    "get_multi_provider",
-    "set_multi_provider",
-    "setup_providers",
-    "load_prompt",
+    "model_provider",
+    "prompt",
+    "runner",
 ]

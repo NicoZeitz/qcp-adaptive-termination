@@ -2,26 +2,19 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
-from qcp_adaptive_termination.models.stages.drafted_query_plan import DraftedQueryPlan
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.models.query_plan.query_dependency import QueryDependency
-from qcp_adaptive_termination.models.query_plan.query_plan import (
+import qcp_adaptive_termination.agent_registry as agent_registry
+from qcp_adaptive_termination.cache import CacheMode, cached
+from qcp_adaptive_termination.llm import runner
+from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
+from qcp_adaptive_termination.models.query_plan import (
     FieldDefinitions,
-    QueryPlan,
-)
-from qcp_adaptive_termination.models.query_plan.query_plan_step import (
     MultiAgentQueryPlanStep,
+    QueryDependency,
+    QueryPlan,
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
-from qcp_adaptive_termination.agents.configuration import (
-    AgentRole,
-    get_agent_configuration,
-)
-import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.models.agent import AgentRegistryType
-from qcp_adaptive_termination.cache import CacheMode, cached
-from qcp_adaptive_termination.llm.runner import run_llm
+from qcp_adaptive_termination.models.stages import DraftedQueryPlan
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 STAGE_NAME = "Stage 2: Planning"
@@ -140,9 +133,8 @@ async def draft_query_plan(
         )
         QueryPlanModel = create_draft_query_plan_model(relevant_data_agents)
 
-        result = await run_llm(
-            agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_PLANNING),
-            prompt_name="planning-coordinator-planning",
+        result = await runner.run_llm(
+            role=AgentRole.COORDINATOR_PLANNING,
             prompt_parameters={
                 "agent_registry": registry_string,
                 "query": query,

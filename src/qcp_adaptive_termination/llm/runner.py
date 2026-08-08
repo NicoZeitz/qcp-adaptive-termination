@@ -7,49 +7,31 @@ from agents import (
     RunConfig,
     Runner,
     Tool,
-    TResponseInputItem,
     ToolsToFinalOutputFunction,
+    TResponseInputItem,
 )
 from agents.exceptions import ModelBehaviorError
 from agents.run_config import DEFAULT_MAX_TURNS
+from openai.types.shared import Reasoning
 from pydantic import BaseModel, JsonValue
 
-from qcp_adaptive_termination.models.agent import AgentConfiguration
-from qcp_adaptive_termination.llm.providers import get_multi_provider
+import qcp_adaptive_termination.llm.model_provider as model_provider
+import qcp_adaptive_termination.llm.prompt as prompt
 from qcp_adaptive_termination.cache import CacheMode, cached
-from qcp_adaptive_termination.llm.prompt import load_prompt
+from qcp_adaptive_termination.models import AgentRole, Config, RoleConfig
 from qcp_adaptive_termination.tracing.span import indented_logging
 
 
-async def run_agent[TResult](
-    agent_configuration: AgentConfiguration,
-    prompt_name: str,
-    prompt_parameters: Mapping[str, str | int | float | bool | None],
-    *,
-    context: JsonValue = None,
-    output_type: Type[TResult] | None = str,  # ty: ignore[invalid-parameter-default]
-    tools: list[FunctionTool] | None = None,
-    reset_tool_choice: bool = True,
-    tool_use_behavior: (
-        Literal["run_llm_again", "stop_on_first_tool"] | ToolsToFinalOutputFunction
-    ) = "run_llm_again",
-    parallel_tool_calls: bool = True,
-    tool_choice: Literal["auto", "required", "none"] | None = None,
-    cache_mode: CacheMode | None = None,
-) -> TResult:
-    tools = tools or []
-
-    prompts = load_prompt(prompt_name, prompt_parameters)
-    # use 1st message as instructions, rest as part of prompt
-    instructions, prompts = prompts[0], prompts[1:]
-    display_name = agent_configuration.display_name
-    tool_use = (
-        tool_use_behavior
-        if isinstance(tool_use_behavior, str)
-        else "function"
-        + getattr(tool_use_behavior, "__name__", repr(tool_use_behavior))
+def _resolve_model_config(
+    role: AgentRole
+)-> tuple[str, Reasoning]:
+    role_cfg: RoleConfig = Config.get().agent_configs[role.value]
+    reasoning = Reasoning(
+        effort=role_cfg.reasoning_effort, summary=role_cfg.reasoning_summary
     )
+    return role_cfg.model, reasoning
 
+def _get_output_and_deserializable_classes(output_type: Type | None) -> tuple[JsonValue, list[type[BaseModel]]]:
     output: JsonValue = None
     deserializable_classes: list[type[BaseModel]] = []
 
@@ -67,8 +49,47 @@ async def run_agent[TResult](
     else:
         raise ValueError(f"Unsupported output type: {output_type}")
 
+    return output, deserializable_classes
+
+async def run_agent[TResult](
+    role: AgentRole,
+    prompt_parameters: Mapping[str, str | int | float | bool | None],
+    *,
+    agent_name: str | None = None,
+    max_turns: int | None = None,
+    context: JsonValue = None,
+    output_type: Type[TResult] | None = str,  # ty: ignore[invalid-parameter-default]
+    tools: list[FunctionTool] | None = None,
+    reset_tool_choice: bool = True,
+    tool_use_behavior: (
+        Literal["run_llm_again", "stop_on_first_tool"] | ToolsToFinalOutputFunction
+    ) = "run_llm_again",
+    parallel_tool_calls: bool = True,
+    tool_choice: Literal["auto", "required", "none"] | None = None,
+    cache_mode: CacheMode | None = None,
+) -> TResult:
+    display_name = f"{agent_name} - {role.value}" if agent_name else role.value
+    model, reasoning = _resolve_model_config(role)
+    if max_turns is None:
+        max_turns = DEFAULT_MAX_TURNS * 2
+
+
+    prompts = prompt.load_prompt(role.prompt_name, prompt_parameters)
+    # use 1st message as instructions, rest as part of prompt
+    instructions, prompts = prompts[0], prompts[1:]
+
+    tools = tools or []
+    tool_use = (
+        tool_use_behavior
+        if isinstance(tool_use_behavior, str)
+        else "function"
+        + getattr(tool_use_behavior, "__name__", repr(tool_use_behavior))
+    )
+
+    output, deserializable_classes = _get_output_and_deserializable_classes(output_type)
+
     @cached(
-        name_prefix=agent_configuration.role,
+        name_prefix=role.value,
         mode=cache_mode,
         deserializable_classes=deserializable_classes,
     )
@@ -86,10 +107,9 @@ async def run_agent[TResult](
         nonlocal tool_use_behavior
         agent = Agent[JsonValue](
             name=display_name,
-            model=agent_configuration.model,
+            model=model,
             model_settings=ModelSettings(
-                reasoning=agent_configuration.reasoning,
-                verbosity=agent_configuration.verbosity,
+                reasoning=reasoning,
                 parallel_tool_calls=parallel_tool_calls,
                 tool_choice=tool_choice,
             ),
@@ -107,8 +127,10 @@ async def run_agent[TResult](
                 agent,
                 cast(list[TResponseInputItem], prompts),
                 context=context,
-                max_turns=agent_configuration.max_turns or DEFAULT_MAX_TURNS,
-                run_config=RunConfig(model_provider=get_multi_provider()),
+                max_turns=max_turns,
+                run_config=RunConfig(
+                    model_provider=model_provider.get_multi_provider()
+                ),
             )
         except ModelBehaviorError as e:
             indented_logging(f"Model behavior error: {e}")
@@ -141,25 +163,19 @@ async def run_agent[TResult](
 
 
 async def run_llm[TResult](
-    agent_configuration: AgentConfiguration,
-    prompt_name: str,
+    role: AgentRole,
     prompt_parameters: Mapping[str, str | int | float | bool | None],
     *,
+    agent_name: str | None = None,
     output_type: Type[TResult] | None = str,  # ty: ignore[invalid-parameter-default]
     context: JsonValue = None,
     cache_mode: CacheMode | None = None,
 ) -> TResult:
-    single_turn_config = AgentConfiguration(
-        role=agent_configuration.role,
-        agent_name=agent_configuration.agent_name,
-        model=agent_configuration.model,
-        reasoning=agent_configuration.reasoning,
-        max_turns=1,
-    )
     return await run_agent(
-        agent_configuration=single_turn_config,
-        prompt_name=prompt_name,
+        role=role,
+        agent_name=agent_name,
         prompt_parameters=prompt_parameters,
+        max_turns=1,
         output_type=output_type,
         context=context,
         tools=[],

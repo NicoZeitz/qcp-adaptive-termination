@@ -8,36 +8,25 @@ from agents import (
 )
 from pydantic import BaseModel, ConfigDict
 
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.models.estimation import (
+from qcp_adaptive_termination import hooks
+from qcp_adaptive_termination.hooks import HookEvent
+from qcp_adaptive_termination.models import (
+    Config,
+    DataAgent,
     AlignedResultList,
-)
-from qcp_adaptive_termination.models.estimation import (
     EstimatorStatistics,
 )
-from qcp_adaptive_termination.models.execution.additional_information import (
+from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
-)
-from qcp_adaptive_termination.models.execution.outcome import (
     EvaluatorDecision,
     FinalResultOutcome,
+    PartialQueryAnswer,
     QueryMoreAgentsOutcome,
     RaiseNeedOutcome,
 )
-from qcp_adaptive_termination.models.execution.partial_query_answer import (
-    PartialQueryAnswer,
-)
-from qcp_adaptive_termination.models.config import config_var
-from qcp_adaptive_termination.models.query_plan.query_plan_step import (
-    MultiAgentQueryPlanStep,
-)
+from qcp_adaptive_termination.models.query_plan import MultiAgentQueryPlanStep
 from qcp_adaptive_termination.models.serializers import SerializedResultType
 from qcp_adaptive_termination.selection_strategy import AgentSelector
-from qcp_adaptive_termination.tracing.span import (
-    append_to_span_output,
-    own_custom_span,
-    span_context_var,
-)
 from qcp_adaptive_termination.stages.execution.align_schema import align_schema
 from qcp_adaptive_termination.stages.execution.completeness_evaluator import (
     run_completeness_evaluator,
@@ -46,8 +35,11 @@ from qcp_adaptive_termination.stages.execution.data_agent import answer_step_dat
 from qcp_adaptive_termination.stages.execution.estimator_utils import (
     compute_estimator_statistics,
 )
-from qcp_adaptive_termination import hooks
-from qcp_adaptive_termination.hooks import HookEvent
+from qcp_adaptive_termination.tracing.span import (
+    append_to_span_output,
+    own_custom_span,
+    span_context_var,
+)
 
 
 class MultiAgentIterationRecord(BaseModel):
@@ -277,7 +269,7 @@ async def answer_step_multiple_agents(
     ranked_all = selector.rank(selector.selections)
     rankings = [(s.agent.name, s.score) for s in ranked_all]
     align_schema_names = [
-        s.agent.name for s in ranked_all[: config_var.get().align_schema_agent_limit]
+        s.agent.name for s in ranked_all[: Config.get().align_schema_agent_limit]
     ]
 
     result_list = await align_schema(
@@ -323,7 +315,7 @@ async def answer_step_multiple_agents(
         if isinstance(outcome, FinalResultOutcome):
             answer.set_answer(outcome.result)
 
-            if not config_var.get().continue_after_final_result:
+            if not Config.get().continue_after_final_result:
                 break
 
         selector.update(result_list, agent_names=batch)

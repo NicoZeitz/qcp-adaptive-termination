@@ -5,16 +5,14 @@ from typing import Any
 import pandas as pd
 from sqlalchemy import bindparam, text
 
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.db.get_db_engine import get_db_engine
-from qcp_adaptive_termination.db.sql_utils import quote_col, quote_table
-
+from qcp_adaptive_termination.models import DataAgent
+from qcp_adaptive_termination.db.utils import get_db_engine, quote_col, quote_table
 
 DEFAULT_HISTOGRAM_BINS = 100
 DEFAULT_MAX_MCV = 100
 
 
-@dataclass
+@dataclass(slots=True)
 class ColumnStatistics:
     column_name: str
     distinct_count: int
@@ -25,14 +23,14 @@ class ColumnStatistics:
     histogram: pd.DataFrame  # columns: bin_start, bin_end, count
 
 
-@dataclass
+@dataclass(slots=True)
 class TableStatistics:
     table_name: str
     total_rows: int
     columns: list[ColumnStatistics] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(slots=True)
 class DatabaseStatistics:
     name: str
     tables: list[TableStatistics] = field(default_factory=list)

@@ -2,31 +2,32 @@ from dataclasses import dataclass, field
 from typing import cast
 
 import numpy as np
-from datasketches import compact_theta_sketch, theta_a_not_b, update_theta_sketch  # ty: ignore[unresolved-import]
+from datasketches import (
+    compact_theta_sketch,  # type: ignore
+    theta_a_not_b,  # type: ignore
+    update_theta_sketch,  # type: ignore
+)
 from sklearn.cluster import DBSCAN
 
-import qcp_adaptive_termination.agents.registry as agent_registry
+import qcp_adaptive_termination.agent_registry as agent_registry
+from qcp_adaptive_termination.models import AgentSelection, DataAgent
 from qcp_adaptive_termination.selection_strategy.sketches import (
     DEFAULT_LG_K,
     fetch_column_values,
 )
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.models.selection_strategy import (
-    AgentSelection,
-)
 
 DEFAULT_EPS = 0.5
 DEFAULT_MIN_SAMPLES = 1
 
 
-@dataclass
+@dataclass(slots=True)
 class PosteriorPrecomputedState:
     embedding: list[float]
     theta_sketch: compact_theta_sketch
 
 
-@dataclass
+@dataclass(slots=True)
 class PosteriorState:
     theta: update_theta_sketch
     queried_embeddings: list[list[float]] = field(default_factory=list)
@@ -39,7 +40,6 @@ def normalize_probability(values: list[float]) -> list[float]:
     return [v / total for v in values]
 
 
-@dataclass
 class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorState]):
     lg_k: int = DEFAULT_LG_K
     clustered_prior: bool = True

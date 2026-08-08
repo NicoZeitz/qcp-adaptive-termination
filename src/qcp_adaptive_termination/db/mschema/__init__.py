@@ -34,7 +34,7 @@ Example `mydb.comments.yaml` sidecar (all keys optional)::
       code: "ISO 3166-1 alpha-2 country code."
 """
 
-from qcp_adaptive_termination.mschema.m_schema import MSchema
-from qcp_adaptive_termination.mschema.schema_engine import SchemaEngine
+from qcp_adaptive_termination.db.mschema.m_schema import MSchema
+from qcp_adaptive_termination.db.mschema.schema_engine import SchemaEngine
 
 __all__ = ["MSchema", "SchemaEngine"]

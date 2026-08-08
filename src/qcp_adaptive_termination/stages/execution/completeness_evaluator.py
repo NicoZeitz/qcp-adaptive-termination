@@ -8,30 +8,25 @@ from agents import (
 )
 from pydantic import BaseModel, ConfigDict
 
-from qcp_adaptive_termination.agents.configuration import (
-    AgentRole,
-    get_agent_configuration,
-)
+from qcp_adaptive_termination.models import AgentRole
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
-from qcp_adaptive_termination.models.estimation import (
+from qcp_adaptive_termination.llm import runner
+from qcp_adaptive_termination.models import (
+    Config,
     AlignedResultList,
-)
-from qcp_adaptive_termination.models.estimation import EstimatorMode
-from qcp_adaptive_termination.models.estimation import (
+    EstimatorMode,
     EstimatorStatistics,
+    SerializedOptionalResultType,
+    try_parse_value_to_result_type,
 )
-from qcp_adaptive_termination.models.execution.outcome import (
+from qcp_adaptive_termination.models.execution import (
     EvaluatorDecision,
     FinalResultOutcome,
     QueryMoreAgentsOutcome,
 )
-from qcp_adaptive_termination.models.config import config_var
-from qcp_adaptive_termination.models.result import try_parse_value_to_result_type
-from qcp_adaptive_termination.models.serializers import SerializedOptionalResultType
 from qcp_adaptive_termination.preview import preview_dataframe, result_to_json_preview
-from qcp_adaptive_termination.llm.runner import run_agent
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
@@ -47,7 +42,7 @@ def build_estimator_summary(
     *,
     include_aggregation_type: bool = True,
 ) -> str | None:
-    config = config_var.get()
+    config = Config.get()
     mode = config.estimator_mode
     if mode == EstimatorMode.NONE:
         return None
@@ -106,7 +101,7 @@ def build_previous_statistics_summary(
 ) -> str | None:
     if (
         not previous_estimator_statistics
-        or config_var.get().estimator_mode == EstimatorMode.NONE
+        or Config.get().estimator_mode == EstimatorMode.NONE
     ):
         return None
 
@@ -178,11 +173,8 @@ async def run_completeness_evaluator(
             "previous_estimator_statistics_count": len(previous_estimator_statistics),
         },
     ):
-        evaluator_result = await run_agent(
-            agent_configuration=get_agent_configuration(
-                AgentRole.COORDINATOR_COMPLETENESS_EVALUATOR
-            ),
-            prompt_name="execution-coordinator-completeness-evaluator",
+        evaluator_result = await runner.run_agent(
+            role=AgentRole.COORDINATOR_COMPLETENESS_EVALUATOR,
             prompt_parameters={
                 "query": query,
                 "result_list_preview": result_list_preview,

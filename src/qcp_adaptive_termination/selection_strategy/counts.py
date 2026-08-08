@@ -1,11 +1,8 @@
-from dataclasses import dataclass
-
 from sqlalchemy import text
 
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.db.get_db_engine import get_db_engine
+from qcp_adaptive_termination.db import get_db_engine, quote_col, quote_table
+from qcp_adaptive_termination.models import DataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import StaticSelectionStrategy
-from qcp_adaptive_termination.db.sql_utils import quote_col, quote_table
 
 
 def fetch_count(data_agent: DataAgent, table_name: str) -> int:
@@ -30,7 +27,6 @@ def fetch_distinct_count(
     return int(result or 0)
 
 
-@dataclass
 class CountStrategy(StaticSelectionStrategy[int]):
     async def precompute(
         self,
@@ -47,7 +43,6 @@ class CountStrategy(StaticSelectionStrategy[int]):
         }
 
 
-@dataclass
 class DistinctCountStrategy(StaticSelectionStrategy[int]):
     async def precompute(
         self,

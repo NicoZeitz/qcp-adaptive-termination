@@ -11,12 +11,8 @@ from datasketches import (
 )
 from sqlalchemy import text
 
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.db.get_db_engine import get_db_engine
-from qcp_adaptive_termination.db.sql_utils import quote_col, quote_table
-from qcp_adaptive_termination.models.selection_strategy import (
-    AgentSelection,
-)
+from qcp_adaptive_termination.db import get_db_engine, quote_col, quote_table
+from qcp_adaptive_termination.models import AgentSelection, DataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
 
 DEFAULT_LG_K = 12
@@ -42,7 +38,7 @@ def fetch_column_values(
 # ---------------------------------------------------------------------------
 
 
-@dataclass
+@dataclass(slots=True)
 class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
     """
     Ranks by estimated new unique values each remaining agent would contribute.
@@ -117,7 +113,7 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
 # ---------------------------------------------------------------------------
 
 
-@dataclass
+@dataclass(slots=True)
 class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_sketch]):
     """
     Ranks by estimated new unique values (A NOT B: agent sketch minus seen state).
@@ -187,13 +183,13 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
 # ---------------------------------------------------------------------------
 
 
-@dataclass
+@dataclass(slots=True)
 class MinHashState:
     minhash: MinHash
     seen: set[str] = field(default_factory=set)
 
 
-@dataclass
+@dataclass(slots=True)
 class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
     """
     Ranks by estimated new unique values via containment estimation.

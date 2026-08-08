@@ -7,19 +7,20 @@ Drives the step-by-step execution loop, handles replanning on failure
 
 from typing import cast
 
-from qcp_adaptive_termination.models.stages.collaborative_query_answering_result import (
-    CollaborativeQueryAnsweringResult,
+from qcp_adaptive_termination.models.stages import CollaborativeQueryAnsweringResult
+from qcp_adaptive_termination.models import (
+    AgentRegistryType,
+    DataAgent,
+    ResultType,
+    get_failed_result,
+    serialize_need,
 )
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.models.execution.execution_result import ExecutionResult
-from qcp_adaptive_termination.models.need import serialize_need
-from qcp_adaptive_termination.models.query_plan.query_plan import QueryPlan
-from qcp_adaptive_termination.models.execution.query_plan_step_execution_result import (
+from qcp_adaptive_termination.models.execution import (
+    ExecutionResult,
     FailedExecution,
     SuccessfulExecution,
 )
-from qcp_adaptive_termination.models.result import ResultType, get_failed_result
-from qcp_adaptive_termination.models.agent import AgentRegistryType
+from qcp_adaptive_termination.models.query_plan import QueryPlan
 from qcp_adaptive_termination.stages.execution.execute_query_plan_next_step import (
     execute_query_plan_next_step,
 )

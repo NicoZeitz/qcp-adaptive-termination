@@ -1,16 +1,14 @@
 """
 Agent-level data models.
 
-Defines `DataAgent`, `AgentConfiguration`, `AgentRegistryData` (with
-`TableDescription` / `ColumnDescription`), and `AgentRegistryType`.
+Defines `DataAgent`, `AgentRegistryData` (with `TableDescription` /
+`ColumnDescription`), `AgentRegistryType`, and `AgentRole`.
 """
 
 from dataclasses import dataclass
 from enum import Enum
 from typing import Hashable, Literal
 
-from agents.run_config import DEFAULT_MAX_TURNS
-from openai.types.shared import Reasoning
 from pydantic import BaseModel, ConfigDict
 
 
@@ -25,29 +23,14 @@ class DataAgent(BaseModel, Hashable):
         return hash((self.name, self.path))
 
 
-class AgentConfiguration(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    role: str
-    agent_name: str | None = None
-    model: str | None
-    reasoning: Reasoning
-    verbosity: Literal["low", "medium", "high"] | None = None
-    max_turns: int | None = DEFAULT_MAX_TURNS * 2
-
-    @property
-    def display_name(self) -> str:
-        return f"{self.agent_name} - {self.role}" if self.agent_name else self.role
-
-
-@dataclass
+@dataclass(slots=True)
 class ColumnDescription:
     column_name: str
     natural_language_description: str
     technical_description: str
 
 
-@dataclass
+@dataclass(slots=True)
 class TableDescription:
     table_name: str
     natural_language_description: str
@@ -55,7 +38,7 @@ class TableDescription:
     columns: dict[str, ColumnDescription]
 
 
-@dataclass
+@dataclass(slots=True)
 class AgentRegistryData:
     natural_language_description: str
     technical_description: str
@@ -66,3 +49,29 @@ class AgentRegistryData:
 class AgentRegistryType(Enum):
     NATURAL_LANGUAGE = "natural_language"
     TECHNICAL = "technical"
+
+
+class AgentRole(Enum):
+    COORDINATOR_RELEVANCE = "coordinator_relevance"
+    COORDINATOR_PLANNING = "coordinator_planning"
+    COORDINATOR_CODE = "coordinator_code"
+    COORDINATOR_REPLANNING = "coordinator_replanning"
+    COORDINATOR_ALIGN_SCHEMA = "coordinator_align_schema"
+    COORDINATOR_COMPLETENESS_EVALUATOR = "coordinator_completeness_evaluator"
+    DATA_AGENT_SCHEMA_DESCRIPTION = "data_agent_schema_description"
+    DATA_AGENT_RELEVANCE = "data_agent_relevance"
+    DATA_AGENT_CODE = "data_agent_code"
+
+    @property
+    def prompt_name(self) -> str:
+        return {
+            AgentRole.COORDINATOR_RELEVANCE: "discovery-coordinator-relevance",
+            AgentRole.COORDINATOR_PLANNING: "planning-coordinator-planning",
+            AgentRole.COORDINATOR_CODE: "execution-coordinator-aggregate",
+            AgentRole.COORDINATOR_REPLANNING: "execution-coordinator-replanning",
+            AgentRole.COORDINATOR_ALIGN_SCHEMA: "execution-coordinator-align-schema",
+            AgentRole.COORDINATOR_COMPLETENESS_EVALUATOR: "execution-coordinator-completeness-evaluator",
+            AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION: "discovery-data-agent-sql-schema-description",
+            AgentRole.DATA_AGENT_RELEVANCE: "discovery-data-agent-sql-relevance",
+            AgentRole.DATA_AGENT_CODE: "execution-data-agent-sql-code",
+        }[self]

@@ -2,29 +2,26 @@ import json
 
 from pydantic import BaseModel
 
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.models.query_plan.query_plan import QueryPlan
-from qcp_adaptive_termination.models.query_plan.query_plan_step import (
-    MultiAgentQueryPlanStep,
-)
-from qcp_adaptive_termination.models.execution.query_plan_step_execution_result import (
-    FailedExecution,
-)
-from qcp_adaptive_termination.models.result import ResultType
-from qcp_adaptive_termination.agents.configuration import (
+import qcp_adaptive_termination.agent_registry as agent_registry
+from qcp_adaptive_termination.llm import runner
+from qcp_adaptive_termination.models import (
+    AgentRegistryType,
     AgentRole,
-    get_agent_configuration,
+    DataAgent,
+    ResultType,
 )
-import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.models.agent import AgentRegistryType
-from qcp_adaptive_termination.llm.runner import run_llm
-from qcp_adaptive_termination.stages.planning import (
-    create_draft_query_plan_model,
-    map_query_plan_model_to_query_plan,
+from qcp_adaptive_termination.models.execution import FailedExecution
+from qcp_adaptive_termination.models.query_plan import (
+    MultiAgentQueryPlanStep,
+    QueryPlan,
 )
 from qcp_adaptive_termination.preview import (
     need_to_json_preview,
     result_to_json_preview,
+)
+from qcp_adaptive_termination.stages.planning import (
+    create_draft_query_plan_model,
+    map_query_plan_model_to_query_plan,
 )
 
 
@@ -110,9 +107,8 @@ async def replan_query_plan(
     answer_map = create_answer_map_from_query_plan(query_plan)
     QueryReplanModel = create_query_replan_model(relevant_data_agents)
 
-    result = await run_llm(
-        agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_REPLANNING),
-        prompt_name="execution-coordinator-replanning",
+    result = await runner.run_llm(
+        role=AgentRole.COORDINATOR_REPLANNING,
         prompt_parameters={
             "agent_registry": registry_string,
             "old_query_plan": create_query_plan_prompt_context(query_plan),

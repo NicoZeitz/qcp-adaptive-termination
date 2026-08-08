@@ -1,10 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic, Protocol, TypeVar, cast
 
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.models.selection_strategy import (
-    AgentSelection,
-)
+from qcp_adaptive_termination.models import AgentSelection, DataAgent
 
 P = TypeVar("P")  # precomputed value type (per-agent mapping value)
 S = TypeVar("S")  # running state type

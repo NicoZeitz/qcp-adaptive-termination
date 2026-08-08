@@ -1,30 +1,27 @@
 from typing import Any
 
+import pandas as pd
 from agents import (
     FunctionToolResult,
     RunContextWrapper,
     ToolsToFinalOutputResult,
 )
-import pandas as pd
 
+from qcp_adaptive_termination.models import AgentRole
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
-from qcp_adaptive_termination.models.execution.additional_information import (
+from qcp_adaptive_termination.llm import runner
+from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
-)
-from qcp_adaptive_termination.models.need import try_parse_value_to_need_type
-from qcp_adaptive_termination.models.execution.partial_query_answer import (
     PartialQueryAnswer,
 )
-from qcp_adaptive_termination.models.query_plan.query_plan_step import QueryPlanStep
-from qcp_adaptive_termination.models.result import try_parse_value_to_result_type
-from qcp_adaptive_termination.agents.configuration import (
-    AgentRole,
-    get_agent_configuration,
+from qcp_adaptive_termination.models import (
+    try_parse_value_to_need_type,
+    try_parse_value_to_result_type,
 )
+from qcp_adaptive_termination.models.query_plan import QueryPlanStep
 from qcp_adaptive_termination.preview import preview_additional_information
-from qcp_adaptive_termination.llm.runner import run_agent
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 
@@ -67,9 +64,8 @@ async def answer_step_coordinator(
                 final_output=partial_answer,
             )
 
-        result = await run_agent(
-            agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_CODE),
-            prompt_name="execution-coordinator-aggregate",
+        result = await runner.run_agent(
+            role=AgentRole.COORDINATOR_CODE,
             prompt_parameters={
                 "query": query,
                 "additional_information_preview": preview_additional_information(

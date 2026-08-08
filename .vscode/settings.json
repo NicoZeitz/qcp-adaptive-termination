@@ -57,11 +57,15 @@
         "vldbsigmod",
         "yearfirst"
     ],
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "always"
+    },
     "python.defaultInterpreterPath": "/Users/I550817/TUDevelop/qcp-adaptive-termination/.venv/bin/python",
     "python.terminal.useEnvFile": true,
     "python.testing.pytestArgs": [
         "test"
     ],
+    "python.analysis.includeAliasesFromUserFiles": true,
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.languageServer": "Pylance",

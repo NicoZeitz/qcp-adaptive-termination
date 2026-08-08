@@ -6,12 +6,11 @@ import pandas as pd
 from pandas import DataFrame, MultiIndex
 from pydantic import JsonValue
 
+
 if TYPE_CHECKING:
-    from qcp_adaptive_termination.models.execution.additional_information import (
+    from qcp_adaptive_termination.models.execution import (
         AdditionalInformation,
     )
-
-CHAR_LIMIT_LLM = 2000
 
 
 def preview_dataframe(
@@ -33,22 +32,6 @@ def preview_dataframe(
         df_copy.index = [""] * len(df_copy)
     with pd.option_context("display.max_rows", top_rows + bottom_rows + 1):
         return df_copy.__repr__()
-
-
-def preview_text(text: str, char_limit=CHAR_LIMIT_LLM):
-    if len(text) <= char_limit:
-        return text
-
-    char_limit_start = char_limit // 2
-    char_limit_end = char_limit - char_limit_start
-
-    omitted_count = len(text) - (char_limit_start + char_limit_end)
-
-    return (
-        text[:char_limit_start]
-        + f"\n...[{omitted_count} chars]...\n"
-        + text[-char_limit_end:]
-    )
 
 
 def preview_additional_information(

@@ -5,34 +5,36 @@ from datetime import datetime
 from pathlib import Path
 from typing import cast
 
-from dotenv import load_dotenv
 from agents import trace
+from dotenv import load_dotenv
 from langfuse import get_client
 
 from qcp_adaptive_termination.cache import load_cache_file, setup_cache
-from qcp_adaptive_termination.llm.providers import setup_providers
-from qcp_adaptive_termination.models.config import Config, config_context, config_var
-from qcp_adaptive_termination.models.stages.collaborative_query_answering import (
+from qcp_adaptive_termination.llm import model_provider
+from qcp_adaptive_termination.models import Config
+from qcp_adaptive_termination.models.stages import (
     CollaborativeQueryAnswering,
-)
-from qcp_adaptive_termination.models.stages.collaborative_query_answering_result import (
     CollaborativeQueryAnsweringResult,
-)
-from qcp_adaptive_termination.models.stages.drafted_query_plan import DraftedQueryPlan
-from qcp_adaptive_termination.models.stages.filtered_relevant_agents import (
+    DraftedQueryPlan,
     FilteredRelevantAgents,
 )
 from qcp_adaptive_termination.preview import result_to_json_preview
 from qcp_adaptive_termination.stages.discovery import (
     STAGE_NAME as DISCOVERY_STAGE_NAME,
+)
+from qcp_adaptive_termination.stages.discovery import (
     filter_relevant_agents,
 )
 from qcp_adaptive_termination.stages.execution import (
     STAGE_NAME as EXECUTION_STAGE_NAME,
+)
+from qcp_adaptive_termination.stages.execution import (
     execute_query_plan,
 )
 from qcp_adaptive_termination.stages.planning import (
     STAGE_NAME as PLANNING_STAGE_NAME,
+)
+from qcp_adaptive_termination.stages.planning import (
     draft_query_plan,
 )
 from qcp_adaptive_termination.tracing import (
@@ -74,12 +76,12 @@ async def run_pipeline(
     load_dotenv(override=True)
     setup_logging(log_filename, log_dir)
     setup_cache(cache_dir, cfg.cache_mode)
-    setup_providers()
+    model_provider.setup_multi_provider()
     if not setup_langfuse():
         sys.exit(1)
     setup_tracing(log_filename, log_dir)
 
-    with config_context(cfg):
+    with Config.context(cfg):
         return await _run_stages(
             name=name,
             input_file=input_file,
@@ -118,7 +120,7 @@ async def _run_stages(
     trace_label = (
         f"[NZ] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}"
     )
-    cfg = config_var.get()
+    cfg = Config.get()
 
     logging.info(f"Config: {cfg.model_dump_json()}")
     config_output_path = log_dir / f"{log_filename} - execution_config.json"

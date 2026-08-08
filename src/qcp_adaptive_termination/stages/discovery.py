@@ -3,18 +3,11 @@ from typing import Any
 
 from pydantic import BaseModel, Field, create_model
 
-import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.models.agent import AgentRegistryType
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.models.stages.filtered_relevant_agents import (
-    FilteredRelevantAgents,
-)
-from qcp_adaptive_termination.agents.configuration import (
-    AgentRole,
-    get_agent_configuration,
-)
+import qcp_adaptive_termination.agent_registry as agent_registry
 from qcp_adaptive_termination.cache import CacheMode, cached
-from qcp_adaptive_termination.llm.runner import run_llm
+from qcp_adaptive_termination.llm import runner
+from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
+from qcp_adaptive_termination.models.stages import FilteredRelevantAgents
 from qcp_adaptive_termination.tracing.span import (
     append_to_span_input,
     append_to_span_output,
@@ -58,9 +51,8 @@ async def filter_coordinator_with_reasoning(
 ) -> list[tuple[DataAgent, str]]:
     RelevanceModel = build_relevance_model(data_agents)
 
-    relevances = await run_llm(
-        agent_configuration=get_agent_configuration(AgentRole.COORDINATOR_RELEVANCE),
-        prompt_name="discovery-coordinator-relevance",
+    relevances = await runner.run_llm(
+        role=AgentRole.COORDINATOR_RELEVANCE,
         prompt_parameters={
             "agent_registry": registry_string,
             "query": query,
@@ -102,11 +94,9 @@ async def filter_data_agent_with_reasoning(
         ),
     }
 
-    is_relevant = await run_llm(
-        agent_configuration=get_agent_configuration(
-            AgentRole.DATA_AGENT_RELEVANCE, data_agent.name
-        ),
-        prompt_name="discovery-data-agent-sql-relevance",
+    is_relevant = await runner.run_llm(
+        role=AgentRole.DATA_AGENT_RELEVANCE,
+        agent_name=data_agent.name,
         prompt_parameters=prompt_parameters,
         output_type=bool,
     )

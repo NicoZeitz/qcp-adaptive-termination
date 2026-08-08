@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from .data_item import DataItem
+from qcp_adaptive_termination.estimator.data_item import DataItem
 
 
 @dataclass(slots=True)
@@ -28,7 +28,7 @@ class HistogramBar:
         self.upper_bound = max(self.upper_bound, value)
 
 
-@dataclass
+@dataclass(slots=True)
 class Bucket:
     """A contiguous value-range partition of the sample used by the bucket estimator.
 

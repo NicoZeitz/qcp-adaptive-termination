@@ -18,11 +18,13 @@ from qcp_adaptive_termination.code_execution.builtins import (
     _SAFE_BUILTINS,
     _UNSAFE_BUILTINS,
 )
-from qcp_adaptive_termination.preview import CHAR_LIMIT_LLM, preview_text
 from qcp_adaptive_termination.serialize_value import serialize_value
 
+LLM_PREVIEW_CHAR_LIMIT = 2000
+LLM_CODE_EXECUTION_TIMEOUT = 60
 
-@dataclass
+
+@dataclass(slots=True)
 class CodeExecutionResult:
     """Holds the outcome of a single code execution, including captured output and surviving locals."""
 
@@ -43,6 +45,52 @@ class CodeExecutionResult:
 
     formatted: str
     """A short formatted string that can be given to the LLM as information"""
+
+
+def preview_text(text: str, char_limit=LLM_PREVIEW_CHAR_LIMIT):
+    if len(text) <= char_limit:
+        return text
+
+    char_limit_start = char_limit // 2
+    char_limit_end = char_limit - char_limit_start
+
+    omitted_count = len(text) - (char_limit_start + char_limit_end)
+
+    return (
+        text[:char_limit_start]
+        + f"\n...[{omitted_count} chars]...\n"
+        + text[-char_limit_end:]
+    )
+
+
+def format_result(
+    stdout: str,
+    stderr: str,
+    exception: Exception | None,
+    locals: dict[str, Any],
+) -> str:
+    formatted = ""
+    if len(stdout) > 0:
+        formatted += f"\nStdout: {preview_text(stdout)}"
+    else:
+        formatted += "\nNo Stout (if output was expected: you must use print())"
+
+    if len(stderr) > 0:
+        formatted += f"\nStderr: {preview_text(stderr)}"
+
+    if exception is not None:
+        formatted += f"\n{type(exception).__name__}: {preview_text(str(exception))}"
+
+    available = ",".join(
+        [
+            f"'{k}': {type(v).__name__}"
+            for k, v in locals.items()
+            if not k.startswith("_")
+        ]
+    )
+
+    formatted += f"\nLocals: {available}"
+    return formatted.strip()
 
 
 class CodeExecutionEnvironment:
@@ -103,7 +151,7 @@ class CodeExecutionEnvironment:
             stderr=stderr,
             exception=exception,
             locals=locals,
-            formatted=self._format_result(stdout, stderr, exception, locals),
+            formatted=format_result(stdout, stderr, exception, locals),
         )
 
         self.code_executions.append(execution_result)
@@ -112,7 +160,7 @@ class CodeExecutionEnvironment:
     def as_function_tool[TContext](self) -> FunctionTool:
         @function_tool(
             name_override="execute_code",
-            timeout=60,
+            timeout=LLM_CODE_EXECUTION_TIMEOUT,
             timeout_behavior="error_as_result",
         )
         async def execute_python_code(
@@ -140,40 +188,10 @@ class CodeExecutionEnvironment:
                     for k, v in code_execution.locals.items()
                     if not k.startswith("_")
                 ],
-                # "formatted": code_execution.formatted,
+                "formatted": code_execution.formatted,
             }
             for code_execution in self.code_executions
         ]
-
-    def _format_result(
-        self,
-        stdout: str,
-        stderr: str,
-        exception: Exception | None,
-        locals: dict[str, Any],
-    ) -> str:
-        formatted = ""
-        if len(stdout) > 0:
-            formatted += f"\nStdout: {preview_text(stdout, CHAR_LIMIT_LLM)}"
-        else:
-            formatted += "\nNo Stout (if output was expected: you must use print())"
-
-        if len(stderr) > 0:
-            formatted += f"\nStderr: {preview_text(stderr, CHAR_LIMIT_LLM)}"
-
-        if exception is not None:
-            formatted += f"\n{type(exception).__name__}: {preview_text(str(exception), CHAR_LIMIT_LLM)}"
-
-        available = ",".join(
-            [
-                f"'{k}': {type(v).__name__}"
-                for k, v in locals.items()
-                if not k.startswith("_")
-            ]
-        )
-
-        formatted += f"\nLocals: {available}"
-        return formatted.strip()
 
     @contextmanager
     def _exec_variables(self):

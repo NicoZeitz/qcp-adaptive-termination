@@ -18,16 +18,14 @@ import matplotlib.lines
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import umap
 from sklearn.cluster import DBSCAN
 
-import umap
-
+import qcp_adaptive_termination.agent_registry as agent_registry
 from qcp_adaptive_termination.cache import setup_cache
+from qcp_adaptive_termination.models.agent import DataAgent
+from qcp_adaptive_termination.models.config import Config, _config_var
 from qcp_adaptive_termination.tracing import setup_logging
-import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
-from qcp_adaptive_termination.models.config import Config, config_var
-
 
 INPUT_FILE = Path("../data/wikidata/companies/split_overlap_employees/employees.json")
 OUTPUT_DIR = Path("../logs")
@@ -78,7 +76,7 @@ async def run() -> None:
     raw_agents = data["value"]["data_agents"]
     agents = [DataAgent(**a) for a in raw_agents]
 
-    config_var.set(
+    _config_var.set(
         Config(data_path_prefix="../data/wikidata/companies/split_overlap_employees/")
     )
 

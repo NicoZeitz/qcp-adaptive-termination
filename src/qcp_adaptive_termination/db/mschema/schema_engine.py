@@ -1,16 +1,17 @@
 import os
 from typing import Optional
+
 import yaml
+from llama_index.core import SQLDatabase
 from sqlalchemy import (
     MetaData,
     Table,
     select,
 )
 from sqlalchemy.engine import Engine
-from llama_index.core import SQLDatabase
 
-from .utils import examples_to_str
-from .m_schema import MSchema
+from qcp_adaptive_termination.db.mschema import MSchema
+from qcp_adaptive_termination.db.mschema.utils import examples_to_str
 
 
 class SchemaEngine(SQLDatabase):

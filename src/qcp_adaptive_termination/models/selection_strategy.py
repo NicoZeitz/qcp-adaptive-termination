@@ -34,7 +34,7 @@ class SelectionType(Enum):
     POSTERIOR = "posterior"  # Needs: Table, Column
 
 
-@dataclass
+@dataclass(slots=True)
 class AgentSelection:
     agent: DataAgent
     score: float | None = None

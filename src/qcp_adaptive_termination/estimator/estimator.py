@@ -1,79 +1,22 @@
 import bisect
-from functools import lru_cache
 import math
 import random
-from collections.abc import Sequence
-from enum import Enum
 import sys
+from collections.abc import Sequence
+from functools import lru_cache
 
 import numpy as np
 from scipy.interpolate import RBFInterpolator
 from scipy.optimize import linprog
 from scipy.stats import norm, poisson
 
-from .data_item import DataItem
-from .bucket import Bucket
-
-MC_DEFAULT_NB_RUNS = 200
-MC_DEFAULT_LAMBDA_GRID = tuple(round(v * 0.1, 1) for v in range(-4, 5))
-MC_RANDOM_SEED = None
-MC_DEFAULT_MAX_THETA_POINTS = 7
-MC_LAPLACE_ALPHA = 0.1
-
-
-class CountEstimator(Enum):
-    """Strategy for estimating the total number of unique entities in the population."""
-
-    CHAO92 = "chao92"
-    """Coverage-based estimator corrected for skew in the publicity distribution via CV²."""
-
-    CHAO84 = "chao84"
-    """Estimator based on the ratio of singletons to doubletons (f1² / 2·f2)."""
-
-    JACKKNIFE1 = "jackknife1"
-    """First-order jackknife: adds the singleton count f1 as a bias correction."""
-
-    JACKKNIFE2 = "jackknife2"
-    """Second-order jackknife: adds 2·f1 and subtracts f2 for a lower-bias estimate."""
-
-    ACE = "ace"
-    """Abundance-based coverage estimator: splits entities into rare/abundant groups
-    and applies coverage correction only to the rare group."""
-
-    UNSEEN = "unseen"
-    """Linear-programming estimator that fits a non-parametric frequency distribution
-    and extrapolates the number of unseen species."""
-
-
-class ValueEstimator(Enum):
-    """Strategy for estimating the attribute values of missing entities."""
-
-    NAIVE = "naive"
-    """Mean substitution: assumes missing entities have the same average value
-    as all observed entities (φ_K / c)."""
-
-    FREQUENCY = "frequency"
-    """Singleton-mean substitution: uses the average value of singletons (φ_f1 / f1)
-    as a proxy for missing entities, which are most similar to rarely seen ones."""
-
-    FREQUENCY_F12 = "frequency_f12"
-    """Singleton+doubleton-mean substitution: averages over singletons and doubletons
-    (φ_f12 / (f1 + f2)) to reduce variance compared to singletons alone."""
-
-    GOOD_TURING = "good_turing"
-    """Good-Turing frequency smoothing: derives Δ directly from φ_f1 and the ratio
-    f1 / (n - f1) without a separate count estimator."""
-
-
-class BoundType(Enum):
-    """Method used to compute confidence intervals for the count estimate."""
-
-    GOOD_TURING = "good_turing"
-    """Bounds the missing mass M0 with an additive error term and converts to N via N = c / (1 - M0)."""
-
-    CHAO84 = "chao84"
-    """Asymmetric log-normal confidence interval for N - c; tighter than the Good-Turing bound.
-    Falls back to Good-Turing when there are no doubletons."""
+from qcp_adaptive_termination.estimator.bucket import Bucket
+from qcp_adaptive_termination.estimator.confidence_interval_type import (
+    ConfidenceIntervalType,
+)
+from qcp_adaptive_termination.estimator.count_estimator import CountEstimator
+from qcp_adaptive_termination.estimator.data_item import DataItem
+from qcp_adaptive_termination.estimator.value_estimator import ValueEstimator
 
 
 class Estimator:
@@ -100,6 +43,13 @@ class Estimator:
 
     DEFAULT_COUNT_ESTIMATOR: CountEstimator = CountEstimator.CHAO92
     DEFAULT_VALUE_ESTIMATOR: ValueEstimator = ValueEstimator.NAIVE
+    DEFAULT_CONFIDENCE_INTERVAL_TYPE: ConfidenceIntervalType = ConfidenceIntervalType.CHAO84
+
+    MC_DEFAULT_NB_RUNS = 200
+    MC_DEFAULT_LAMBDA_GRID = tuple(round(v * 0.1, 1) for v in range(-4, 5))
+    MC_RANDOM_SEED = None
+    MC_DEFAULT_MAX_THETA_POINTS = 7
+    MC_LAPLACE_ALPHA = 0.1
 
     # ── Class-level attribute annotations (typed, for IDE support) ───────────
 
@@ -396,7 +346,7 @@ class Estimator:
 
     def estimated_count_lower_bound(
         self,
-        confidence_interval_type: BoundType = BoundType.CHAO84,
+        confidence_interval_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
         confidence_epsilon: float = 0.01,
     ) -> float:
         """Lower bound for the estimated total unique entity count at the given confidence level."""
@@ -407,7 +357,7 @@ class Estimator:
 
     def estimated_count_upper_bound(
         self,
-        confidence_interval_type: BoundType = BoundType.CHAO84,
+        confidence_interval_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
         confidence_epsilon: float = 0.01,
     ) -> float:
         """Upper bound for the estimated total unique entity count at the given confidence level."""
@@ -418,7 +368,7 @@ class Estimator:
 
     def estimated_count_bounds(
         self,
-        confidence_interval_type: BoundType = BoundType.CHAO84,
+        confidence_interval_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
         confidence_epsilon: float = 0.01,
     ) -> tuple[float, float]:
         """Lower and upper bounds for the estimated total unique entity count.
@@ -428,9 +378,9 @@ class Estimator:
         if confidence_epsilon <= 0.0 or confidence_epsilon > 1.0:
             raise ValueError("confidence_epsilon must be in (0, 1]")
 
-        if confidence_interval_type == BoundType.CHAO84:
+        if confidence_interval_type == ConfidenceIntervalType.CHAO84:
             return self.chao84_confidence_interval(confidence_epsilon)
-        if confidence_interval_type == BoundType.GOOD_TURING:
+        if confidence_interval_type == ConfidenceIntervalType.GOOD_TURING:
             return self.good_turing_confidence_interval(confidence_epsilon)
         raise ValueError(
             f"Unsupported confidence interval type: {confidence_interval_type}"
@@ -650,7 +600,7 @@ class Estimator:
 
     def estimated_sum_lower_bound(
         self,
-        bound_type: BoundType = BoundType.CHAO84,
+        bound_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
         confidence_epsilon: float = 0.01,
     ) -> float:
         """Lower bound for the corrected SUM at the given confidence level."""
@@ -659,7 +609,7 @@ class Estimator:
 
     def estimated_sum_upper_bound(
         self,
-        bound_type: BoundType = BoundType.CHAO84,
+        bound_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
         confidence_epsilon: float = 0.01,
     ) -> float:
         """Upper bound for the corrected SUM at the given confidence level."""
@@ -668,7 +618,7 @@ class Estimator:
 
     def estimated_sum_bounds(
         self,
-        bound_type: BoundType = BoundType.CHAO84,
+        bound_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
         confidence_epsilon: float = 0.01,
     ) -> tuple[float, float]:
         """Lower and upper bounds for the corrected SUM.
