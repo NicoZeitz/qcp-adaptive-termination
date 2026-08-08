@@ -11,7 +11,7 @@ from qcp_adaptive_termination.selection_strategy.sketches import (
     fetch_column_values,
 )
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.models.selection_strategy import (
     AgentSelection,
 )

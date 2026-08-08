@@ -10,13 +10,13 @@ from qcp_adaptive_termination.agents.configuration import (
     get_agent_configuration,
 )
 import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
+from qcp_adaptive_termination.models.agent import AgentRegistryType
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
 from qcp_adaptive_termination.db.get_db_engine import get_db_engine
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
-from qcp_adaptive_termination.models.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.agent import DataAgent
+from qcp_adaptive_termination.models.estimation import (
     AlignedSchemaMetadata,
 )
 from qcp_adaptive_termination.models.execution.additional_information import (

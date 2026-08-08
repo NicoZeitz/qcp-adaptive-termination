@@ -5,7 +5,7 @@ from typing import Any
 import pandas as pd
 from sqlalchemy import bindparam, text
 
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.db.get_db_engine import get_db_engine
 from qcp_adaptive_termination.db.sql_utils import quote_col, quote_table
 

@@ -14,9 +14,9 @@ from qcp_adaptive_termination.agents.configuration import (
     get_agent_configuration,
 )
 import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
-from qcp_adaptive_termination.models.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.agent import AgentRegistryType
+from qcp_adaptive_termination.models.agent import DataAgent
+from qcp_adaptive_termination.models.estimation import (
     AggregationType,
     AlignedResultList,
     AlignedSchemaMetadata,

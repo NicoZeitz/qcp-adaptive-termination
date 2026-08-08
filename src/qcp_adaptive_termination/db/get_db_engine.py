@@ -2,7 +2,7 @@ import os
 
 from sqlalchemy import Engine, create_engine, text
 
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.models.config import config_var
 
 _engine_cache: dict[str, Engine] = {}

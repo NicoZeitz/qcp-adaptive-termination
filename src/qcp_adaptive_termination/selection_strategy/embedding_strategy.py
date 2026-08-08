@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import DataAgent
 import qcp_adaptive_termination.agents.registry as agent_registry
 from qcp_adaptive_termination.selection_strategy.strategy import StaticSelectionStrategy
 from qcp_adaptive_termination.embedding.embeddings import create_embedding

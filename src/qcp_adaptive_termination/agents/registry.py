@@ -3,9 +3,9 @@ from typing import Callable, overload
 
 from qcp_adaptive_termination.data_agent.data_agent import load_agent_registry_data
 from qcp_adaptive_termination.embedding.embeddings import create_embedding
-from qcp_adaptive_termination.models.agent.agent_registry_data import AgentRegistryData
-from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import AgentRegistryData
+from qcp_adaptive_termination.models.agent import AgentRegistryType
+from qcp_adaptive_termination.models.agent import DataAgent
 
 
 @overload

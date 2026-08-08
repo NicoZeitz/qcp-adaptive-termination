@@ -2,7 +2,7 @@ import json
 
 from pydantic import BaseModel
 
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.models.query_plan.query_plan import QueryPlan
 from qcp_adaptive_termination.models.query_plan.query_plan_step import (
     MultiAgentQueryPlanStep,
@@ -16,7 +16,7 @@ from qcp_adaptive_termination.agents.configuration import (
     get_agent_configuration,
 )
 import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
+from qcp_adaptive_termination.models.agent import AgentRegistryType
 from qcp_adaptive_termination.llm.runner import run_llm
 from qcp_adaptive_termination.stages.planning import (
     create_draft_query_plan_model,

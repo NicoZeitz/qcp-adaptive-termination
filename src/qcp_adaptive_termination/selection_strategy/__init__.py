@@ -9,10 +9,10 @@ each iteration of the multi-agent loop.
 
 from typing import Any
 
-from qcp_adaptive_termination.models.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.estimation import (
     AlignedResultList,
 )
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.models.config import config_var
 from qcp_adaptive_termination.models.selection_strategy import (
     SelectionType,

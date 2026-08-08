@@ -4,8 +4,8 @@ from typing import Any
 from pydantic import BaseModel, Field, create_model
 
 import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import AgentRegistryType
+from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.models.stages.filtered_relevant_agents import (
     FilteredRelevantAgents,
 )

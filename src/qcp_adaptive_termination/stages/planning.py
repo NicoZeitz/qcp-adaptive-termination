@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from qcp_adaptive_termination.models.stages.drafted_query_plan import DraftedQueryPlan
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.models.query_plan.query_dependency import QueryDependency
 from qcp_adaptive_termination.models.query_plan.query_plan import (
     FieldDefinitions,
@@ -19,7 +19,7 @@ from qcp_adaptive_termination.agents.configuration import (
     get_agent_configuration,
 )
 import qcp_adaptive_termination.agents.registry as agent_registry
-from qcp_adaptive_termination.models.agent.agent_registry_type import AgentRegistryType
+from qcp_adaptive_termination.models.agent import AgentRegistryType
 from qcp_adaptive_termination.cache import CacheMode, cached
 from qcp_adaptive_termination.llm.runner import run_llm
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span

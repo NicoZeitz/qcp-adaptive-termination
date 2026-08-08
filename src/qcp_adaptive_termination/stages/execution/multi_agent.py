@@ -8,11 +8,11 @@ from agents import (
 )
 from pydantic import BaseModel, ConfigDict
 
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
-from qcp_adaptive_termination.models.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.agent import DataAgent
+from qcp_adaptive_termination.models.estimation import (
     AlignedResultList,
 )
-from qcp_adaptive_termination.models.estimation.estimator_statistics import (
+from qcp_adaptive_termination.models.estimation import (
     EstimatorStatistics,
 )
 from qcp_adaptive_termination.models.execution.additional_information import (

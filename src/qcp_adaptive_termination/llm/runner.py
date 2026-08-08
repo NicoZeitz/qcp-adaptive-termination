@@ -14,7 +14,7 @@ from agents.exceptions import ModelBehaviorError
 from agents.run_config import DEFAULT_MAX_TURNS
 from pydantic import BaseModel, JsonValue
 
-from qcp_adaptive_termination.models.agent.agent_configuration import AgentConfiguration
+from qcp_adaptive_termination.models.agent import AgentConfiguration
 from qcp_adaptive_termination.llm.providers import get_multi_provider
 from qcp_adaptive_termination.cache import CacheMode, cached
 from qcp_adaptive_termination.llm.prompt import load_prompt

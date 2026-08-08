@@ -8,12 +8,12 @@ from qcp_adaptive_termination.agents.configuration import (
 )
 from qcp_adaptive_termination.db.get_db_engine import get_db_engine
 from qcp_adaptive_termination.tracing.span import own_custom_span
-from qcp_adaptive_termination.models.agent.agent_registry_data import (
+from qcp_adaptive_termination.models.agent import (
     AgentRegistryData,
     ColumnDescription,
     TableDescription,
 )
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.mschema.schema_engine import SchemaEngine
 from qcp_adaptive_termination.mschema.m_schema import MSchema
 from qcp_adaptive_termination.llm.runner import run_llm

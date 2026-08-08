@@ -15,11 +15,11 @@ from qcp_adaptive_termination.agents.configuration import (
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
-from qcp_adaptive_termination.models.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.estimation import (
     AlignedResultList,
 )
-from qcp_adaptive_termination.models.estimation.estimator_mode import EstimatorMode
-from qcp_adaptive_termination.models.estimation.estimator_statistics import (
+from qcp_adaptive_termination.models.estimation import EstimatorMode
+from qcp_adaptive_termination.models.estimation import (
     EstimatorStatistics,
 )
 from qcp_adaptive_termination.models.execution.outcome import (

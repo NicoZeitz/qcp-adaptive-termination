@@ -5,7 +5,7 @@ from agents import AgentsException, MaxTurnsExceeded
 from qcp_adaptive_termination.models.execution.additional_information import (
     AdditionalInformation,
 )
-from qcp_adaptive_termination.models.agent.data_agent import DataAgent
+from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.models.need import exception_to_need
 from qcp_adaptive_termination.models.execution.partial_query_answer import (
     PartialQueryAnswer,

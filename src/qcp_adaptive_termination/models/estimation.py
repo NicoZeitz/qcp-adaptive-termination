@@ -1,4 +1,20 @@
+"""
+Estimation data models.
+
+Defines `EstimatorMode` (enum controlling what statistics are reported),
+`EstimatorStatistics` (per-iteration stats snapshot), `AlignedResultList`
+and `AlignedSchemaMetadata` (schema-aligned result accumulation).
+"""
+
 from enum import Enum
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict
+
+from qcp_adaptive_termination.models.result import ResultType
+from qcp_adaptive_termination.models.serializers import SerializedResultType
+
+AggregationType = Literal["count", "min", "max", "sum", "avg"]
 
 
 class EstimatorMode(Enum):
@@ -68,3 +84,43 @@ class EstimatorMode(Enum):
 
     NONE = "none"
     """No statistics injected — evaluator decides from the result list alone."""
+
+
+class AlignedSchemaMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    aggregation_type: AggregationType
+    keys: list[str]
+    value_column: str | None = None
+    columns: list[str] = []
+    source_agent_column: str
+
+
+class AlignedResultList(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
+    data: SerializedResultType = ResultType()
+    schema_metadata: AlignedSchemaMetadata
+
+
+class EstimatorStatistics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sample_coverage: float | None = None
+
+    new_unique_count: int
+
+    agents_queried: int
+    agents_total: int
+
+    aggregation_type: AggregationType
+
+    observed_count: int
+    estimated_count: float | None = None
+    estimated_count_lower: float | None = None
+    estimated_count_upper: float | None = None
+
+    observed_value: float | None = None
+    estimated_value: float | None = None
+    estimated_value_lower: float | None = None
+    estimated_value_upper: float | None = None

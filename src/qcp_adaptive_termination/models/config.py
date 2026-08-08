@@ -5,7 +5,7 @@ from typing import Generator
 from pydantic import BaseModel, ConfigDict, Field
 
 from qcp_adaptive_termination.cache import CacheMode
-from qcp_adaptive_termination.models.estimation.estimator_mode import EstimatorMode
+from qcp_adaptive_termination.models.estimation import EstimatorMode
 from qcp_adaptive_termination.models.selection_strategy import (
     SelectionType,
 )

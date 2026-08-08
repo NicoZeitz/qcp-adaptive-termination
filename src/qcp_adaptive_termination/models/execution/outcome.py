@@ -1,6 +1,6 @@
 from typing import Literal
 
-from qcp_adaptive_termination.models.estimation.aligned_result_list import (
+from qcp_adaptive_termination.models.estimation import (
     AlignedResultList,
 )
 from qcp_adaptive_termination.models.serializers import (
