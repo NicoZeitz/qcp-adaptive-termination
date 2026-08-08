@@ -46,6 +46,6 @@ def load_input(path: str | Path) -> Any:
     return data, extra
 
 
-def load_stage_input(path: str | Path, stage: int) -> Any:
+def load_stage_input(path: str | Path) -> Any:
     data, extra = load_input(path)
     return data, extra

@@ -1,5 +1,10 @@
 data_path_prefix: "../data/"
 
+log_dir: "../logs/"
+cache_dir: "../cache/"
+throw_on_cache_miss: false
+disable_cache: false
+
 estimator_mode: full
 count_estimator: chao92
 value_estimator: naive

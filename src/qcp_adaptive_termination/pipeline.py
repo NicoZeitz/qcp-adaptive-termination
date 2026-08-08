@@ -4,9 +4,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import cast
 
-from qcp_adaptive_termination.cache import load_cache_file
-from qcp_adaptive_termination.initialization import initialize
-from qcp_adaptive_termination.model.config import Config, config_var, config_context
+from qcp_adaptive_termination.cache import load_cache_file, setup_cache
+from qcp_adaptive_termination.llm.providers import setup_providers
+from qcp_adaptive_termination.model.config import Config, config_context, config_var
 from qcp_adaptive_termination.model.stages.collaborative_query_answering import (
     CollaborativeQueryAnswering,
 )
@@ -30,6 +30,11 @@ from qcp_adaptive_termination.stages.planning import (
     STAGE_NAME as PLANNING_STAGE_NAME,
     draft_query_plan,
 )
+from qcp_adaptive_termination.tracing import (
+    setup_langfuse,
+    setup_logging,
+    setup_tracing,
+)
 
 STAGES = {
     1: DISCOVERY_STAGE_NAME,
@@ -45,42 +50,39 @@ async def run_pipeline(
     config: Config | None = None,
     start_stage: int = 1,
     end_stage: int = 3,
-    log_dir: Path | None = None,
-    cache_dir: Path | None = None,
-    log_name: str | None = None,
-    throw_on_cache_miss: bool = False,
-    disable_cache: bool = False,
 ) -> CollaborativeQueryAnsweringResult | None:
     cfg = config or Config()
-    resolved_log_dir = log_dir or (Path(cfg.log_dir) if cfg.log_dir else None)
-    resolved_cache_dir = cache_dir or (Path(cfg.cache_dir) if cfg.cache_dir else None)
-    resolved_log_name = (
-        log_name or cfg.log_name or datetime.now().strftime("%Y-%m-%d %H-%M-%S")
-    )
+
+    if cfg.log_dir is None:
+        raise ValueError("log_dir must be set in Config")
+    if cfg.cache_dir is None:
+        raise ValueError("cache_dir must be set in Config")
+
+    log_dir = Path(cfg.log_dir)
+    cache_dir = Path(cfg.cache_dir)
+    log_name = cfg.log_name or datetime.now().strftime("%Y-%m-%d %H-%M-%S")
 
     if start_stage > end_stage:
         raise ValueError("start_stage must be <= end_stage")
 
-    if resolved_log_dir is None:
-        raise ValueError("log_dir must be provided via argument or Config")
-    if resolved_cache_dir is None:
-        raise ValueError("cache_dir must be provided via argument or Config")
+    log_filename = f"Stage {start_stage}-{end_stage} - {log_name}"
 
-    log_filename = f"Stage {start_stage}-{end_stage} - {resolved_log_name}"
+    from dotenv import load_dotenv
+    import sys
 
-    initialize(
-        log_filename,
-        resolved_log_dir,
-        resolved_cache_dir,
-        throw_on_cache_miss,
-        disable_cache,
-    )
+    load_dotenv(override=True)
+    setup_logging(log_filename, log_dir)
+    setup_cache(cache_dir, cfg.throw_on_cache_miss, cfg.disable_cache)
+    setup_providers()
+    if not setup_langfuse():
+        sys.exit(1)
+    setup_tracing(log_filename, log_dir)
 
     with config_context(cfg):
         return await _run_stages(
             name=name,
             input_file=input_file,
-            log_dir=resolved_log_dir,
+            log_dir=log_dir,
             log_filename=log_filename,
             start_stage=start_stage,
             end_stage=end_stage,
@@ -91,11 +93,6 @@ async def run_query(
     name: str,
     input_file: Path,
     config: Config | None = None,
-    log_dir: Path | None = None,
-    cache_dir: Path | None = None,
-    log_name: str | None = None,
-    throw_on_cache_miss: bool = False,
-    disable_cache: bool = False,
 ) -> CollaborativeQueryAnsweringResult | None:
     return await run_pipeline(
         name=name,
@@ -103,11 +100,6 @@ async def run_query(
         config=config,
         start_stage=1,
         end_stage=3,
-        log_dir=log_dir,
-        cache_dir=cache_dir,
-        log_name=log_name,
-        throw_on_cache_miss=throw_on_cache_miss,
-        disable_cache=disable_cache,
     )
 
 

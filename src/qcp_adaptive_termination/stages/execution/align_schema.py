@@ -8,11 +8,11 @@ from agents import (
     function_tool,
 )
 
-from qcp_adaptive_termination.agent_configuration import (
+from qcp_adaptive_termination.agents.configuration import (
     AgentRole,
     get_agent_configuration,
 )
-import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.agents.registry as agent_registry
 from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.model.agent.data_agent import DataAgent
 from qcp_adaptive_termination.model.estimation.aligned_result_list import (
@@ -20,7 +20,7 @@ from qcp_adaptive_termination.model.estimation.aligned_result_list import (
     AlignedResultList,
     AlignedSchemaMetadata,
 )
-from qcp_adaptive_termination.run_agent import run_agent
+from qcp_adaptive_termination.agents.runner import run_agent
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 from qcp_adaptive_termination.stages.execution.validation import validate_schema_output
 

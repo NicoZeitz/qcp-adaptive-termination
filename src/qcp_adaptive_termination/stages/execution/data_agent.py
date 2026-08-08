@@ -5,11 +5,11 @@ import pandas as pd
 from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResult
 from pydantic import JsonValue
 
-from qcp_adaptive_termination.agent_configuration import (
+from qcp_adaptive_termination.agents.configuration import (
     AgentRole,
     get_agent_configuration,
 )
-import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.agents.registry as agent_registry
 from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
@@ -31,7 +31,7 @@ from qcp_adaptive_termination.preview import (
     preview_additional_information,
     result_to_json_preview,
 )
-from qcp_adaptive_termination.run_agent import run_agent
+from qcp_adaptive_termination.agents.runner import run_agent
 from qcp_adaptive_termination.serialize_value import serialize_value
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 from qcp_adaptive_termination.stages.execution.validation import validate_agent_output

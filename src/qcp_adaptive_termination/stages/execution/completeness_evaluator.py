@@ -8,7 +8,7 @@ from agents import (
 )
 from pydantic import BaseModel, ConfigDict
 
-from qcp_adaptive_termination.agent_configuration import (
+from qcp_adaptive_termination.agents.configuration import (
     AgentRole,
     get_agent_configuration,
 )
@@ -31,7 +31,7 @@ from qcp_adaptive_termination.model.config import config_var
 from qcp_adaptive_termination.model.result import try_parse_value_to_result_type
 from qcp_adaptive_termination.model.serializers import SerializedOptionalResultType
 from qcp_adaptive_termination.preview import preview_dataframe, result_to_json_preview
-from qcp_adaptive_termination.run_agent import run_agent
+from qcp_adaptive_termination.agents.runner import run_agent
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 

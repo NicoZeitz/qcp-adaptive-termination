@@ -3,7 +3,7 @@ from typing import cast, overload
 from agents import OpenAIProvider
 from openai import AsyncOpenAI
 
-from qcp_adaptive_termination.initialization import get_multi_provider
+from qcp_adaptive_termination.llm.providers import get_multi_provider
 from qcp_adaptive_termination.cache import cached
 from qcp_adaptive_termination.tracing.span import own_custom_span
 from qcp_adaptive_termination.model.config import config_var

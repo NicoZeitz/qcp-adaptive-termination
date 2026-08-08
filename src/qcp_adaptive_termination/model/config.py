@@ -42,6 +42,8 @@ class Config(BaseModel):
     log_dir: str | None = None
     cache_dir: str | None = None
     log_name: str | None = None
+    throw_on_cache_miss: bool = False
+    disable_cache: bool = False
 
 
 config_var: ContextVar[Config] = ContextVar("config", default=Config())

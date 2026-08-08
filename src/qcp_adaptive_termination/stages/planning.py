@@ -14,14 +14,14 @@ from qcp_adaptive_termination.model.query_plan.query_plan_step import (
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
-from qcp_adaptive_termination.agent_configuration import (
+from qcp_adaptive_termination.agents.configuration import (
     AgentRole,
     get_agent_configuration,
 )
-import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.agents.registry as agent_registry
 from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
 from qcp_adaptive_termination.cache import cached
-from qcp_adaptive_termination.run_agent import run_llm
+from qcp_adaptive_termination.agents.runner import run_llm
 from qcp_adaptive_termination.tracing.span import append_to_span_output, own_custom_span
 
 STAGE_NAME = "Stage 2: Planning"

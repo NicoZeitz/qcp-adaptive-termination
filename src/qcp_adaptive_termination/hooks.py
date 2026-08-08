@@ -1,7 +1,8 @@
+from collections import defaultdict
 from enum import StrEnum
 from typing import Any, Callable
 
-_handlers: dict[str, list[Callable[..., Any]]] = {}
+_handlers: defaultdict[str, list[Callable[..., Any]]] = defaultdict(list)
 
 
 class HookEvent(StrEnum):
@@ -17,11 +18,11 @@ def on(event: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
 
 
 def register(event: str, handler: Callable[..., Any]) -> None:
-    _handlers.setdefault(event, []).append(handler)
+    _handlers[event].append(handler)
 
 
 def emit(event: str, **kwargs: Any) -> None:
-    for handler in _handlers.get(event, []):
+    for handler in _handlers[event]:
         handler(**kwargs)
 
 

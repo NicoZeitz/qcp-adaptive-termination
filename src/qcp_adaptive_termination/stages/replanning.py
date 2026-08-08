@@ -11,13 +11,13 @@ from qcp_adaptive_termination.model.execution.query_plan_step_execution_result i
     FailedExecution,
 )
 from qcp_adaptive_termination.model.result import ResultType
-from qcp_adaptive_termination.agent_configuration import (
+from qcp_adaptive_termination.agents.configuration import (
     AgentRole,
     get_agent_configuration,
 )
-import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.agents.registry as agent_registry
 from qcp_adaptive_termination.model.agent.agent_registry_type import AgentRegistryType
-from qcp_adaptive_termination.run_agent import run_llm
+from qcp_adaptive_termination.agents.runner import run_llm
 from qcp_adaptive_termination.stages.planning import (
     create_draft_query_plan_model,
     map_query_plan_model_to_query_plan,

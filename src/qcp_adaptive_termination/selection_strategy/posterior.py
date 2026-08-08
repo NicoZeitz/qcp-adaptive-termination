@@ -5,7 +5,7 @@ import numpy as np
 from datasketches import compact_theta_sketch, theta_a_not_b, update_theta_sketch  # type: ignore
 from sklearn.cluster import DBSCAN
 
-import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.agents.registry as agent_registry
 from qcp_adaptive_termination.selection_strategy.sketches import (
     DEFAULT_LG_K,
     fetch_column_values,

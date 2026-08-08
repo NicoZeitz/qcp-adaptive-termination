@@ -47,11 +47,12 @@ from qcp_adaptive_termination.stages.execution.estimator_utils import (
     compute_estimator_statistics,
 )
 from qcp_adaptive_termination import hooks
+from qcp_adaptive_termination.hooks import HookEvent
 
 MULTI_AGENT_ITERATION_RECORDS: dict[str, list[MultiAgentIterationRecord]] = {}
 
 
-@hooks.on(hooks.HookEvent.ITERATION_RECORDS)
+@hooks.on(HookEvent.ITERATION_RECORDS)
 def _store_iteration_records(
     execution_id: str, records: list[MultiAgentIterationRecord]
 ) -> None:
@@ -326,7 +327,7 @@ async def answer_step_multiple_agents(
         }
     )
     hooks.emit(
-        hooks.HookEvent.ITERATION_RECORDS,
+        HookEvent.ITERATION_RECORDS,
         execution_id=f"{query_plan_step.id} {cast(Span[CustomSpanData], span_context_var.get()).span_id}",
         records=iteration_records,
     )

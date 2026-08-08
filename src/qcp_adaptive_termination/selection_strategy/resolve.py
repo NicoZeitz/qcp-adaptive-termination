@@ -1,5 +1,5 @@
 from qcp_adaptive_termination.model.agent.data_agent import DataAgent
-import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.agents.registry as agent_registry
 from qcp_adaptive_termination.embedding.embeddings import create_embedding
 from qcp_adaptive_termination.embedding.vector_search import (
     build_index,

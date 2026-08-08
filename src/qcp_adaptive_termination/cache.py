@@ -185,6 +185,22 @@ def load_cache_file(
         raise FileNotFoundError(f"Cache file not found: {cache_file}") from exc
 
 
+def setup_cache(
+    cache_dir: Path,
+    throw_on_cache_miss: bool = False,
+    disable_cache: bool = False,
+) -> None:
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    Cache.instance().set_cache_folder(cache_dir)
+    if disable_cache:
+        Cache.instance().set_mode("DISABLED")
+        logging.info("Cache completely disabled")
+    elif throw_on_cache_miss:
+        Cache.instance().set_mode("READ_AND_WRITE_THROW_ON_MISS")
+    else:
+        Cache.instance().set_mode("READ_AND_WRITE")
+
+
 Param = ParamSpec("Param")
 RetType = TypeVar("RetType")
 

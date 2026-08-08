@@ -20,8 +20,6 @@ def cli() -> None:
         type=str,
         default="../data/imdb/queries/Who played Rocket in the movie called 'Guardians of the Galaxy'?.json",
     )
-    parser.add_argument("--log-dir", type=str, default=None)
-    parser.add_argument("--cache-dir", type=str, default=None)
     parser.add_argument(
         "--start-stage",
         type=int,
@@ -34,23 +32,20 @@ def cli() -> None:
         choices=[1, 2, 3, 99],
         default=3,
     )
-    parser.add_argument("--throw-on-cache-miss", action="store_true")
-    parser.add_argument("--disable-cache", action="store_true")
     parser.add_argument(
         "--config",
         type=str,
         default=None,
-        help="Execution config as a YAML file path or inline YAML string",
+        help="Config as a YAML file path or inline YAML string",
     )
     args = parser.parse_args()
 
     config: Config | None = None
     if args.config:
         config_path = Path(args.config)
-        if config_path.exists():
-            raw = yaml.safe_load(config_path.read_text())
-        else:
-            raw = yaml.safe_load(args.config)
+        raw = yaml.safe_load(
+            config_path.read_text() if config_path.exists() else args.config
+        )
         config = Config.model_validate(raw)
 
     result = asyncio.run(
@@ -60,10 +55,6 @@ def cli() -> None:
             config=config,
             start_stage=args.start_stage,
             end_stage=args.end_stage,
-            log_dir=Path(args.log_dir) if args.log_dir else None,
-            cache_dir=Path(args.cache_dir) if args.cache_dir else None,
-            throw_on_cache_miss=args.throw_on_cache_miss,
-            disable_cache=args.disable_cache,
         )
     )
 

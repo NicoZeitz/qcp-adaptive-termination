@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, create_model, Field
 
-from qcp_adaptive_termination.agent_configuration import (
+from qcp_adaptive_termination.agents.configuration import (
     AgentRole,
     get_agent_configuration,
 )
@@ -16,7 +16,7 @@ from qcp_adaptive_termination.model.agent.agent_registry_data import (
 from qcp_adaptive_termination.model.agent.data_agent import DataAgent
 from qcp_adaptive_termination.mschema.schema_engine import SchemaEngine
 from qcp_adaptive_termination.mschema.m_schema import MSchema
-from qcp_adaptive_termination.run_agent import run_llm
+from qcp_adaptive_termination.agents.runner import run_llm
 
 
 def missing_comments(
