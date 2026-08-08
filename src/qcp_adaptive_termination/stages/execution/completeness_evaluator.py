@@ -116,7 +116,7 @@ def build_previous_statistics_summary(
             estimator_statistic, include_aggregation_type=False
         )
         lines.append(summary)
-    return "\n\n".join(lines)
+    return "\n\n".join(line for line in lines if line is not None)
 
 
 async def run_completeness_evaluator(

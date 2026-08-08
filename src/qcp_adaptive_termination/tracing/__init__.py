@@ -57,7 +57,7 @@ def setup_tracing(log_name: str, log_dir: Path) -> None:
 
     tracing_log_file = log_dir / f"{log_name}_traces.jsonl"
     nest_asyncio.apply()
-    trace.get_tracer_provider().add_span_processor(  # type: ignore
+    trace.get_tracer_provider().add_span_processor(  # ty: ignore
         BatchSpanProcessor(FileSpanExporter(tracing_log_file))
     )
     OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)

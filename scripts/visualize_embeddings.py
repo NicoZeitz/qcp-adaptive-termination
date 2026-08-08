@@ -10,7 +10,6 @@ import asyncio
 import json
 import sys
 from pathlib import Path
-from typing import cast
 
 import matplotlib
 import matplotlib.artist
@@ -23,7 +22,8 @@ from sklearn.cluster import DBSCAN
 
 import umap
 
-from qcp_adaptive_termination.initialization import initialize
+from qcp_adaptive_termination.cache import setup_cache
+from qcp_adaptive_termination.tracing import setup_logging
 import qcp_adaptive_termination.agent_registry as agent_registry
 from qcp_adaptive_termination.model.agent.data_agent import DataAgent
 from qcp_adaptive_termination.model.config import Config, config_var
@@ -67,12 +67,10 @@ def db_label(agent: DataAgent) -> str:
 
 
 async def run() -> None:
-    initialize(
-        log_name="visualize_embeddings",
-        log_dir=Path("../logs"),
-        cache_dir=Path("../.cache"),
-        disable_cache=False,
-    )
+    log_dir = Path("../logs")
+    cache_dir = Path("../.cache")
+    setup_logging("visualize_embeddings", log_dir)
+    setup_cache(cache_dir, disable_cache=False)
 
     with open(INPUT_FILE) as f:
         data = json.load(f)
@@ -116,7 +114,7 @@ async def run() -> None:
 
     # UMAP reduction
     reducer = umap.UMAP(n_components=2, random_state=42, n_neighbors=15, min_dist=0.1)
-    coords: np.ndarray = cast(np.ndarray, reducer.fit_transform(X))
+    coords: np.ndarray = reducer.fit_transform(X)
 
     # --- Plot ---
     fig, ax = plt.subplots(figsize=(14, 10))

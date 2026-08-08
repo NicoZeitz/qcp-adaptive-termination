@@ -156,7 +156,6 @@ async def _run_stages(
         if start_stage == 1:
             data = cast(CollaborativeQueryAnswering, data)
             data = await filter_relevant_agents(data.query, data.data_agents)
-            data = cast(FilteredRelevantAgents, data)
             start_stage += 1
             if end_stage < start_stage:
                 return None
@@ -166,7 +165,6 @@ async def _run_stages(
             data = await draft_query_plan(
                 data.query, data.data_agents, data.relevant_data_agents
             )
-            data = cast(DraftedQueryPlan, data)
             start_stage += 1
             if end_stage < start_stage:
                 return None
@@ -178,7 +176,6 @@ async def _run_stages(
                 data.relevant_data_agents,
                 data.data_agents,
             )
-            result = cast(CollaborativeQueryAnsweringResult, result)
 
             logging.info(result_to_json_preview(result.result))
             output_path = log_dir / f"{log_filename} - final_result.json"

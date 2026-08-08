@@ -6,8 +6,8 @@ from agents import (
     ModelSettings,
     RunConfig,
     Runner,
-    TResponseInputItem,
     Tool,
+    TResponseInputItem,
     ToolsToFinalOutputFunction,
 )
 from agents.exceptions import ModelBehaviorError
@@ -27,7 +27,7 @@ async def run_agent[TResult](
     prompt_parameters: Mapping[str, str | int | float | bool | None],
     *,
     context: JsonValue = None,
-    output_type: Type[TResult] | None = str,
+    output_type: Type[TResult] | None = str,  # ty: ignore[invalid-parameter-default]
     tools: list[FunctionTool] | None = None,
     reset_tool_choice: bool = True,
     tool_use_behavior: (
@@ -46,7 +46,8 @@ async def run_agent[TResult](
     tool_use = (
         tool_use_behavior
         if isinstance(tool_use_behavior, str)
-        else "function" + tool_use_behavior.__name__
+        else "function"
+        + getattr(tool_use_behavior, "__name__", repr(tool_use_behavior))
     )
 
     output: JsonValue = None
@@ -144,7 +145,7 @@ async def run_llm[TResult](
     prompt_name: str,
     prompt_parameters: Mapping[str, str | int | float | bool | None],
     *,
-    output_type: Type[TResult] | None = str,
+    output_type: Type[TResult] | None = str,  # ty: ignore[invalid-parameter-default]
     context: JsonValue = None,
     cache_mode: CacheMode | None = None,
 ) -> TResult:

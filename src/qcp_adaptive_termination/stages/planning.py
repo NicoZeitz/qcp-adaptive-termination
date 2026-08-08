@@ -29,8 +29,8 @@ STAGE_NAME = "Stage 2: Planning"
 
 def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
     data_agent_names = [agent.name for agent in data_agents]
-    AgentName = Literal["Coordinator", *data_agent_names]
-    DataAgentName = Literal[*data_agent_names]
+    AgentName = Literal["Coordinator", *data_agent_names]  # ty: ignore[invalid-type-form]
+    DataAgentName = Literal[*data_agent_names]  # ty: ignore[invalid-type-form]
     StrictModelConfig = ConfigDict(extra="forbid")
 
     QueryDependency = create_model(
@@ -44,7 +44,7 @@ def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseMode
         id=(str, FieldDefinitions.step_id),
         query=(str, FieldDefinitions.step_query),
         to_agent=(AgentName, FieldDefinitions.step_to_agents),
-        dependencies=(list[QueryDependency], FieldDefinitions.step_dependencies),
+        dependencies=(list[QueryDependency], FieldDefinitions.step_dependencies),  # ty: ignore[invalid-type-form]
         __config__=StrictModelConfig,
     )
 
@@ -60,14 +60,14 @@ def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseMode
             ),
         ),
         merge_task=(str, FieldDefinitions.step_merge_task),
-        dependencies=(list[QueryDependency], FieldDefinitions.step_dependencies),
+        dependencies=(list[QueryDependency], FieldDefinitions.step_dependencies),  # ty: ignore[invalid-type-form]
         __config__=StrictModelConfig,
     )
 
     QueryPlan = create_model(
         "QueryPlan",
         steps=(
-            list[SingleAgentQueryPlanStepModel | MultiAgentQueryPlanStepModel],
+            list[SingleAgentQueryPlanStepModel | MultiAgentQueryPlanStepModel],  # ty: ignore[invalid-type-form]
             FieldDefinitions.plan_steps,
         ),
         __config__=StrictModelConfig,

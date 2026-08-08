@@ -7,7 +7,7 @@ import json
 import logging
 from pathlib import Path
 import uuid
-from typing import Any, Awaitable, Callable, Literal, ParamSpec, Sequence, TypeVar
+from typing import Any, Awaitable, Callable, cast, Literal, ParamSpec, Sequence, TypeVar
 
 from pydantic import BaseModel, JsonValue
 
@@ -244,16 +244,18 @@ def cached(
                     if arg in arguments:
                         del arguments[arg]
 
-            name_prefix = (
-                name_prefix(*args, **kwargs) if callable(name_prefix) else name_prefix
+            resolved_prefix: str = (
+                cast(Callable[..., str], name_prefix)(*args, **kwargs)
+                if callable(name_prefix)
+                else name_prefix
             )
 
             with Cache.instance().cache_context(mode) as cache:
                 key: JsonValue = _serialize_value(arguments)
-                result, found = cache.get(key=key, name_prefix=name_prefix)
+                result, found = cache.get(key=key, name_prefix=resolved_prefix)
 
                 if found:
-                    name = name_prefix or func.__name__
+                    name = resolved_prefix or getattr(func, "__name__", "")
 
                     if "Schema Description" not in name:
                         with own_custom_span(
@@ -268,7 +270,7 @@ def cached(
 
             result = await func(*args, **kwargs)
             cache.store(
-                key=key, value=_serialize_value(result), name_prefix=name_prefix
+                key=key, value=_serialize_value(result), name_prefix=resolved_prefix
             )
             return result
 

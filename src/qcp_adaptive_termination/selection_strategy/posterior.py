@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import cast
 
 import numpy as np
-from datasketches import compact_theta_sketch, theta_a_not_b, update_theta_sketch  # type: ignore
+from datasketches import compact_theta_sketch, theta_a_not_b, update_theta_sketch  # ty: ignore[unresolved-import]
 from sklearn.cluster import DBSCAN
 
 import qcp_adaptive_termination.agents.registry as agent_registry

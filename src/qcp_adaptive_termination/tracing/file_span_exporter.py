@@ -35,7 +35,7 @@ class FileSpanExporter(SpanExporter):
                         "description": span.status.description,
                     },
                 }
-                self._file.write(  # type: ignore
+                self._file.write(  # ty: ignore
                     json.dumps(span_dict, default=lambda x: dict(x)) + "\n"
                 )
         return SpanExportResult.SUCCESS

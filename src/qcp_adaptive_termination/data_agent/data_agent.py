@@ -57,7 +57,7 @@ def create_database_description_model(
                 )
         if not fields:
             return None
-        return create_model(f"{table_name}ColumnDescriptions", **fields)
+        return create_model(f"{table_name}ColumnDescriptions", **fields)  # ty: ignore[no-matching-overload]
 
     schema_dict: dict[str, Any] = {}
     for table_name, table_info in schema_engine.mschema.tables.items():
@@ -75,9 +75,9 @@ def create_database_description_model(
             )
             for table_name in missing_tables
         }
-        TableDescriptionsModel = create_model(
+        TableDescriptionsModel = create_model(  # ty: ignore[no-matching-overload]
             "TableDescriptionsModel",
-            **table_desc_fields,  # type: ignore[call-overload]
+            **table_desc_fields,
         )
         schema_dict["table_descriptions"] = (TableDescriptionsModel, Field(...))
 
