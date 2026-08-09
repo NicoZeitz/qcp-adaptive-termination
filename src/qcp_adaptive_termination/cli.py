@@ -18,9 +18,10 @@ if TYPE_CHECKING:
         FilteredRelevantAgents,
     )
 
+
 def _register_output_hooks() -> None:
     def _write_output_file(filename: str, data: dict) -> None:
-        if (output_dir := context.get_output_dir()):
+        if output_dir := context.get_output_dir():
             path = output_dir / filename
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, sort_keys=False, allow_unicode=True, indent=4)
