@@ -19,7 +19,7 @@ from qcp_adaptive_termination.code_execution.builtins import (
     SAFE_BUILTINS,
     UNSAFE_BUILTINS,
 )
-from qcp_adaptive_termination.serialize_value import serialize_value
+from qcp_adaptive_termination.observability import tracing
 
 LLM_PREVIEW_CHAR_LIMIT = 2000
 LLM_CODE_EXECUTION_TIMEOUT = 60
@@ -169,7 +169,7 @@ class CodeExecutionEnvironment:
                 "code": code_execution.code,
                 "stdout": code_execution.stdout,
                 "stderr": code_execution.stderr,
-                "exception": serialize_value(code_execution.exception),
+                "exception": tracing.serialize_data_for_tracing(code_execution.exception),
                 "locals": [
                     f"{k}: {type(v).__name__}" for k, v in code_execution.locals.items() if not k.startswith("_")
                 ],

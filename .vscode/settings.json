@@ -55,6 +55,7 @@
         "sqlalchemy",
         "testpaths",
         "vldbsigmod",
+        "xhigh",
         "yearfirst"
     ],
     "editor.codeActionsOnSave": {

@@ -4,15 +4,13 @@ import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
 from qcp_adaptive_termination.embedding import VectorIndex
 from qcp_adaptive_termination.models import (
-    AgentSelection,
     AlignedResultList,
     Config,
     DataAgent,
-    SelectionType,
+    SelectionStrategyType,
 )
-from qcp_adaptive_termination.selection_strategy import (
-    SequentialStrategy,
-)
+from qcp_adaptive_termination.selection_strategy import SequentialStrategy
+from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSelection
 from qcp_adaptive_termination.selection_strategy.count_strategy import (
     CountStrategy,
     DistinctCountStrategy,
@@ -31,26 +29,26 @@ from qcp_adaptive_termination.selection_strategy.sketch_strategy import (
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
 
 
-def _build_strategy(selection_type: SelectionType) -> SelectionStrategy:
-    if selection_type == SelectionType.SEQUENTIAL:
+def _build_strategy(selection_type: SelectionStrategyType) -> SelectionStrategy:
+    if selection_type == SelectionStrategyType.SEQUENTIAL:
         return SequentialStrategy()
-    elif selection_type == SelectionType.EMBEDDING:
+    elif selection_type == SelectionStrategyType.EMBEDDING:
         return EmbeddingStrategy()
-    elif selection_type == SelectionType.COUNT:
+    elif selection_type == SelectionStrategyType.COUNT:
         return CountStrategy()
-    elif selection_type == SelectionType.DISTINCT_COUNT:
+    elif selection_type == SelectionStrategyType.DISTINCT_COUNT:
         return DistinctCountStrategy()
-    elif selection_type == SelectionType.HLL_SKETCH:
+    elif selection_type == SelectionStrategyType.HLL_SKETCH:
         return HllSketchStrategy()
-    elif selection_type == SelectionType.HLL_SKETCH_UCB:
+    elif selection_type == SelectionStrategyType.HLL_SKETCH_UCB:
         return HllSketchStrategy(use_ucb=True)
-    elif selection_type == SelectionType.THETA_SKETCH:
+    elif selection_type == SelectionStrategyType.THETA_SKETCH:
         return ThetaSketchStrategy()
-    elif selection_type == SelectionType.THETA_SKETCH_UCB:
+    elif selection_type == SelectionStrategyType.THETA_SKETCH_UCB:
         return ThetaSketchStrategy(use_ucb=True)
-    elif selection_type == SelectionType.MIN_HASH:
+    elif selection_type == SelectionStrategyType.MIN_HASH:
         return MinHashStrategy()
-    elif selection_type == SelectionType.POSTERIOR:
+    elif selection_type == SelectionStrategyType.POSTERIOR:
         return PosteriorStrategy()
     else:
         raise ValueError(f"Unsupported SelectionType: {selection_type}")

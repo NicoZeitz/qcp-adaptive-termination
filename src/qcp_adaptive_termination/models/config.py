@@ -8,8 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from qcp_adaptive_termination.cache import CacheMode
 from qcp_adaptive_termination.estimator import CountEstimator, Estimator, ValueEstimator
 from qcp_adaptive_termination.models.estimation import EstimatorMode
-from qcp_adaptive_termination.models.selection_strategy import (
-    SelectionType,
+from qcp_adaptive_termination.models.selection_strategy_type import (
+    SelectionStrategyType,
 )
 
 _config_var: ContextVar["Config | None"] = ContextVar("config", default=None)
@@ -30,7 +30,7 @@ class Config(BaseModel):
 
     continue_after_final_result: bool = False
 
-    selection_type: SelectionType = SelectionType.SEQUENTIAL
+    selection_type: SelectionStrategyType = SelectionStrategyType.SEQUENTIAL
     align_schema_agent_limit: int = 1000
 
     estimator_mode: EstimatorMode = EstimatorMode.FULL

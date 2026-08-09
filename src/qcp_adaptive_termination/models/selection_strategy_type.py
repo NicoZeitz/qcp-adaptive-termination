@@ -1,17 +1,14 @@
 """
 Agent selection strategy types.
 
-Defines `SelectionType` (ranking algorithm enum) and `AgentSelection`
+Defines `SelectionStrategyType` (ranking algorithm enum) and `AgentSelection`
 (agent + score pair used during multi-agent iteration).
 """
 
-from dataclasses import dataclass
 from enum import StrEnum
 
-from qcp_adaptive_termination.models.agent import DataAgent
 
-
-class SelectionType(StrEnum):
+class SelectionStrategyType(StrEnum):
     SEQUENTIAL = "sequential"  # Needs: None
 
     # Embedding-based
@@ -32,9 +29,3 @@ class SelectionType(StrEnum):
 
     # Posterior (embedding prior + sketch likelihood)
     POSTERIOR = "posterior"  # Needs: Table, Column
-
-
-@dataclass(slots=True)
-class AgentSelection:
-    agent: DataAgent
-    score: float | None = None

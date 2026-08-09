@@ -36,9 +36,8 @@ from qcp_adaptive_termination.models.result_type import (
     SerializedOptionalResultType,
     SerializedResultType,
 )
-from qcp_adaptive_termination.models.selection_strategy import (
-    AgentSelection,
-    SelectionType,
+from qcp_adaptive_termination.models.selection_strategy_type import (
+    SelectionStrategyType,
 )
 
 __all__ = [
@@ -68,6 +67,5 @@ __all__ = [
     "SerializedResultType",
     "SerializedOptionalResultType",
     # selection_strategy
-    "AgentSelection",
-    "SelectionType",
+    "SelectionStrategyType",
 ]

@@ -11,7 +11,8 @@ from datasketches import (
 )
 
 import qcp_adaptive_termination.database as database
-from qcp_adaptive_termination.models import AgentSelection, DataAgent
+from qcp_adaptive_termination.models import DataAgent
+from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSelection
 from qcp_adaptive_termination.selection_strategy.strategy import (
     SelectionStrategy,
 )

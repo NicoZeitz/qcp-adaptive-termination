@@ -2,29 +2,44 @@ import logging
 import math
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any
+from types import ModuleType
+from typing import Any, overload
 
 from agents import CustomSpanData, Span, custom_span
 from langfuse import get_client
-from pydantic import BaseModel
+from pydantic import BaseModel, JsonValue
 
 _span_by_id: dict[str | None, int] = {}
 _span_context_var = ContextVar[Span[CustomSpanData] | None]("current_span", default=None)
 
 
-def serialize_data_for_tracing(value: Any) -> Any:
-    if isinstance(value, BaseModel):
-        return serialize_data_for_tracing(value.model_dump(context="preview"))
-    elif isinstance(value, list):
-        return [serialize_data_for_tracing(item) for item in value]
-    elif isinstance(value, dict):
-        return {key: serialize_data_for_tracing(val) for key, val in value.items()}
-    elif isinstance(value, float) and not math.isfinite(value):
+@overload
+def serialize_data_for_tracing(value: dict[str, Any]) -> dict[str, JsonValue]: ...
+@overload
+def serialize_data_for_tracing(value: Any) -> JsonValue: ...
+def serialize_data_for_tracing(value):
+    if isinstance(value, float) and not math.isfinite(value):
         if math.isnan(value):
             return "NaN"
         return "Infinity" if value > 0 else "-Infinity"
-    else:
+    elif value is None or isinstance(value, (bool, int, float, str)):
         return value
+    if isinstance(value, BaseModel):
+        return serialize_data_for_tracing(value.model_dump(context="preview"))
+    elif isinstance(value, (list, set, tuple, frozenset)):
+        return [serialize_data_for_tracing(item) for item in value]
+    elif isinstance(value, dict):
+        return {key: serialize_data_for_tracing(val) for key, val in value.items()}
+    elif isinstance(value, ModuleType):
+        return f"<module '{value.__name__}'>"
+    if callable(value):
+        return f"<{type(value).__name__} '{getattr(value, '__name__', repr(value))}'>"
+
+    # Try to convert to string for other types
+    try:
+        return repr(value)
+    except Exception:
+        return f"<{type(value).__name__}>"
 
 
 def append_to_span_input(data: dict[str, Any], span: Span[CustomSpanData] | None = None):

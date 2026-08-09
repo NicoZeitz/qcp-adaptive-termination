@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import TypeVar, cast
 
-from qcp_adaptive_termination.models import AgentSelection, DataAgent
+from qcp_adaptive_termination.models import DataAgent
+from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSelection
 
 PrecomputedState = TypeVar("PrecomputedState")
 RunningState = TypeVar("RunningState")
