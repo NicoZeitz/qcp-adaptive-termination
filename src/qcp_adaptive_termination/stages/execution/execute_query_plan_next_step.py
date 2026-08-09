@@ -5,7 +5,7 @@ from agents import AgentsException, MaxTurnsExceeded
 from qcp_adaptive_termination.models import (
     DataAgent,
     ResultType,
-    exception_to_need,
+    from_exception,
 )
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
@@ -85,7 +85,7 @@ async def execute_query_plan_next_step(
         )
     except (MaxTurnsExceeded, AgentsException) as e:
         result = PartialQueryAnswer()
-        result.add_needs({exception_to_need(e)})
+        result.add_needs({from_exception(e)})
         return FailedExecution(
             step=step_to_execute,
             needs=result.needs,

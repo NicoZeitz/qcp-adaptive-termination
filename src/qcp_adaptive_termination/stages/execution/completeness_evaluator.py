@@ -20,7 +20,7 @@ from qcp_adaptive_termination.models import (
     EstimatorMode,
     EstimatorStatistics,
     SerializedOptionalResultType,
-    try_parse_value_to_result_type,
+    try_parse_result_value,
 )
 from qcp_adaptive_termination.models.execution import (
     EvaluatorDecision,
@@ -119,7 +119,7 @@ async def run_completeness_evaluator(
 
     def final_result(result: Any):
         evaluator_result.decision = "final_result"
-        evaluator_result.result = try_parse_value_to_result_type(result)
+        evaluator_result.result = try_parse_result_value(result)
 
     def query_more_agents():
         evaluator_result.decision = "query_more_agents"

@@ -16,8 +16,8 @@ from qcp_adaptive_termination.models import (
     AgentRole,
     AlignedSchemaMetadata,
     DataAgent,
-    try_parse_value_to_need_type,
-    try_parse_value_to_result_type,
+    try_parse_result_value,
+    try_parse_value,
 )
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
@@ -84,10 +84,10 @@ async def answer_query_data_agent(
                 sql_queries.append(sql_query)
 
         def raise_needs(new_needs: Any):
-            partial_answer.add_needs(try_parse_value_to_need_type(new_needs))
+            partial_answer.add_needs(try_parse_value(new_needs))
 
         def final_answer(new_answer: Any):
-            answer_df = try_parse_value_to_result_type(new_answer)
+            answer_df = try_parse_result_value(new_answer)
             if schema_metadata is not None:
                 validate_agent_output(answer_df, schema_metadata)
             partial_answer.set_answer(answer_df)

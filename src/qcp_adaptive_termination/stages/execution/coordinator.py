@@ -13,8 +13,8 @@ from qcp_adaptive_termination.code_execution.code_execution_environment import (
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
     AgentRole,
-    try_parse_value_to_need_type,
-    try_parse_value_to_result_type,
+    try_parse_result_value,
+    try_parse_value,
 )
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
@@ -38,10 +38,10 @@ async def answer_step_coordinator(
         partial_answer = PartialQueryAnswer()
 
         def raise_needs(new_needs: Any):
-            partial_answer.add_needs(try_parse_value_to_need_type(new_needs))
+            partial_answer.add_needs(try_parse_value(new_needs))
 
         def final_answer(new_answer: Any):
-            partial_answer.set_answer(try_parse_value_to_result_type(new_answer))
+            partial_answer.set_answer(try_parse_result_value(new_answer))
 
         code_environment = CodeExecutionEnvironment(
             variables={

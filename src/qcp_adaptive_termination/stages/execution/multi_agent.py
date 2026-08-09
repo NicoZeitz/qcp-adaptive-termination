@@ -15,7 +15,9 @@ from qcp_adaptive_termination.models import (
     Config,
     DataAgent,
     EstimatorStatistics,
+    result_type,
 )
+from qcp_adaptive_termination.models.result_type import SerializedResultType
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
     EvaluatorDecision,
@@ -25,7 +27,6 @@ from qcp_adaptive_termination.models.execution import (
     RaiseNeedOutcome,
 )
 from qcp_adaptive_termination.models.query_plan import MultiAgentQueryPlanStep
-from qcp_adaptive_termination.models.serializers import SerializedResultType
 from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.selection_strategy.agent_selector import AgentSelector
 from qcp_adaptive_termination.stages.execution.align_schema import align_schema
