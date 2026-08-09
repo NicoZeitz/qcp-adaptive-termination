@@ -20,16 +20,16 @@ from qcp_adaptive_termination.observability import tracing
 def _get_embedding_client_and_model() -> tuple[AsyncOpenAI, str]:
     embedding_model = Config.get().embedding_model
     multi_provider = model_provider.get_multi_provider()
-    prefix, stripped = cast(tuple[str, str], multi_provider._get_prefix_and_model_name(embedding_model))
+    prefix, stripped = cast(tuple[str, str], multi_provider._get_prefix_and_model_name(embedding_model))  # type: ignore[reportPrivateUsage]
     provider, model_name = cast(
         tuple[OpenAIProvider, str],
-        multi_provider._resolve_prefixed_model(
+        multi_provider._resolve_prefixed_model(  # type: ignore[reportPrivateUsage]
             original_model_name=embedding_model,
             prefix=prefix,
             stripped_model_name=stripped,
         ),
     )
-    return provider._get_client(), model_name
+    return provider._get_client(), model_name  # type: ignore[reportPrivateUsage]
 
 
 @overload

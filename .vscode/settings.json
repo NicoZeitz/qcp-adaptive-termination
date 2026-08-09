@@ -65,9 +65,9 @@
     "python.testing.pytestArgs": [
         "test"
     ],
-    "python.analysis.includeAliasesFromUserFiles": true,
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
+    "python.analysis.includeAliasesFromUserFiles": true,
     "python.languageServer": "Pylance",
     "ty.disableLanguageServices": true,
     "[rq]": {

@@ -16,8 +16,8 @@ from agents import FunctionTool, RunContextWrapper, function_tool
 from pydantic import JsonValue
 
 from qcp_adaptive_termination.code_execution.builtins import (
-    _SAFE_BUILTINS,
-    _UNSAFE_BUILTINS,
+    SAFE_BUILTINS,
+    UNSAFE_BUILTINS,
 )
 from qcp_adaptive_termination.serialize_value import serialize_value
 
@@ -99,8 +99,8 @@ class CodeExecutionEnvironment:
         self.code_executions: list[CodeExecutionResult] = []
 
         self.initial_globals: dict[str, Any] = {
-            **_SAFE_BUILTINS.copy(),
-            **_UNSAFE_BUILTINS.copy(),
+            **SAFE_BUILTINS.copy(),
+            **UNSAFE_BUILTINS.copy(),
             **(self.tools.copy()),
             "__name__": "__main__",
         }

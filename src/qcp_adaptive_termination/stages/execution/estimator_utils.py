@@ -15,7 +15,7 @@ def dataframe_to_data_items(
     items = []
     for _, row in dataframe.iterrows():
         name = "|".join(str(row[k]) for k in key_cols if k in row)
-        value = float(row[value_col]) if value_col and value_col in row else 1.0
+        value = float(row[value_col].item()) if value_col and value_col in row else 1.0
         items.append(DataItem(name=name, value=value, source_id=source_id))
     return items
 

@@ -23,6 +23,9 @@ class FileSpanExporter(SpanExporter):
             if not self._file and isinstance(self.file_path, Path):
                 self._file = self.file_path.open("a+")
 
+            if not self._file:
+                return SpanExportResult.FAILURE
+
             for span in spans:
                 span_dict = {
                     "name": span.name,

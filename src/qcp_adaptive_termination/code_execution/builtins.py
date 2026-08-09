@@ -1,7 +1,7 @@
 import builtins
 
 # Explicit allowlist: only builtins that cannot access the filesystem, network, or process state.
-_SAFE_BUILTINS = {
+SAFE_BUILTINS = {
     key: getattr(builtins, key)
     for key in [
         "abs",
@@ -144,7 +144,7 @@ _SAFE_BUILTINS = {
 }
 
 # Explicitly set to None
-_UNSAFE_BUILTINS = {
+UNSAFE_BUILTINS = {
     key: None
     for key in [
         "__name__",

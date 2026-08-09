@@ -19,7 +19,6 @@ from qcp_adaptive_termination.models.agent import (
 from qcp_adaptive_termination.models.config import (
     Config,
     RoleConfig,
-    _config_var,
 )
 from qcp_adaptive_termination.models.estimation import (
     AggregationType,
@@ -53,7 +52,6 @@ __all__ = [
     # config
     "Config",
     "RoleConfig",
-    "_config_var",
     # estimation
     "AggregationType",
     "AlignedResultList",
