@@ -60,16 +60,12 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
     ) -> dict[str, PosteriorPrecomputedState]:
         assert table_per_agent and column_per_agent
 
-        vectors = await agent_registry.embedding_vector_for_table(
-            agents, table_per_agent
-        )
+        vectors = await agent_registry.embedding_vector_for_table(agents, table_per_agent)
 
         result: dict[str, PosteriorPrecomputedState] = {}
         for agent in agents:
             sketch = update_theta_sketch(self.lg_k)
-            for v in database.fetch_column_values(
-                agent, table_per_agent[agent.name], column_per_agent[agent.name]
-            ):
+            for v in database.fetch_column_values(agent, table_per_agent[agent.name], column_per_agent[agent.name]):
                 sketch.update(v)
 
             result[agent.name] = PosteriorPrecomputedState(
@@ -105,9 +101,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
     ) -> list[float]:
         likelihood_raw: list[float] = []
         for s in remaining:
-            a_not_b = theta_a_not_b().compute(
-                precomputed[s.agent.name].theta_sketch, state.theta
-            )
+            a_not_b = theta_a_not_b().compute(precomputed[s.agent.name].theta_sketch, state.theta)
             likelihood_raw.append(max(0.0, a_not_b.get_estimate()))
 
         return _normalize_probability(likelihood_raw)
@@ -150,13 +144,9 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
     ) -> list[float]:
         reference_embeddings = np.array(state.queried_embeddings, dtype=float)
 
-        agent_embeddings = np.array(
-            [precomputed[s.agent.name].embedding for s in remaining], dtype=float
-        )
+        agent_embeddings = np.array([precomputed[s.agent.name].embedding for s in remaining], dtype=float)
 
-        labels = DBSCAN(eps=self.eps, min_samples=self.min_samples).fit_predict(
-            agent_embeddings
-        )
+        labels = DBSCAN(eps=self.eps, min_samples=self.min_samples).fit_predict(agent_embeddings)
 
         centroids: dict[int, np.ndarray] = {}
         for lbl in set(labels):

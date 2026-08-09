@@ -1,4 +1,3 @@
-
 import qcp_adaptive_termination.database as database
 from qcp_adaptive_termination.models import DataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import StaticSelectionStrategy
@@ -18,10 +17,7 @@ class CountStrategy(StaticSelectionStrategy[int]):
         assert table_per_agent
 
         return {
-            a.name: database.fetch_count(a, table_per_agent[a.name])
-            if a.name in table_per_agent
-            else 0
-            for a in agents
+            a.name: database.fetch_count(a, table_per_agent[a.name]) if a.name in table_per_agent else 0 for a in agents
         }
 
 
@@ -42,9 +38,7 @@ class DistinctCountStrategy(StaticSelectionStrategy[int]):
         assert table_per_agent and column_per_agent
 
         return {
-            a.name: database.fetch_distinct_count(
-                a, table_per_agent[a.name], column_per_agent[a.name]
-            )
+            a.name: database.fetch_distinct_count(a, table_per_agent[a.name], column_per_agent[a.name])
             if a.name in table_per_agent and a.name in column_per_agent
             else 0
             for a in agents

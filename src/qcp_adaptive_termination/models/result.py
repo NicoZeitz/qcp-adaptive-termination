@@ -3,16 +3,13 @@ from typing import Any
 import numpy as np
 from pandas import DataFrame
 
-
 ResultType = DataFrame
 
 
 def serialize_result(result: ResultType) -> dict[str, Any]:
     # Replace NaN with None for JSON serialization (null in JSON)
     result_with_none = result.replace(np.nan, None)
-    result_with_none = result_with_none.replace(
-        {np.inf: "Infinity", -np.inf: "-Infinity"}
-    )
+    result_with_none = result_with_none.replace({np.inf: "Infinity", -np.inf: "-Infinity"})
     return result_with_none.to_dict(orient="split")
 
 
@@ -39,9 +36,7 @@ def try_parse_value_to_result_type(value: Any) -> ResultType:
         return DataFrame({"result": list(value)})
     else:
         # Only list types that we want to hint to the LLM in the list
-        raise ValueError(
-            f"Answer must be a DataFrame, string or None, got {type(value)}: {value}"
-        )
+        raise ValueError(f"Answer must be a DataFrame, string or None, got {type(value)}: {value}")
 
 
 def get_failed_result() -> ResultType:

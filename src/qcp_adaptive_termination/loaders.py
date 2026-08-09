@@ -18,9 +18,7 @@ def load_config(source: str | Path | None) -> Config:
         return Config()
 
     config_path = Path(source)
-    raw_config = yaml.safe_load(
-        config_path.read_text() if config_path.exists() else str(source)
-    )
+    raw_config = yaml.safe_load(config_path.read_text() if config_path.exists() else str(source))
 
     return Config.model_validate(raw_config)
 

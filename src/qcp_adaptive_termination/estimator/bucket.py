@@ -49,9 +49,7 @@ class Bucket:
     samples: list[DataItem] = field(default_factory=list)
     """All DataItems assigned to this bucket. len == number_of_samples."""
 
-    histogram: dict[str, HistogramBar] = field(
-        default_factory=lambda: defaultdict(HistogramBar)
-    )
+    histogram: dict[str, HistogramBar] = field(default_factory=lambda: defaultdict(HistogramBar))
     """Per-entity observation summary; one HistogramBar per unique entity name."""
 
     f: list[int] = field(default_factory=list)

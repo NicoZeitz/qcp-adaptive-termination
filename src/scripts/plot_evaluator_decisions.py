@@ -122,13 +122,8 @@ def plot_group(group_key, scenarios, out_dir, scenario_records=None):
     ax_heat.tick_params(labelbottom=True)
     ax_heat.set_yticks(range(len(variants)))
     ax_heat.set_yticklabels(variants, fontsize=9)
-    ax_heat.set_title(
-        f"{group_key} — evaluator decision per agent", fontsize=12, fontweight="bold"
-    )
-    patches = [
-        mpatches.Patch(color=DECISION_COLORS[i], label=DECISION_ORDER[i])
-        for i in range(len(DECISION_ORDER))
-    ]
+    ax_heat.set_title(f"{group_key} — evaluator decision per agent", fontsize=12, fontweight="bold")
+    patches = [mpatches.Patch(color=DECISION_COLORS[i], label=DECISION_ORDER[i]) for i in range(len(DECISION_ORDER))]
     ax_heat.legend(
         handles=patches,
         loc="upper right",
@@ -156,9 +151,7 @@ def plot_group(group_key, scenarios, out_dir, scenario_records=None):
             if xs:
                 ax_cov.plot(xs, ys, marker="o", markersize=4, label=variant)
         ax_cov.set_ylabel("Sample coverage", fontsize=9)
-        ax_cov.legend(
-            fontsize=7, bbox_to_anchor=(1.01, 1), loc="upper left", frameon=True
-        )
+        ax_cov.legend(fontsize=7, bbox_to_anchor=(1.01, 1), loc="upper left", frameon=True)
         ax_cov.tick_params(labelbottom=False)
 
         # --- count and value from full-bucket ---
@@ -233,9 +226,7 @@ def main():
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", default=default_data)
-    parser.add_argument(
-        "--out-dir", default=None, help="Output directory (defaults to --data-dir)"
-    )
+    parser.add_argument("--out-dir", default=None, help="Output directory (defaults to --data-dir)")
     parser.add_argument(
         "--extra-plots",
         action="store_true",

@@ -54,9 +54,7 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
         result: dict[str, hll_sketch] = {}
         for agent in agents:
             sketch = hll_sketch(self.lg_k)
-            for v in database.fetch_column_values(
-                agent, table_per_agent[agent.name], column_per_agent[agent.name]
-            ):
+            for v in database.fetch_column_values(agent, table_per_agent[agent.name], column_per_agent[agent.name]):
                 sketch.update(v)
             result[agent.name] = sketch
         return result
@@ -75,11 +73,7 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
             union.update(state)
             union.update(precomputed[s.agent.name])
             result = union.get_result()
-            estimate = (
-                result.get_upper_bound(DEFAULT_NUM_STD)
-                if self.use_ucb
-                else result.get_estimate()
-            )
+            estimate = result.get_upper_bound(DEFAULT_NUM_STD) if self.use_ucb else result.get_estimate()
             return max(0.0, estimate - state.get_estimate())
 
         for s in remaining:
@@ -133,9 +127,7 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
             if agent.name not in table_per_agent or agent.name not in column_per_agent:
                 continue
             sketch = update_theta_sketch(self.lg_k)
-            for v in database.fetch_column_values(
-                agent, table_per_agent[agent.name], column_per_agent[agent.name]
-            ):
+            for v in database.fetch_column_values(agent, table_per_agent[agent.name], column_per_agent[agent.name]):
                 sketch.update(v)
             result[agent.name] = sketch.compact()
         return result
@@ -210,9 +202,7 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
         for agent in agents:
             if agent.name not in table_per_agent or agent.name not in column_per_agent:
                 continue
-            values = database.fetch_column_values(
-                agent, table_per_agent[agent.name], column_per_agent[agent.name]
-            )
+            values = database.fetch_column_values(agent, table_per_agent[agent.name], column_per_agent[agent.name])
             mh = MinHash(num_perm=self.num_perm)
             for v in values:
                 mh.update(v.encode("utf8"))
@@ -232,11 +222,7 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
             agent_mh, cardinality = precomputed[s.agent.name]
             jaccard = state.minhash.jaccard(agent_mh)
             seen_count = len(state.seen)
-            intersection_est = (
-                jaccard * (cardinality + seen_count) / (1 + jaccard)
-                if (1 + jaccard) > 0
-                else 0
-            )
+            intersection_est = jaccard * (cardinality + seen_count) / (1 + jaccard) if (1 + jaccard) > 0 else 0
             return max(0.0, cardinality - intersection_est)
 
         for s in remaining:

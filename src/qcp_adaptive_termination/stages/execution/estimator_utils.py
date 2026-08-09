@@ -34,9 +34,7 @@ def compute_estimator_statistics(
     source_samples: list[list[DataItem]] = []
     for agent_name in data[schema.source_agent_column].unique():
         dataframe = pd.DataFrame(data[data[schema.source_agent_column] == agent_name])
-        items = dataframe_to_data_items(
-            dataframe, schema.keys, schema.value_column, agent_name
-        )
+        items = dataframe_to_data_items(dataframe, schema.keys, schema.value_column, agent_name)
         if items:
             source_samples.append(items)
 
@@ -44,9 +42,7 @@ def compute_estimator_statistics(
     has_overlap = len(source_samples) >= 2
 
     if not has_data:
-        tracing.indented_logging(
-            "Estimator: no data (all agents returned empty results)"
-        )
+        tracing.indented_logging("Estimator: no data (all agents returned empty results)")
         return EstimatorStatistics(
             agents_queried=agents_queried,
             agents_total=agents_total,
@@ -56,9 +52,7 @@ def compute_estimator_statistics(
         )
 
     if not has_overlap:
-        tracing.indented_logging(
-            "Estimator: no overlap data (fewer than 2 agents with results)"
-        )
+        tracing.indented_logging("Estimator: no overlap data (fewer than 2 agents with results)")
 
     key_series = data[schema.keys].astype(str).agg("|".join, axis=1)
     is_current = data[schema.source_agent_column].isin(agents_current)

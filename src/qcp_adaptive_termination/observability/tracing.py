@@ -9,9 +9,7 @@ from langfuse import get_client
 from pydantic import BaseModel
 
 _span_by_id: dict[str | None, int] = {}
-_span_context_var = ContextVar[Span[CustomSpanData] | None](
-    "current_span", default=None
-)
+_span_context_var = ContextVar[Span[CustomSpanData] | None]("current_span", default=None)
 
 
 def serialize_data_for_tracing(value: Any) -> Any:
@@ -29,18 +27,14 @@ def serialize_data_for_tracing(value: Any) -> Any:
         return value
 
 
-def append_to_span_input(
-    data: dict[str, Any], span: Span[CustomSpanData] | None = None
-):
+def append_to_span_input(data: dict[str, Any], span: Span[CustomSpanData] | None = None):
     data = serialize_data_for_tracing(data)
     span = span or _span_context_var.get()
     if span is not None:
         span.span_data.data["input"] = {**span.span_data.data.get("input", {}), **data}
 
 
-def append_to_span_output(
-    data: dict[str, Any], span: Span[CustomSpanData] | None = None
-):
+def append_to_span_output(data: dict[str, Any], span: Span[CustomSpanData] | None = None):
     data = serialize_data_for_tracing(data)
     span = span or _span_context_var.get()
     if span is not None:

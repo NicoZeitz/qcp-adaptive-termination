@@ -1,7 +1,6 @@
-from qcp_adaptive_termination.models.agent import DataAgent
-
-
 from pydantic import BaseModel, ConfigDict
+
+from qcp_adaptive_termination.models.agent import DataAgent
 
 
 class FilteredRelevantAgents(BaseModel):

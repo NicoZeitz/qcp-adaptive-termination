@@ -1,5 +1,3 @@
-from typing import TypeAlias
-
 from pydantic import BaseModel, ConfigDict, Field
 
 from qcp_adaptive_termination.models.query_plan.query_dependency import QueryDependency
@@ -40,4 +38,4 @@ class MultiAgentQueryPlanStep(BaseQueryPlanStep):
         return self.to_agent
 
 
-QueryPlanStep: TypeAlias = SingleAgentQueryPlanStep | MultiAgentQueryPlanStep
+type QueryPlanStep = SingleAgentQueryPlanStep | MultiAgentQueryPlanStep

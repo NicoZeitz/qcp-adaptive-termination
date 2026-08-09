@@ -1,15 +1,16 @@
 """Restricted Python execution environment with a builtin allowlist and isolated I/O."""
 
-from contextlib import contextmanager
-from dataclasses import dataclass
 import io
 import os
 import shutil
 import sys
 import tempfile
 import threading
-from typing import Any, Callable
 import uuid
+from collections.abc import Callable
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
+from typing import Any
 
 from agents import FunctionTool, RunContextWrapper, function_tool
 from pydantic import JsonValue
@@ -56,11 +57,7 @@ def preview_text(text: str, char_limit=LLM_PREVIEW_CHAR_LIMIT):
 
     omitted_count = len(text) - (char_limit_start + char_limit_end)
 
-    return (
-        text[:char_limit_start]
-        + f"\n...[{omitted_count} chars]...\n"
-        + text[-char_limit_end:]
-    )
+    return text[:char_limit_start] + f"\n...[{omitted_count} chars]...\n" + text[-char_limit_end:]
 
 
 def format_result(
@@ -81,13 +78,7 @@ def format_result(
     if exception is not None:
         formatted += f"\n{type(exception).__name__}: {preview_text(str(exception))}"
 
-    available = ",".join(
-        [
-            f"'{k}': {type(v).__name__}"
-            for k, v in locals.items()
-            if not k.startswith("_")
-        ]
-    )
+    available = ",".join([f"'{k}': {type(v).__name__}" for k, v in locals.items() if not k.startswith("_")])
 
     formatted += f"\nLocals: {available}"
     return formatted.strip()
@@ -96,9 +87,7 @@ def format_result(
 class CodeExecutionEnvironment:
     """Stateful REPL-like environment that persists locals across calls while keeping globals immutable."""
 
-    def __init__(
-        self, variables: dict[str, Any] | None, tools: dict[str, Callable] | None
-    ):
+    def __init__(self, variables: dict[str, Any] | None, tools: dict[str, Callable] | None):
         """
         Args:
             variables: Pre-seeded local variables available to all executions.
@@ -163,9 +152,7 @@ class CodeExecutionEnvironment:
             timeout=LLM_CODE_EXECUTION_TIMEOUT,
             timeout_behavior="error_as_result",
         )
-        async def execute_python_code(
-            ctx: RunContextWrapper[TContext], code: str
-        ) -> str:
+        async def execute_python_code(ctx: RunContextWrapper[TContext], code: str) -> str:
             """
             Execute python code. You will only see partial output results.
             """
@@ -184,9 +171,7 @@ class CodeExecutionEnvironment:
                 "stderr": code_execution.stderr,
                 "exception": serialize_value(code_execution.exception),
                 "locals": [
-                    f"{k}: {type(v).__name__}"
-                    for k, v in code_execution.locals.items()
-                    if not k.startswith("_")
+                    f"{k}: {type(v).__name__}" for k, v in code_execution.locals.items() if not k.startswith("_")
                 ],
                 "formatted": code_execution.formatted,
             }
@@ -229,9 +214,7 @@ class CodeExecutionEnvironment:
         try:
             os.chdir(temp_dir)
             yield
-            try:
+            with suppress(Exception):
                 shutil.rmtree(temp_dir)
-            except Exception:
-                pass
         finally:
             os.chdir(old_cwd)

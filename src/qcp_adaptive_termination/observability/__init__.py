@@ -45,9 +45,7 @@ def setup_tracing(log_name: str, log_dir: Path) -> None:
         )
         set_trace_processors([BatchTraceProcessor(exporter=openai_exporter)])
     else:
-        logging.warning(
-            "No OpenAI tracing API key found; OpenAI trace export is disabled."
-        )
+        logging.warning("No OpenAI tracing API key found; OpenAI trace export is disabled.")
 
     tracing_log_file = log_dir / f"{log_name}_traces.jsonl"
     nest_asyncio.apply()

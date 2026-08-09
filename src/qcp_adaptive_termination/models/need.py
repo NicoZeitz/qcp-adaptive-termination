@@ -1,6 +1,5 @@
 from typing import Any
 
-
 NeedType = str
 
 
@@ -22,6 +21,4 @@ def try_parse_value_to_need_type(value: Any) -> set[NeedType]:
     elif isinstance(value, list):
         return {item for item in value if isinstance(item, str)}
     else:
-        raise ValueError(
-            f"Needs must be a string or a list of strings, got {type(value)}: {value}"
-        )
+        raise ValueError(f"Needs must be a string or a list of strings, got {type(value)}: {value}")

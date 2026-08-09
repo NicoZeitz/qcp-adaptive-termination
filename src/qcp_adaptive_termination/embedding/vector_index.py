@@ -32,7 +32,7 @@ class VectorIndex[T]:
         distances, indices = self.index.search(query_vector, k)
 
         results = []
-        for dist, idx in zip(distances[0], indices[0]):
+        for dist, idx in zip(distances[0], indices[0], strict=False):
             if idx != -1:
                 results.append((self.mapping[idx], dist))
 

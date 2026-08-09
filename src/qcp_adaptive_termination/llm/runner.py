@@ -1,4 +1,5 @@
-from typing import Literal, Mapping, Type, cast
+from collections.abc import Mapping
+from typing import Literal, cast
 
 from agents import (
     Agent,
@@ -24,14 +25,12 @@ from qcp_adaptive_termination.observability import tracing
 
 def _resolve_model_config(role: AgentRole) -> tuple[str, Reasoning]:
     role_cfg: RoleConfig = Config.get().agent_configs[role.value]
-    reasoning = Reasoning(
-        effort=role_cfg.reasoning_effort, summary=role_cfg.reasoning_summary
-    )
+    reasoning = Reasoning(effort=role_cfg.reasoning_effort, summary=role_cfg.reasoning_summary)
     return role_cfg.model, reasoning
 
 
 def _get_output_and_deserializable_classes(
-    output_type: Type | None,
+    output_type: type | None,
 ) -> tuple[JsonValue, list[type[BaseModel]]]:
     output: JsonValue = None
     deserializable_classes: list[type[BaseModel]] = []
@@ -60,12 +59,10 @@ async def run_agent[TResult](
     agent_name: str | None = None,
     max_turns: int | None = None,
     context: JsonValue = None,
-    output_type: Type[TResult] | None = str,  # ty: ignore[invalid-parameter-default]
+    output_type: type[TResult] | None = str,  # ty: ignore[invalid-parameter-default]
     tools: list[FunctionTool] | None = None,
     reset_tool_choice: bool = True,
-    tool_use_behavior: (
-        Literal["run_llm_again", "stop_on_first_tool"] | ToolsToFinalOutputFunction
-    ) = "run_llm_again",
+    tool_use_behavior: (Literal["run_llm_again", "stop_on_first_tool"] | ToolsToFinalOutputFunction) = "run_llm_again",
     parallel_tool_calls: bool = True,
     tool_choice: Literal["auto", "required", "none"] | None = None,
     cache_mode: CacheMode | None = None,
@@ -83,8 +80,7 @@ async def run_agent[TResult](
     tool_use = (
         tool_use_behavior
         if isinstance(tool_use_behavior, str)
-        else "function"
-        + getattr(tool_use_behavior, "__name__", repr(tool_use_behavior))
+        else "function" + getattr(tool_use_behavior, "__name__", repr(tool_use_behavior))
     )
 
     output, deserializable_classes = _get_output_and_deserializable_classes(output_type)
@@ -129,9 +125,7 @@ async def run_agent[TResult](
                 cast(list[TResponseInputItem], prompts),
                 context=context,
                 max_turns=max_turns,
-                run_config=RunConfig(
-                    model_provider=model_provider.get_multi_provider()
-                ),
+                run_config=RunConfig(model_provider=model_provider.get_multi_provider()),
             )
         except ModelBehaviorError as e:
             tracing.indented_logging(f"Model behavior error: {e}")
@@ -168,7 +162,7 @@ async def run_llm[TResult](
     prompt_parameters: Mapping[str, str | int | float | bool | None],
     *,
     agent_name: str | None = None,
-    output_type: Type[TResult] | None = str,  # ty: ignore[invalid-parameter-default]
+    output_type: type[TResult] | None = str,  # ty: ignore[invalid-parameter-default]
     context: JsonValue = None,
     cache_mode: CacheMode | None = None,
 ) -> TResult:

@@ -3,11 +3,11 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict
 
 from qcp_adaptive_termination.models.need import NeedType
+from qcp_adaptive_termination.models.result import ResultType
 from qcp_adaptive_termination.models.serializers import (
     SerializedNeedList,
     SerializedOptionalResultType,
 )
-from qcp_adaptive_termination.models.result import ResultType
 
 
 class PartialQueryAnswer(BaseModel):

@@ -1,5 +1,6 @@
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping, cast
+from typing import Any, cast
 
 import chevron
 from openai.types.responses import EasyInputMessageParam
@@ -16,9 +17,7 @@ def _get_prompt(name: str) -> str:
     return _prompt_cache[name]
 
 
-def load_prompt(
-    name: str, parameters: Mapping[str, Any]
-) -> list[EasyInputMessageParam]:
+def load_prompt(name: str, parameters: Mapping[str, Any]) -> list[EasyInputMessageParam]:
     parameters = cast(dict[str, Any], parameters)
     instructions = chevron.render(_get_prompt(f"{name}-instructions"), parameters)
     user = chevron.render(_get_prompt(f"{name}-user"), parameters)

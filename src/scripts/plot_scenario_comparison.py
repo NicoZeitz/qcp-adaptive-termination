@@ -129,12 +129,8 @@ def extract_series(records):
         "val_hi": val_hi,
         "sample_cov": sample_cov,
         "decisions": decisions,
-        "agents_total": records[0]["estimator_result"].get(
-            "agents_total", len(records)
-        ),
-        "aggregation_type": records[-1]["estimator_result"].get(
-            "aggregation_type", "value"
-        ),
+        "agents_total": records[0]["estimator_result"].get("agents_total", len(records)),
+        "aggregation_type": records[-1]["estimator_result"].get("aggregation_type", "value"),
         "last_obs_cnt": next((v for v in reversed(obs_cnt) if v is not None), None),
     }
 
@@ -154,11 +150,7 @@ def human_format(value, _pos=None):
 
 def _ylim(primary_vals, band_vals=(), percentile=97, margin_frac=0.12):
     """Y-axis limits clipped at `percentile` to suppress extreme early CI outliers."""
-    finite_all = sorted(
-        v
-        for v in list(primary_vals) + list(band_vals)
-        if v is not None and math.isfinite(v)
-    )
+    finite_all = sorted(v for v in list(primary_vals) + list(band_vals) if v is not None and math.isfinite(v))
     if not finite_all:
         return None, None
     hi_idx = min(int(len(finite_all) * percentile / 100), len(finite_all) - 1)
@@ -171,9 +163,7 @@ def _ylim(primary_vals, band_vals=(), percentile=97, margin_frac=0.12):
 def _set_agent_xticks(ax, n_agents, show_labels):
     ax.set_xticks(range(1, n_agents + 1))
     if show_labels:
-        ax.set_xticklabels(
-            [f"A{i}" for i in range(1, n_agents + 1)], rotation=45, ha="right"
-        )
+        ax.set_xticklabels([f"A{i}" for i in range(1, n_agents + 1)], rotation=45, ha="right")
         ax.set_xlabel("Agents queried")
     else:
         ax.set_xticklabels([])
@@ -190,7 +180,7 @@ def draw_heatmap(ax, variants, series_map, n_agents):
         ser = series_map.get(variant)
         if ser is None:
             continue
-        for x, dec in zip(ser["x"], ser["decisions"]):
+        for x, dec in zip(ser["x"], ser["decisions"], strict=False):
             col = x - 1
             if 0 <= col < n_agents:
                 matrix[row_i, col] = DECISION_ORDER.index(dec)
@@ -204,18 +194,14 @@ def draw_heatmap(ax, variants, series_map, n_agents):
         interpolation="none",
     )
     ax.set_xticks(range(n_agents))
-    ax.set_xticklabels(
-        [f"A{i}" for i in range(1, n_agents + 1)], rotation=45, ha="right"
-    )
+    ax.set_xticklabels([f"A{i}" for i in range(1, n_agents + 1)], rotation=45, ha="right")
     ax.set_yticks(range(len(variants)))
     ax.set_yticklabels([VARIANT_LABELS.get(v, v) for v in variants])
     ax.set_xlabel("Agents queried")
     ax.set_ylabel("Variant")
 
     patches = [
-        mpatches.Patch(
-            color=DECISION_COLORS[i], label=DECISION_ORDER[i].replace("_", " ")
-        )
+        mpatches.Patch(color=DECISION_COLORS[i], label=DECISION_ORDER[i].replace("_", " "))
         for i in range(len(DECISION_ORDER))
     ]
     ax.legend(
@@ -231,7 +217,7 @@ def draw_heatmap(ax, variants, series_map, n_agents):
 
 
 def draw_coverage(ax, ser, gt_count, n_agents, show_labels):
-    xs = [x for x, v in zip(ser["x"], ser["sample_cov"]) if v is not None]
+    xs = [x for x, v in zip(ser["x"], ser["sample_cov"], strict=False) if v is not None]
     ys = [v for v in ser["sample_cov"] if v is not None]
     if xs:
         ax.plot(
@@ -245,7 +231,7 @@ def draw_coverage(ax, ser, gt_count, n_agents, show_labels):
         )
 
     if gt_count:
-        xs_t = [x for x, v in zip(ser["x"], ser["obs_cnt"]) if v is not None]
+        xs_t = [x for x, v in zip(ser["x"], ser["obs_cnt"], strict=False) if v is not None]
         ys_t = [v / gt_count for v in ser["obs_cnt"] if v is not None]
         if xs_t:
             ax.plot(
@@ -290,7 +276,7 @@ def draw_estimation(
             zorder=2,
         )
 
-    xs_o = [xv for xv, v in zip(x, ser[field_obs]) if v is not None]
+    xs_o = [xv for xv, v in zip(x, ser[field_obs], strict=False) if v is not None]
     ys_o = [v for v in ser[field_obs] if v is not None]
     if xs_o:
         ax.plot(
@@ -304,9 +290,7 @@ def draw_estimation(
             zorder=3,
         )
 
-    xs_e = [
-        xv for xv, v in zip(x, ser[field_est]) if v is not None and math.isfinite(v)
-    ]
+    xs_e = [xv for xv, v in zip(x, ser[field_est], strict=False) if v is not None and math.isfinite(v)]
     ys_e = [v for v in ser[field_est] if v is not None and math.isfinite(v)]
     if xs_e:
         ax.plot(
@@ -321,20 +305,13 @@ def draw_estimation(
         )
 
     ci_x, ci_lo, ci_hi = [], [], []
-    for xv, lo, hi in zip(x, ser[field_lo], ser[field_hi]):
-        if (
-            lo is not None
-            and hi is not None
-            and math.isfinite(lo)
-            and math.isfinite(hi)
-        ):
+    for xv, lo, hi in zip(x, ser[field_lo], ser[field_hi], strict=False):
+        if lo is not None and hi is not None and math.isfinite(lo) and math.isfinite(hi):
             ci_x.append(xv)
             ci_lo.append(lo)
             ci_hi.append(hi)
     if ci_x:
-        ax.fill_between(
-            ci_x, ci_lo, ci_hi, color=COLOR_ESTIMATED, alpha=0.15, label="CI"
-        )
+        ax.fill_between(ci_x, ci_lo, ci_hi, color=COLOR_ESTIMATED, alpha=0.15, label="CI")
 
     anchor = [v for v in ys_o + ys_e if math.isfinite(v)]
     if gt_value is not None and math.isfinite(gt_value):
@@ -353,14 +330,10 @@ def draw_estimation(
 # ── Main plot ─────────────────────────────────────────────────────────────────
 
 
-def plot_scenario(
-    scenario_name, series_map, gt_value, agg_type, n_agents, out_dir, show
-):
+def plot_scenario(scenario_name, series_map, gt_value, agg_type, n_agents, out_dir, show):
     variants = [v for v in series_map if series_map[v] is not None]
 
-    ref_ser = series_map.get(REFERENCE_VARIANT) or next(
-        s for s in series_map.values() if s is not None
-    )
+    ref_ser = series_map.get(REFERENCE_VARIANT) or next(s for s in series_map.values() if s is not None)
     gt_count = ref_ser["last_obs_cnt"]
 
     # ── Sizing (all in inches) ────────────────────────────────────────────────
@@ -405,9 +378,7 @@ def plot_scenario(
     # Left: heatmap axes centered on the same midpoint as the right content block
     right_content_mid = bot + fh(right_content_h) / 2
     heat_bottom = right_content_mid - fh(heat_content_h_in) / 2
-    ax_heat = fig.add_axes(
-        (fw(margin_l), heat_bottom, fw(col_w_in), fh(heat_content_h_in))
-    )
+    ax_heat = fig.add_axes((fw(margin_l), heat_bottom, fw(col_w_in), fh(heat_content_h_in)))
 
     # ── Draw ─────────────────────────────────────────────────────────────────
     draw_heatmap(ax_heat, variants, series_map, n_agents)
@@ -460,9 +431,7 @@ def main():
     default_data = os.path.join(repo_root, "data", "runs", "unknown-query-estimation")
     default_scenario = os.path.join(repo_root, "data", "unknown-query-estimation")
 
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("scenario", help='Dataset name, e.g. "siliconvalley_revenue"')
     parser.add_argument("--data-dir", default=default_data)
     parser.add_argument("--scenario-dir", default=default_scenario)
@@ -503,13 +472,9 @@ def main():
         sys.exit(1)
 
     if n_agents == 0:
-        n_agents = max(
-            (max(s["x"]) for s in series_map.values() if s is not None), default=1
-        )
+        n_agents = max((max(s["x"]) for s in series_map.values() if s is not None), default=1)
 
-    plot_scenario(
-        args.scenario, series_map, gt_value, agg_type, n_agents, out_dir, args.show
-    )
+    plot_scenario(args.scenario, series_map, gt_value, agg_type, n_agents, out_dir, args.show)
 
 
 if __name__ == "__main__":

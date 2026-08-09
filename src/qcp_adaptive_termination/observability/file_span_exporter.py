@@ -1,7 +1,8 @@
 import json
 import threading
+from collections.abc import Sequence
 from pathlib import Path
-from typing import IO, Sequence
+from typing import IO
 
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
@@ -19,9 +20,8 @@ class FileSpanExporter(SpanExporter):
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         with self._lock:
-            if not self._file:
-                if isinstance(self.file_path, Path):
-                    self._file = self.file_path.open("a+")
+            if not self._file and isinstance(self.file_path, Path):
+                self._file = self.file_path.open("a+")
 
             for span in spans:
                 span_dict = {
@@ -35,9 +35,7 @@ class FileSpanExporter(SpanExporter):
                         "description": span.status.description,
                     },
                 }
-                self._file.write(  # type: ignore
-                    json.dumps(span_dict, default=lambda x: dict(x)) + "\n"
-                )
+                self._file.write(json.dumps(span_dict, default=lambda x: dict(x)) + "\n")
         return SpanExportResult.SUCCESS
 
     def shutdown(self) -> None:

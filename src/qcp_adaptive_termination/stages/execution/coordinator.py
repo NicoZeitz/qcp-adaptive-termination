@@ -68,9 +68,7 @@ async def answer_step_coordinator(
             role=AgentRole.COORDINATOR_CODE,
             prompt_parameters={
                 "query": query,
-                "additional_information_preview": preview_additional_information(
-                    additional_information
-                ),
+                "additional_information_preview": preview_additional_information(additional_information),
             },
             tools=[code_environment.as_function_tool()],
             tool_use_behavior=custom_tool_handler,

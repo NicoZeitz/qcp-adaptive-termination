@@ -76,14 +76,10 @@ async def run() -> None:
     raw_agents = data["value"]["data_agents"]
     agents = [DataAgent(**a) for a in raw_agents]
 
-    _config_var.set(
-        Config(data_path_prefix="../data/wikidata/companies/split_overlap_employees/")
-    )
+    _config_var.set(Config(data_path_prefix="../data/wikidata/companies/split_overlap_employees/"))
 
     print(f"Loading embeddings for {len(agents)} agents …")
-    all_table_embeddings: dict[str, dict[str, list[float]]] = await load_embeddings(
-        agents
-    )
+    all_table_embeddings: dict[str, dict[str, list[float]]] = await load_embeddings(agents)
 
     # For each agent use the mean of its table embeddings as the agent vector.
     agent_names: list[str] = []
@@ -123,9 +119,7 @@ async def run() -> None:
     for i, (x, y) in enumerate(coords.tolist()):
         lbl = int(cluster_labels[i])
         color = color_for_label(lbl)
-        sc = ax.scatter(
-            x, y, color=color, s=60, linewidths=0.5, edgecolors="white", zorder=3
-        )
+        sc = ax.scatter(x, y, color=color, s=60, linewidths=0.5, edgecolors="white", zorder=3)
         if lbl not in scatter_handles:
             scatter_handles[lbl] = sc
 
@@ -163,9 +157,7 @@ async def run() -> None:
         edgecolor="#cccccc",
     )
 
-    ax.set_title(
-        "DB Agent Embeddings — UMAP + DBSCAN clusters", fontsize=12, color="#0b0b0b"
-    )
+    ax.set_title("DB Agent Embeddings — UMAP + DBSCAN clusters", fontsize=12, color="#0b0b0b")
     ax.set_xlabel("UMAP-1", fontsize=9, color="#52514e")
     ax.set_ylabel("UMAP-2", fontsize=9, color="#52514e")
     ax.tick_params(colors="#888888", labelsize=7)

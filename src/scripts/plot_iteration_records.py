@@ -21,10 +21,10 @@ import json
 import math
 import sys
 from pathlib import Path
+
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-
 
 DECISION_COLORS = {
     "batch_query": "#f59e0b",
@@ -80,9 +80,7 @@ def load_reasoning_by_agents_queried(traces_path: str) -> dict[int, list[str]]:
         agents_queried = inp.get("estimator_statistics", {}).get("agents_queried")
         if agents_queried is None:
             continue
-        ce_windows.append(
-            (int(agents_queried), s.get("start_time", 0), s.get("end_time", 0))
-        )
+        ce_windows.append((int(agents_queried), s.get("start_time", 0), s.get("end_time", 0)))
 
     # Collect generation spans and extract reasoning from message content
     result: dict[int, list[str]] = {}
@@ -105,9 +103,7 @@ def load_reasoning_by_agents_queried(traces_path: str) -> dict[int, list[str]]:
         if not raw_output:
             continue
         try:
-            choices = (
-                json.loads(raw_output) if isinstance(raw_output, str) else raw_output
-            )
+            choices = json.loads(raw_output) if isinstance(raw_output, str) else raw_output
         except (json.JSONDecodeError, TypeError):
             continue
         for choice in choices if isinstance(choices, list) else []:
@@ -189,7 +185,7 @@ def draw_decision_markers(ax, x: list, decisions: list) -> None:
     """Draw decision markers as colored triangles along the bottom of the axes."""
     trans = ax.get_xaxis_transform()  # x in data coords, y in axes fraction
     seen = set()
-    for xi, dec in zip(x, decisions):
+    for xi, dec in zip(x, decisions, strict=False):
         if dec is None:
             continue
         color = DECISION_COLORS.get(dec, DECISION_DEFAULT_COLOR)
@@ -281,9 +277,7 @@ def draw_estimation_panel(
             bx = [t[0] for t in est_ci]
             bl = [t[2] for t in est_ci]
             bh = [t[3] for t in est_ci]
-            ax.fill_between(
-                bx, bl, bh, color="#f97316", alpha=0.15, label="Estimated bounds"
-            )
+            ax.fill_between(bx, bl, bh, color="#f97316", alpha=0.15, label="Estimated bounds")
         fmt = y_formatter if y_formatter else human_format
         ax.annotate(
             fmt(est_y[-1], None),
@@ -297,13 +291,9 @@ def draw_estimation_panel(
     # y-axis limits:
     # clip_bands=True  — anchor to observed+estimated only, tight margin
     # clip_bands=False — anchor to band extent but clip extreme outliers via percentile
-    all_values = [
-        v for v in y_obs + est_y + [ground_truth] if v is not None and math.isfinite(v)
-    ]
+    all_values = [v for v in y_obs + est_y + [ground_truth] if v is not None and math.isfinite(v)]
     band_values = [t[2] for t in est_ci] + [t[3] for t in est_ci]
-    all_with_bands = sorted(
-        v for v in all_values + band_values if v is not None and math.isfinite(v)
-    )
+    all_with_bands = sorted(v for v in all_values + band_values if v is not None and math.isfinite(v))
 
     if clip_bands:
         anchor = all_values
@@ -414,19 +404,12 @@ def compute_error_series(series: dict, count_gt: float, value_gt: float) -> dict
         series["estimated_value"],
         series["observed_count"],
         series["estimated_count"],
+        strict=False,
     ):
         value_obs_err.append(abs(obs_v - value_gt) if obs_v is not None else None)
-        value_est_err.append(
-            abs(est_v - value_gt)
-            if est_v is not None and math.isfinite(est_v)
-            else None
-        )
+        value_est_err.append(abs(est_v - value_gt) if est_v is not None and math.isfinite(est_v) else None)
         count_obs_err.append(abs(obs_c - count_gt) if obs_c is not None else None)
-        count_est_err.append(
-            abs(est_c - count_gt)
-            if est_c is not None and math.isfinite(est_c)
-            else None
-        )
+        count_est_err.append(abs(est_c - count_gt) if est_c is not None and math.isfinite(est_c) else None)
     return {
         "value_obs_err": value_obs_err,
         "value_est_err": value_est_err,
@@ -435,9 +418,7 @@ def compute_error_series(series: dict, count_gt: float, value_gt: float) -> dict
     }
 
 
-def draw_error_panel(
-    ax, x, obs_err, est_err, decisions, title, y_label, *, clip_bands: bool = False
-) -> None:
+def draw_error_panel(ax, x, obs_err, est_err, decisions, title, y_label, *, clip_bands: bool = False) -> None:
     """Plot |observed - gt| (blue) and |estimated - gt| (orange) per step.
 
     clip_bands=False — full range (all steps including inf-est outliers skipped)
@@ -511,6 +492,7 @@ def save_reasoning_text(
         series["estimated_value"],
         series["observed_count"],
         series["estimated_count"],
+        strict=False,
     ):
 
         def fmt(v: float) -> str:
@@ -531,24 +513,16 @@ def save_reasoning_text(
 
         if obs_v is not None:
             obs_err = abs(obs_v - value_gt)
-            parts.append(
-                f"  value:  observed={fmt(obs_v)}  gt={fmt(value_gt)}  |obs error|={fmt(obs_err)}"
-            )
+            parts.append(f"  value:  observed={fmt(obs_v)}  gt={fmt(value_gt)}  |obs error|={fmt(obs_err)}")
         if est_v is not None and math.isfinite(est_v):
             est_err = abs(est_v - value_gt)
-            parts.append(
-                f"           estimated={fmt(est_v)}  |est error|={fmt(est_err)}"
-            )
+            parts.append(f"           estimated={fmt(est_v)}  |est error|={fmt(est_err)}")
         if obs_c is not None:
             obs_err = abs(obs_c - count_gt)
-            parts.append(
-                f"  count:  observed={fmt(obs_c)}  gt={fmt(count_gt)}  |obs error|={fmt(obs_err)}"
-            )
+            parts.append(f"  count:  observed={fmt(obs_c)}  gt={fmt(count_gt)}  |obs error|={fmt(obs_err)}")
         if est_c is not None and math.isfinite(est_c):
             est_err = abs(est_c - count_gt)
-            parts.append(
-                f"           estimated={fmt(est_c)}  |est error|={fmt(est_err)}"
-            )
+            parts.append(f"           estimated={fmt(est_c)}  |est error|={fmt(est_err)}")
 
         if texts:
             full = "\n\n".join(texts)
@@ -556,9 +530,7 @@ def save_reasoning_text(
 
         lines.append("\n".join(parts))
 
-    Path(output_path).write_text(
-        "\n\n" + ("\n\n" + "—" * 80 + "\n\n").join(lines) + "\n"
-    )
+    Path(output_path).write_text("\n\n" + ("\n\n" + "—" * 80 + "\n\n").join(lines) + "\n")
     print(f"Reasoning saved to {output_path}")
 
 
@@ -579,17 +551,11 @@ def attach_legend(ax, *, add_gt: bool = False) -> None:
     """Add a legend inside ax, optionally prepending a Ground truth handle."""
     handles, labels = ax.get_legend_handles_labels()
     if add_gt:
-        gt_h = mlines.Line2D(
-            [], [], color="#ef4444", linewidth=1.5, linestyle="--", label="Ground truth"
-        )
+        gt_h = mlines.Line2D([], [], color="#ef4444", linewidth=1.5, linestyle="--", label="Ground truth")
         handles, labels = handles + [gt_h], labels + ["Ground truth"]
-    visible = [
-        (handle, label)
-        for handle, label in zip(handles, labels)
-        if not label.startswith("_")
-    ]
+    visible = [(handle, label) for handle, label in zip(handles, labels, strict=False) if not label.startswith("_")]
     if visible:
-        hs, ls = zip(*visible)
+        hs, ls = zip(*visible, strict=False)
         ax.legend(hs, ls, fontsize=8, loc="best")
 
 
@@ -662,9 +628,7 @@ def plot(
 
     # Count zoomed
     fig_s, ax_s = plt.subplots(figsize=(8, 5))
-    draw_estimation_panel(
-        ax_s, x, count_gt, **count_common, title="Count — Zoomed", clip_bands=True
-    )
+    draw_estimation_panel(ax_s, x, count_gt, **count_common, title="Count — Zoomed", clip_bands=True)
     attach_legend(ax_s, add_gt=True)
     save_subplot(fig_s, subplots_dir, "count_zoomed")
     plt.close(fig_s)
@@ -791,9 +755,7 @@ def plot(
         title="Count — Full Interval",
         clip_bands=False,
     )
-    draw_estimation_panel(
-        axes[1, 1], x, count_gt, **count_common, title="Count — Zoomed", clip_bands=True
-    )
+    draw_estimation_panel(axes[1, 1], x, count_gt, **count_common, title="Count — Zoomed", clip_bands=True)
     draw_error_panel(
         axes[2, 1],
         x,
@@ -855,14 +817,12 @@ def plot(
     # Single shared legend below all panels
     cov_handles, cov_labels = axes[0, 0].get_legend_handles_labels()
     est_handles, est_labels = axes[0, 1].get_legend_handles_labels()
-    gt_handle = mlines.Line2D(
-        [], [], color="#ef4444", linewidth=1.5, linestyle="--", label="Ground truth"
-    )
+    gt_handle = mlines.Line2D([], [], color="#ef4444", linewidth=1.5, linestyle="--", label="Ground truth")
     all_handles = cov_handles + est_handles + [gt_handle]
     all_labels = cov_labels + est_labels + ["Ground truth"]
     seen_labels: set[str] = set()
     deduped_handles, deduped_labels = [], []
-    for handle, label in zip(all_handles, all_labels):
+    for handle, label in zip(all_handles, all_labels, strict=False):
         if label not in seen_labels and not label.startswith("_"):
             seen_labels.add(label)
             deduped_handles.append(handle)
@@ -981,12 +941,8 @@ def main() -> None:
         if not reasoning_by_n:
             print("Warning: no reasoning found in trace file.", file=sys.stderr)
 
-    count_gt = (
-        args.count_gt if args.count_gt is not None else series["last_observed_count"]
-    )
-    value_gt = (
-        args.value_gt if args.value_gt is not None else series["last_observed_value"]
-    )
+    count_gt = args.count_gt if args.count_gt is not None else series["last_observed_count"]
+    value_gt = args.value_gt if args.value_gt is not None else series["last_observed_value"]
 
     if count_gt is None:
         print(

@@ -33,33 +33,26 @@ def quote_col(name: str) -> str:
 def fetch_count(data_agent: DataAgent, table_name: str) -> int:
     db_engine = get_database_engine(data_agent)
     with db_engine.connect() as conn:
-        result = conn.execute(
-            text(f"SELECT COUNT(*) FROM {quote_table(table_name)}")
-        ).scalar()
+        result = conn.execute(text(f"SELECT COUNT(*) FROM {quote_table(table_name)}")).scalar()
     return int(result or 0)
 
 
-def fetch_distinct_count(
-    data_agent: DataAgent, table_name: str, column_name: str
-) -> int:
+def fetch_distinct_count(data_agent: DataAgent, table_name: str, column_name: str) -> int:
     db_engine = get_database_engine(data_agent)
     with db_engine.connect() as conn:
         result = conn.execute(
-            text(
-                f"SELECT COUNT(DISTINCT {quote_col(column_name)}) FROM {quote_table(table_name)}"
-            )
+            text(f"SELECT COUNT(DISTINCT {quote_col(column_name)}) FROM {quote_table(table_name)}")
         ).scalar()
     return int(result or 0)
 
 
-def fetch_column_values(
-    data_agent: DataAgent, table_name: str, column_name: str
-) -> list[str]:
+def fetch_column_values(data_agent: DataAgent, table_name: str, column_name: str) -> list[str]:
     db_engine = get_database_engine(data_agent)
     with db_engine.connect() as conn:
         rows = conn.execute(
             text(
-                f"SELECT {quote_col(column_name)} FROM {quote_table(table_name)} WHERE {quote_col(column_name)} IS NOT NULL AND {quote_col(column_name)} <> ''"
+                f"SELECT {quote_col(column_name)} FROM {quote_table(table_name)}"
+                f" WHERE {quote_col(column_name)} IS NOT NULL AND {quote_col(column_name)} <> ''"
             )
         ).fetchall()
     return [str(row[0]) for row in rows]

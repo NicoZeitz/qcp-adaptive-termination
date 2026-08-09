@@ -23,7 +23,7 @@ async def load(agent: list[DataAgent]) -> dict[str, AgentRegistryData]: ...
 async def load(agent):
     if isinstance(agent, list):
         results = await asyncio.gather(*[utils.load_registry_data(a) for a in agent])
-        return {a.name: r for a, r in zip(agent, results)}
+        return {a.name: r for a, r in zip(agent, results, strict=False)}
     return await utils.load_registry_data(agent)
 
 
@@ -32,9 +32,7 @@ async def natural_language_info(agent: DataAgent) -> str: ...
 @overload
 async def natural_language_info(agent: list[DataAgent]) -> list[str]: ...
 async def natural_language_info(agent):
-    return utils.map_entries(
-        await load(agent), lambda e: e.natural_language_description
-    )
+    return utils.map_entries(await load(agent), lambda e: e.natural_language_description)
 
 
 @overload
@@ -65,9 +63,7 @@ async def build_registry(
     registry_type: AgentRegistryType,
     include_capabilities: bool = True,
 ) -> list[str]: ...
-async def build_registry(
-    agent, registry_type: AgentRegistryType, include_capabilities: bool = True
-):
+async def build_registry(agent, registry_type: AgentRegistryType, include_capabilities: bool = True):
     def format_entry(a: DataAgent, entry: AgentRegistryData) -> str:
         desc = (
             entry.natural_language_description
@@ -121,9 +117,7 @@ async def embedding_vector_for_column(agents, table_per_agent, column_per_agent)
         table = table_map[agent.name]
         column = column_map[agent.name]
         data = agent_data[agent.name]
-        embedding_descriptions.append(
-            data.individual_descriptions[table].columns[column].technical_description
-        )
+        embedding_descriptions.append(data.individual_descriptions[table].columns[column].technical_description)
 
     embeddings = await embedding.create(embedding_descriptions)
 
@@ -156,8 +150,7 @@ async def embedding_vectors_for_all_columns(agents, table_per_agent):
         column_names = list(data.individual_descriptions[table].columns.keys())
 
         embedding_descriptions: list[str] = [
-            data.individual_descriptions[table].columns[col].technical_description
-            for col in column_names
+            data.individual_descriptions[table].columns[col].technical_description for col in column_names
         ]
 
         embeddings = await embedding.create(embedding_descriptions)
@@ -189,9 +182,7 @@ async def embedding_vector_for_table(agents, table_per_agent):
     for agent in agent_list:
         table = table_map[agent.name]
         data = agent_data[agent.name]
-        embedding_descriptions.append(
-            data.individual_descriptions[table].technical_description
-        )
+        embedding_descriptions.append(data.individual_descriptions[table].technical_description)
 
     embeddings = await embedding.create(embedding_descriptions)
 
@@ -220,14 +211,11 @@ async def embedding_vectors_for_all_tables(agents):
         table_names = list(data.individual_descriptions.keys())
 
         embedding_descriptions: list[str] = [
-            data.individual_descriptions[table].technical_description
-            for table in table_names
+            data.individual_descriptions[table].technical_description for table in table_names
         ]
 
         embeddings = await embedding.create(embedding_descriptions)
-        result[agent.name] = {
-            table: embeddings[i] for i, table in enumerate(table_names)
-        }
+        result[agent.name] = {table: embeddings[i] for i, table in enumerate(table_names)}
 
     if single:
         return result[agents.name]

@@ -3,7 +3,6 @@ import json
 from argparse import ArgumentParser
 from pathlib import Path
 
-
 from qcp_adaptive_termination.loaders import load_config
 from qcp_adaptive_termination.pipeline import run_pipeline
 from qcp_adaptive_termination.preview import result_to_json_preview
@@ -51,11 +50,7 @@ def main() -> None:
 
     print("Pipeline completed successfully. Result preview:")
     if result is not None:
-        print(
-            json.dumps(
-                result_to_json_preview(result.result), indent=2, ensure_ascii=False
-            )
-        )
+        print(json.dumps(result_to_json_preview(result.result), indent=2, ensure_ascii=False))
     else:
         print("No result produced.")
 

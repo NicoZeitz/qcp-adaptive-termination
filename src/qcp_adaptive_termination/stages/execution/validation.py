@@ -1,5 +1,5 @@
-from pandas import DataFrame
 import pandas as pd
+from pandas import DataFrame
 
 from qcp_adaptive_termination.models.estimation import (
     AlignedSchemaMetadata,
@@ -27,9 +27,7 @@ def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata)
 
     if metadata.value_column is not None:
         if metadata.value_column not in dataframe.columns:
-            errors.append(
-                f"Column '{metadata.value_column}' is missing from the output"
-            )
+            errors.append(f"Column '{metadata.value_column}' is missing from the output")
         else:
             if bool(dataframe[metadata.value_column].isnull().all()):
                 errors.append(f"Column '{metadata.value_column}' cannot be empty")

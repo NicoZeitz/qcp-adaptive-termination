@@ -37,7 +37,7 @@ COLOR_ESTIMATED = "#DD8452"
 
 DECISION_ORDER = ["batch_query", "query_more_agents", "final_result"]
 DECISION_COLORS = ["#4C72B0", "#DD8452", "#55A868"]
-DECISION_COLOR_MAP = dict(zip(DECISION_ORDER, DECISION_COLORS))
+DECISION_COLOR_MAP = dict(zip(DECISION_ORDER, DECISION_COLORS, strict=False))
 
 DATASET_GROUPS = [
     "gdp2012",
@@ -95,11 +95,7 @@ def extract_series(records):
         decisions.append(rec.get("evaluator_decision"))
         obs_acc.append(accuracy(er.get("observed_value"), ground_truth))
         est_v = er.get("estimated_value")
-        est_acc.append(
-            accuracy(est_v, ground_truth)
-            if est_v is not None and math.isfinite(est_v)
-            else None
-        )
+        est_acc.append(accuracy(est_v, ground_truth) if est_v is not None and math.isfinite(est_v) else None)
 
     return xs, obs_acc, est_acc, decisions, max(xs)
 
@@ -107,7 +103,7 @@ def extract_series(records):
 def draw_decision_markers(ax, xs, decisions):
     trans = ax.get_xaxis_transform()
     seen = set()
-    for x, dec in zip(xs, decisions):
+    for x, dec in zip(xs, decisions, strict=False):
         if dec is None:
             continue
         color = DECISION_COLOR_MAP.get(dec, "#6b7280")
@@ -169,9 +165,7 @@ def draw_accuracy_axes(ax, xs, obs_acc, est_acc, decisions, n_agents, title):
 
 
 def build_legend_handles():
-    gt_handle = mlines.Line2D(
-        [], [], color="#ef4444", linewidth=1.5, linestyle="--", label="Perfect (100%)"
-    )
+    gt_handle = mlines.Line2D([], [], color="#ef4444", linewidth=1.5, linestyle="--", label="Perfect (100%)")
     obs_handle = mlines.Line2D(
         [],
         [],
@@ -191,8 +185,7 @@ def build_legend_handles():
         label="Estimated",
     )
     dec_handles = [
-        mpatches.Patch(color=DECISION_COLORS[i], label=DECISION_ORDER[i])
-        for i in range(len(DECISION_ORDER))
+        mpatches.Patch(color=DECISION_COLORS[i], label=DECISION_ORDER[i]) for i in range(len(DECISION_ORDER))
     ]
     return [obs_handle, est_handle, gt_handle] + dec_handles
 
@@ -211,9 +204,7 @@ def plot_scenario(scenario_dir, out_dir):
 
     fig, ax = plt.subplots(figsize=(max(8, n_agents * 0.55), 5))
     scenario_name = os.path.basename(scenario_dir)
-    draw_accuracy_axes(
-        ax, xs, obs_acc, est_acc, decisions, n_agents, f"{scenario_name} — accuracy"
-    )
+    draw_accuracy_axes(ax, xs, obs_acc, est_acc, decisions, n_agents, f"{scenario_name} — accuracy")
 
     handles = build_legend_handles()
     ax.legend(handles=handles, fontsize=8, loc="lower right")
@@ -240,9 +231,7 @@ def plot_combined(group_key, variant_data, out_dir):
     fig_h = n_rows * 4.5
 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(fig_w, fig_h), squeeze=False)
-    fig.suptitle(
-        f"{group_key} — accuracy per variant", fontsize=14, fontweight="bold", y=1.01
-    )
+    fig.suptitle(f"{group_key} — accuracy per variant", fontsize=14, fontweight="bold", y=1.01)
 
     for idx, variant in enumerate(variants):
         row, col = divmod(idx, n_cols)

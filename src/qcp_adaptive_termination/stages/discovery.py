@@ -59,8 +59,8 @@ async def filter_coordinator_with_reasoning(
 
     relevant_agents_with_reasoning: list[tuple[DataAgent, str]] = []
     for agent in data_agents:
-        relevant = getattr(getattr(relevances, agent.name), "is_relevant")
-        reasoning = getattr(getattr(relevances, agent.name), "reasoning")
+        relevant = getattr(relevances, agent.name).is_relevant
+        reasoning = getattr(relevances, agent.name).reasoning
 
         tracing.append_to_span_output(
             {
@@ -102,9 +102,7 @@ async def filter_data_agent_with_reasoning(
 
 
 @cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
-async def filter_relevant_agents(
-    query: str, data_agents: list[DataAgent]
-) -> FilteredRelevantAgents:
+async def filter_relevant_agents(query: str, data_agents: list[DataAgent]) -> FilteredRelevantAgents:
     with tracing.own_span(
         STAGE_NAME,
         input={
@@ -143,9 +141,7 @@ async def filter_relevant_agents_internal(
             "data_agents": data_agents,
         },
     ):
-        registry_string = await agent_registry.build_registry_string(
-            data_agents, registry_type
-        )
+        registry_string = await agent_registry.build_registry_string(data_agents, registry_type)
         tracing.append_to_span_input({"agent_registry": registry_string})
 
     with tracing.own_span(
@@ -157,9 +153,7 @@ async def filter_relevant_agents_internal(
         },
     ):
         if filter_type == FilterType.REASONING:
-            result = await filter_coordinator_with_reasoning(
-                query, data_agents, registry_string, additional_context
-            )
+            result = await filter_coordinator_with_reasoning(query, data_agents, registry_string, additional_context)
         else:
             raise ValueError(f"Unsupported filter type: {filter_type}")
 
@@ -170,13 +164,9 @@ async def filter_relevant_agents_internal(
         relevant_data_agents = []
         for item in result:
             if filter_type == FilterType.REASONING:
-                agent = await filter_data_agent_with_reasoning(
-                    query, item, additional_context
-                )
+                agent = await filter_data_agent_with_reasoning(query, item, additional_context)
 
             if agent is not None:
                 relevant_data_agents.append(agent)
 
-    return FilteredRelevantAgents(
-        data_agents=data_agents, relevant_data_agents=relevant_data_agents, query=query
-    )
+    return FilteredRelevantAgents(data_agents=data_agents, relevant_data_agents=relevant_data_agents, query=query)

@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 import yaml
 from llama_index.core import SQLDatabase
@@ -18,16 +17,16 @@ class SchemaEngine(SQLDatabase):
     def __init__(
         self,
         engine: Engine,
-        schema: Optional[str] = None,
-        metadata: Optional[MetaData] = None,
-        ignore_tables: Optional[list[str]] = None,
-        include_tables: Optional[list[str]] = None,
+        schema: str | None = None,
+        metadata: MetaData | None = None,
+        ignore_tables: list[str] | None = None,
+        include_tables: list[str] | None = None,
         sample_rows_in_table_info: int = 3,
         indexes_in_table_info: bool = False,
-        custom_table_info: Optional[dict] = None,
+        custom_table_info: dict | None = None,
         view_support: bool = False,
         max_string_length: int = 300,
-        mschema: Optional[MSchema] = None,
+        mschema: MSchema | None = None,
         db_name: str = "",
     ):
         super().__init__(
@@ -59,9 +58,7 @@ class SchemaEngine(SQLDatabase):
         # If a schema is specified, filter by that schema and store that value for every table.
         if schema:
             self._usable_tables = [
-                table_name
-                for table_name in self._usable_tables
-                if self._inspector.has_table(table_name, schema)
+                table_name for table_name in self._usable_tables if self._inspector.has_table(table_name, schema)
             ]
             for table_name in self._usable_tables:
                 self._tables_schemas[table_name] = schema
@@ -77,10 +74,7 @@ class SchemaEngine(SQLDatabase):
 
         self._dialect = engine.dialect.name
         self._sqlite_comments = self.load_sqlite_comments()
-        if self._engine.dialect.name == "sqlite":
-            db_comment = self._sqlite_comments.get("__database__", "")
-        else:
-            db_comment = ""
+        db_comment = self._sqlite_comments.get("__database__", "") if self._engine.dialect.name == "sqlite" else ""
         if mschema is not None:
             self._mschema = mschema
         else:
@@ -94,9 +88,7 @@ class SchemaEngine(SQLDatabase):
         return self._mschema
 
     def get_pk_constraint(self, table_name: str) -> list[str]:
-        return self._inspector.get_pk_constraint(
-            table_name, self._tables_schemas[table_name]
-        )["constrained_columns"]
+        return self._inspector.get_pk_constraint(table_name, self._tables_schemas[table_name])["constrained_columns"]
 
     def load_sqlite_comments(self) -> dict:
         if self._engine.dialect.name != "sqlite":
@@ -124,9 +116,7 @@ class SchemaEngine(SQLDatabase):
                 return entry.get("__table__", "")
             return entry or ""
         try:
-            return self._inspector.get_table_comment(
-                table_name, self._tables_schemas[table_name]
-            )["text"]
+            return self._inspector.get_table_comment(table_name, self._tables_schemas[table_name])["text"]
         except Exception:
             return ""
 
@@ -137,25 +127,19 @@ class SchemaEngine(SQLDatabase):
                 return entry.get(field_name, "")
         return ""
 
-    def default_schema_name(self) -> Optional[str]:
+    def default_schema_name(self) -> str | None:
         return self._inspector.default_schema_name
 
     def get_schema_names(self) -> list[str]:
         return self._inspector.get_schema_names()
 
     def get_foreign_keys(self, table_name: str):
-        return self._inspector.get_foreign_keys(
-            table_name, self._tables_schemas[table_name]
-        )
+        return self._inspector.get_foreign_keys(table_name, self._tables_schemas[table_name])
 
     def get_unique_constraints(self, table_name: str):
-        return self._inspector.get_unique_constraints(
-            table_name, self._tables_schemas[table_name]
-        )
+        return self._inspector.get_unique_constraints(table_name, self._tables_schemas[table_name])
 
-    def fetch_distinct_values(
-        self, table_name: str, column_name: str, max_num: int = 5
-    ):
+    def fetch_distinct_values(self, table_name: str, column_name: str, max_num: int = 5):
         table = Table(
             table_name,
             self.metadata_obj,
@@ -181,9 +165,12 @@ class SchemaEngine(SQLDatabase):
             )  # For MySQL, avoid duplicate schema name in table identifier
             # For PostgreSQL, include schema name if it's not 'public'
             schema_name = self._tables_schemas[table_name]
-            if self._engine.dialect.name == "mysql" and schema_name == self._db_name:
-                table_with_schema = table_name
-            elif self._engine.dialect.name == "postgresql" and schema_name == "public":
+            if (
+                self._engine.dialect.name == "mysql"
+                and schema_name == self._db_name
+                or self._engine.dialect.name == "postgresql"
+                and schema_name == "public"
+            ):
                 table_with_schema = table_name
             else:
                 table_with_schema = schema_name + "." + table_name
@@ -193,14 +180,10 @@ class SchemaEngine(SQLDatabase):
             fks = self.get_foreign_keys(table_name)
             for fk in fks:
                 referred_schema = fk["referred_schema"]
-                for c, r in zip(fk["constrained_columns"], fk["referred_columns"]):
-                    self._mschema.add_foreign_key(
-                        table_with_schema, c, referred_schema, fk["referred_table"], r
-                    )
+                for c, r in zip(fk["constrained_columns"], fk["referred_columns"], strict=False):
+                    self._mschema.add_foreign_key(table_with_schema, c, referred_schema, fk["referred_table"], r)
 
-            fields = self._inspector.get_columns(
-                table_name, schema=self._tables_schemas[table_name]
-            )
+            fields = self._inspector.get_columns(table_name, schema=self._tables_schemas[table_name])
             for field in fields:
                 field_type = f"{field['type']!s}"
                 field_name = field["name"]

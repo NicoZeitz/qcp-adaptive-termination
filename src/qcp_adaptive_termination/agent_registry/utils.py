@@ -1,4 +1,5 @@
-from typing import Any, Callable, overload
+from collections.abc import Callable
+from typing import Any, overload
 
 from pydantic import BaseModel, Field, create_model
 
@@ -39,11 +40,9 @@ def _create_database_description_model(
 ) -> type[BaseModel]:
     missing_fields_set = set(missing_fields)
 
-    def create_table_column_model(
-        table_name: str, table_info: dict[str, Any]
-    ) -> type[BaseModel] | None:
+    def create_table_column_model(table_name: str, table_info: dict[str, Any]) -> type[BaseModel] | None:
         fields = {}
-        for col_name in table_info["fields"].keys():
+        for col_name in table_info["fields"]:
             if (table_name, col_name) in missing_fields_set:
                 fields[col_name] = (
                     str,
@@ -65,9 +64,7 @@ def _create_database_description_model(
         table_desc_fields = {
             table_name: (
                 str,
-                Field(
-                    description=f"Natural language description of the table '{table_name}'"
-                ),
+                Field(description=f"Natural language description of the table '{table_name}'"),
             )
             for table_name in missing_tables
         }
@@ -90,19 +87,15 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
     db_engine = database.get_database_engine(data_agent)
     schema_engine = SchemaEngine(db_engine, db_name=data_agent.name)
 
-    missing_tables, missing_fields, db_missing = _missing_comments(
-        schema_engine.mschema
-    )
+    missing_tables, missing_fields, db_missing = _missing_comments(schema_engine.mschema)
     needs_llm = missing_tables or missing_fields or db_missing
 
     if needs_llm:
-        m_schema_without_comments = schema_engine.mschema.to_mschema(
-            include_db_id=False
-        )
+        m_schema_without_comments = schema_engine.mschema.to_mschema(include_db_id=False)
         DatabaseDescriptionModel = _create_database_description_model(
             schema_engine, missing_tables, missing_fields, db_missing
         )
-        result = await runner.run_llm(
+        result: Any = await runner.run_llm(
             role=AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION,
             agent_name=data_agent.name,
             prompt_parameters={
@@ -123,12 +116,10 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
             table_desc_result = getattr(result, "table_descriptions", None)
             if table_desc_result is not None:
                 for table_name in missing_tables:
-                    schema_engine.mschema.tables[table_name]["comment"] = getattr(
-                        table_desc_result, table_name
-                    )
+                    schema_engine.mschema.tables[table_name]["comment"] = getattr(table_desc_result, table_name)
 
         if db_missing:
-            natural_language_description = getattr(result, "database_description")
+            natural_language_description = result.database_description
             schema_engine.mschema.database_comment = natural_language_description
     else:
         with tracing.own_span(
@@ -144,21 +135,17 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
     individual_descriptions = {
         table_name: TableDescription(
             table_name=table_name,
-            natural_language_description=schema_engine.mschema.tables[table_name].get(
-                "comment", ""
-            ),
+            natural_language_description=schema_engine.mschema.tables[table_name].get("comment", ""),
             technical_description=table_mschema,
             columns={
                 col_name: ColumnDescription(
                     column_name=col_name,
-                    natural_language_description=schema_engine.mschema.tables[
-                        table_name
-                    ]["fields"][col_name].get("comment", ""),
+                    natural_language_description=schema_engine.mschema.tables[table_name]["fields"][col_name].get(
+                        "comment", ""
+                    ),
                     technical_description=field_mschema,
                 )
-                for col_name, field_mschema in schema_engine.mschema.field_mschema(
-                    table_name
-                ).items()
+                for col_name, field_mschema in schema_engine.mschema.field_mschema(table_name).items()
             },
         )
         for table_name, table_mschema in schema_engine.mschema.table_mschema().items()
@@ -173,13 +160,9 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
 
 
 @overload
-def map_entries[T](
-    data_agents: list[AgentRegistryData], mapping: Callable[[AgentRegistryData], T]
-) -> list[T]: ...
+def map_entries[T](data_agents: list[AgentRegistryData], mapping: Callable[[AgentRegistryData], T]) -> list[T]: ...
 @overload
-def map_entries[T](
-    data_agents: AgentRegistryData, mapping: Callable[[AgentRegistryData], T]
-) -> T: ...
+def map_entries[T](data_agents: AgentRegistryData, mapping: Callable[[AgentRegistryData], T]) -> T: ...
 def map_entries(data_agents, mapping):
     if isinstance(data_agents, list):
         return [mapping(agent) for agent in data_agents]

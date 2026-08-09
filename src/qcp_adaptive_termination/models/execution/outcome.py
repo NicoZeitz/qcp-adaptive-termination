@@ -1,5 +1,7 @@
 from typing import Literal
 
+from pydantic import BaseModel, ConfigDict
+
 from qcp_adaptive_termination.models.estimation import (
     AlignedResultList,
 )
@@ -8,8 +10,6 @@ from qcp_adaptive_termination.models.serializers import (
     SerializedOptionalResultType,
     SerializedResultType,
 )
-
-from pydantic import BaseModel, ConfigDict
 
 
 class RaiseNeedOutcome(BaseModel):

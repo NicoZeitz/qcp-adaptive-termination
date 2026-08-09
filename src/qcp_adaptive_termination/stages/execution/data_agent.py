@@ -74,9 +74,7 @@ async def answer_query_data_agent(
             sql_query = SqlQuery(query=query)
 
             try:
-                result = pd.read_sql_query(
-                    query, db_engine, dtype_backend="numpy_nullable"
-                )
+                result = pd.read_sql_query(query, db_engine, dtype_backend="numpy_nullable")
                 sql_query.result = result
                 return result
             except Exception as e:
@@ -122,12 +120,8 @@ async def answer_query_data_agent(
             prompt_parameters={
                 "m_schema": m_schema,
                 "query": query,
-                "additional_information_preview": preview_additional_information(
-                    additional_information
-                ),
-                "columns": ", ".join(schema_metadata.columns)
-                if schema_metadata is not None
-                else None,
+                "additional_information_preview": preview_additional_information(additional_information),
+                "columns": ", ".join(schema_metadata.columns) if schema_metadata is not None else None,
             },
             tools=[code_environment.as_function_tool()],
             tool_use_behavior=custom_tool_handler,
@@ -154,9 +148,5 @@ async def answer_step_data_agent(
     additional_information: list[AdditionalInformation],
     schema_metadata: AlignedSchemaMetadata | None = None,
 ) -> PartialQueryAnswer:
-    responsible_data_agent = next(
-        (agent for agent in data_agents if agent.name == to_agent)
-    )
-    return await answer_query_data_agent(
-        responsible_data_agent, query, additional_information, schema_metadata
-    )
+    responsible_data_agent = next(agent for agent in data_agents if agent.name == to_agent)
+    return await answer_query_data_agent(responsible_data_agent, query, additional_information, schema_metadata)

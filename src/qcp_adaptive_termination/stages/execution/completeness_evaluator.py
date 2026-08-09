@@ -1,4 +1,5 @@
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import pandas as pd
 from agents import (
@@ -58,11 +59,10 @@ def build_estimator_summary(
     if include_aggregation_type:
         lines.append(f"Aggregation type: {agg}")
     lines.append(
-        f"Agents queried: {estimator_statistics.agents_queried} /  {estimator_statistics.agents_total} ({estimator_statistics.agents_queried / estimator_statistics.agents_total:.2%})"
+        f"Agents queried: {estimator_statistics.agents_queried} /  {estimator_statistics.agents_total}"
+        f" ({estimator_statistics.agents_queried / estimator_statistics.agents_total:.2%})"
     )
-    lines.append(
-        f"New unique entries added by this agent: {estimator_statistics.new_unique_count}"
-    )
+    lines.append(f"New unique entries added by this agent: {estimator_statistics.new_unique_count}")
     if estimator_statistics.sample_coverage is not None:
         lines.append(f"Sample Coverage: {estimator_statistics.sample_coverage:.3f}")
 
@@ -76,7 +76,8 @@ def build_estimator_summary(
             and estimator_statistics.estimated_count_upper is not None
         ):
             lines.append(
-                f"Estimated count confidence interval: [{estimator_statistics.estimated_count_lower:.3f}, {estimator_statistics.estimated_count_upper:.3f}]"
+                f"Estimated count confidence interval: "
+                f"[{estimator_statistics.estimated_count_lower:.3f}, {estimator_statistics.estimated_count_upper:.3f}]"
             )
 
     if include_obs_value and estimator_statistics.observed_value is not None:
@@ -84,12 +85,8 @@ def build_estimator_summary(
     if include_est_value and estimator_statistics.estimated_value is not None:
         lines.append(f"Estimated {agg}: {estimator_statistics.estimated_value:.3f}")
         if include_ci:
-            estimated_value_lower = estimator_statistics.estimated_value_lower or float(
-                "-inf"
-            )
-            estimated_value_upper = estimator_statistics.estimated_value_upper or float(
-                "inf"
-            )
+            estimated_value_lower = estimator_statistics.estimated_value_lower or float("-inf")
+            estimated_value_upper = estimator_statistics.estimated_value_upper or float("inf")
             lines.append(
                 f"Estimated {agg} confidence interval: [{estimated_value_lower:.3f}, {estimated_value_upper:.3f}]"
             )
@@ -99,17 +96,12 @@ def build_estimator_summary(
 def build_previous_statistics_summary(
     previous_estimator_statistics: list[EstimatorStatistics],
 ) -> str | None:
-    if (
-        not previous_estimator_statistics
-        or Config.get().estimator_mode == EstimatorMode.NONE
-    ):
+    if not previous_estimator_statistics or Config.get().estimator_mode == EstimatorMode.NONE:
         return None
 
     lines = []
     for estimator_statistic in reversed(previous_estimator_statistics):
-        summary = build_estimator_summary(
-            estimator_statistic, include_aggregation_type=False
-        )
+        summary = build_estimator_summary(estimator_statistic, include_aggregation_type=False)
         lines.append(summary)
     return "\n\n".join(line for line in lines if line is not None)
 
@@ -121,9 +113,7 @@ async def run_completeness_evaluator(
     previous_estimator_statistics: list[EstimatorStatistics],
     merge_task: str,
 ) -> QueryMoreAgentsOutcome | FinalResultOutcome:
-    force_result = (
-        estimator_statistics.agents_queried == estimator_statistics.agents_total
-    )
+    force_result = estimator_statistics.agents_queried == estimator_statistics.agents_total
 
     evaluator_result = CompletenessEvaluatorResult()
 
@@ -159,9 +149,7 @@ async def run_completeness_evaluator(
         )
 
     estimator_summary = build_estimator_summary(estimator_statistics)
-    previous_statistics_summary = build_previous_statistics_summary(
-        previous_estimator_statistics
-    )
+    previous_statistics_summary = build_previous_statistics_summary(previous_estimator_statistics)
     result_list_preview = preview_dataframe(aligned_result_list.data)
 
     with tracing.own_span(

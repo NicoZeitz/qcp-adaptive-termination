@@ -1,18 +1,20 @@
 import json
-from typing import Any, Optional
+from typing import Any
 
 from qcp_adaptive_termination.database.mschema.utils import examples_to_str
 
 
 class MSchema:
-    def __init__(self, db_id: str = "Anonymous", schema: Optional[str] = None):
+    def __init__(self, db_id: str = "Anonymous", schema: str | None = None):
         self.db_id = db_id
         self.schema = schema
         self.tables = {}
         self.foreign_keys = []
         self.database_comment: str = ""
 
-    def add_table(self, name, fields={}, comment=None):
+    def add_table(self, name, fields=None, comment=None):
+        if fields is None:
+            fields = {}
         self.tables[name] = {
             "fields": fields.copy(),
             "examples": [],
@@ -29,9 +31,11 @@ class MSchema:
         default: Any = None,
         autoincrement: bool = False,
         comment: str = "",
-        examples: list = [],
+        examples: list | None = None,
         **kwargs,
     ):
+        if examples is None:
+            examples = []
         self.tables[table_name]["fields"][field_name] = {
             "type": field_type,
             "primary_key": primary_key,
@@ -43,12 +47,8 @@ class MSchema:
             **kwargs,
         }
 
-    def add_foreign_key(
-        self, table_name, field_name, ref_schema, ref_table_name, ref_field_name
-    ):
-        self.foreign_keys.append(
-            [table_name, field_name, ref_schema, ref_table_name, ref_field_name]
-        )
+    def add_foreign_key(self, table_name, field_name, ref_schema, ref_table_name, ref_field_name):
+        self.foreign_keys.append([table_name, field_name, ref_schema, ref_table_name, ref_field_name])
 
     def get_field_type(self, field_type, simple_mode=True) -> str:
         if not simple_mode:
@@ -57,17 +57,11 @@ class MSchema:
             return field_type.split("(")[0]
 
     def has_table(self, table_name: str) -> bool:
-        if table_name in self.tables.keys():
-            return True
-        else:
-            return False
+        return table_name in self.tables
 
     def has_column(self, table_name: str, field_name: str) -> bool:
         if self.has_table(table_name):
-            if field_name in self.tables[table_name]["fields"].keys():
-                return True
-            else:
-                return False
+            return field_name in self.tables[table_name]["fields"]
         else:
             return False
 
@@ -118,9 +112,7 @@ class MSchema:
         show_type_detail: bool = False,
     ) -> dict[str, str]:
         return {
-            field_name: self.single_field_mschema(
-                table_name, field_name, example_num, show_type_detail
-            )
+            field_name: self.single_field_mschema(table_name, field_name, example_num, show_type_detail)
             for field_name in self.tables.get(table_name, {}).get("fields", {})
         }
 
@@ -134,11 +126,7 @@ class MSchema:
         table_info = self.tables.get(table_name, {})
         output = []
         table_comment = table_info.get("comment", "")
-        if (
-            table_comment is not None
-            and table_comment != "None"
-            and len(table_comment) > 0
-        ):
+        if table_comment is not None and table_comment != "None" and len(table_comment) > 0:
             if self.schema is not None and len(self.schema) > 0:
                 output.append(f"# Table: {self.schema}.{table_name}, {table_comment}")
             else:
@@ -152,14 +140,9 @@ class MSchema:
         field_lines = []
         # 处理表中的每一个字段
         for field_name in table_info["fields"]:
-            if (
-                selected_columns is not None
-                and field_name.lower() not in selected_columns
-            ):
+            if selected_columns is not None and field_name.lower() not in selected_columns:
                 continue
-            line = self.single_field_mschema(
-                table_name, field_name, example_num, show_type_detail
-            )
+            line = self.single_field_mschema(table_name, field_name, example_num, show_type_detail)
             if line:
                 field_lines.append(line)
         output.append("[")
@@ -174,9 +157,7 @@ class MSchema:
         show_type_detail: bool = False,
     ) -> dict[str, str]:
         return {
-            table_name: self.single_table_mschema(
-                table_name, None, example_num, show_type_detail
-            )
+            table_name: self.single_table_mschema(table_name, None, example_num, show_type_detail)
             for table_name in self.tables
         }
 
@@ -198,18 +179,11 @@ class MSchema:
             selected_tables_lower = [s.split(".")[0].lower() for s in selected_columns]
         else:
             selected_columns_lower = None
-            selected_tables_lower = (
-                [s.lower() for s in selected_tables]
-                if selected_tables is not None
-                else None
-            )
+            selected_tables_lower = [s.lower() for s in selected_tables] if selected_tables is not None else None
 
         output = ([f"【DB_ID】 {self.db_id}"] if include_db_id else []) + ["【Schema】"]
         for table_name in self.tables:
-            if (
-                selected_tables_lower is not None
-                and table_name.lower() not in selected_tables_lower
-            ):
+            if selected_tables_lower is not None and table_name.lower() not in selected_tables_lower:
                 continue
             cur_cols = (
                 [
@@ -220,11 +194,7 @@ class MSchema:
                 if selected_columns_lower is not None
                 else None
             )
-            output.append(
-                self.single_table_mschema(
-                    table_name, cur_cols, example_num, show_type_detail
-                )
-            )
+            output.append(self.single_table_mschema(table_name, cur_cols, example_num, show_type_detail))
 
         # 添加外键信息，选择table_type为view时不展示外键
         if self.foreign_keys:
@@ -233,12 +203,11 @@ class MSchema:
             for fk in self.foreign_keys:
                 ref_schema = fk[2]
                 table1, column1, _, table2, column2 = fk
-                if normalized_tables is None or (
-                    table1.lower() in normalized_tables
-                    and table2.lower() in normalized_tables
-                ):
-                    if ref_schema == self.schema:
-                        fk_lines.append(f"{fk[0]}.{fk[1]}={fk[3]}.{fk[4]}")
+                if (
+                    normalized_tables is None
+                    or (table1.lower() in normalized_tables and table2.lower() in normalized_tables)
+                ) and ref_schema == self.schema:
+                    fk_lines.append(f"{fk[0]}.{fk[1]}={fk[3]}.{fk[4]}")
             if fk_lines:
                 output.append("【Foreign keys】")
                 output.extend(fk_lines)
@@ -260,7 +229,7 @@ class MSchema:
             json.dump(schema_dict, f, ensure_ascii=False, indent=2)
 
     def load(self, file_path: str):
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
         self.db_id = data.get("db_id", "Anonymous")
         self.schema = data.get("schema", None)

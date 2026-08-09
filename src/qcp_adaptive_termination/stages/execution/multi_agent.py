@@ -54,9 +54,7 @@ MULTI_AGENT_ITERATION_RECORDS: dict[str, list[MultiAgentIterationRecord]] = {}
 
 
 @hooks.on(HookEvent.ITERATION_RECORDS)
-def _store_iteration_records(
-    execution_id: str, records: list[MultiAgentIterationRecord]
-) -> None:
+def _store_iteration_records(execution_id: str, records: list[MultiAgentIterationRecord]) -> None:
     MULTI_AGENT_ITERATION_RECORDS[execution_id] = records
 
 
@@ -91,12 +89,7 @@ async def query_single_agent(
         schema_metadata=result_list.schema_metadata,
     )
 
-    if (
-        len(result.needs) > 0
-        or result.answer is None
-        or result.has_needs
-        or not result.has_answer
-    ):
+    if len(result.needs) > 0 or result.answer is None or result.has_needs or not result.has_answer:
         need_outcome = RaiseNeedOutcome(
             needs=result.needs,
             partial_answer=result.answer,
@@ -148,19 +141,14 @@ async def run_agent_batch(
         )
 
         need_results = [
-            (agent_name, need_outcome)
-            for agent_name, _, need_outcome in results
-            if need_outcome is not None
+            (agent_name, need_outcome) for agent_name, _, need_outcome in results if need_outcome is not None
         ]
         if need_results:
             merged_needs: list[str] = []
             partial_dfs: list[pd.DataFrame] = []
             for agent_name, need_outcome in need_results:
                 merged_needs.extend(need_outcome.needs)
-                if (
-                    need_outcome.has_partial_answer
-                    and need_outcome.partial_answer is not None
-                ):
+                if need_outcome.has_partial_answer and need_outcome.partial_answer is not None:
                     partial_dfs.append(need_outcome.partial_answer)
                 iteration_records.append(
                     MultiAgentIterationRecord(
@@ -173,9 +161,7 @@ async def run_agent_batch(
                         remaining_agents=remaining_agents_now,
                     )
                 )
-            merged_partial = (
-                pd.concat(partial_dfs, ignore_index=True) if partial_dfs else None
-            )
+            merged_partial = pd.concat(partial_dfs, ignore_index=True) if partial_dfs else None
             combined_need_outcome = RaiseNeedOutcome(
                 needs=list(set(merged_needs)),
                 partial_answer=merged_partial,
@@ -193,9 +179,7 @@ async def run_agent_batch(
         current_result_list = result_list
         for idx, (agent_name, agent_df, _) in enumerate(results):
             assert agent_df is not None
-            current_result_list = merge_agent_result(
-                current_result_list, agent_name, agent_df
-            )
+            current_result_list = merge_agent_result(current_result_list, agent_name, agent_df)
             agent_stats = compute_estimator_statistics(
                 current_result_list,
                 len(agents_queried) + idx + 1,
@@ -214,11 +198,7 @@ async def run_agent_batch(
                 merged_result_list,
                 final_stats,
                 query_plan_step.query,
-                [
-                    r.estimator_result
-                    for r in iteration_records
-                    if r.estimator_result is not None
-                ],
+                [r.estimator_result for r in iteration_records if r.estimator_result is not None],
                 query_plan_step.merge_task,
             )
 
@@ -247,11 +227,7 @@ async def answer_step_multiple_agents(
     batch_size: int = 1,
 ) -> PartialQueryAnswer:
     agents_by_name = {a.name: a for a in data_agents}
-    agents_in_step = [
-        agents_by_name[name]
-        for name in query_plan_step.to_agent
-        if name in agents_by_name
-    ]
+    agents_in_step = [agents_by_name[name] for name in query_plan_step.to_agent if name in agents_by_name]
 
     selector = await AgentSelector.create(
         agents=agents_in_step,
@@ -264,9 +240,7 @@ async def answer_step_multiple_agents(
 
     ranked_all = selector.rank(selector.selections)
     rankings = [(s.agent.name, s.score) for s in ranked_all]
-    align_schema_names = [
-        s.agent.name for s in ranked_all[: Config.get().align_schema_agent_limit]
-    ]
+    align_schema_names = [s.agent.name for s in ranked_all[: Config.get().align_schema_agent_limit]]
 
     result_list = await align_schema(
         data_agents=data_agents,
@@ -288,9 +262,7 @@ async def answer_step_multiple_agents(
             additional_information=additional_information,
             result_list=result_list,
             agents_queried=agents_queried,
-            agents_remaining=[
-                s.agent.name for s in batch_selections + remaining_selections
-            ],
+            agents_remaining=[s.agent.name for s in batch_selections + remaining_selections],
             iteration_records=iteration_records,
             rankings=rankings,
         )

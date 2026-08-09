@@ -55,9 +55,7 @@ def create_query_plan_prompt_context(query_plan: QueryPlan) -> str:
                         }
                         for dependency in step.dependencies
                     ],
-                    "answer_preview": result_to_json_preview(step.answer)
-                    if step.answer is not None
-                    else None,
+                    "answer_preview": result_to_json_preview(step.answer) if step.answer is not None else None,
                 }
                 for step in query_plan.steps
             ]
@@ -101,9 +99,7 @@ async def replan_query_plan(
     query_plan: QueryPlan,
     reason: FailedExecution,
 ) -> QueryPlan:
-    registry_string = await agent_registry.build_registry_string(
-        relevant_data_agents, AgentRegistryType.TECHNICAL
-    )
+    registry_string = await agent_registry.build_registry_string(relevant_data_agents, AgentRegistryType.TECHNICAL)
     answer_map = create_answer_map_from_query_plan(query_plan)
     QueryReplanModel = create_query_replan_model(relevant_data_agents)
 
@@ -118,7 +114,5 @@ async def replan_query_plan(
         output_type=QueryReplanModel,
     )
 
-    query_plan = map_query_replan_model_to_query_plan(
-        result, query_plan.query, answer_map
-    )
+    query_plan = map_query_replan_model_to_query_plan(result, query_plan.query, answer_map)
     return query_plan

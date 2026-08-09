@@ -1,8 +1,7 @@
+from pydantic import BaseModel, ConfigDict
+
 from qcp_adaptive_termination.models.agent import DataAgent
 from qcp_adaptive_termination.models.query_plan.query_plan import QueryPlan
-
-
-from pydantic import BaseModel, ConfigDict
 
 
 class DraftedQueryPlan(BaseModel):

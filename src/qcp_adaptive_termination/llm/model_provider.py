@@ -21,30 +21,24 @@ def set_multi_provider(provider: MultiProvider) -> None:
 
 def get_multi_provider() -> MultiProvider:
     if _multi_provider is None:
-        raise RuntimeError(
-            "MultiProvider not initialized — call setup_multi_provider() first"
-        )
+        raise RuntimeError("MultiProvider not initialized — call setup_multi_provider() first")
     return _multi_provider
 
 
 async def _modify_request_hook(request: httpx.Request):
-    if request.method == "POST" and "application/json" in request.headers.get(
-        "content-type", ""
-    ):
+    if request.method == "POST" and "application/json" in request.headers.get("content-type", ""):
         body_bytes = await request.aread()
         request_json = json.loads(body_bytes.decode("utf-8"))
 
         request_json["temperature"] = 0.0
 
-        # thinking_mode needs to be disabled for correct output, otherwise it will return output in reasoning, which breaks openai sdk
-        thinking_enabled = (
-            "reasoning_effort" in request_json
-            and request_json["reasoning_effort"] != "none"
-        )
+        # thinking_mode needs to be disabled for correct output,
+        # otherwise it will return output in reasoning, which breaks openai sdk
+        thinking_enabled = "reasoning_effort" in request_json and request_json["reasoning_effort"] != "none"
 
         request_json["chat_template_kwargs"] = {
             "thinking_mode": "enabled" if thinking_enabled else "disabled",
-            "thinking": True if thinking_enabled else False,
+            "thinking": bool(thinking_enabled),
             "reasoning_effort": request_json.get("reasoning_effort", "none"),
         }
         if "reasoning_effort" in request_json:
@@ -76,9 +70,7 @@ def _add_provider(
     api_key = os.getenv(f"{prefix.upper()}_API_KEY")
 
     if not base_url:
-        logging.warning(
-            f"{prefix.upper()}_BASE_URL not set; skipping provider registration."
-        )
+        logging.warning(f"{prefix.upper()}_BASE_URL not set; skipping provider registration.")
         return
 
     client = AsyncOpenAI(

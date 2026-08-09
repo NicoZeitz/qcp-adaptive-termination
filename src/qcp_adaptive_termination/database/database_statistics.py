@@ -67,9 +67,7 @@ def fetch_table_statistics(
     db_engine = get_database_engine(data_agent)
     with db_engine.connect() as conn:
         if columns is None:
-            rows = conn.execute(
-                text(f"PRAGMA table_info({quote_table(table_name)})")
-            ).fetchall()
+            rows = conn.execute(text(f"PRAGMA table_info({quote_table(table_name)})")).fetchall()
             columns = [row[1] for row in rows]
 
         # Base Statistics: total rows, non-null counts, distinct counts, min/max
@@ -81,13 +79,7 @@ def fetch_table_statistics(
                 f"MIN({quote_col(col)}) AS min_{i}",
                 f"MAX({quote_col(col)}) AS max_{i}",
             ]
-        base_row = (
-            conn.execute(
-                text(f"SELECT {', '.join(col_exprs)} FROM {quote_table(table_name)}")
-            )
-            .mappings()
-            .one()
-        )
+        base_row = conn.execute(text(f"SELECT {', '.join(col_exprs)} FROM {quote_table(table_name)}")).mappings().one()
 
         total_rows = int(base_row["total_rows"])
         column_stats: list[ColumnStatistics] = []
@@ -166,9 +158,7 @@ def fetch_table_statistics(
                 )
             )
 
-    return TableStatistics(
-        table_name=table_name, total_rows=total_rows, columns=column_stats
-    )
+    return TableStatistics(table_name=table_name, total_rows=total_rows, columns=column_stats)
 
 
 def fetch_database_statistics(
@@ -178,15 +168,11 @@ def fetch_database_statistics(
 ) -> DatabaseStatistics:
     db_engine = get_database_engine(data_agent)
     with db_engine.connect() as conn:
-        rows = conn.execute(
-            text("SELECT name FROM sqlite_master WHERE type='table'")
-        ).fetchall()
+        rows = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()
     tables = [row[0] for row in rows]
 
     table_stats = [
-        fetch_table_statistics(
-            data_agent, table_name, histogram_bins=histogram_bins, max_mcv=max_mcv
-        )
+        fetch_table_statistics(data_agent, table_name, histogram_bins=histogram_bins, max_mcv=max_mcv)
         for table_name in tables
     ]
     return DatabaseStatistics(name=data_agent.name, tables=table_stats)

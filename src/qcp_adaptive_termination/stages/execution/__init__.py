@@ -54,17 +54,10 @@ async def execute_query_plan_attempt(
                 query_plan,
             )
 
-            if (
-                isinstance(execution_result, SuccessfulExecution)
-                and execution_result.execution_finished
-            ):
-                return ExecutionResult(
-                    success=execution_result.success, result=execution_result.result
-                )
+            if isinstance(execution_result, SuccessfulExecution) and execution_result.execution_finished:
+                return ExecutionResult(success=execution_result.success, result=execution_result.result)
             elif isinstance(execution_result, FailedExecution):
-                return ExecutionResult(
-                    success=execution_result.success, failed_execution=execution_result
-                )
+                return ExecutionResult(success=execution_result.success, failed_execution=execution_result)
 
 
 async def replan(
@@ -88,12 +81,8 @@ async def replan(
 
         if failed_execution.needs:
             current_agent_names = {agent.name for agent in current_data_agents}
-            remaining_agents = [
-                agent for agent in data_agents if agent.name not in current_agent_names
-            ]
-            needs_context = "\n".join(
-                f"- {serialize_need(need)}" for need in failed_execution.needs
-            )
+            remaining_agents = [agent for agent in data_agents if agent.name not in current_agent_names]
+            needs_context = "\n".join(f"- {serialize_need(need)}" for need in failed_execution.needs)
             if remaining_agents:
                 result = await filter_relevant_agents_internal(
                     query=query_plan.query,

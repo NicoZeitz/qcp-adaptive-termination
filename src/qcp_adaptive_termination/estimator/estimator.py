@@ -49,9 +49,7 @@ class Estimator:
 
     DEFAULT_COUNT_ESTIMATOR: CountEstimator = CountEstimator.CHAO92
     DEFAULT_VALUE_ESTIMATOR: ValueEstimator = ValueEstimator.NAIVE
-    DEFAULT_CONFIDENCE_INTERVAL_TYPE: ConfidenceIntervalType = (
-        ConfidenceIntervalType.CHAO84
-    )
+    DEFAULT_CONFIDENCE_INTERVAL_TYPE: ConfidenceIntervalType = ConfidenceIntervalType.CHAO84
 
     # ── Class-level attribute annotations (typed, for IDE support) ───────────
 
@@ -88,9 +86,7 @@ class Estimator:
 
     def __init__(self, source_samples: list[list[DataItem]]) -> None:
         self.source_samples = source_samples
-        self._all_samples = [
-            item for src in source_samples for item in src if item is not None
-        ]
+        self._all_samples = [item for src in source_samples for item in src if item is not None]
         if not self._all_samples:
             raise ValueError("Estimator requires at least one sample")
 
@@ -127,6 +123,7 @@ class Estimator:
         self._mc_random_seed: int | None = MC_RANDOM_SEED
         self._mc_max_theta_points: int = MC_DEFAULT_MAX_THETA_POINTS
         self._mc_laplace_alpha: float = MC_LAPLACE_ALPHA
+        self._dynamic_buckets = lru_cache(maxsize=None)(self._raw_dynamic_buckets)
 
     def set_monte_carlo_parameters(
         self,
@@ -225,9 +222,7 @@ class Estimator:
                         use_bucket=False,
                         use_monte_carlo=use_monte_carlo,
                     )
-                    for b in self._dynamic_buckets(
-                        bucket_value_estimator, count_estimator
-                    )
+                    for b in self._dynamic_buckets(bucket_value_estimator, count_estimator)
                 ),
             )
 
@@ -302,15 +297,9 @@ class Estimator:
         rare entities, then adds the observed abundant count.
         Falls back to chao92 when all rare entities are singletons (zero coverage).
         """
-        c_rare = sum(
-            1 for abundance, _ in self._entities.values() if int(abundance) <= 10
-        )
+        c_rare = sum(1 for abundance, _ in self._entities.values() if int(abundance) <= 10)
         c_abundant = self._c - c_rare
-        n_rare = sum(
-            int(abundance)
-            for abundance, _ in self._entities.values()
-            if int(abundance) <= 10
-        )
+        n_rare = sum(int(abundance) for abundance, _ in self._entities.values() if int(abundance) <= 10)
 
         if n_rare == 0:
             return self._c
@@ -352,9 +341,7 @@ class Estimator:
         confidence_epsilon: float = 0.01,
     ) -> float:
         """Lower bound for the estimated total unique entity count at the given confidence level."""
-        lower, _ = self.estimated_count_bounds(
-            confidence_interval_type, confidence_epsilon
-        )
+        lower, _ = self.estimated_count_bounds(confidence_interval_type, confidence_epsilon)
         return lower
 
     def estimated_count_upper_bound(
@@ -363,9 +350,7 @@ class Estimator:
         confidence_epsilon: float = 0.01,
     ) -> float:
         """Upper bound for the estimated total unique entity count at the given confidence level."""
-        _, upper = self.estimated_count_bounds(
-            confidence_interval_type, confidence_epsilon
-        )
+        _, upper = self.estimated_count_bounds(confidence_interval_type, confidence_epsilon)
         return upper
 
     def estimated_count_bounds(
@@ -384,13 +369,9 @@ class Estimator:
             return self.chao84_confidence_interval(confidence_epsilon)
         if confidence_interval_type == ConfidenceIntervalType.GOOD_TURING:
             return self.good_turing_confidence_interval(confidence_epsilon)
-        raise ValueError(
-            f"Unsupported confidence interval type: {confidence_interval_type}"
-        )
+        raise ValueError(f"Unsupported confidence interval type: {confidence_interval_type}")
 
-    def good_turing_confidence_interval(
-        self, confidence_epsilon: float
-    ) -> tuple[float, float]:
+    def good_turing_confidence_interval(self, confidence_epsilon: float) -> tuple[float, float]:
         """Confidence interval for total unique entity count using a Good-Turing error bound.
 
         Bounds the missing mass M0 = f1/n with an additive error term derived from
@@ -402,9 +383,7 @@ class Estimator:
         c = self._c
 
         M0_hat = f1 / n  # Good-Turing estimate of missing mass
-        error = (2.0 * math.sqrt(2.0) + math.sqrt(3.0)) * math.sqrt(
-            math.log(3.0 / confidence_epsilon) / n
-        )
+        error = (2.0 * math.sqrt(2.0) + math.sqrt(3.0)) * math.sqrt(math.log(3.0 / confidence_epsilon) / n)
 
         M0_upper = min(1.0, M0_hat + error)
         M0_lower = max(0.0, M0_hat - error)
@@ -413,9 +392,7 @@ class Estimator:
         N_hat_lower = c / max(numeric_eps, 1.0 - M0_lower)
         return (max(self._c, N_hat_lower), max(self._c, N_hat_upper))
 
-    def chao84_confidence_interval(
-        self, confidence_epsilon: float
-    ) -> tuple[float, float]:
+    def chao84_confidence_interval(self, confidence_epsilon: float) -> tuple[float, float]:
         """Confidence interval for total unique entity count using the asymmetric Chao84 interval.
 
         Uses the log-normal approximation for N - c, which gives a tighter interval
@@ -477,24 +454,16 @@ class Estimator:
     ) -> float:
         """Estimated SUM contribution of missing entities (Δ = φ_D - φ_K)."""
         if use_bucket:
-            return self._bucket_delta(
-                value_estimator, count_estimator, use_monte_carlo=use_monte_carlo
-            )
+            return self._bucket_delta(value_estimator, count_estimator, use_monte_carlo=use_monte_carlo)
 
         if value_estimator is ValueEstimator.NAIVE:
-            return self._naive_delta(
-                count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
-            )
+            return self._naive_delta(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
         if value_estimator is ValueEstimator.FREQUENCY:
-            return self._frequency_delta(
-                count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
-            )
+            return self._frequency_delta(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
         if value_estimator is ValueEstimator.GOOD_TURING:
             return self._good_turing_delta()
         if value_estimator is ValueEstimator.FREQUENCY_F12:
-            return self._frequency_f12_delta(
-                count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
-            )
+            return self._frequency_f12_delta(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
 
         raise ValueError(f"Unsupported estimator: {value_estimator}")
 
@@ -528,9 +497,7 @@ class Estimator:
         Assumes missing entities have the same average value as the observed ones:
         Δ = (φ_K / c) * (N_hat - c).
         """
-        N_hat = self.estimated_count(
-            count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo
-        )
+        N_hat = self.estimated_count(count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo)
         if not math.isfinite(N_hat):
             return math.inf
         return (self._φ_K / self._c) * (N_hat - self._c)
@@ -552,9 +519,7 @@ class Estimator:
         if f1 == 0:
             return 0.0
 
-        N_hat = self.estimated_count(
-            count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo
-        )
+        N_hat = self.estimated_count(count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo)
         if not math.isfinite(N_hat):
             return math.inf
         return (self._φ_f1 / f1) * (N_hat - self._c)
@@ -591,9 +556,7 @@ class Estimator:
         denom = self.f1_count() + f2
         if denom == 0:
             return 0.0
-        N_hat = self.estimated_count(
-            count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo
-        )
+        N_hat = self.estimated_count(count_estimator, use_bucket=use_bucket, use_monte_carlo=use_monte_carlo)
         if not math.isfinite(N_hat):
             return math.inf
         return (self._φ_f12 / denom) * (N_hat - self._c)
@@ -703,9 +666,7 @@ class Estimator:
         """
         z = float(norm.ppf(1.0 - confidence_epsilon / 2.0))
         φ_K_over_c = self._φ_K / self._c
-        σ_K = math.sqrt(
-            sum((v[1] - φ_K_over_c) ** 2 for v in self._entities.values()) / self._c
-        ) / math.sqrt(self._c)
+        σ_K = math.sqrt(sum((v[1] - φ_K_over_c) ** 2 for v in self._entities.values()) / self._c) / math.sqrt(self._c)
 
         lower = φ_K_over_c - z * σ_K
         upper = φ_K_over_c + z * σ_K
@@ -729,13 +690,7 @@ class Estimator:
         """
         buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator)
         sub = Estimator(buckets[0].to_sources())
-        if (
-            sub.estimated_count(
-                count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
-            )
-            - sub._c
-            == 0
-        ):
+        if sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo) - sub._c == 0:
             return self._observed_min
         return None
 
@@ -755,13 +710,7 @@ class Estimator:
         """
         buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator)
         sub = Estimator(buckets[-1].to_sources())
-        if (
-            sub.estimated_count(
-                count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo
-            )
-            - sub._c
-            == 0
-        ):
+        if sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo) - sub._c == 0:
             return self._observed_max
         return None
 
@@ -804,9 +753,7 @@ class Estimator:
         if xlp_max <= xlp_min:
             return self.chao92()
 
-        grid_size = (
-            int(math.ceil(math.log(xlp_max / xlp_min) / math.log(grid_factor))) + 1
-        )
+        grid_size = int(math.ceil(math.log(xlp_max / xlp_min) / math.log(grid_factor))) + 1
         xlp = [xlp_min * (grid_factor**i) for i in range(max(grid_size, 2))]
 
         m = len(xlp)
@@ -872,13 +819,12 @@ class Estimator:
             return self.chao92()
 
         y = res2.x[:m]
-        lp_species = float(sum(y_i / x_i for y_i, x_i in zip(y, xlp)))
+        lp_species = float(sum(y_i / x_i for y_i, x_i in zip(y, xlp, strict=False)))
         return sparse_species + lp_species
 
     # ── Private Helpers: Buckets ───────────────────────────────────────────
 
-    @lru_cache(maxsize=None)
-    def _dynamic_buckets(
+    def _raw_dynamic_buckets(
         self,
         bucket_value_estimator: ValueEstimator,
         bucket_count_estimator: CountEstimator,
@@ -913,9 +859,7 @@ class Estimator:
                 lb, ub = bucket.lower_bound, bucket.upper_bound
 
                 best_left, best_right, best_score = None, None, math.inf
-                for split_value in [(lb + ub) / 2.0] + [
-                    item.value for item in bucket.sorted_samples()
-                ]:
+                for split_value in [(lb + ub) / 2.0] + [item.value for item in bucket.sorted_samples()]:
                     left, right = self._split_bucket(bucket, split_value)
                     if left.number_of_samples == 0 or right.number_of_samples == 0:
                         continue
@@ -931,10 +875,7 @@ class Estimator:
                 if (
                     best_left is None
                     or best_right is None
-                    or best_score
-                    >= self._bucket_sum_est(
-                        bucket, bucket_value_estimator, bucket_count_estimator
-                    )
+                    or best_score >= self._bucket_sum_est(bucket, bucket_value_estimator, bucket_count_estimator)
                 ):
                     bucket.split_locked = True
                     next_buckets.append(bucket)
@@ -997,11 +938,7 @@ class Estimator:
         and returns the N at the minimum.
         """
         n_estimated = self.estimated_count(count_estimator, use_bucket=False)
-        n_ub = (
-            self._c * 2
-            if not math.isfinite(n_estimated)
-            else max(self._c, int(math.ceil(n_estimated)))
-        )
+        n_ub = self._c * 2 if not math.isfinite(n_estimated) else max(self._c, int(math.ceil(n_estimated)))
 
         # If Chao is not finite or collapses to the observed count, there is no
         # meaningful N-grid search to perform for Monte Carlo.

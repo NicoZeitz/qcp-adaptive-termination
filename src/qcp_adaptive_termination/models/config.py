@@ -1,6 +1,7 @@
+from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Generator, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,14 +17,12 @@ class RoleConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     model: str
-    reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = (
-        "none"
-    )
+    reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = "none"
     reasoning_summary: Literal["auto", "concise", "detailed"] | None = None
 
 
 class Config(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     data_path_prefix: str = "../data/"
 
@@ -49,7 +48,11 @@ class Config(BaseModel):
 
     @classmethod
     def get(cls) -> "Config":
-        return _config_var.get()
+        cfg = _config_var.get()
+        if cfg is None:
+            cfg = Config()
+            _config_var.set(cfg)
+        return cfg
 
     @classmethod
     @contextmanager
@@ -61,4 +64,4 @@ class Config(BaseModel):
             _config_var.reset(token)
 
 
-_config_var: ContextVar[Config] = ContextVar("config", default=Config())
+_config_var: ContextVar[Config | None] = ContextVar("config", default=None)

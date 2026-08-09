@@ -1,6 +1,7 @@
 from collections import defaultdict
+from collections.abc import Callable
 from enum import StrEnum
-from typing import Any, Callable
+from typing import Any
 
 _handlers: defaultdict[str, list[Callable[..., Any]]] = defaultdict(list)
 

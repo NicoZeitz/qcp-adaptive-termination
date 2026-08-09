@@ -68,9 +68,7 @@ def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseMode
     return QueryPlan
 
 
-def map_query_plan_model_to_query_plan(
-    query_plan_model: BaseModel, query: str
-) -> QueryPlan:
+def map_query_plan_model_to_query_plan(query_plan_model: BaseModel, query: str) -> QueryPlan:
     step_mapping: dict[str, QueryPlanStep] = {}
     steps = []
 
@@ -81,7 +79,7 @@ def map_query_plan_model_to_query_plan(
         dependencies = []
         for dependency_model in getattr(step_model, "dependencies", []):
             if getattr(dependency_model, "step_id", None) not in step_mapping:
-                continue  # TODO:DRAFT_ERROR Ignore invalid dependencies that refer to steps that are not defined in the plan
+                continue  # TODO:DRAFT_ERROR Ignore invalid dependencies that refer to steps not defined in the plan
 
             dependencies.append(
                 QueryDependency(

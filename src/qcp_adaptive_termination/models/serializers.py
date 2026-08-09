@@ -11,6 +11,8 @@ from qcp_adaptive_termination.models.need import (
 from qcp_adaptive_termination.models.result import (
     ResultType,
     deserialize_result,
+)
+from qcp_adaptive_termination.models.result import (
     serialize_result as serialize_result_type,
 )
 from qcp_adaptive_termination.preview import result_to_json_preview
@@ -36,9 +38,7 @@ def validate_optional_result(value: Any) -> ResultType | None:
     return validate_result(value)
 
 
-def serialize_optional_result(
-    result: ResultType | None, info: SerializationInfo
-) -> JsonValue:
+def serialize_optional_result(result: ResultType | None, info: SerializationInfo) -> JsonValue:
     if result is None:
         return None
     return serialize_result(result, info)

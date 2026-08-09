@@ -75,9 +75,7 @@ async def _resolve_column(
     table_per_agent: dict[str, str],
     query: str,
 ) -> dict[str, str]:
-    agents_vectors = await agent_registry.embedding_vectors_for_all_columns(
-        agents, table_per_agent
-    )
+    agents_vectors = await agent_registry.embedding_vectors_for_all_columns(agents, table_per_agent)
     query_vector = await embedding.create(query)
 
     result: dict[str, str] = {}
@@ -128,9 +126,7 @@ class AgentSelector:
             assert table_per_agent is not None
             column_per_agent = await _resolve_column(agents, table_per_agent, query)
 
-        precomputed = await strategy.precompute(
-            agents, table_per_agent, column_per_agent, query
-        )
+        precomputed = await strategy.precompute(agents, table_per_agent, column_per_agent, query)
         state = strategy.init_state()
         selections = [AgentSelection(agent=a, score=None) for a in agents]
         return cls(strategy, precomputed, state, selections)
@@ -138,13 +134,8 @@ class AgentSelector:
     def rank(self, remaining: list[AgentSelection]) -> list[AgentSelection]:
         return self._strategy.rank(remaining, self._precomputed, self._state)
 
-    def update(
-        self, result_list: AlignedResultList, agent_names: list[str] | None = None
-    ) -> None:
-        col = (
-            result_list.schema_metadata.value_column
-            or result_list.schema_metadata.keys[0]
-        )
+    def update(self, result_list: AlignedResultList, agent_names: list[str] | None = None) -> None:
+        col = result_list.schema_metadata.value_column or result_list.schema_metadata.keys[0]
         df = result_list.data
         values = df[col].dropna().astype(str).tolist()
         self._state = self._strategy.update(

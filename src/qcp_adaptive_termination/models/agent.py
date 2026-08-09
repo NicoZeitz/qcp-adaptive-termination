@@ -5,9 +5,10 @@ Defines `DataAgent`, `AgentRegistryData` (with `TableDescription` /
 `ColumnDescription`), `AgentRegistryType`, and `AgentRole`.
 """
 
+from collections.abc import Hashable
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Hashable, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 

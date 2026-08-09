@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, cast
+from typing import TypeVar, cast
 
 from qcp_adaptive_termination.models import AgentSelection, DataAgent
 
@@ -8,7 +8,7 @@ RunningState = TypeVar("RunningState")
 PrecomputedScoredState = TypeVar("PrecomputedScoredState", bound=float)
 
 
-class SelectionStrategy(ABC, Generic[PrecomputedState, RunningState]):
+class SelectionStrategy[PrecomputedState, RunningState](ABC):
     """
     Stateful ranking strategy for dynamic agent selection.
 

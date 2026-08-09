@@ -1,6 +1,6 @@
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import field
-from typing import Callable
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
@@ -42,6 +42,4 @@ class EmbeddingStrategy(StaticSelectionStrategy[float]):
         for agent_name, dist in ranked:
             agent_distances[agent_name].append(dist)
 
-        return {
-            name: self.scorer(distances) for name, distances in agent_distances.items()
-        }
+        return {name: self.scorer(distances) for name, distances in agent_distances.items()}

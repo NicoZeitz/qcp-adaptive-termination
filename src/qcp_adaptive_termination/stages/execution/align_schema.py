@@ -101,8 +101,6 @@ async def align_schema(
 
         tracing.append_to_span_output({"schema_metadata": schema_metadata})
         return AlignedResultList(
-            data=pd.DataFrame(
-                columns=schema_metadata.columns + [schema_metadata.source_agent_column]
-            ),
+            data=pd.DataFrame(columns=schema_metadata.columns + [schema_metadata.source_agent_column]),
             schema_metadata=schema_metadata,
         )

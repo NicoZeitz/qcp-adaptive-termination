@@ -18,6 +18,10 @@ from qcp_adaptive_termination.models.stages import (
     DraftedQueryPlan,
     FilteredRelevantAgents,
 )
+from qcp_adaptive_termination.observability import (
+    setup_logging,
+    setup_tracing,
+)
 from qcp_adaptive_termination.preview import result_to_json_preview
 from qcp_adaptive_termination.stages.discovery import (
     STAGE_NAME as DISCOVERY_STAGE_NAME,
@@ -36,10 +40,6 @@ from qcp_adaptive_termination.stages.planning import (
 )
 from qcp_adaptive_termination.stages.planning import (
     draft_query_plan,
-)
-from qcp_adaptive_termination.observability import (
-    setup_logging,
-    setup_tracing,
 )
 
 STAGES = {
@@ -124,9 +124,7 @@ async def _run_stages(
     max_trace_label_len = 50
     name_prefix = f"{name.strip()[:max_trace_label_len]} - " if name else ""
     input_file_prefix = input_file.stem[:max_trace_label_len]
-    trace_label = (
-        f"[NZ] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}"
-    )
+    trace_label = f"[NZ] {name_prefix}{input_file_prefix}: Stage {start_stage}-{end_stage}"
     cfg = Config.get()
 
     logging.info(f"Config: {cfg.model_dump_json()}")
@@ -145,9 +143,7 @@ async def _run_stages(
     langfuse = get_client()
 
     with (
-        langfuse.start_as_current_observation(
-            name=trace_label, input=langfuse_input, metadata=trace_metadata
-        ),
+        langfuse.start_as_current_observation(name=trace_label, input=langfuse_input, metadata=trace_metadata),
         trace(trace_label, metadata=trace_metadata),
     ):
         data, extra = load_cache_file(
@@ -169,9 +165,7 @@ async def _run_stages(
 
         if start_stage == 2:
             data = cast(FilteredRelevantAgents, data)
-            data = await draft_query_plan(
-                data.query, data.data_agents, data.relevant_data_agents
-            )
+            data = await draft_query_plan(data.query, data.data_agents, data.relevant_data_agents)
             start_stage += 1
             if end_stage < start_stage:
                 return None
@@ -194,10 +188,7 @@ async def _run_stages(
             )
 
             for execution_id, records in MULTI_AGENT_ITERATION_RECORDS.items():
-                records_path = (
-                    log_dir
-                    / f"{log_filename} - iteration_records - {execution_id}.json"
-                )
+                records_path = log_dir / f"{log_filename} - iteration_records - {execution_id}.json"
                 with open(records_path, "w", encoding="utf-8") as f:
                     json.dump(
                         [r.model_dump() for r in records],
@@ -231,9 +222,7 @@ async def _run_stages(
                     traces_file = log_dir / f"{log_filename}_traces.jsonl"
                     reasoning_by_n = None
                     if traces_file.exists():
-                        reasoning_by_n = load_reasoning_by_agents_queried(
-                            str(traces_file)
-                        )
+                        reasoning_by_n = load_reasoning_by_agents_queried(str(traces_file))
                         if reasoning_by_n:
                             save_reasoning_text(
                                 series,
