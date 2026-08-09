@@ -1,3 +1,4 @@
+import asyncio
 from enum import StrEnum
 from typing import Any
 
@@ -160,12 +161,12 @@ async def filter_relevant_agents_internal(
         "Filtering with Agents",
         input={"query": query, "filter_type": filter_type.value},
     ):
-        relevant_data_agents = []
-        for item in result:
-            if filter_type == FilterType.REASONING:
-                agent = await _filter_data_agent_with_reasoning(query, item, additional_context)
-
-            if agent is not None:
-                relevant_data_agents.append(agent)
+        if filter_type == FilterType.REASONING:
+            agents = await asyncio.gather(
+                *[_filter_data_agent_with_reasoning(query, item, additional_context) for item in result]
+            )
+        else:
+            raise ValueError(f"Unsupported filter type: {filter_type}")
+        relevant_data_agents = [agent for agent in agents if agent is not None]
 
     return FilteredRelevantAgents(data_agents=data_agents, relevant_data_agents=relevant_data_agents, query=query)

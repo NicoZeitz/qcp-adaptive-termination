@@ -5,6 +5,7 @@ Drives the step-by-step execution loop, handles replanning on failure
 (up to `MAX_REPLAN_ATTEMPTS`), and returns a `CollaborativeQueryAnsweringResult`.
 """
 
+import logging
 from typing import cast
 
 from qcp_adaptive_termination.models import (
@@ -92,6 +93,8 @@ async def replan(
                     additional_context=needs_context,
                 )
                 updated_data_agents = current_data_agents + result.relevant_data_agents
+            else:
+                logging.warning("Replan triggered with needs but no remaining agents to expand into")
 
         new_query_plan = await replan_query_plan(
             data_agents=data_agents,

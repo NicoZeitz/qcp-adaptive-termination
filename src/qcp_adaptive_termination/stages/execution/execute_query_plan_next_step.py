@@ -41,6 +41,8 @@ async def execute_query_plan_next_step(
         break
 
     if step_to_execute is None:
+        if not query_plan.steps:
+            raise ValueError("Query plan has no steps")
         return SuccessfulExecution(
             step=query_plan.steps[-1],
             result=cast(ResultType, query_plan.steps[-1].answer),

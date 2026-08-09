@@ -38,6 +38,7 @@ _cache_var: ContextVar[Cache | None] = ContextVar("cache", default=None)
 _config_var: ContextVar[Config | None] = ContextVar("config", default=None)
 _data_dir_var: ContextVar[Path | None] = ContextVar("data_dir", default=None)
 _output_dir_var: ContextVar[Path | None] = ContextVar("output_dir", default=None)
+_logging_active_var: ContextVar[bool] = ContextVar("logging_active", default=False)
 
 
 def get_cache() -> Cache | None:
@@ -69,7 +70,7 @@ def _config_is_active() -> bool:
 
 
 def _is_logging_active() -> bool:
-    return len(logging.root.handlers) > 0
+    return _logging_active_var.get()
 
 
 def _is_tracing_active() -> bool:
@@ -126,17 +127,24 @@ def cache_context(
 def logging_context(output_dir: Path) -> Generator[None, None, None]:
     """Set up logging to file + stderr. Stacks with existing logging context."""
     token_dir = _output_dir_var.set(output_dir)
+    token_active = _logging_active_var.set(True)
+    file_handler: logging.FileHandler | None = None
 
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
         log_file = output_dir / "stdout.log"
         logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
-        logging.getLogger().addHandler(logging.FileHandler(log_file))
+        file_handler = logging.FileHandler(log_file)
+        logging.getLogger().addHandler(file_handler)
         logging.info(f"Logging initialized. Log file: {log_file}")
 
         yield
     finally:
+        if file_handler is not None:
+            logging.getLogger().removeHandler(file_handler)
+            file_handler.close()
         _output_dir_var.reset(token_dir)
+        _logging_active_var.reset(token_active)
 
 
 @contextmanager

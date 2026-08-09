@@ -9,7 +9,6 @@ from qcp_adaptive_termination.models import (
     SelectionStrategyType,
 )
 from qcp_adaptive_termination.observability import context
-from qcp_adaptive_termination.selection_strategy import SequentialStrategy
 from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSelection
 from qcp_adaptive_termination.selection_strategy.count_strategy import (
     CountStrategy,
@@ -21,6 +20,7 @@ from qcp_adaptive_termination.selection_strategy.embedding_strategy import (
 from qcp_adaptive_termination.selection_strategy.posterior_strategy import (
     PosteriorStrategy,
 )
+from qcp_adaptive_termination.selection_strategy.sequential_strategy import SequentialStrategy
 from qcp_adaptive_termination.selection_strategy.sketch_strategy import (
     HllSketchStrategy,
     MinHashStrategy,

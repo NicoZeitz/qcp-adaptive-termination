@@ -9,7 +9,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.engine import Engine
 
-from qcp_adaptive_termination.database.mschema import MSchema
+from qcp_adaptive_termination.database.mschema.m_schema import MSchema
 from qcp_adaptive_termination.database.mschema.utils import examples_to_str
 
 

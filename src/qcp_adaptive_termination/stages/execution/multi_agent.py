@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Literal, cast
 
 import pandas as pd
@@ -226,6 +227,9 @@ async def answer_step_multiple_agents(
     batch_size: int = 1,
 ) -> PartialQueryAnswer:
     agents_by_name = {a.name: a for a in data_agents}
+    missing = [name for name in query_plan_step.to_agent if name not in agents_by_name]
+    if missing:
+        logging.warning(f"Step {query_plan_step.id}: agents not found in data_agents and will be skipped: {missing}")
     agents_in_step = [agents_by_name[name] for name in query_plan_step.to_agent if name in agents_by_name]
 
     selector = await AgentSelector.create(

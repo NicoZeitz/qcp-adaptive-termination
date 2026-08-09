@@ -186,7 +186,8 @@ async def run_completeness_evaluator(
         )
 
     if evaluator_result.decision == "final_result":
-        assert evaluator_result.result is not None
+        if evaluator_result.result is None:
+            raise RuntimeError("Completeness evaluator returned final_result decision but no result")
         return FinalResultOutcome(
             result=evaluator_result.result,
             result_list=aligned_result_list,
