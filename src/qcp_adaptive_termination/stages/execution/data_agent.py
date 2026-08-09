@@ -7,9 +7,11 @@ from pydantic import JsonValue
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.database as database
+import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
     AgentRegistryType,
@@ -50,6 +52,7 @@ async def answer_query_data_agent(
     additional_information: list[AdditionalInformation],
     schema_metadata: AlignedSchemaMetadata | None = None,
 ) -> PartialQueryAnswer:
+    hooks.emit(HookEvent.DATA_AGENT_QUERY_START, data_agent=data_agent, query=query)
     with tracing.own_span(
         f"Data Agent {data_agent.name} - answer_query",
         input={
@@ -135,6 +138,7 @@ async def answer_query_data_agent(
                 "sql_queries": [sql_query.to_span_data() for sql_query in sql_queries],
             }
         )
+        hooks.emit(HookEvent.DATA_AGENT_QUERY_END, data_agent=data_agent, query=query, partial_answer=result)
         return result
 
 

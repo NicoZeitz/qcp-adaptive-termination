@@ -8,6 +8,8 @@ Drives the step-by-step execution loop, handles replanning on failure
 import logging
 from typing import cast
 
+from qcp_adaptive_termination import hooks
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import (
     AgentRegistryType,
     CacheMode,
@@ -68,6 +70,12 @@ async def replan(
     query_plan: QueryPlan,
     failed_execution: FailedExecution,
 ) -> tuple[list[DataAgent], QueryPlan]:
+    hooks.emit(
+        HookEvent.REPLAN_START,
+        replan_attempt=replan_attempt,
+        query_plan=query_plan,
+        failed_execution=failed_execution,
+    )
     with tracing.own_span(
         f"{replan_attempt} - {REPLAN_STAGE_NAME}",
         input={
@@ -110,6 +118,12 @@ async def replan(
             }
         )
 
+        hooks.emit(
+            HookEvent.REPLAN_END,
+            replan_attempt=replan_attempt,
+            updated_data_agents=updated_data_agents,
+            new_query_plan=new_query_plan,
+        )
         return updated_data_agents, new_query_plan
 
 
@@ -121,6 +135,13 @@ async def execute_query_plan(
 ) -> CollaborativeQueryAnsweringResult:
     MAX_REPLAN_ATTEMPTS = 2
 
+    hooks.emit(
+        HookEvent.EXECUTE_QUERY_PLAN_START,
+        query_plan=query_plan,
+        relevant_data_agents=relevant_data_agents,
+        data_agents=data_agents,
+    )
+
     for replan_attempt in range(MAX_REPLAN_ATTEMPTS + 1):
         execution_result = await execute_query_plan_attempt(
             replan_attempt=replan_attempt,
@@ -129,14 +150,18 @@ async def execute_query_plan(
         )
 
         if execution_result.success:
-            return CollaborativeQueryAnsweringResult(
+            result = CollaborativeQueryAnsweringResult(
                 result=cast(ResultType, execution_result.result),
             )
+            hooks.emit(HookEvent.EXECUTE_QUERY_PLAN_END, result=result)
+            return result
 
         if replan_attempt >= MAX_REPLAN_ATTEMPTS:
-            return CollaborativeQueryAnsweringResult(
+            result = CollaborativeQueryAnsweringResult(
                 result=result_type.failed_result(),
             )
+            hooks.emit(HookEvent.EXECUTE_QUERY_PLAN_END, result=result)
+            return result
 
         relevant_data_agents, query_plan = await replan(
             replan_attempt=replan_attempt,
@@ -146,6 +171,8 @@ async def execute_query_plan(
             failed_execution=cast(FailedExecution, execution_result.failed_execution),
         )
 
-    return CollaborativeQueryAnsweringResult(
+    result = CollaborativeQueryAnsweringResult(
         result=result_type.failed_result(),
     )
+    hooks.emit(HookEvent.EXECUTE_QUERY_PLAN_END, result=result)
+    return result

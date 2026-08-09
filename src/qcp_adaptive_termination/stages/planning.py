@@ -3,6 +3,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
 import qcp_adaptive_termination.agent_registry as agent_registry
+from qcp_adaptive_termination import hooks
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, CacheMode, DataAgent
 from qcp_adaptive_termination.models.query_plan import (
@@ -125,6 +127,12 @@ async def draft_query_plan(
             "relevant_data_agents": relevant_data_agents,
         },
     ):
+        hooks.emit(
+            HookEvent.DRAFT_QUERY_PLAN_START,
+            query=query,
+            data_agents=data_agents,
+            relevant_data_agents=relevant_data_agents,
+        )
         registry_string = await agent_registry.build_registry_string(
             relevant_data_agents, registry_type=AgentRegistryType.TECHNICAL
         )
@@ -142,8 +150,10 @@ async def draft_query_plan(
         query_plan = map_query_plan_model_to_query_plan(result, query)
         tracing.append_to_span_output({"query_plan": query_plan})
 
-        return DraftedQueryPlan(
+        drafted_query_plan = DraftedQueryPlan(
             relevant_data_agents=relevant_data_agents,
             data_agents=data_agents,
             query_plan=query_plan,
         )
+        hooks.emit(HookEvent.DRAFT_QUERY_PLAN_END, drafted_query_plan=drafted_query_plan)
+        return drafted_query_plan

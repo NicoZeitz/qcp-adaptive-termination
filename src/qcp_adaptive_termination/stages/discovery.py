@@ -5,6 +5,8 @@ from typing import Any
 from pydantic import BaseModel, Field, create_model
 
 import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.hooks as hooks
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, CacheMode, DataAgent
 from qcp_adaptive_termination.models.stages import FilteredRelevantAgents
@@ -110,6 +112,8 @@ async def filter_relevant_agents(query: str, data_agents: list[DataAgent]) -> Fi
             "data_agents": data_agents,
         },
     ):
+        hooks.emit(HookEvent.FILTER_RELEVANT_AGENTS_START, query=query, data_agents=data_agents)
+
         result = await filter_relevant_agents_internal(
             query=query,
             data_agents=data_agents,
@@ -122,6 +126,7 @@ async def filter_relevant_agents(query: str, data_agents: list[DataAgent]) -> Fi
                 "relevant_data_agents": result.relevant_data_agents,
             }
         )
+        hooks.emit(HookEvent.FILTER_RELEVANT_AGENTS_END, filtered_relevant_agents=result)
         return result
 
 

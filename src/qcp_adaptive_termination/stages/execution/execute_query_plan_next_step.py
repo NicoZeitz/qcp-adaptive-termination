@@ -2,6 +2,8 @@ from typing import cast
 
 from agents import AgentsException, MaxTurnsExceeded
 
+import qcp_adaptive_termination.hooks as hooks
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import DataAgent, ResultType, need_type
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
@@ -97,6 +99,7 @@ async def execute_query_plan_step(
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
 ) -> PartialQueryAnswer:
+    hooks.emit(HookEvent.EXECUTE_STEP_START, query_plan_step=query_plan_step)
     with tracing.own_span(
         f"Execute Step: {query_plan_step.id}",
         input={
@@ -119,6 +122,7 @@ async def execute_query_plan_step(
             )
 
         tracing.append_to_span_output({"partial_answer": result})
+        hooks.emit(HookEvent.EXECUTE_STEP_END, query_plan_step=query_plan_step, partial_answer=result)
         return result
 
 

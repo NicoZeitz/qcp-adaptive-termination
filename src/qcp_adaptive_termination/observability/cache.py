@@ -163,6 +163,7 @@ def cached[**Param, RetType](
         async def wrapper(*args: Param.args, **kwargs: Param.kwargs) -> RetType:
             nonlocal name_prefix
 
+            # deferred: context imports Cache, so top-level would be circular
             from qcp_adaptive_termination.observability.context import get_cache
 
             bound = sig.bind(*args, **kwargs)

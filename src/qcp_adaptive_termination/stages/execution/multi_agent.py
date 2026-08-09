@@ -117,6 +117,13 @@ async def run_agent_batch(
     remaining_agents_now = [a for a in agents_remaining if a not in batch]
     batch_label = ", ".join(batch)
 
+    hooks.emit(
+        HookEvent.MULTI_AGENT_BATCH_START,
+        query_plan_step=query_plan_step,
+        batch=batch,
+        agents_queried=agents_queried,
+        agents_remaining=agents_remaining,
+    )
     with tracing.own_span(
         f"Batch: [{batch_label}]",
         input={
@@ -173,6 +180,12 @@ async def run_agent_batch(
                     "agents_with_needs": [a for a, _ in need_results],
                 }
             )
+            hooks.emit(
+                HookEvent.MULTI_AGENT_BATCH_END,
+                query_plan_step=query_plan_step,
+                batch=batch,
+                iteration_records=iteration_records,
+            )
             return combined_need_outcome
 
         per_agent_stats: list[tuple[str, AlignedResultList, EstimatorStatistics]] = []
@@ -217,6 +230,12 @@ async def run_agent_batch(
             )
 
         tracing.append_to_span_output({"outcome": outcome, "batch": batch})
+        hooks.emit(
+            HookEvent.MULTI_AGENT_BATCH_END,
+            query_plan_step=query_plan_step,
+            batch=batch,
+            iteration_records=iteration_records,
+        )
         return outcome
 
 
