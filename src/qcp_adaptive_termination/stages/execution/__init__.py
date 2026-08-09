@@ -12,8 +12,8 @@ from qcp_adaptive_termination.models import (
     AgentRegistryType,
     DataAgent,
     ResultType,
-    failed_result,
-    serialize,
+    need_type,
+    result_type,
 )
 from qcp_adaptive_termination.models.execution import (
     ExecutionResult,
@@ -82,7 +82,7 @@ async def replan(
         if failed_execution.needs:
             current_agent_names = {agent.name for agent in current_data_agents}
             remaining_agents = [agent for agent in data_agents if agent.name not in current_agent_names]
-            needs_context = "\n".join(f"- {serialize(need)}" for need in failed_execution.needs)
+            needs_context = "\n".join(f"- {need_type.serialize(need)}" for need in failed_execution.needs)
             if remaining_agents:
                 result = await filter_relevant_agents_internal(
                     query=query_plan.query,
@@ -132,7 +132,7 @@ async def execute_query_plan(
 
         if replan_attempt >= MAX_REPLAN_ATTEMPTS:
             return CollaborativeQueryAnsweringResult(
-                result=failed_result(),
+                result=result_type.failed_result(),
             )
 
         relevant_data_agents, query_plan = await replan(
@@ -144,5 +144,5 @@ async def execute_query_plan(
         )
 
     return CollaborativeQueryAnsweringResult(
-        result=failed_result(),
+        result=result_type.failed_result(),
     )

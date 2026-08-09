@@ -15,9 +15,8 @@ from qcp_adaptive_termination.models import (
     Config,
     DataAgent,
     EstimatorStatistics,
-    result_type,
+    SerializedResultType,
 )
-from qcp_adaptive_termination.models.result_type import SerializedResultType
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
     EvaluatorDecision,

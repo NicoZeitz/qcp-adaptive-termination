@@ -1,9 +1,11 @@
 from pydantic import BaseModel, ConfigDict
 
-from qcp_adaptive_termination.models import need_type, result_type
 from qcp_adaptive_termination.models.need_type import SerializedNeedList
-from qcp_adaptive_termination.models.result_type import SerializedOptionalResultType, SerializedResultType
-from qcp_adaptive_termination.models.query_plan.query_plan_step import QueryPlanStep
+from qcp_adaptive_termination.models.query_plan import QueryPlanStep
+from qcp_adaptive_termination.models.result_type import (
+    SerializedOptionalResultType,
+    SerializedResultType,
+)
 
 
 class SuccessfulExecution(BaseModel):

@@ -819,7 +819,7 @@ class Estimator:
             return self.chao92()
 
         y = res2.x[:m]
-        lp_species = float(sum(y_i / x_i for y_i, x_i in zip(y, xlp, strict=False)))
+        lp_species = float(sum(y_i / x_i for y_i, x_i in zip(y, xlp, strict=True)))
         return sparse_species + lp_species
 
     # ── Private Helpers: Buckets ───────────────────────────────────────────

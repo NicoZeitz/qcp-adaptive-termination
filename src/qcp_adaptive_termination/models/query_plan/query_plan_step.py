@@ -1,8 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from qcp_adaptive_termination.models import result_type
-from qcp_adaptive_termination.models.result_type import SerializedOptionalResultType
 from qcp_adaptive_termination.models.query_plan.query_dependency import QueryDependency
+from qcp_adaptive_termination.models.result_type import SerializedOptionalResultType
 
 
 class BaseQueryPlanStep(BaseModel):

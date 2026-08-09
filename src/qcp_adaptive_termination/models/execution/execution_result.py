@@ -1,9 +1,9 @@
 from pydantic import BaseModel, ConfigDict
 
-from qcp_adaptive_termination.models.result_type import SerializedOptionalResultType
 from qcp_adaptive_termination.models.execution.query_plan_step_execution_result import (
     FailedExecution,
 )
+from qcp_adaptive_termination.models.result_type import SerializedOptionalResultType
 
 
 class ExecutionResult(BaseModel):

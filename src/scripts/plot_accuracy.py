@@ -37,7 +37,7 @@ COLOR_ESTIMATED = "#DD8452"
 
 DECISION_ORDER = ["batch_query", "query_more_agents", "final_result"]
 DECISION_COLORS = ["#4C72B0", "#DD8452", "#55A868"]
-DECISION_COLOR_MAP = dict(zip(DECISION_ORDER, DECISION_COLORS, strict=False))
+DECISION_COLOR_MAP = dict(zip(DECISION_ORDER, DECISION_COLORS, strict=True))
 
 DATASET_GROUPS = [
     "gdp2012",
@@ -103,7 +103,7 @@ def extract_series(records):
 def draw_decision_markers(ax, xs, decisions):
     trans = ax.get_xaxis_transform()
     seen = set()
-    for x, dec in zip(xs, decisions, strict=False):
+    for x, dec in zip(xs, decisions, strict=True):
         if dec is None:
             continue
         color = DECISION_COLOR_MAP.get(dec, "#6b7280")

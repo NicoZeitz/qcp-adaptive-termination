@@ -1,6 +1,5 @@
 from pydantic import BaseModel, ConfigDict
 
-from qcp_adaptive_termination.models import result_type
 from qcp_adaptive_termination.models.result_type import SerializedResultType
 
 

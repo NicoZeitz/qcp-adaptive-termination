@@ -23,7 +23,7 @@ async def load(agent: list[DataAgent]) -> dict[str, AgentRegistryData]: ...
 async def load(agent):
     if isinstance(agent, list):
         results = await asyncio.gather(*[utils.load_registry_data(a) for a in agent])
-        return {a.name: r for a, r in zip(agent, results, strict=False)}
+        return {a.name: r for a, r in zip(agent, results, strict=True)}
     return await utils.load_registry_data(agent)
 
 

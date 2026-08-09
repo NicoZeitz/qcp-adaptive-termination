@@ -1,7 +1,7 @@
 import pandas as pd
 from pandas import DataFrame
 
-from qcp_adaptive_termination.models.estimation import (
+from qcp_adaptive_termination.models import (
     AlignedSchemaMetadata,
 )
 

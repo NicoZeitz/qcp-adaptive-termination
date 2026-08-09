@@ -180,7 +180,7 @@ class SchemaEngine(SQLDatabase):
             fks = self.get_foreign_keys(table_name)
             for fk in fks:
                 referred_schema = fk["referred_schema"]
-                for c, r in zip(fk["constrained_columns"], fk["referred_columns"], strict=False):
+                for c, r in zip(fk["constrained_columns"], fk["referred_columns"], strict=True):
                     self._mschema.add_foreign_key(table_with_schema, c, referred_schema, fk["referred_table"], r)
 
             fields = self._inspector.get_columns(table_name, schema=self._tables_schemas[table_name])

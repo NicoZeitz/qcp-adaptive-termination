@@ -185,7 +185,7 @@ def draw_decision_markers(ax, x: list, decisions: list) -> None:
     """Draw decision markers as colored triangles along the bottom of the axes."""
     trans = ax.get_xaxis_transform()  # x in data coords, y in axes fraction
     seen = set()
-    for xi, dec in zip(x, decisions, strict=False):
+    for xi, dec in zip(x, decisions, strict=True):
         if dec is None:
             continue
         color = DECISION_COLORS.get(dec, DECISION_DEFAULT_COLOR)
@@ -404,7 +404,7 @@ def compute_error_series(series: dict, count_gt: float, value_gt: float) -> dict
         series["estimated_value"],
         series["observed_count"],
         series["estimated_count"],
-        strict=False,
+        strict=True,
     ):
         value_obs_err.append(abs(obs_v - value_gt) if obs_v is not None else None)
         value_est_err.append(abs(est_v - value_gt) if est_v is not None and math.isfinite(est_v) else None)
@@ -492,7 +492,7 @@ def save_reasoning_text(
         series["estimated_value"],
         series["observed_count"],
         series["estimated_count"],
-        strict=False,
+        strict=True,
     ):
 
         def fmt(v: float) -> str:

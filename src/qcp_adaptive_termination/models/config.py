@@ -12,6 +12,8 @@ from qcp_adaptive_termination.models.selection_strategy import (
     SelectionType,
 )
 
+_config_var: ContextVar["Config | None"] = ContextVar("config", default=None)
+
 
 class RoleConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -62,6 +64,3 @@ class Config(BaseModel):
             yield cfg
         finally:
             _config_var.reset(token)
-
-
-_config_var: ContextVar[Config | None] = ContextVar("config", default=None)

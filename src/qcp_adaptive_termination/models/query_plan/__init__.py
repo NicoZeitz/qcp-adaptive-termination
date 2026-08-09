@@ -11,18 +11,16 @@ from qcp_adaptive_termination.models.query_plan.query_plan import (
     QueryPlan,
 )
 from qcp_adaptive_termination.models.query_plan.query_plan_step import (
-    BaseQueryPlanStep,
     MultiAgentQueryPlanStep,
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
 
 __all__ = [
-    "QueryDependency",
     "FieldDefinitions",
-    "QueryPlan",
-    "BaseQueryPlanStep",
     "MultiAgentQueryPlanStep",
+    "QueryDependency",
+    "QueryPlan",
     "QueryPlanStep",
     "SingleAgentQueryPlanStep",
 ]

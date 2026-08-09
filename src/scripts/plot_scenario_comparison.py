@@ -180,7 +180,7 @@ def draw_heatmap(ax, variants, series_map, n_agents):
         ser = series_map.get(variant)
         if ser is None:
             continue
-        for x, dec in zip(ser["x"], ser["decisions"], strict=False):
+        for x, dec in zip(ser["x"], ser["decisions"], strict=True):
             col = x - 1
             if 0 <= col < n_agents:
                 matrix[row_i, col] = DECISION_ORDER.index(dec)
@@ -217,7 +217,7 @@ def draw_heatmap(ax, variants, series_map, n_agents):
 
 
 def draw_coverage(ax, ser, gt_count, n_agents, show_labels):
-    xs = [x for x, v in zip(ser["x"], ser["sample_cov"], strict=False) if v is not None]
+    xs = [x for x, v in zip(ser["x"], ser["sample_cov"], strict=True) if v is not None]
     ys = [v for v in ser["sample_cov"] if v is not None]
     if xs:
         ax.plot(
@@ -231,7 +231,7 @@ def draw_coverage(ax, ser, gt_count, n_agents, show_labels):
         )
 
     if gt_count:
-        xs_t = [x for x, v in zip(ser["x"], ser["obs_cnt"], strict=False) if v is not None]
+        xs_t = [x for x, v in zip(ser["x"], ser["obs_cnt"], strict=True) if v is not None]
         ys_t = [v / gt_count for v in ser["obs_cnt"] if v is not None]
         if xs_t:
             ax.plot(
@@ -276,7 +276,7 @@ def draw_estimation(
             zorder=2,
         )
 
-    xs_o = [xv for xv, v in zip(x, ser[field_obs], strict=False) if v is not None]
+    xs_o = [xv for xv, v in zip(x, ser[field_obs], strict=True) if v is not None]
     ys_o = [v for v in ser[field_obs] if v is not None]
     if xs_o:
         ax.plot(
@@ -290,7 +290,7 @@ def draw_estimation(
             zorder=3,
         )
 
-    xs_e = [xv for xv, v in zip(x, ser[field_est], strict=False) if v is not None and math.isfinite(v)]
+    xs_e = [xv for xv, v in zip(x, ser[field_est], strict=True) if v is not None and math.isfinite(v)]
     ys_e = [v for v in ser[field_est] if v is not None and math.isfinite(v)]
     if xs_e:
         ax.plot(
@@ -305,7 +305,7 @@ def draw_estimation(
         )
 
     ci_x, ci_lo, ci_hi = [], [], []
-    for xv, lo, hi in zip(x, ser[field_lo], ser[field_hi], strict=False):
+    for xv, lo, hi in zip(x, ser[field_lo], ser[field_hi], strict=True):
         if lo is not None and hi is not None and math.isfinite(lo) and math.isfinite(hi):
             ci_x.append(xv)
             ci_lo.append(lo)

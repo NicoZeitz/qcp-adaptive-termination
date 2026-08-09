@@ -13,10 +13,8 @@ class MSchema:
         self.database_comment: str = ""
 
     def add_table(self, name, fields=None, comment=None):
-        if fields is None:
-            fields = {}
         self.tables[name] = {
-            "fields": fields.copy(),
+            "fields": (fields or {}).copy(),
             "examples": [],
             "comment": comment,
         }
@@ -43,7 +41,7 @@ class MSchema:
             "default": default if default is None else f"{default}",
             "autoincrement": autoincrement,
             "comment": comment,
-            "examples": examples.copy(),
+            "examples": (examples or []).copy(),
             **kwargs,
         }
 

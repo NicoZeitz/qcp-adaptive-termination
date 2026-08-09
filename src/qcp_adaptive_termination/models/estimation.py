@@ -7,14 +7,18 @@ and `AlignedSchemaMetadata` (schema-aligned result accumulation).
 """
 
 from enum import StrEnum
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from qcp_adaptive_termination.models import result_type
 from qcp_adaptive_termination.models.result_type import ResultType, SerializedResultType
 
-AggregationType = Literal["count", "min", "max", "sum", "avg"]
+
+class AggregationType(StrEnum):
+    COUNT = "count"
+    MIN = "min"
+    MAX = "max"
+    SUM = "sum"
+    AVG = "avg"
 
 
 class EstimatorMode(StrEnum):
