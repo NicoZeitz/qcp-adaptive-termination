@@ -1,20 +1,12 @@
 from collections import defaultdict
 from dataclasses import field
-from typing import Protocol
+from typing import Callable
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
 from qcp_adaptive_termination.embedding import VectorIndex
 from qcp_adaptive_termination.models import DataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import StaticSelectionStrategy
-
-
-class EmbeddingScorer(Protocol):
-    def __call__(self, distances: list[float]) -> float: ...
-
-
-def min_distance_scorer(distances: list[float]) -> float:
-    return min(distances)
 
 
 class EmbeddingStrategy(StaticSelectionStrategy[float]):
@@ -26,7 +18,7 @@ class EmbeddingStrategy(StaticSelectionStrategy[float]):
     """
 
     ascending: bool = True
-    scorer: EmbeddingScorer = field(default=min_distance_scorer)
+    scorer: Callable[[list[float]], float] = field(default=min)
 
     async def precompute(
         self,

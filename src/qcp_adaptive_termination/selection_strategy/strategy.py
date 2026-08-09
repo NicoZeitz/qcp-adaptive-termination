@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import Generic, Protocol, TypeVar, cast
+from typing import Generic, TypeVar, cast
 
 from qcp_adaptive_termination.models import AgentSelection, DataAgent
 
-P = TypeVar("P")  # precomputed value type (per-agent mapping value)
-S = TypeVar("S")  # running state type
-PS = TypeVar("PS", bound=float)  # numeric score type for static strategies
+PrecomputedState = TypeVar("PrecomputedState")
+RunningState = TypeVar("RunningState")
+PrecomputedScoredState = TypeVar("PrecomputedScoredState", bound=float)
 
 
-class SelectionStrategy(Protocol[P, S]):
+class SelectionStrategy(ABC, Generic[PrecomputedState, RunningState]):
     """
     Stateful ranking strategy for dynamic agent selection.
 
@@ -19,41 +19,53 @@ class SelectionStrategy(Protocol[P, S]):
          (repeat 2-3 until done)
     """
 
+    def needs_table(self) -> bool:
+        """Return True if this strategy requires a table name to be resolved per agent."""
+        return self.needs_column()
+
+    def needs_column(self) -> bool:
+        """Return True if this strategy requires a column name to be resolved per agent."""
+        return False
+
+    @abstractmethod
     async def precompute(
         self,
         agents: list[DataAgent],
         table_per_agent: dict[str, str] | None,
         column_per_agent: dict[str, str] | None,
         query: str = "",
-    ) -> dict[str, P]:
+    ) -> dict[str, PrecomputedState]:
         """Return a per-agent-name mapping of precomputed data (sketches, scores, …)."""
-        ...
+        raise NotImplementedError
 
-    def init_state(self) -> S:
+    @abstractmethod
+    def init_state(self) -> RunningState:
         """Return the initial running state (empty sketch, empty set, …)."""
-        ...
+        raise NotImplementedError
 
+    @abstractmethod
     def rank(
         self,
         remaining: list[AgentSelection],
-        precomputed: dict[str, P],
-        state: S,
+        precomputed: dict[str, PrecomputedState],
+        state: RunningState,
     ) -> list[AgentSelection]:
         """Return remaining agents sorted best-first given the current running state."""
-        ...
+        raise NotImplementedError
 
+    @abstractmethod
     def update(
         self,
-        state: S,
+        state: RunningState,
         values: list[str],
         agent_names: list[str],
-        precomputed: dict[str, P],
-    ) -> S:
+        precomputed: dict[str, PrecomputedState],
+    ) -> RunningState:
         """Fold the column values seen so far into the running state and return it."""
-        ...
+        raise NotImplementedError
 
 
-class StaticSelectionStrategy(ABC, Generic[PS]):
+class StaticSelectionStrategy(SelectionStrategy[PrecomputedScoredState, None]):
     """
     Base for strategies whose ranking does not change between iterations
     (COUNT, DISTINCT_COUNT, statistics-based, embedding).
@@ -71,7 +83,7 @@ class StaticSelectionStrategy(ABC, Generic[PS]):
         table_per_agent: dict[str, str] | None,
         column_per_agent: dict[str, str] | None,
         query: str = "",
-    ) -> dict[str, PS]:
+    ) -> dict[str, PrecomputedScoredState]:
         raise NotImplementedError
 
     def init_state(self) -> None:
@@ -80,7 +92,7 @@ class StaticSelectionStrategy(ABC, Generic[PS]):
     def rank(
         self,
         remaining: list[AgentSelection],
-        precomputed: dict[str, PS],
+        precomputed: dict[str, PrecomputedScoredState],
         state: None,
     ) -> list[AgentSelection]:
         for s in remaining:
@@ -97,6 +109,6 @@ class StaticSelectionStrategy(ABC, Generic[PS]):
         state: None,
         values: list[str],
         agent_names: list[str] | None = None,
-        precomputed: dict[str, PS] | None = None,
+        precomputed: dict[str, PrecomputedScoredState] | None = None,
     ) -> None:
         return None

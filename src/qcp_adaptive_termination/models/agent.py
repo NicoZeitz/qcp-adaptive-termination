@@ -6,7 +6,7 @@ Defines `DataAgent`, `AgentRegistryData` (with `TableDescription` /
 """
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Hashable, Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -46,12 +46,12 @@ class AgentRegistryData:
     individual_descriptions: dict[str, TableDescription]
 
 
-class AgentRegistryType(Enum):
+class AgentRegistryType(StrEnum):
     NATURAL_LANGUAGE = "natural_language"
     TECHNICAL = "technical"
 
 
-class AgentRole(Enum):
+class AgentRole(StrEnum):
     COORDINATOR_RELEVANCE = "coordinator_relevance"
     COORDINATOR_PLANNING = "coordinator_planning"
     COORDINATOR_CODE = "coordinator_code"

@@ -6,7 +6,7 @@ Defines `EstimatorMode` (enum controlling what statistics are reported),
 and `AlignedSchemaMetadata` (schema-aligned result accumulation).
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -17,7 +17,7 @@ from qcp_adaptive_termination.models.serializers import SerializedResultType
 AggregationType = Literal["count", "min", "max", "sum", "avg"]
 
 
-class EstimatorMode(Enum):
+class EstimatorMode(StrEnum):
     FULL = "full"
     """Coverage, observed count + value, estimated count + value with intervals.
 

@@ -27,7 +27,7 @@ from qcp_adaptive_termination.models.execution import (
 from qcp_adaptive_termination.models.query_plan import MultiAgentQueryPlanStep
 from qcp_adaptive_termination.models.serializers import SerializedResultType
 from qcp_adaptive_termination.observability import tracing
-from qcp_adaptive_termination.selection_strategy import AgentSelector
+from qcp_adaptive_termination.selection_strategy.agent_selector import AgentSelector
 from qcp_adaptive_termination.stages.execution.align_schema import align_schema
 from qcp_adaptive_termination.stages.execution.completeness_evaluator import (
     run_completeness_evaluator,

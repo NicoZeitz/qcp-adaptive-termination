@@ -6,10 +6,10 @@ from agents import FunctionToolResult, RunContextWrapper, ToolsToFinalOutputResu
 from pydantic import JsonValue
 
 import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.database as database
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
-from qcp_adaptive_termination.db import get_db_engine
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
     AgentRegistryType,
@@ -63,7 +63,7 @@ async def answer_query_data_agent(
             "schema_metadata": schema_metadata,
         },
     ):
-        db_engine = get_db_engine(data_agent)
+        db_engine = database.get_database_engine(data_agent)
         m_schema = await agent_registry.build_registry_string(
             data_agent, AgentRegistryType.TECHNICAL, include_capabilities=False
         )

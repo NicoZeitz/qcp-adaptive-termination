@@ -6,12 +6,12 @@ Defines `SelectionType` (ranking algorithm enum) and `AgentSelection`
 """
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 from qcp_adaptive_termination.models.agent import DataAgent
 
 
-class SelectionType(Enum):
+class SelectionType(StrEnum):
     SEQUENTIAL = "sequential"  # Needs: None
 
     # Embedding-based

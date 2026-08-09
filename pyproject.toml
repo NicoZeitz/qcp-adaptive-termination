@@ -38,6 +38,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/qcp_adaptive_termination"]
 
+[tool.ty.environment]
+extra-paths = ["src/typings"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

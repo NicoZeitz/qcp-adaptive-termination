@@ -1,12 +1,16 @@
-from dataclasses import dataclass, field
 import textwrap
+from dataclasses import dataclass, field
 from typing import Any
 
 import pandas as pd
 from sqlalchemy import bindparam, text
 
+from qcp_adaptive_termination.database.utils import (
+    get_database_engine,
+    quote_col,
+    quote_table,
+)
 from qcp_adaptive_termination.models import DataAgent
-from qcp_adaptive_termination.db.utils import get_db_engine, quote_col, quote_table
 
 DEFAULT_HISTOGRAM_BINS = 100
 DEFAULT_MAX_MCV = 100
@@ -60,7 +64,7 @@ def fetch_table_statistics(
     histogram_bins: int = DEFAULT_HISTOGRAM_BINS,
     max_mcv: int = DEFAULT_MAX_MCV,
 ) -> TableStatistics:
-    db_engine = get_db_engine(data_agent)
+    db_engine = get_database_engine(data_agent)
     with db_engine.connect() as conn:
         if columns is None:
             rows = conn.execute(
@@ -172,7 +176,7 @@ def fetch_database_statistics(
     histogram_bins: int = DEFAULT_HISTOGRAM_BINS,
     max_mcv: int = DEFAULT_MAX_MCV,
 ) -> DatabaseStatistics:
-    db_engine = get_db_engine(data_agent)
+    db_engine = get_database_engine(data_agent)
     with db_engine.connect() as conn:
         rows = conn.execute(
             text("SELECT name FROM sqlite_master WHERE type='table'")

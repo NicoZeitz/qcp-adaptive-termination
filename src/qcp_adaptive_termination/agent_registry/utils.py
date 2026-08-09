@@ -2,7 +2,8 @@ from typing import Any, Callable, overload
 
 from pydantic import BaseModel, Field, create_model
 
-from qcp_adaptive_termination.db import MSchema, SchemaEngine, get_db_engine
+import qcp_adaptive_termination.database as database
+from qcp_adaptive_termination.database import MSchema, SchemaEngine
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
     AgentRegistryData,
@@ -86,7 +87,7 @@ def _create_database_description_model(
 
 
 async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
-    db_engine = get_db_engine(data_agent)
+    db_engine = database.get_database_engine(data_agent)
     schema_engine = SchemaEngine(db_engine, db_name=data_agent.name)
 
     missing_tables, missing_fields, db_missing = _missing_comments(

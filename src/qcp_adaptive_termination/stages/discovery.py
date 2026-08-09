@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, create_model
@@ -13,7 +13,7 @@ from qcp_adaptive_termination.observability import tracing
 STAGE_NAME = "Stage 1: Discovery"
 
 
-class FilterType(Enum):
+class FilterType(StrEnum):
     REASONING = "reasoning"
 
 

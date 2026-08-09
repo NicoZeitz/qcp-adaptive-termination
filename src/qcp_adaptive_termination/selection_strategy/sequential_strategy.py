@@ -1,5 +1,7 @@
 from qcp_adaptive_termination.models import DataAgent
-from qcp_adaptive_termination.selection_strategy.strategy import StaticSelectionStrategy
+from qcp_adaptive_termination.selection_strategy.strategy import (
+    StaticSelectionStrategy,
+)
 
 
 class SequentialStrategy(StaticSelectionStrategy[float]):

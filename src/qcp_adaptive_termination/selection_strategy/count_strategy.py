@@ -1,33 +1,13 @@
-from sqlalchemy import text
 
-from qcp_adaptive_termination.db import get_db_engine, quote_col, quote_table
+import qcp_adaptive_termination.database as database
 from qcp_adaptive_termination.models import DataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import StaticSelectionStrategy
 
 
-def fetch_count(data_agent: DataAgent, table_name: str) -> int:
-    db_engine = get_db_engine(data_agent)
-    with db_engine.connect() as conn:
-        result = conn.execute(
-            text(f"SELECT COUNT(*) FROM {quote_table(table_name)}")
-        ).scalar()
-    return int(result or 0)
-
-
-def fetch_distinct_count(
-    data_agent: DataAgent, table_name: str, column_name: str
-) -> int:
-    db_engine = get_db_engine(data_agent)
-    with db_engine.connect() as conn:
-        result = conn.execute(
-            text(
-                f"SELECT COUNT(DISTINCT {quote_col(column_name)}) FROM {quote_table(table_name)}"
-            )
-        ).scalar()
-    return int(result or 0)
-
-
 class CountStrategy(StaticSelectionStrategy[int]):
+    def needs_table(self) -> bool:
+        return True
+
     async def precompute(
         self,
         agents: list[DataAgent],
@@ -36,14 +16,22 @@ class CountStrategy(StaticSelectionStrategy[int]):
         query: str = "",
     ) -> dict[str, int]:
         assert table_per_agent
+
         return {
-            a.name: fetch_count(a, table_per_agent[a.name])
-            for a in agents
+            a.name: database.fetch_count(a, table_per_agent[a.name])
             if a.name in table_per_agent
+            else 0
+            for a in agents
         }
 
 
 class DistinctCountStrategy(StaticSelectionStrategy[int]):
+    def needs_table(self) -> bool:
+        return True
+
+    def needs_column(self) -> bool:
+        return True
+
     async def precompute(
         self,
         agents: list[DataAgent],
@@ -52,10 +40,12 @@ class DistinctCountStrategy(StaticSelectionStrategy[int]):
         query: str = "",
     ) -> dict[str, int]:
         assert table_per_agent and column_per_agent
+
         return {
-            a.name: fetch_distinct_count(
+            a.name: database.fetch_distinct_count(
                 a, table_per_agent[a.name], column_per_agent[a.name]
             )
-            for a in agents
             if a.name in table_per_agent and a.name in column_per_agent
+            else 0
+            for a in agents
         }

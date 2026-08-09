@@ -3,34 +3,22 @@ from typing import cast
 
 from datasketch import MinHash
 from datasketches import (
-    compact_theta_sketch,  # ty: ignore[unresolved-import]
-    hll_sketch,  # ty: ignore[unresolved-import]
-    hll_union,  # ty: ignore[unresolved-import]
-    theta_a_not_b,  # ty: ignore[unresolved-import]
-    update_theta_sketch,  # ty: ignore[unresolved-import]
+    compact_theta_sketch,
+    hll_sketch,
+    hll_union,
+    theta_a_not_b,
+    update_theta_sketch,
 )
-from sqlalchemy import text
 
-from qcp_adaptive_termination.db import get_db_engine, quote_col, quote_table
+import qcp_adaptive_termination.database as database
 from qcp_adaptive_termination.models import AgentSelection, DataAgent
-from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
+from qcp_adaptive_termination.selection_strategy.strategy import (
+    SelectionStrategy,
+)
 
 DEFAULT_LG_K = 12
 DEFAULT_NUM_STD = 2
 DEFAULT_MIN_HASH_NUM_PERM = 128
-
-
-def fetch_column_values(
-    data_agent: DataAgent, table_name: str, column_name: str
-) -> list[str]:
-    db_engine = get_db_engine(data_agent)
-    with db_engine.connect() as conn:
-        rows = conn.execute(
-            text(
-                f"SELECT {quote_col(column_name)} FROM {quote_table(table_name)} WHERE {quote_col(column_name)} IS NOT NULL AND {quote_col(column_name)} <> ''"
-            )
-        ).fetchall()
-    return [str(row[0]) for row in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +40,9 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
     lg_k: int = DEFAULT_LG_K
     use_ucb: bool = False
 
+    def needs_column(self) -> bool:
+        return True
+
     async def precompute(
         self,
         agents: list[DataAgent],
@@ -63,7 +54,7 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
         result: dict[str, hll_sketch] = {}
         for agent in agents:
             sketch = hll_sketch(self.lg_k)
-            for v in fetch_column_values(
+            for v in database.fetch_column_values(
                 agent, table_per_agent[agent.name], column_per_agent[agent.name]
             ):
                 sketch.update(v)
@@ -126,6 +117,9 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
     lg_k: int = DEFAULT_LG_K
     use_ucb: bool = False
 
+    def needs_column(self) -> bool:
+        return True
+
     async def precompute(
         self,
         agents: list[DataAgent],
@@ -139,7 +133,7 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
             if agent.name not in table_per_agent or agent.name not in column_per_agent:
                 continue
             sketch = update_theta_sketch(self.lg_k)
-            for v in fetch_column_values(
+            for v in database.fetch_column_values(
                 agent, table_per_agent[agent.name], column_per_agent[agent.name]
             ):
                 sketch.update(v)
@@ -201,6 +195,9 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
 
     num_perm: int = DEFAULT_MIN_HASH_NUM_PERM
 
+    def needs_column(self) -> bool:
+        return True
+
     async def precompute(
         self,
         agents: list[DataAgent],
@@ -213,7 +210,7 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
         for agent in agents:
             if agent.name not in table_per_agent or agent.name not in column_per_agent:
                 continue
-            values = fetch_column_values(
+            values = database.fetch_column_values(
                 agent, table_per_agent[agent.name], column_per_agent[agent.name]
             )
             mh = MinHash(num_perm=self.num_perm)
