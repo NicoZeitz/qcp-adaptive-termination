@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from qcp_adaptive_termination.models.agent import DataAgent
+from qcp_adaptive_termination.models import DataAgent
 
 
 @dataclass(slots=True)

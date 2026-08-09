@@ -9,7 +9,7 @@
         "**/__pycache__": true,
         "**/.ruff_cache": true,
         // "**/.cache": true,
-        "**/.logs": true,
+        // "**/.logs": true,
         "**/.claude": true,
     },
     "explorer.fileNesting.patterns": {
@@ -27,6 +27,7 @@
     "cSpell.words": [
         "akas",
         "alru",
+        "aread",
         "asyncio",
         "bindparam",
         "bindparams",

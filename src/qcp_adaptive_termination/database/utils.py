@@ -2,7 +2,8 @@ import os
 
 from sqlalchemy import Engine, create_engine, text
 
-from qcp_adaptive_termination.models import Config, DataAgent
+from qcp_adaptive_termination.models import DataAgent
+from qcp_adaptive_termination.observability import context
 
 _engine_cache: dict[str, Engine] = {}
 
@@ -17,8 +18,10 @@ def _get_db_engine_for_path(resolved_path: str) -> Engine:
 
 
 def get_database_engine(data_agent: DataAgent) -> Engine:
-    prefix = Config.get().data_path_prefix
-    resolved_path = os.path.abspath(os.path.join(prefix, data_agent.path))
+    data_dir = context.get_data_dir()
+    if data_dir is None:
+        raise RuntimeError("data_dir context not set. Use data_context() or pipeline_context(data_dir=...).")
+    resolved_path = os.path.abspath(os.path.join(data_dir, data_agent.path))
     return _get_db_engine_for_path(resolved_path)
 
 

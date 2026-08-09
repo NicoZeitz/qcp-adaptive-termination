@@ -12,7 +12,6 @@ from qcp_adaptive_termination import hooks
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import (
     AlignedResultList,
-    Config,
     DataAgent,
     EstimatorStatistics,
     SerializedResultType,
@@ -26,7 +25,7 @@ from qcp_adaptive_termination.models.execution import (
     RaiseNeedOutcome,
 )
 from qcp_adaptive_termination.models.query_plan import MultiAgentQueryPlanStep
-from qcp_adaptive_termination.observability import tracing
+from qcp_adaptive_termination.observability import context, tracing
 from qcp_adaptive_termination.selection_strategy.agent_selector import AgentSelector
 from qcp_adaptive_termination.stages.execution.align_schema import align_schema
 from qcp_adaptive_termination.stages.execution.completeness_evaluator import (
@@ -240,7 +239,7 @@ async def answer_step_multiple_agents(
 
     ranked_all = selector.rank(selector.selections)
     rankings = [(s.agent.name, s.score) for s in ranked_all]
-    align_schema_names = [s.agent.name for s in ranked_all[: Config.get().align_schema_agent_limit]]
+    align_schema_names = [s.agent.name for s in ranked_all[: context.get_config().align_schema_agent_limit]]
 
     result_list = await align_schema(
         data_agents=data_agents,
@@ -283,7 +282,7 @@ async def answer_step_multiple_agents(
         if isinstance(outcome, FinalResultOutcome):
             answer.set_answer(outcome.result)
 
-            if not Config.get().continue_after_final_result:
+            if not context.get_config().continue_after_final_result:
                 break
 
         selector.update(result_list, agent_names=batch)

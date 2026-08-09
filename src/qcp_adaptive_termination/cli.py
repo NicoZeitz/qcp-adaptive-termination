@@ -1,11 +1,11 @@
 import asyncio
 import json
 from argparse import ArgumentParser
+from datetime import datetime
 from pathlib import Path
 
-from qcp_adaptive_termination.loaders import load_config
-from qcp_adaptive_termination.pipeline import run_pipeline
-from qcp_adaptive_termination.preview import result_to_json_preview
+from qcp_adaptive_termination.pipeline import load_config, run_pipeline
+from qcp_adaptive_termination.utils import preview
 
 
 def main() -> None:
@@ -35,22 +35,51 @@ def main() -> None:
         default=None,
         help="Config as a YAML file path or inline YAML string",
     )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default=None,
+        help="Directory for logs and traces (default: .logs/ at project root)",
+    )
+    parser.add_argument(
+        "--cache_dir",
+        type=str,
+        default=None,
+        help="Directory for cache files (default: .cache/ at project root)",
+    )
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default=None,
+        help="Root directory for agent data files (default: parent of input file)",
+    )
     args = parser.parse_args()
 
+    datetime_str = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+
     config = load_config(args.config)
+    input_file = Path(args.input)
+    output_dir = Path(args.output_dir) / datetime_str if args.output_dir else None
+    cache_dir = Path(args.cache_dir) if args.cache_dir else None
+    data_dir = Path(args.data_dir) if args.data_dir else input_file.parent
+
     result = asyncio.run(
         run_pipeline(
-            name=args.name,
-            input_file=Path(args.input),
-            config=config,
+            name=f"{args.name} - {datetime_str}" if args.name else datetime_str,
+            input_file=input_file,
             start_stage=args.start_stage,
             end_stage=args.end_stage,
+            output_dir=output_dir,
+            cache_dir=cache_dir,
+            data_dir=data_dir,
+            cache_mode=config.cache_mode,
+            config=config,
         )
     )
 
     print("Pipeline completed successfully. Result preview:")
     if result is not None:
-        print(json.dumps(result_to_json_preview(result.result), indent=2, ensure_ascii=False))
+        print(json.dumps(preview.result_to_json_preview(result.result), indent=2, ensure_ascii=False))
     else:
         print("No result produced.")
 

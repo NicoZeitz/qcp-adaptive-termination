@@ -7,9 +7,9 @@ Drives the step-by-step execution loop, handles replanning on failure
 
 from typing import cast
 
-from qcp_adaptive_termination.cache import CacheMode, cached
 from qcp_adaptive_termination.models import (
     AgentRegistryType,
+    CacheMode,
     DataAgent,
     ResultType,
     need_type,
@@ -22,7 +22,7 @@ from qcp_adaptive_termination.models.execution import (
 )
 from qcp_adaptive_termination.models.query_plan import QueryPlan
 from qcp_adaptive_termination.models.stages import CollaborativeQueryAnsweringResult
-from qcp_adaptive_termination.observability import tracing
+from qcp_adaptive_termination.observability import cache, tracing
 from qcp_adaptive_termination.stages.discovery import (
     FilterType,
     filter_relevant_agents_internal,
@@ -110,7 +110,7 @@ async def replan(
         return updated_data_agents, new_query_plan
 
 
-@cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
+@cache.cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
 async def execute_query_plan(
     query_plan: QueryPlan,
     relevant_data_agents: list[DataAgent],

@@ -14,14 +14,11 @@ from openai import AsyncOpenAI
 _multi_provider: MultiProvider | None = None
 
 
-def set_multi_provider(provider: MultiProvider) -> None:
-    global _multi_provider
-    _multi_provider = provider
-
-
 def get_multi_provider() -> MultiProvider:
+    global _multi_provider
     if _multi_provider is None:
-        raise RuntimeError("MultiProvider not initialized — call setup_multi_provider() first")
+        _multi_provider = _setup_multi_provider()
+
     return _multi_provider
 
 
@@ -85,7 +82,7 @@ def _add_provider(
     provider_map.add_provider(prefix.lower(), provider)
 
 
-def setup_multi_provider() -> None:
+def _setup_multi_provider() -> MultiProvider:
     provider_map = MultiProviderMap()
     _add_provider("OPENAI", provider_map=provider_map)
     _add_provider(
@@ -95,4 +92,4 @@ def setup_multi_provider() -> None:
         http_client=AsyncClient(event_hooks={"request": [_modify_request_hook]}),
     )
     _add_provider("LOCAL", provider_map=provider_map)
-    set_multi_provider(MultiProvider(provider_map=provider_map))
+    return MultiProvider(provider_map=provider_map)

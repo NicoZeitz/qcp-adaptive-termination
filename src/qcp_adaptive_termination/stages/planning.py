@@ -3,9 +3,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
 import qcp_adaptive_termination.agent_registry as agent_registry
-from qcp_adaptive_termination.cache import CacheMode, cached
 from qcp_adaptive_termination.llm import runner
-from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
+from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, CacheMode, DataAgent
 from qcp_adaptive_termination.models.query_plan import (
     FieldDefinitions,
     MultiAgentQueryPlanStep,
@@ -15,7 +14,7 @@ from qcp_adaptive_termination.models.query_plan import (
     SingleAgentQueryPlanStep,
 )
 from qcp_adaptive_termination.models.stages import DraftedQueryPlan
-from qcp_adaptive_termination.observability import tracing
+from qcp_adaptive_termination.observability import cache, tracing
 
 STAGE_NAME = "Stage 2: Planning"
 
@@ -114,7 +113,7 @@ def map_query_plan_model_to_query_plan(query_plan_model: BaseModel, query: str) 
     return query_plan
 
 
-@cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
+@cache.cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
 async def draft_query_plan(
     query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
 ) -> DraftedQueryPlan:

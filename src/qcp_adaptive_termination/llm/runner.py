@@ -18,13 +18,12 @@ from pydantic import BaseModel, JsonValue
 
 import qcp_adaptive_termination.llm.model_provider as model_provider
 import qcp_adaptive_termination.llm.prompt as prompt
-from qcp_adaptive_termination.cache import CacheMode, cached
-from qcp_adaptive_termination.models import AgentRole, Config, RoleConfig
-from qcp_adaptive_termination.observability import tracing
+from qcp_adaptive_termination.models import AgentRole, CacheMode, RoleConfig
+from qcp_adaptive_termination.observability import cache, context, tracing
 
 
 def _resolve_model_config(role: AgentRole) -> tuple[str, Reasoning]:
-    role_cfg: RoleConfig = Config.get().agent_configs[role.value]
+    role_cfg: RoleConfig = context.get_config().agent_configs[role.value]
     reasoning = Reasoning(effort=role_cfg.reasoning_effort, summary=role_cfg.reasoning_summary)
     return role_cfg.model, reasoning
 
@@ -85,7 +84,7 @@ async def run_agent[TResult](
 
     output, deserializable_classes = _get_output_and_deserializable_classes(output_type)
 
-    @cached(
+    @cache.cached(
         name_prefix=role.value,
         mode=cache_mode,
         deserializable_classes=deserializable_classes,

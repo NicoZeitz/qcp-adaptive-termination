@@ -5,7 +5,7 @@ from pandas import DataFrame
 from pydantic import BeforeValidator, JsonValue, PlainSerializer, SerializationInfo
 from pydantic.json_schema import SkipJsonSchema
 
-from qcp_adaptive_termination.preview import result_to_json_preview
+from qcp_adaptive_termination.utils import preview
 
 ResultType = DataFrame
 
@@ -49,7 +49,7 @@ def failed_result() -> ResultType:
 
 def _serialize_result(result: ResultType, info: SerializationInfo) -> JsonValue:
     if info.context == "preview":
-        return result_to_json_preview(result)
+        return preview.result_to_json_preview(result)
     return serialize(result)
 
 

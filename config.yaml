@@ -1,9 +1,3 @@
-data_path_prefix: "../data/"
-
-log_dir: "../logs/"
-cache_dir: "../cache/"
-cache_mode: READ_AND_WRITE
-
 estimator_mode: full
 count_estimator: chao92
 value_estimator: naive

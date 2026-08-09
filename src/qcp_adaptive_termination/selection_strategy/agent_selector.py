@@ -5,10 +5,10 @@ import qcp_adaptive_termination.embedding as embedding
 from qcp_adaptive_termination.embedding import VectorIndex
 from qcp_adaptive_termination.models import (
     AlignedResultList,
-    Config,
     DataAgent,
     SelectionStrategyType,
 )
+from qcp_adaptive_termination.observability import context
 from qcp_adaptive_termination.selection_strategy import SequentialStrategy
 from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSelection
 from qcp_adaptive_termination.selection_strategy.count_strategy import (
@@ -112,7 +112,7 @@ class AgentSelector:
         agents: list[DataAgent],
         query: str,
     ) -> "AgentSelector":
-        selection_type = Config.get().selection_type
+        selection_type = context.get_config().selection_type
         strategy = _build_strategy(selection_type)
 
         table_per_agent: dict[str, str] | None = None

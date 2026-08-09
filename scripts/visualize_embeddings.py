@@ -22,10 +22,8 @@ import umap
 from sklearn.cluster import DBSCAN
 
 import qcp_adaptive_termination.agent_registry as agent_registry
-from qcp_adaptive_termination.cache import setup_cache
-from qcp_adaptive_termination.models.agent import DataAgent
-from qcp_adaptive_termination.models.config import Config, _config_var
-from qcp_adaptive_termination.observability import setup_logging
+from qcp_adaptive_termination.models import DataAgent
+from qcp_adaptive_termination.observability import context
 
 INPUT_FILE = Path("../data/wikidata/companies/split_overlap_employees/employees.json")
 OUTPUT_DIR = Path("../logs")
@@ -67,8 +65,6 @@ def db_label(agent: DataAgent) -> str:
 async def run() -> None:
     log_dir = Path("../logs")
     cache_dir = Path("../.cache")
-    setup_logging("visualize_embeddings", log_dir)
-    setup_cache(cache_dir)
 
     with open(INPUT_FILE) as f:
         data = json.load(f)
@@ -76,10 +72,13 @@ async def run() -> None:
     raw_agents = data["value"]["data_agents"]
     agents = [DataAgent(**a) for a in raw_agents]
 
-    _config_var.set(Config(data_path_prefix="../data/wikidata/companies/split_overlap_employees/"))
-
-    print(f"Loading embeddings for {len(agents)} agents …")
-    all_table_embeddings: dict[str, dict[str, list[float]]] = await load_embeddings(agents)
+    with context.pipeline_context(
+        name="visualize_embeddings",
+        output_dir=log_dir,
+        cache_dir=cache_dir,
+    ):
+        print(f"Loading embeddings for {len(agents)} agents …")
+        all_table_embeddings: dict[str, dict[str, list[float]]] = await load_embeddings(agents)
 
     # For each agent use the mean of its table embeddings as the agent vector.
     agent_names: list[str] = []

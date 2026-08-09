@@ -10,15 +10,13 @@ from typing import cast, overload
 from agents import OpenAIProvider
 from openai import AsyncOpenAI
 
-from qcp_adaptive_termination.cache import cached
 from qcp_adaptive_termination.embedding.vector_index import VectorIndex
 from qcp_adaptive_termination.llm import model_provider
-from qcp_adaptive_termination.models import Config
-from qcp_adaptive_termination.observability import tracing
+from qcp_adaptive_termination.observability import cache, context, tracing
 
 
 def _get_embedding_client_and_model() -> tuple[AsyncOpenAI, str]:
-    embedding_model = Config.get().embedding_model
+    embedding_model = context.get_config().embedding_model
     multi_provider = model_provider.get_multi_provider()
     prefix, stripped = cast(tuple[str, str], multi_provider._get_prefix_and_model_name(embedding_model))  # type: ignore[reportPrivateUsage]
     provider, model_name = cast(
@@ -36,7 +34,7 @@ def _get_embedding_client_and_model() -> tuple[AsyncOpenAI, str]:
 async def create(text: str) -> list[float]: ...
 @overload
 async def create(text: list[str]) -> list[list[float]]: ...
-@cached(name_prefix="Embedding")
+@cache.cached(name_prefix="Embedding")
 async def create(text):
     with tracing.own_span("Embedding", input={"text": text}):
         client, model = _get_embedding_client_and_model()

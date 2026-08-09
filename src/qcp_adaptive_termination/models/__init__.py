@@ -16,6 +16,7 @@ from qcp_adaptive_termination.models.agent import (
     DataAgent,
     TableDescription,
 )
+from qcp_adaptive_termination.models.cache_mode import CacheMode
 from qcp_adaptive_termination.models.config import (
     Config,
     RoleConfig,
@@ -48,6 +49,8 @@ __all__ = [
     "ColumnDescription",
     "DataAgent",
     "TableDescription",
+    # cache_mode
+    "CacheMode",
     # config
     "Config",
     "RoleConfig",

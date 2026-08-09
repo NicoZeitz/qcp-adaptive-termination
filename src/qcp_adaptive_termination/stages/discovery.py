@@ -4,20 +4,19 @@ from typing import Any
 from pydantic import BaseModel, Field, create_model
 
 import qcp_adaptive_termination.agent_registry as agent_registry
-from qcp_adaptive_termination.cache import CacheMode, cached
 from qcp_adaptive_termination.llm import runner
-from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
+from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, CacheMode, DataAgent
 from qcp_adaptive_termination.models.stages import FilteredRelevantAgents
-from qcp_adaptive_termination.observability import tracing
+from qcp_adaptive_termination.observability import cache, tracing
 
-STAGE_NAME = "Stage 1: Discovery"
+DISCOVERY_STAGE_NAME = "Stage 1: Discovery"
 
 
 class FilterType(StrEnum):
     REASONING = "reasoning"
 
 
-def build_relevance_model(data_agents: list[DataAgent]) -> type[BaseModel]:
+def _build_relevance_model(data_agents: list[DataAgent]) -> type[BaseModel]:
     agent_fields: dict[str, Any] = {}
     for agent in data_agents:
         AgentRelevanceModel = create_model(
@@ -39,13 +38,13 @@ def build_relevance_model(data_agents: list[DataAgent]) -> type[BaseModel]:
     return create_model("RelevanceModel", **agent_fields)
 
 
-async def filter_coordinator_with_reasoning(
+async def _filter_coordinator_with_reasoning(
     query: str,
     data_agents: list[DataAgent],
     registry_string: str,
     additional_context: str | None = None,
 ) -> list[tuple[DataAgent, str]]:
-    RelevanceModel = build_relevance_model(data_agents)
+    RelevanceModel = _build_relevance_model(data_agents)
 
     relevances = await runner.run_llm(
         role=AgentRole.COORDINATOR_RELEVANCE,
@@ -75,7 +74,7 @@ async def filter_coordinator_with_reasoning(
     return relevant_agents_with_reasoning
 
 
-async def filter_data_agent_with_reasoning(
+async def _filter_data_agent_with_reasoning(
     query: str,
     item: tuple[DataAgent, str],
     additional_context: str | None = None,
@@ -101,10 +100,10 @@ async def filter_data_agent_with_reasoning(
     return data_agent if is_relevant else None
 
 
-@cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
+@cache.cached(name_prefix=DISCOVERY_STAGE_NAME, mode=CacheMode.WRITE_ONLY)
 async def filter_relevant_agents(query: str, data_agents: list[DataAgent]) -> FilteredRelevantAgents:
     with tracing.own_span(
-        STAGE_NAME,
+        DISCOVERY_STAGE_NAME,
         input={
             "query": query,
             "data_agents": data_agents,
@@ -153,7 +152,7 @@ async def filter_relevant_agents_internal(
         },
     ):
         if filter_type == FilterType.REASONING:
-            result = await filter_coordinator_with_reasoning(query, data_agents, registry_string, additional_context)
+            result = await _filter_coordinator_with_reasoning(query, data_agents, registry_string, additional_context)
         else:
             raise ValueError(f"Unsupported filter type: {filter_type}")
 
@@ -164,7 +163,7 @@ async def filter_relevant_agents_internal(
         relevant_data_agents = []
         for item in result:
             if filter_type == FilterType.REASONING:
-                agent = await filter_data_agent_with_reasoning(query, item, additional_context)
+                agent = await _filter_data_agent_with_reasoning(query, item, additional_context)
 
             if agent is not None:
                 relevant_data_agents.append(agent)
