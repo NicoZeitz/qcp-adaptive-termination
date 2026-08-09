@@ -22,7 +22,6 @@ from qcp_adaptive_termination.models.execution import (
 )
 from qcp_adaptive_termination.models.query_plan import QueryPlanStep
 from qcp_adaptive_termination.observability import tracing
-from qcp_adaptive_termination.utils import preview
 
 
 async def answer_step_coordinator(
@@ -68,7 +67,9 @@ async def answer_step_coordinator(
             role=AgentRole.COORDINATOR_CODE,
             prompt_parameters={
                 "query": query,
-                "additional_information_preview": preview.preview_additional_information(additional_information),
+                "additional_information_preview": AdditionalInformation.preview_additional_information(
+                    additional_information
+                ),
             },
             tools=[code_environment.as_function_tool()],
             tool_use_behavior=custom_tool_handler,

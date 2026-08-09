@@ -1,16 +1,43 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal, overload
 
 import numpy as np
-from pandas import DataFrame
+import pandas as pd
+from pandas import DataFrame, MultiIndex
 from pydantic import BeforeValidator, JsonValue, PlainSerializer, SerializationInfo
 from pydantic.json_schema import SkipJsonSchema
-
-from qcp_adaptive_termination.utils import preview
 
 ResultType = DataFrame
 
 
-def serialize(result: ResultType) -> dict[str, Any]:
+def preview_dataframe(
+    df: DataFrame | None,
+    top_rows: int = 5,
+    bottom_rows: int = 5,
+    show_dtypes: bool = True,
+    show_row_numbers: bool = True,
+) -> str:
+    if df is None:
+        return "None"
+    if df.empty:
+        return df.__repr__()
+    df_copy = df.copy()
+    if show_dtypes:
+        columns = [(c, df_copy[c].dtype) for c in df_copy.columns]
+        df_copy.columns = MultiIndex.from_tuples(columns, names=["name", "type"])
+    if not show_row_numbers:
+        df_copy.index = [""] * len(df_copy)
+    with pd.option_context("display.max_rows", top_rows + bottom_rows + 1):
+        return df_copy.__repr__()
+
+
+@overload
+def serialize(result: ResultType, context: Literal["preview"]) -> str: ...
+@overload
+def serialize(result: ResultType, context: Literal["full"] = "full") -> dict[str, Any]: ...
+def serialize(result: ResultType, context: Literal["preview", "full"] = "full") -> str | dict[str, Any]:
+    if context == "preview":
+        return preview_dataframe(result)
+
     # Replace NaN with None for JSON serialization (null in JSON)
     result_with_none = result.replace(np.nan, None)
     result_with_none = result_with_none.replace({np.inf: "Infinity", -np.inf: "-Infinity"})
@@ -21,6 +48,10 @@ def deserialize(data: dict[str, Any]) -> ResultType:
     df = DataFrame(**data)
     # Convert None values back to NaN
     return df.replace({None: np.nan})
+
+
+def is_result_type(value: Any) -> bool:
+    return isinstance(value, DataFrame)
 
 
 def try_parse_value(value: Any) -> ResultType:
@@ -49,8 +80,9 @@ def failed_result() -> ResultType:
 
 def _serialize_result(result: ResultType, info: SerializationInfo) -> JsonValue:
     if info.context == "preview":
-        return preview.result_to_json_preview(result)
-    return serialize(result)
+        return serialize(result, context="preview")
+    else:
+        return serialize(result, context="full")
 
 
 def _validate_result(value: Any) -> ResultType:

@@ -1,3 +1,4 @@
+import json
 import logging
 import shutil
 from pathlib import Path
@@ -125,6 +126,16 @@ async def run_query(
     )
 
 
+def _write_result(
+    result: FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult,
+    filename: str,
+) -> None:
+    if output_dir := context.get_output_dir():
+        output_path = output_dir / filename
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(result.model_dump(), f, sort_keys=False, allow_unicode=True, indent=4)
+
+
 @overload
 async def run_stages(
     input_file: Path,
@@ -170,6 +181,7 @@ async def run_stages(
     if start_stage == 1:
         data = cast(CollaborativeQueryAnswering, data)
         data = await stages.filter_relevant_agents(data.query, data.data_agents)
+        _write_result(data, "stage_1_filtered_relevant_agents.json")
         start_stage += 1
         if end_stage < start_stage:
             return data
@@ -177,6 +189,7 @@ async def run_stages(
     if start_stage == 2:
         data = cast(FilteredRelevantAgents, data)
         data = await stages.draft_query_plan(data.query, data.data_agents, data.relevant_data_agents)
+        _write_result(data, "stage_2_drafted_query_plan.json")
         start_stage += 1
         if end_stage < start_stage:
             return data
@@ -188,10 +201,10 @@ async def run_stages(
             data.relevant_data_agents,
             data.data_agents,
         )
+        _write_result(data, "stage_3_collaborative_query_answering_result.json")
         return data
 
         # TODO: better code for this (e.g. hooks)
-        # logging.info(preview.result_to_json_preview(result.result))
 
         # if output_dir and log_name:
         #     output_path = output_dir / f"{log_name} - final_result.json"

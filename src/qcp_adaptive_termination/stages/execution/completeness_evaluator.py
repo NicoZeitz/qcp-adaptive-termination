@@ -27,7 +27,6 @@ from qcp_adaptive_termination.models.execution import (
     QueryMoreAgentsOutcome,
 )
 from qcp_adaptive_termination.observability import context, tracing
-from qcp_adaptive_termination.utils import preview
 
 
 class CompletenessEvaluatorResult(BaseModel):
@@ -149,7 +148,7 @@ async def run_completeness_evaluator(
 
     estimator_summary = build_estimator_summary(estimator_statistics)
     previous_statistics_summary = build_previous_statistics_summary(previous_estimator_statistics)
-    result_list_preview = preview.preview_dataframe(aligned_result_list.data)
+    result_list_preview = result_type.serialize(aligned_result_list.data, context="preview")
 
     with tracing.own_span(
         "Query Coordinator - Completeness Evaluator",
@@ -180,7 +179,7 @@ async def run_completeness_evaluator(
         tracing.append_to_span_output(
             {
                 "decision": evaluator_result.decision,
-                "final_result": preview.result_to_json_preview(evaluator_result.result)
+                "final_result": result_type.serialize(evaluator_result.result, context="preview")
                 if evaluator_result.result is not None
                 else None,
             }

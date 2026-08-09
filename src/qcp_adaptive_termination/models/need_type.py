@@ -1,4 +1,4 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BeforeValidator, JsonValue, PlainSerializer
 from pydantic.json_schema import SkipJsonSchema
@@ -6,7 +6,7 @@ from pydantic.json_schema import SkipJsonSchema
 NeedType = str
 
 
-def serialize(need: NeedType) -> str:
+def serialize(need: NeedType, context: Literal["preview", "full"] = "full") -> str:
     return need
 
 

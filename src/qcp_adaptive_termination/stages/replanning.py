@@ -4,12 +4,7 @@ from pydantic import BaseModel
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 from qcp_adaptive_termination.llm import runner
-from qcp_adaptive_termination.models import (
-    AgentRegistryType,
-    AgentRole,
-    DataAgent,
-    ResultType,
-)
+from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent, ResultType, need_type, result_type
 from qcp_adaptive_termination.models.execution import FailedExecution
 from qcp_adaptive_termination.models.query_plan import (
     MultiAgentQueryPlanStep,
@@ -19,7 +14,6 @@ from qcp_adaptive_termination.stages.planning import (
     create_draft_query_plan_model,
     map_query_plan_model_to_query_plan,
 )
-from qcp_adaptive_termination.utils import preview
 
 
 def create_answer_map_from_query_plan(query_plan: QueryPlan) -> dict[str, ResultType]:
@@ -52,7 +46,9 @@ def create_query_plan_prompt_context(query_plan: QueryPlan) -> str:
                         }
                         for dependency in step.dependencies
                     ],
-                    "answer_preview": preview.result_to_json_preview(step.answer) if step.answer is not None else None,
+                    "answer_preview": result_type.serialize(step.answer, context="preview")
+                    if step.answer is not None
+                    else None,
                 }
                 for step in query_plan.steps
             ]
@@ -63,13 +59,13 @@ def create_query_plan_prompt_context(query_plan: QueryPlan) -> str:
 
 def create_reason_prompt_context(reason: FailedExecution) -> str:
     reason_data = {
-        "raised_needs": [preview.need_to_json_preview(need) for need in reason.needs],
+        "raised_needs": [need_type.serialize(need, context="preview") for need in reason.needs],
         "failed_step_id": reason.step.id,
         "failed_step_query": reason.step.query,
         "failed_step_agent": reason.step.to_agent,
     }
     if reason.partial_answer is not None:
-        reason_data["partial_answer"] = preview.result_to_json_preview(reason.partial_answer)
+        reason_data["partial_answer"] = result_type.serialize(reason.partial_answer, context="preview")
 
     return json.dumps(reason_data, indent=2)
 

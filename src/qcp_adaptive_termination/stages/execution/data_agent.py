@@ -25,7 +25,6 @@ from qcp_adaptive_termination.models.execution import (
 )
 from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.stages.execution.validation import validate_agent_output
-from qcp_adaptive_termination.utils import preview
 
 
 @dataclass(slots=True)
@@ -38,7 +37,7 @@ class SqlQuery:
         span_data: dict[str, JsonValue] = {"query": self.query}
 
         if self.result is not None:
-            span_data["result_preview"] = preview.result_to_json_preview(self.result)
+            span_data["result_preview"] = result_type.serialize(self.result, context="preview")
         if self.error is not None:
             span_data["error"] = tracing.serialize_data_for_tracing(self.error)
 
@@ -116,7 +115,9 @@ async def answer_query_data_agent(
             prompt_parameters={
                 "m_schema": m_schema,
                 "query": query,
-                "additional_information_preview": preview.preview_additional_information(additional_information),
+                "additional_information_preview": AdditionalInformation.preview_additional_information(
+                    additional_information
+                ),
                 "columns": ", ".join(schema_metadata.columns) if schema_metadata is not None else None,
             },
             tools=[code_environment.as_function_tool()],

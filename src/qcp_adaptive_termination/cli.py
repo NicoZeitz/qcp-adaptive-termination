@@ -4,8 +4,8 @@ from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
 
+from qcp_adaptive_termination.models import result_type
 from qcp_adaptive_termination.pipeline import load_config, run_pipeline
-from qcp_adaptive_termination.utils import preview
 
 
 def main() -> None:
@@ -77,11 +77,12 @@ def main() -> None:
         )
     )
 
-    print("Pipeline completed successfully. Result preview:")
-    if result is not None:
-        print(json.dumps(preview.result_to_json_preview(result.result), indent=2, ensure_ascii=False))
-    else:
-        print("No result produced.")
+    if args.end_stage == 3:
+        print("Pipeline completed successfully. Result preview:")
+        if result_type.is_result_type(result):
+            print(json.dumps(result_type.serialize(result, context="preview"), indent=2, ensure_ascii=False))
+        else:
+            print("No result produced.")
 
 
 if __name__ == "__main__":
