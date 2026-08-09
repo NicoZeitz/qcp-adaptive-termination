@@ -3,9 +3,48 @@ import json
 from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+from qcp_adaptive_termination import hooks
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import result_type
+from qcp_adaptive_termination.observability import context
 from qcp_adaptive_termination.pipeline import load_config, run_pipeline
+
+if TYPE_CHECKING:
+    from qcp_adaptive_termination.models.stages import (
+        CollaborativeQueryAnsweringResult,
+        DraftedQueryPlan,
+        FilteredRelevantAgents,
+    )
+
+def _register_output_hooks() -> None:
+    def _write_output_file(filename: str, data: dict) -> None:
+        if (output_dir := context.get_output_dir()):
+            path = output_dir / filename
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, sort_keys=False, allow_unicode=True, indent=4)
+
+    @hooks.on(HookEvent.FILTER_RELEVANT_AGENTS_END)
+    def _write_stage_1(filtered_relevant_agents: FilteredRelevantAgents) -> None:
+        _write_output_file(
+            "stage_1_filtered_relevant_agents.json",
+            filtered_relevant_agents.model_dump(),
+        )
+
+    @hooks.on(HookEvent.DRAFT_QUERY_PLAN_END)
+    def _write_stage_2(drafted_query_plan: DraftedQueryPlan) -> None:
+        _write_output_file(
+            "stage_2_drafted_query_plan.json",
+            drafted_query_plan.model_dump(),
+        )
+
+    @hooks.on(HookEvent.EXECUTE_QUERY_PLAN_END)
+    def _write_stage_3(result: CollaborativeQueryAnsweringResult) -> None:
+        _write_output_file(
+            "stage_3_collaborative_query_answering_result.json",
+            result.model_dump(),
+        )
 
 
 def main() -> None:
@@ -62,6 +101,11 @@ def main() -> None:
     output_dir = Path(args.output_dir) / datetime_str if args.output_dir else None
     cache_dir = Path(args.cache_dir) if args.cache_dir else None
     data_dir = Path(args.data_dir) if args.data_dir else input_file.parent
+
+    if output_dir:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    _register_output_hooks()
 
     result = asyncio.run(
         run_pipeline(

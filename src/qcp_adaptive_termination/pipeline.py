@@ -1,4 +1,3 @@
-import json
 import logging
 import shutil
 from pathlib import Path
@@ -126,16 +125,6 @@ async def run_query(
     )
 
 
-def _write_result(
-    result: FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult,
-    filename: str,
-) -> None:
-    if output_dir := context.get_output_dir():
-        output_path = output_dir / filename
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(result.model_dump(), f, sort_keys=False, allow_unicode=True, indent=4)
-
-
 @overload
 async def run_stages(
     input_file: Path,
@@ -181,7 +170,6 @@ async def run_stages(
     if start_stage == 1:
         data = cast(CollaborativeQueryAnswering, data)
         data = await stages.filter_relevant_agents(data.query, data.data_agents)
-        _write_result(data, "stage_1_filtered_relevant_agents.json")
         start_stage += 1
         if end_stage < start_stage:
             return data
@@ -189,7 +177,6 @@ async def run_stages(
     if start_stage == 2:
         data = cast(FilteredRelevantAgents, data)
         data = await stages.draft_query_plan(data.query, data.data_agents, data.relevant_data_agents)
-        _write_result(data, "stage_2_drafted_query_plan.json")
         start_stage += 1
         if end_stage < start_stage:
             return data
@@ -201,71 +188,4 @@ async def run_stages(
             data.relevant_data_agents,
             data.data_agents,
         )
-        _write_result(data, "stage_3_collaborative_query_answering_result.json")
         return data
-
-        # TODO: better code for this (e.g. hooks)
-
-        # if output_dir and log_name:
-        #     output_path = output_dir / f"{log_name} - final_result.json"
-        #     with open(output_path, "w") as f:
-        #         f.write(result.model_dump_json(indent=4, ensure_ascii=False))
-
-        #     from qcp_adaptive_termination.stages.execution.multi_agent import (
-        #         MULTI_AGENT_ITERATION_RECORDS,
-        #     )
-
-        #     for execution_id, records in MULTI_AGENT_ITERATION_RECORDS.items():
-        #         records_path = output_dir / f"{log_name} - iteration_records - {execution_id}.json"
-        #         with open(records_path, "w", encoding="utf-8") as f:
-        #             json.dump(
-        #                 [r.model_dump() for r in records],
-        #                 f,
-        #                 indent=4,
-        #                 ensure_ascii=False,
-        #                 default=str,
-        #             )
-
-        #         run_prefix = str(output_dir / log_name)
-        #         try:
-        #             from scripts.plot_iteration_records import (
-        #                 extract_series,
-        #                 load_final_result_value,
-        #                 load_reasoning_by_agents_queried,
-        #                 load_records,
-        #                 plot,
-        #                 save_reasoning_text,
-        #             )
-
-        #             plot_records = load_records(str(records_path))
-        #             series = extract_series(plot_records)
-        #             count_gt = series["last_observed_count"] or 0
-        #             value_gt = (
-        #                 (extra.get("full_answer") if extra else None)
-        #                 or load_final_result_value(run_prefix)
-        #                 or series["last_observed_value"]
-        #                 or 0
-        #             )
-
-        #             traces_file = output_dir / f"{log_name}_traces.jsonl"
-        #             reasoning_by_n = None
-        #             if traces_file.exists():
-        #                 reasoning_by_n = load_reasoning_by_agents_queried(str(traces_file))
-        #                 if reasoning_by_n:
-        #                     save_reasoning_text(
-        #                         series,
-        #                         reasoning_by_n,
-        #                         run_prefix + " - completeness reasoning.txt",
-        #                     )
-
-        #             plot(
-        #                 series,
-        #                 count_gt,
-        #                 value_gt,
-        #                 run_prefix,
-        #                 include_confidence_intervals=cfg.include_confidence_intervals,
-        #             )
-        #         except Exception as e:
-        #             logging.warning(f"Plotting failed for {execution_id}: {e}")
-
-        # return result
