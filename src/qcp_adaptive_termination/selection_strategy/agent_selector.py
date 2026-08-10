@@ -29,27 +29,23 @@ from qcp_adaptive_termination.selection_strategy.sketch_strategy import (
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
 
 
-def _build_strategy(selection_type: SelectionStrategyType) -> SelectionStrategy:
+def _build_strategy(selection_type: SelectionStrategyType, kwargs: dict[str, Any]) -> SelectionStrategy:
     if selection_type == SelectionStrategyType.SEQUENTIAL:
-        return SequentialStrategy()
+        return SequentialStrategy(**kwargs)
     elif selection_type == SelectionStrategyType.EMBEDDING:
-        return EmbeddingStrategy()
+        return EmbeddingStrategy(**kwargs)
     elif selection_type == SelectionStrategyType.COUNT:
-        return CountStrategy()
+        return CountStrategy(**kwargs)
     elif selection_type == SelectionStrategyType.DISTINCT_COUNT:
-        return DistinctCountStrategy()
+        return DistinctCountStrategy(**kwargs)
     elif selection_type == SelectionStrategyType.HLL_SKETCH:
-        return HllSketchStrategy()
-    elif selection_type == SelectionStrategyType.HLL_SKETCH_UCB:
-        return HllSketchStrategy(use_ucb=True)
+        return HllSketchStrategy(**kwargs)
     elif selection_type == SelectionStrategyType.THETA_SKETCH:
-        return ThetaSketchStrategy()
-    elif selection_type == SelectionStrategyType.THETA_SKETCH_UCB:
-        return ThetaSketchStrategy(use_ucb=True)
+        return ThetaSketchStrategy(**kwargs)
     elif selection_type == SelectionStrategyType.MIN_HASH:
-        return MinHashStrategy()
+        return MinHashStrategy(**kwargs)
     elif selection_type == SelectionStrategyType.POSTERIOR:
-        return PosteriorStrategy()
+        return PosteriorStrategy(**kwargs)
     else:
         raise ValueError(f"Unsupported SelectionType: {selection_type}")
 
@@ -113,7 +109,7 @@ class AgentSelector:
         query: str,
     ) -> "AgentSelector":
         selection_type = context.get_config().selection_type
-        strategy = _build_strategy(selection_type)
+        strategy = _build_strategy(selection_type, dict(context.get_config().selection_kwargs))
 
         table_per_agent: dict[str, str] | None = None
         column_per_agent: dict[str, str] | None = None

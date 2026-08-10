@@ -5,8 +5,16 @@ use_bucket: true
 use_monte_carlo: false
 include_confidence_intervals: true
 
-continue_after_final_result: false
-selection_type: sequential
+continue_after_final_result: true
+selection_type: embedding
+selection_kwargs:
+  registry_type: natural_language  # technical | natural_language                  # embedding
+  # lg_k: 12                       # <number>                                      # hll_sketch, theta_sketch, posterior
+  # use_ucb: false                  # true | false                                  # hll_sketch, theta_sketch
+  # clustered_prior: true           # true | false                                  # posterior
+  # eps: 0.5                        # <number>                                      # posterior
+  # min_samples: 5                  # <number>                                      # posterior
+  # num_perm: 128                   # <number>                                      # min_hash
 align_schema_agent_limit: 1000
 
 embedding_model: "openai/text-embedding-3-large"

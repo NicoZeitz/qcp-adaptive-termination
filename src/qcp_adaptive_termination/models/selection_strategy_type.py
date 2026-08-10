@@ -23,9 +23,5 @@ class SelectionStrategyType(StrEnum):
     THETA_SKETCH = "theta_sketch"  # Needs: Table, Column
     MIN_HASH = "min_hash"  # Needs: Table, Column
 
-    # Sketch-based (upper confidence bound — optimistic ranking)
-    HLL_SKETCH_UCB = "hll_sketch_ucb"  # Needs: Table, Column
-    THETA_SKETCH_UCB = "theta_sketch_ucb"  # Needs: Table, Column
-
     # Posterior (embedding prior + sketch likelihood)
     POSTERIOR = "posterior"  # Needs: Table, Column

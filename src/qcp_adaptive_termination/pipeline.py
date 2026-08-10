@@ -21,7 +21,8 @@ def load_config(source: str | Path | None) -> Config:
         return Config()
 
     config_path = Path(source)
-    raw_config = yaml.safe_load(config_path.read_text() if config_path.exists() else str(source))
+    is_file = len(str(source)) <= 255 and config_path.exists()
+    raw_config = yaml.safe_load(config_path.read_text() if is_file else str(source))
     return Config.model_validate(raw_config)
 
 

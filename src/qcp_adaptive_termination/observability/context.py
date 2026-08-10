@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 from langfuse import get_client
 from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
 from opentelemetry import trace as otel_trace
+from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from pydantic import JsonValue
 
@@ -96,9 +97,13 @@ def _setup_tracing(output_dir: Path) -> None:
 
     tracing_log_file = output_dir / "traces.jsonl"
     nest_asyncio.apply()
-    otel_trace.get_tracer_provider().add_span_processor(  # type: ignore
-        BatchSpanProcessor(FileSpanExporter(tracing_log_file))
-    )
+
+    provider = otel_trace.get_tracer_provider()
+    if not isinstance(provider, TracerProvider):
+        provider = TracerProvider()
+        otel_trace.set_tracer_provider(provider)
+    provider.add_span_processor(BatchSpanProcessor(FileSpanExporter(tracing_log_file)))
+    otel_trace.set_tracer_provider(provider)
     if not get_client().auth_check():
         logging.warning("Langfuse authentication failed; Langfuse tracing is disabled.")
 
@@ -165,6 +170,8 @@ def tracing_context(
         trace(name, metadata=metadata_str),
     ):
         yield
+
+    langfuse.flush()
 
 
 @contextmanager

@@ -5,7 +5,7 @@ from dataclasses import field
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
 from qcp_adaptive_termination.embedding import VectorIndex
-from qcp_adaptive_termination.models import DataAgent
+from qcp_adaptive_termination.models import AgentRegistryType, DataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import StaticSelectionStrategy
 
 
@@ -19,6 +19,7 @@ class EmbeddingStrategy(StaticSelectionStrategy[float]):
 
     ascending: bool = True
     scorer: Callable[[list[float]], float] = field(default=min)
+    registry_type: AgentRegistryType = field(default=AgentRegistryType.TECHNICAL)
 
     async def precompute(
         self,
@@ -27,7 +28,7 @@ class EmbeddingStrategy(StaticSelectionStrategy[float]):
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, float]:
-        agent_vectors = await agent_registry.embedding_vectors_for_all_tables(agents)
+        agent_vectors = await agent_registry.embedding_vectors_for_all_tables(agents, registry_type=self.registry_type)
         query_embedding = await embedding.create(query)
 
         flat_data: list[tuple[str, list[float]]] = []

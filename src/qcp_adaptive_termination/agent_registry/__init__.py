@@ -165,13 +165,17 @@ async def embedding_vectors_for_all_columns(agents, table_per_agent):
 async def embedding_vector_for_table(
     agents: DataAgent,
     table_per_agent: str,
+    registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
 ) -> list[float]: ...
 @overload
 async def embedding_vector_for_table(
     agents: list[DataAgent],
     table_per_agent: dict[str, str],
+    registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
 ) -> dict[str, list[float]]: ...
-async def embedding_vector_for_table(agents, table_per_agent):
+async def embedding_vector_for_table(
+    agents, table_per_agent, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL
+):
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
     table_map = {agents.name: table_per_agent} if single else table_per_agent
@@ -182,7 +186,11 @@ async def embedding_vector_for_table(agents, table_per_agent):
     for agent in agent_list:
         table = table_map[agent.name]
         data = agent_data[agent.name]
-        embedding_descriptions.append(data.individual_descriptions[table].technical_description)
+        embedding_descriptions.append(
+            data.individual_descriptions[table].natural_language_description
+            if registry_type == AgentRegistryType.NATURAL_LANGUAGE
+            else data.individual_descriptions[table].technical_description
+        )
 
     embeddings = await embedding.create(embedding_descriptions)
 
@@ -194,12 +202,14 @@ async def embedding_vector_for_table(agents, table_per_agent):
 @overload
 async def embedding_vectors_for_all_tables(
     agents: DataAgent,
+    registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
 ) -> dict[str, list[float]]: ...
 @overload
 async def embedding_vectors_for_all_tables(
     agents: list[DataAgent],
+    registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
 ) -> dict[str, dict[str, list[float]]]: ...
-async def embedding_vectors_for_all_tables(agents):
+async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL):
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
 
@@ -211,7 +221,10 @@ async def embedding_vectors_for_all_tables(agents):
         table_names = list(data.individual_descriptions.keys())
 
         embedding_descriptions: list[str] = [
-            data.individual_descriptions[table].technical_description for table in table_names
+            data.individual_descriptions[table].natural_language_description
+            if registry_type == AgentRegistryType.NATURAL_LANGUAGE
+            else data.individual_descriptions[table].technical_description
+            for table in table_names
         ]
 
         embeddings = await embedding.create(embedding_descriptions)

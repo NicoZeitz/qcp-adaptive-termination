@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -30,6 +30,8 @@ class Config(BaseModel):
     use_bucket: bool = True
     use_monte_carlo: bool = False
     include_confidence_intervals: bool = True
+
+    selection_kwargs: dict[str, Any] = Field(default_factory=dict)
 
     embedding_model: str = "openai/text-embedding-3-large"
     agent_configs: dict[str, RoleConfig] = Field(default_factory=dict)
