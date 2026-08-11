@@ -107,7 +107,7 @@ class AgentSelector:
         cls,
         agents: list[DataAgent],
         query: str,
-    ) -> "AgentSelector":
+    ) -> AgentSelector:
         selection_type = context.get_config().selection_type
         strategy = _build_strategy(selection_type, dict(context.get_config().selection_kwargs))
 

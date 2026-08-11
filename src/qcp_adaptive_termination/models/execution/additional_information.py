@@ -13,7 +13,7 @@ class AdditionalInformation(BaseModel):
 
     @staticmethod
     def preview_additional_information(
-        additional_information: list["AdditionalInformation"],
+        additional_information: list[AdditionalInformation],
     ) -> str | None:
         if not additional_information:
             return None

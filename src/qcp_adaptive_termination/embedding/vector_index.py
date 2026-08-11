@@ -1,10 +1,7 @@
 from dataclasses import dataclass
-from typing import TypeVar
 
 import numpy as np
 from faiss import Index, IndexFlatL2
-
-T = TypeVar("T")
 
 
 @dataclass(slots=True)
@@ -13,7 +10,7 @@ class VectorIndex[T]:
     mapping: dict[int, T]
 
     @classmethod
-    def build(cls, data: list[tuple[T, list[float]]]) -> "VectorIndex[T]":
+    def build(cls, data: list[tuple[T, list[float]]]) -> VectorIndex[T]:
         if not data:
             raise ValueError("Data cannot be empty")
 

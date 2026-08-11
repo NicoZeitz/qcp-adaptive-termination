@@ -121,7 +121,7 @@ def _setup_tracing(output_dir: Path) -> BatchTraceProcessor | None:
 def cache_context(
     cache_dir: Path,
     mode: CacheMode = CacheMode.READ_AND_WRITE,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     """Set up cache folder and mode. Stacks with existing cache context."""
     token_cache = _cache_var.set(Cache(folder=cache_dir, mode=mode))
     try:
@@ -135,7 +135,7 @@ def cache_context(
 
 
 @contextmanager
-def logging_context(output_dir: Path) -> Generator[None, None, None]:
+def logging_context(output_dir: Path) -> Generator[None]:
     """Set up logging to file + stderr. Stacks with existing logging context."""
     token_dir = _output_dir_var.set(output_dir)
     token_active = _logging_active_var.set(True)
@@ -159,9 +159,7 @@ def logging_context(output_dir: Path) -> Generator[None, None, None]:
 
 
 @contextmanager
-def tracing_context(
-    name: str, output_dir: Path, *, metadata: dict[str, JsonValue] | None = None
-) -> Generator[None, None, None]:
+def tracing_context(name: str, output_dir: Path, *, metadata: dict[str, JsonValue] | None = None) -> Generator[None]:
     """Set up OTel file exporter + agents trace. Stacks with existing tracing context."""
     load_dotenv(override=True)
     openai_processor = _setup_tracing(output_dir)
@@ -200,7 +198,7 @@ def tracing_context(
 
 
 @contextmanager
-def data_context(data_dir: Path) -> Generator[None, None, None]:
+def data_context(data_dir: Path) -> Generator[None]:
     """Set the data directory used to resolve agent paths."""
     token = _data_dir_var.set(data_dir)
     try:
@@ -210,7 +208,7 @@ def data_context(data_dir: Path) -> Generator[None, None, None]:
 
 
 @contextmanager
-def config_context(cfg: Config) -> Generator[Config, None, None]:
+def config_context(cfg: Config) -> Generator[Config]:
     """Activate a Config for the duration of the block. Stacks with existing config context."""
     token = _config_var.set(cfg)
     try:
@@ -230,7 +228,7 @@ def pipeline_context(
     config: Config | None = None,
     *,
     trace_metadata: dict[str, JsonValue] | None = None,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     """Activate logging, tracing, cache, data dir, and config in one block. Skips already-active ones."""
     datetime_str = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
     if name is None:

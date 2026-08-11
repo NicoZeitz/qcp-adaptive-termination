@@ -35,7 +35,7 @@ class Cache:
                 payload = json.load(f)
                 tracing.indented_logging(f"Cache: HIT ({cache_file})")
                 return payload.get("value"), True
-        except (FileNotFoundError, Exception):
+        except FileNotFoundError, Exception:
             self._throw_on_miss(key)
             return None, False
 

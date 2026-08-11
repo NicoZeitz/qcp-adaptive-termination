@@ -1,8 +1,8 @@
 import json
 import threading
 from collections.abc import Sequence
+from io import TextIOBase
 from pathlib import Path
-from typing import IO
 
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
@@ -15,7 +15,7 @@ class FileSpanExporter(SpanExporter):
     ) -> None:
         self.file_path = Path(file_path) if isinstance(file_path, str) else file_path
         self._lock = threading.Lock()
-        self._file: IO[str] | None = None
+        self._file: TextIOBase | None = None
         self._wrote_header = False
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:

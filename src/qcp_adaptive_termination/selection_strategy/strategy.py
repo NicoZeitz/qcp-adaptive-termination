@@ -1,12 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, cast
+from typing import cast
 
 from qcp_adaptive_termination.models import DataAgent
 from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSelection
-
-PrecomputedState = TypeVar("PrecomputedState")
-RunningState = TypeVar("RunningState")
-PrecomputedScoredState = TypeVar("PrecomputedScoredState", bound=float)
 
 
 class SelectionStrategy[PrecomputedState, RunningState](ABC):
@@ -66,7 +62,7 @@ class SelectionStrategy[PrecomputedState, RunningState](ABC):
         raise NotImplementedError
 
 
-class StaticSelectionStrategy(SelectionStrategy[PrecomputedScoredState, None]):
+class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[PrecomputedScoredState, None]):
     """
     Base for strategies whose ranking does not change between iterations
     (COUNT, DISTINCT_COUNT, statistics-based, embedding).

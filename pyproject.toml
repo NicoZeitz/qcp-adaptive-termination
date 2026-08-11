@@ -3,7 +3,7 @@ name = "qcp-adaptive-termination"
 version = "0.1.0"
 description = "Collaborative Query Processing with Adaptive Termination"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "async-lru>=2.3.0",
     "chevron>=0.14.0",
@@ -60,7 +60,7 @@ extra-paths = ["src/typings"]
 [tool.pyright]
 stubPath = "src/typings"
 include = ["src"]
-pythonVersion = "3.12"
+pythonVersion = "3.14"
 typeCheckingMode = "standard"
 reportPrivateUsage = true
 
