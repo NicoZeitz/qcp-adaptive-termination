@@ -82,8 +82,9 @@ def _is_data_dir_active() -> bool:
     return _data_dir_var.get() is not None
 
 
-def _setup_tracing(output_dir: Path) -> None:
+def _setup_tracing(output_dir: Path) -> BatchTraceProcessor | None:
     tracing_api_key = os.getenv("OPENAI_API_KEY")
+    openai_processor: BatchTraceProcessor | None = None
     if tracing_api_key:
         set_tracing_export_api_key(tracing_api_key)
         max_field_bytes = int(os.getenv("OPENAI_TRACING_MAX_FIELD_BYTES", "9500"))
@@ -91,9 +92,11 @@ def _setup_tracing(output_dir: Path) -> None:
             api_key=tracing_api_key,
             max_field_bytes=max_field_bytes,
         )
-        set_trace_processors([BatchTraceProcessor(exporter=openai_exporter)])
+        openai_processor = BatchTraceProcessor(exporter=openai_exporter)
+        set_trace_processors([openai_processor])
     else:
         logging.warning("No OpenAI tracing API key found; OpenAI trace export is disabled.")
+    return openai_processor
 
     tracing_log_file = output_dir / "traces.jsonl"
     nest_asyncio.apply()
@@ -158,20 +161,27 @@ def tracing_context(
 ) -> Generator[None, None, None]:
     """Set up OTel file exporter + agents trace. Stacks with existing tracing context."""
     load_dotenv(override=True)
-    _setup_tracing(output_dir)
+    openai_processor = _setup_tracing(output_dir)
 
     metadata_str = {k: str(v) for k, v in (metadata or {}).items()}
     langfuse = get_client()
 
-    with (
-        langfuse.start_as_current_observation(
-            name=name, input=serialize_data_for_tracing(metadata), metadata=metadata_str
-        ),
-        trace(name, metadata=metadata_str),
-    ):
-        yield
-
-    langfuse.flush()
+    try:
+        with (
+            langfuse.start_as_current_observation(
+                name=name, input=serialize_data_for_tracing(metadata), metadata=metadata_str
+            ),
+            trace(name, metadata=metadata_str),
+        ):
+            yield
+    finally:
+        openai_shutdown_timeout = float(os.getenv("OPENAI_TRACING_SHUTDOWN_TIMEOUT", "5.0"))
+        if openai_processor is not None:
+            openai_processor.shutdown(timeout=openai_shutdown_timeout)
+        langfuse.flush()
+        provider = otel_trace.get_tracer_provider()
+        if isinstance(provider, TracerProvider):
+            provider.shutdown()
 
 
 @contextmanager
