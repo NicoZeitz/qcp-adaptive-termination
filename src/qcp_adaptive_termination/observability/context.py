@@ -5,15 +5,18 @@ Use individually (stacking) or via `pipeline_context` which composes all four.
 `pipeline_context` is idempotent: if already active it is a no-op.
 """
 
+import atexit
 import contextlib
 import logging
 import os
+import threading
 from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
+import agents.tracing.setup as _agents_tracing_setup
 import nest_asyncio
 from agents import get_current_trace, set_trace_processors, set_tracing_export_api_key, trace
 from agents.tracing.processors import BatchTraceProcessor
@@ -96,7 +99,6 @@ def _setup_tracing(output_dir: Path) -> BatchTraceProcessor | None:
         set_trace_processors([openai_processor])
     else:
         logging.warning("No OpenAI tracing API key found; OpenAI trace export is disabled.")
-    return openai_processor
 
     tracing_log_file = output_dir / "traces.jsonl"
     nest_asyncio.apply()
@@ -112,6 +114,7 @@ def _setup_tracing(output_dir: Path) -> BatchTraceProcessor | None:
 
     OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
     logging.info(f"Tracing initialized. Trace file: {tracing_log_file}")
+    return openai_processor
 
 
 @contextmanager
@@ -175,13 +178,25 @@ def tracing_context(
         ):
             yield
     finally:
-        openai_shutdown_timeout = float(os.getenv("OPENAI_TRACING_SHUTDOWN_TIMEOUT", "5.0"))
-        if openai_processor is not None:
-            openai_processor.shutdown(timeout=openai_shutdown_timeout)
-        langfuse.flush()
-        provider = otel_trace.get_tracer_provider()
-        if isinstance(provider, TracerProvider):
-            provider.shutdown()
+        shutdown_timeout = float(os.getenv("TRACING_SHUTDOWN_TIMEOUT", "10.0"))
+
+        def _friendly_shutdown() -> None:
+            if openai_processor is not None:
+                openai_processor.shutdown(timeout=shutdown_timeout)
+            provider = otel_trace.get_tracer_provider()
+            if isinstance(provider, TracerProvider):
+                provider.shutdown()
+            langfuse.shutdown()
+
+        t = threading.Thread(target=_friendly_shutdown, daemon=True)
+        t.start()
+        t.join(timeout=shutdown_timeout)
+
+        if t.is_alive() and openai_processor is not None:
+            # Friendly shutdown timed out — force by signaling events and skipping joins.
+            openai_processor.shutdown(timeout=0)
+
+        atexit.unregister(vars(_agents_tracing_setup)["_shutdown_global_trace_provider"])
 
 
 @contextmanager

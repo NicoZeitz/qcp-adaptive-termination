@@ -188,13 +188,6 @@ def cached[**Param, RetType](
             result, found = effective_cache.get(key=key, name_prefix=resolved_prefix)
 
             if found:
-                name = resolved_prefix or getattr(func, "__name__", "")
-                with tracing.own_span(
-                    f"Cache Hit: {name}",
-                    input={"arguments": key},
-                    output={"result": result},
-                ):
-                    pass
                 return _deserialize_value(result, deserializable_values)
 
             result = await func(*args, **kwargs)

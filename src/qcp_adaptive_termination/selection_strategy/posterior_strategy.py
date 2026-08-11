@@ -1,13 +1,13 @@
 from dataclasses import dataclass, field
 from typing import cast
 
+import evoc
 import numpy as np
 from datasketches import (
     compact_theta_sketch,
     theta_a_not_b,
     update_theta_sketch,
 )
-from sklearn.cluster import DBSCAN
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.database as database
@@ -16,8 +16,8 @@ from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSel
 from qcp_adaptive_termination.selection_strategy.sketch_strategy import DEFAULT_LG_K
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
 
-DEFAULT_EPS = 0.5
 DEFAULT_MIN_SAMPLES = 1
+DEFAULT_MIN_CLUSTER_SIZE_RATIO = 0.05
 
 
 @dataclass(slots=True)
@@ -43,8 +43,8 @@ def _normalize_probability(values: list[float]) -> list[float]:
 class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorState]):
     lg_k: int = DEFAULT_LG_K
     clustered_prior: bool = True
-    eps: float = DEFAULT_EPS
     min_samples: int = DEFAULT_MIN_SAMPLES
+    min_cluster_size_ratio: float = DEFAULT_MIN_CLUSTER_SIZE_RATIO
 
     def needs_table(self) -> bool:
         return True
@@ -147,7 +147,10 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
 
         agent_embeddings = np.array([precomputed[s.agent.name].embedding for s in remaining], dtype=float)
 
-        labels = DBSCAN(eps=self.eps, min_samples=self.min_samples).fit_predict(agent_embeddings)
+        min_cluster_size = max(5, int(len(remaining) * self.min_cluster_size_ratio))
+        labels = evoc.EVoC(base_min_cluster_size=min_cluster_size, min_samples=self.min_samples).fit_predict(
+            agent_embeddings.astype(np.float32)
+        )
 
         centroids: dict[int, np.ndarray] = {}
         for lbl in set(labels):

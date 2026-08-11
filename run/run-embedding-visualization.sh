@@ -12,10 +12,11 @@ DATASETS=(
     "fifa_overlap_sampled"
     "companies_overlap_sampled"
     "award_winners_overlap_sampled"
+    "all_datasets_overlap_sampled"
 )
-DATASETS=(
-    "airports_overlap_sampled"
-)
+# DATASETS=(
+#     "airports_overlap_sampled"
+# )
 
 REGISTRY_TYPES=("technical" "natural_language")
 
@@ -32,7 +33,7 @@ print(yaml.dump(cfg, default_flow_style=False))
 PYEOF
 )
 
-        uv run python -m scripts.create_embedding_visualization \
+        uv run python -m scripts.embedding_visualization \
             --input "${DATA_DIR}/${DATASET}.json" \
             --data_dir "${DATA_DIR}" \
             --output_dir "${BASE_RUNS}/${DATASET}/${REGISTRY_TYPE}" \

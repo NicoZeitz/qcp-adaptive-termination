@@ -1,19 +1,18 @@
 from collections.abc import Mapping
-from pathlib import Path
+from importlib.resources import files
 from typing import Any, cast
 
 import chevron
 from openai.types.responses import EasyInputMessageParam
 
-PROMPTS_DIR = Path(__file__).parents[3] / "prompts"
+_PROMPTS = files("qcp_adaptive_termination.prompts")
 
 _prompt_cache: dict[str, str] = {}
 
 
 def _get_prompt(name: str) -> str:
     if name not in _prompt_cache:
-        path = PROMPTS_DIR / f"{name}.md"
-        _prompt_cache[name] = path.read_text()
+        _prompt_cache[name] = _PROMPTS.joinpath(f"{name}.md").read_text()
     return _prompt_cache[name]
 
 
