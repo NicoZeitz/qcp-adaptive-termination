@@ -37,6 +37,9 @@ from qcp_adaptive_termination.models.result_type import (
     SerializedOptionalResultType,
     SerializedResultType,
 )
+from qcp_adaptive_termination.models.scored_data_agent import (
+    ScoredDataAgent,
+)
 from qcp_adaptive_termination.models.selection_strategy_type import (
     SelectionStrategyType,
 )
@@ -71,4 +74,5 @@ __all__ = [
     "SerializedOptionalResultType",
     # selection_strategy
     "SelectionStrategyType",
+    "ScoredDataAgent",
 ]

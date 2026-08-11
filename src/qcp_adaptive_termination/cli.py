@@ -12,8 +12,8 @@ from qcp_adaptive_termination.observability import context
 from qcp_adaptive_termination.pipeline import load_config, run_pipeline
 
 if TYPE_CHECKING:
+    from qcp_adaptive_termination.models.execution import ExecutionResult
     from qcp_adaptive_termination.models.stages import (
-        CollaborativeQueryAnsweringResult,
         DraftedQueryPlan,
         FilteredRelevantAgents,
     )
@@ -27,21 +27,21 @@ def _register_output_hooks() -> None:
                 json.dump(data, f, sort_keys=False, allow_unicode=True, indent=4)
 
     @hooks.on(HookEvent.FILTER_RELEVANT_AGENTS_END)
-    def _write_stage_1(filtered_relevant_agents: FilteredRelevantAgents) -> None:
+    def _write_stage_1(execution_id: str, filtered_relevant_agents: FilteredRelevantAgents) -> None:
         _write_output_file(
             "stage_1_filtered_relevant_agents.json",
             filtered_relevant_agents.model_dump(),
         )
 
     @hooks.on(HookEvent.DRAFT_QUERY_PLAN_END)
-    def _write_stage_2(drafted_query_plan: DraftedQueryPlan) -> None:
+    def _write_stage_2(execution_id: str, drafted_query_plan: DraftedQueryPlan) -> None:
         _write_output_file(
             "stage_2_drafted_query_plan.json",
             drafted_query_plan.model_dump(),
         )
 
     @hooks.on(HookEvent.EXECUTE_QUERY_PLAN_END)
-    def _write_stage_3(result: CollaborativeQueryAnsweringResult) -> None:
+    def _write_stage_3(execution_id: str, attempt: int, result: ExecutionResult) -> None:
         _write_output_file(
             "stage_3_collaborative_query_answering_result.json",
             result.model_dump(),
@@ -122,12 +122,9 @@ def main() -> None:
         )
     )
 
-    if args.end_stage == 3:
-        print("Pipeline completed successfully. Result preview:")
-        if result_type.is_result_type(result):
-            print(json.dumps(result_type.serialize(result, context="preview"), indent=2, ensure_ascii=False))
-        else:
-            print("No result produced.")
+    if result_type.is_result_type(result):
+        print("Pipeline completed. Result preview:")
+        print(json.dumps(result_type.serialize(result, context="preview"), indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

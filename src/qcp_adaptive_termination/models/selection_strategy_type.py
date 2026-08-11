@@ -1,8 +1,7 @@
 """
 Agent selection strategy types.
 
-Defines `SelectionStrategyType` (ranking algorithm enum) and `AgentSelection`
-(agent + score pair used during multi-agent iteration).
+Defines `SelectionStrategyType` (ranking algorithm enum).
 """
 
 from enum import StrEnum

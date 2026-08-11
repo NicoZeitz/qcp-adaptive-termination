@@ -11,8 +11,7 @@ from datasketches import (
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.database as database
-from qcp_adaptive_termination.models import DataAgent
-from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSelection
+from qcp_adaptive_termination.models import DataAgent, ScoredDataAgent
 from qcp_adaptive_termination.selection_strategy.sketch_strategy import DEFAULT_LG_K
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
 
@@ -81,7 +80,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
 
     def calculate_prior(
         self,
-        remaining: list[AgentSelection],
+        remaining: list[ScoredDataAgent],
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> list[float]:
@@ -96,7 +95,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
 
     def calculate_likelihood(
         self,
-        remaining: list[AgentSelection],
+        remaining: list[ScoredDataAgent],
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> list[float]:
@@ -109,10 +108,10 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
 
     def rank(
         self,
-        remaining: list[AgentSelection],
+        remaining: list[ScoredDataAgent],
         precomputed: dict[str, PosteriorPrecomputedState],
         state: PosteriorState,
-    ) -> list[AgentSelection]:
+    ) -> list[ScoredDataAgent]:
         prior = self.calculate_prior(remaining, state, precomputed)
         likelihood = self.calculate_likelihood(remaining, state, precomputed)
 
@@ -139,7 +138,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
 
     def _calculate_clustered_prior(
         self,
-        remaining: list[AgentSelection],
+        remaining: list[ScoredDataAgent],
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> list[float]:
@@ -167,7 +166,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
 
     def _calculate_non_clustered_prior(
         self,
-        remaining: list[AgentSelection],
+        remaining: list[ScoredDataAgent],
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> list[float]:

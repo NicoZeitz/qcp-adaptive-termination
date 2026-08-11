@@ -40,17 +40,26 @@ REPLAN_STAGE_NAME = "Stage 4: Replan"
 
 
 async def execute_query_plan_attempt(
-    replan_attempt: int,
+    attempt: int,
     query_plan: QueryPlan,
     current_data_agents: list[DataAgent],
 ) -> ExecutionResult:
-    with tracing.own_span(
-        f"{replan_attempt} - {STAGE_NAME}",
-        input={
-            "query_plan": query_plan,
-            "current_data_agents": current_data_agents,
-        },
+    with (
+        hooks.stage_context(),
+        tracing.own_span(
+            f"{attempt} - {STAGE_NAME}",
+            input={
+                "query_plan": query_plan,
+                "current_data_agents": current_data_agents,
+            },
+        ),
     ):
+        hooks.emit(
+            HookEvent.EXECUTE_QUERY_PLAN_START,
+            attempt=attempt,
+            query_plan=query_plan,
+            current_data_agents=current_data_agents,
+        )
         while True:
             execution_result = await execute_query_plan_next_step(
                 current_data_agents,
@@ -58,34 +67,44 @@ async def execute_query_plan_attempt(
             )
 
             if isinstance(execution_result, SuccessfulExecution) and execution_result.execution_finished:
-                return ExecutionResult(success=execution_result.success, result=execution_result.result)
-            elif isinstance(execution_result, FailedExecution):
-                return ExecutionResult(success=execution_result.success, failed_execution=execution_result)
+                result = ExecutionResult(success=execution_result.success, result=execution_result.result)
+                break
+            if isinstance(execution_result, FailedExecution):
+                result = ExecutionResult(success=execution_result.success, failed_execution=execution_result)
+                break
+
+        hooks.emit(HookEvent.EXECUTE_QUERY_PLAN_END, attempt=attempt, result=result)
+        return result
 
 
 async def replan(
-    replan_attempt: int,
+    attempt: int,
     current_data_agents: list[DataAgent],
     data_agents: list[DataAgent],
     query_plan: QueryPlan,
     failed_execution: FailedExecution,
 ) -> tuple[list[DataAgent], QueryPlan]:
-    hooks.emit(
-        HookEvent.REPLAN_START,
-        replan_attempt=replan_attempt,
-        query_plan=query_plan,
-        failed_execution=failed_execution,
-    )
-    with tracing.own_span(
-        f"{replan_attempt} - {REPLAN_STAGE_NAME}",
-        input={
-            "replan_attempt": replan_attempt,
-            "current_data_agents": current_data_agents,
-            "data_agents": data_agents,
-            "query_plan": query_plan,
-            "failed_execution": failed_execution,
-        },
+    with (
+        hooks.stage_context(),
+        tracing.own_span(
+            f"{attempt} - {REPLAN_STAGE_NAME}",
+            input={
+                "attempt": attempt,
+                "current_data_agents": current_data_agents,
+                "data_agents": data_agents,
+                "query_plan": query_plan,
+                "failed_execution": failed_execution,
+            },
+        ),
     ):
+        hooks.emit(
+            HookEvent.REPLAN_START,
+            attempt=attempt,
+            current_data_agents=current_data_agents,
+            data_agents=data_agents,
+            query_plan=query_plan,
+            failed_execution=failed_execution,
+        )
         updated_data_agents = current_data_agents
 
         if failed_execution.needs:
@@ -120,7 +139,7 @@ async def replan(
 
         hooks.emit(
             HookEvent.REPLAN_END,
-            replan_attempt=replan_attempt,
+            attempt=attempt,
             updated_data_agents=updated_data_agents,
             new_query_plan=new_query_plan,
         )
@@ -135,44 +154,45 @@ async def execute_query_plan(
 ) -> CollaborativeQueryAnsweringResult:
     MAX_REPLAN_ATTEMPTS = 2
 
-    hooks.emit(
-        HookEvent.EXECUTE_QUERY_PLAN_START,
-        query_plan=query_plan,
-        relevant_data_agents=relevant_data_agents,
-        data_agents=data_agents,
-    )
-
-    for replan_attempt in range(MAX_REPLAN_ATTEMPTS + 1):
-        execution_result = await execute_query_plan_attempt(
-            replan_attempt=replan_attempt,
+    with hooks.stage_context():
+        hooks.emit(
+            HookEvent.EXECUTE_QUERY_PLAN_LOOP_START,
             query_plan=query_plan,
             current_data_agents=relevant_data_agents,
         )
 
-        if execution_result.success:
-            result = CollaborativeQueryAnsweringResult(
-                result=cast(ResultType, execution_result.result),
+        final_result: CollaborativeQueryAnsweringResult | None = None
+        for attempt in range(MAX_REPLAN_ATTEMPTS + 1):
+            execution_result = await execute_query_plan_attempt(
+                attempt=attempt,
+                query_plan=query_plan,
+                current_data_agents=relevant_data_agents,
             )
-            hooks.emit(HookEvent.EXECUTE_QUERY_PLAN_END, result=result)
-            return result
 
-        if replan_attempt >= MAX_REPLAN_ATTEMPTS:
-            result = CollaborativeQueryAnsweringResult(
+            if execution_result.success:
+                final_result = CollaborativeQueryAnsweringResult(
+                    result=cast(ResultType, execution_result.result),
+                )
+                break
+
+            if attempt >= MAX_REPLAN_ATTEMPTS:
+                final_result = CollaborativeQueryAnsweringResult(
+                    result=result_type.failed_result(),
+                )
+                break
+
+            relevant_data_agents, query_plan = await replan(
+                attempt=attempt,
+                current_data_agents=relevant_data_agents,
+                data_agents=data_agents,
+                query_plan=query_plan,
+                failed_execution=cast(FailedExecution, execution_result.failed_execution),
+            )
+
+        if final_result is None:
+            final_result = CollaborativeQueryAnsweringResult(
                 result=result_type.failed_result(),
             )
-            hooks.emit(HookEvent.EXECUTE_QUERY_PLAN_END, result=result)
-            return result
 
-        relevant_data_agents, query_plan = await replan(
-            replan_attempt=replan_attempt,
-            current_data_agents=relevant_data_agents,
-            data_agents=data_agents,
-            query_plan=query_plan,
-            failed_execution=cast(FailedExecution, execution_result.failed_execution),
-        )
-
-    result = CollaborativeQueryAnsweringResult(
-        result=result_type.failed_result(),
-    )
-    hooks.emit(HookEvent.EXECUTE_QUERY_PLAN_END, result=result)
-    return result
+        hooks.emit(HookEvent.EXECUTE_QUERY_PLAN_LOOP_END, result=final_result)
+        return final_result

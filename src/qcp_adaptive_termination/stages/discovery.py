@@ -105,12 +105,15 @@ async def _filter_data_agent_with_reasoning(
 
 @cache.cached(name_prefix=DISCOVERY_STAGE_NAME, mode=CacheMode.WRITE_ONLY)
 async def filter_relevant_agents(query: str, data_agents: list[DataAgent]) -> FilteredRelevantAgents:
-    with tracing.own_span(
-        DISCOVERY_STAGE_NAME,
-        input={
-            "query": query,
-            "data_agents": data_agents,
-        },
+    with (
+        hooks.stage_context(),
+        tracing.own_span(
+            DISCOVERY_STAGE_NAME,
+            input={
+                "query": query,
+                "data_agents": data_agents,
+            },
+        ),
     ):
         hooks.emit(HookEvent.FILTER_RELEVANT_AGENTS_START, query=query, data_agents=data_agents)
 

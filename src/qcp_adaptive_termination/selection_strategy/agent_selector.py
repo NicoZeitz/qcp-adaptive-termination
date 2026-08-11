@@ -6,10 +6,10 @@ from qcp_adaptive_termination.embedding import VectorIndex
 from qcp_adaptive_termination.models import (
     AlignedResultList,
     DataAgent,
+    ScoredDataAgent,
     SelectionStrategyType,
 )
 from qcp_adaptive_termination.observability import context
-from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSelection
 from qcp_adaptive_termination.selection_strategy.count_strategy import (
     CountStrategy,
     DistinctCountStrategy,
@@ -95,7 +95,7 @@ class AgentSelector:
         strategy: SelectionStrategy,
         precomputed: dict[str, Any],
         state: Any,
-        selections: list[AgentSelection],
+        selections: list[ScoredDataAgent],
     ) -> None:
         self._strategy = strategy
         self._precomputed = precomputed
@@ -122,10 +122,10 @@ class AgentSelector:
 
         precomputed = await strategy.precompute(agents, table_per_agent, column_per_agent, query)
         state = strategy.init_state()
-        selections = [AgentSelection(agent=a, score=None) for a in agents]
+        selections = [ScoredDataAgent(agent=a, score=None) for a in agents]
         return cls(strategy, precomputed, state, selections)
 
-    def rank(self, remaining: list[AgentSelection]) -> list[AgentSelection]:
+    def rank(self, remaining: list[ScoredDataAgent]) -> list[ScoredDataAgent]:
         return self._strategy.rank(remaining, self._precomputed, self._state)
 
     def update(self, result_list: AlignedResultList, agent_names: list[str] | None = None) -> None:

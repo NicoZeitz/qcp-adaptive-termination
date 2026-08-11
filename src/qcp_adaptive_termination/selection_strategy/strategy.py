@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import cast
 
-from qcp_adaptive_termination.models import DataAgent
-from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSelection
+from qcp_adaptive_termination.models import DataAgent, ScoredDataAgent
 
 
 class SelectionStrategy[PrecomputedState, RunningState](ABC):
@@ -43,10 +42,10 @@ class SelectionStrategy[PrecomputedState, RunningState](ABC):
     @abstractmethod
     def rank(
         self,
-        remaining: list[AgentSelection],
+        remaining: list[ScoredDataAgent],
         precomputed: dict[str, PrecomputedState],
         state: RunningState,
-    ) -> list[AgentSelection]:
+    ) -> list[ScoredDataAgent]:
         """Return remaining agents sorted best-first given the current running state."""
         raise NotImplementedError
 
@@ -88,10 +87,10 @@ class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[P
 
     def rank(
         self,
-        remaining: list[AgentSelection],
+        remaining: list[ScoredDataAgent],
         precomputed: dict[str, PrecomputedScoredState],
         state: None,
-    ) -> list[AgentSelection]:
+    ) -> list[ScoredDataAgent]:
         for s in remaining:
             s.score = precomputed.get(s.agent.name, 0.0)
 

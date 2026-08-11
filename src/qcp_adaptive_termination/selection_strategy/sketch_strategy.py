@@ -11,8 +11,7 @@ from datasketches import (
 )
 
 import qcp_adaptive_termination.database as database
-from qcp_adaptive_termination.models import DataAgent
-from qcp_adaptive_termination.selection_strategy.agent_selection import AgentSelection
+from qcp_adaptive_termination.models import DataAgent, ScoredDataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import (
     SelectionStrategy,
 )
@@ -65,11 +64,11 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
 
     def rank(
         self,
-        remaining: list[AgentSelection],
+        remaining: list[ScoredDataAgent],
         precomputed: dict[str, hll_sketch],
         state: hll_sketch,
-    ) -> list[AgentSelection]:
-        def score(s: AgentSelection) -> float:
+    ) -> list[ScoredDataAgent]:
+        def score(s: ScoredDataAgent) -> float:
             union = hll_union(self.lg_k)
             union.update(state)
             union.update(precomputed[s.agent.name])
@@ -138,11 +137,11 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
 
     def rank(
         self,
-        remaining: list[AgentSelection],
+        remaining: list[ScoredDataAgent],
         precomputed: dict[str, compact_theta_sketch],
         state: update_theta_sketch,
-    ) -> list[AgentSelection]:
-        def score(s: AgentSelection) -> float:
+    ) -> list[ScoredDataAgent]:
+        def score(s: ScoredDataAgent) -> float:
             a_not_b = theta_a_not_b().compute(precomputed[s.agent.name], state)
             if self.use_ucb:
                 return a_not_b.get_upper_bound(DEFAULT_NUM_STD)
@@ -215,11 +214,11 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
 
     def rank(
         self,
-        remaining: list[AgentSelection],
+        remaining: list[ScoredDataAgent],
         precomputed: dict[str, tuple[MinHash, int]],
         state: MinHashState,
-    ) -> list[AgentSelection]:
-        def score(s: AgentSelection) -> float:
+    ) -> list[ScoredDataAgent]:
+        def score(s: ScoredDataAgent) -> float:
             agent_mh, cardinality = precomputed[s.agent.name]
             jaccard = state.minhash.jaccard(agent_mh)
             seen_count = len(state.seen)

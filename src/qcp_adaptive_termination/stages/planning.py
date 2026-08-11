@@ -119,13 +119,16 @@ def map_query_plan_model_to_query_plan(query_plan_model: BaseModel, query: str) 
 async def draft_query_plan(
     query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
 ) -> DraftedQueryPlan:
-    with tracing.own_span(
-        STAGE_NAME,
-        input={
-            "query": query,
-            "data_agents": data_agents,
-            "relevant_data_agents": relevant_data_agents,
-        },
+    with (
+        hooks.stage_context(),
+        tracing.own_span(
+            STAGE_NAME,
+            input={
+                "query": query,
+                "data_agents": data_agents,
+                "relevant_data_agents": relevant_data_agents,
+            },
+        ),
     ):
         hooks.emit(
             HookEvent.DRAFT_QUERY_PLAN_START,
