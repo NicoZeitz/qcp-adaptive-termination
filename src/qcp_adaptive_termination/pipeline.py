@@ -26,7 +26,12 @@ def load_config(source: str | Path | None) -> Config:
     return Config.model_validate(raw_config)
 
 
-def load_input(path: str | Path) -> Any:
+def load_input(
+    path: str | Path,
+) -> tuple[
+    CollaborativeQueryAnswering | FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult,
+    dict[str, Any] | None,
+]:
     data, extra = cache.load_cache_file(
         Path(path),
         deserializable_classes=[
