@@ -1,6 +1,6 @@
 from collections import defaultdict
 from collections.abc import Callable
-from dataclasses import field
+from dataclasses import dataclass, field
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
@@ -9,6 +9,7 @@ from qcp_adaptive_termination.models import AgentRegistryType, DataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import StaticSelectionStrategy
 
 
+@dataclass(slots=True)
 class EmbeddingStrategy(StaticSelectionStrategy[float]):
     """
     Ranks agents by embedding distance to the query.

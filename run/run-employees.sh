@@ -20,7 +20,8 @@ print(yaml.dump(cfg, default_flow_style=False))
 PYEOF
 )
 
-uv run qcp-adaptive-termination \
+# uv run qcp-adaptive-termination \
+uv run python -m scripts.main \
   --name "employees" \
   --input "${BASE_DATA}/employees.json" \
   --output_dir "${BASE_RUNS}/employees" \

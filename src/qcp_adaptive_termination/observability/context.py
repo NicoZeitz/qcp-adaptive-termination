@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 import agents.tracing.setup as _agents_tracing_setup
-import nest_asyncio
+import nest_asyncio2
 from agents import get_current_trace, set_trace_processors, set_tracing_export_api_key, trace
 from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
@@ -101,14 +101,13 @@ def _setup_tracing(output_dir: Path) -> BatchTraceProcessor | None:
         logging.warning("No OpenAI tracing API key found; OpenAI trace export is disabled.")
 
     tracing_log_file = output_dir / "traces.jsonl"
-    nest_asyncio.apply()
+    nest_asyncio2.apply()
 
     provider = otel_trace.get_tracer_provider()
     if not isinstance(provider, TracerProvider):
         provider = TracerProvider()
         otel_trace.set_tracer_provider(provider)
     provider.add_span_processor(BatchSpanProcessor(FileSpanExporter(tracing_log_file)))
-    otel_trace.set_tracer_provider(provider)
     if not get_client().auth_check():
         logging.warning("Langfuse authentication failed; Langfuse tracing is disabled.")
 
@@ -230,6 +229,8 @@ def pipeline_context(
     trace_metadata: dict[str, JsonValue] | None = None,
 ) -> Generator[None]:
     """Activate logging, tracing, cache, data dir, and config in one block. Skips already-active ones."""
+    load_dotenv(override=True)
+
     datetime_str = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
     if name is None:
         name = datetime_str

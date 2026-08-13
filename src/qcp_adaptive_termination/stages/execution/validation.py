@@ -6,7 +6,12 @@ from qcp_adaptive_termination.models import (
 )
 
 
-def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata):
+def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata) -> DataFrame:
+    # if the dataframe is empty, just create a dataframe that is aligned with the schema metadata and return it
+    if dataframe.empty:
+        empty_df = pd.DataFrame(columns=metadata.columns)
+        return empty_df
+
     errors = []
 
     expected = set(metadata.columns)
@@ -36,6 +41,8 @@ def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata)
 
     if len(errors) > 0:
         raise ValueError("\n".join(errors))
+
+    return dataframe
 
 
 def validate_schema_output(

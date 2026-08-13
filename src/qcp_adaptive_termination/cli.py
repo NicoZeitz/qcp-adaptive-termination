@@ -1,9 +1,13 @@
 import asyncio
 import json
+import logging
+import shutil
 from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+import yaml
 
 from qcp_adaptive_termination import hooks
 from qcp_adaptive_termination.hooks import HookEvent
@@ -12,43 +16,102 @@ from qcp_adaptive_termination.observability import context
 from qcp_adaptive_termination.pipeline import load_config, run_pipeline
 
 if TYPE_CHECKING:
+    from qcp_adaptive_termination.models import Config, DataAgent
     from qcp_adaptive_termination.models.execution import ExecutionResult
+    from qcp_adaptive_termination.models.query_plan import QueryPlan
     from qcp_adaptive_termination.models.stages import (
+        CollaborativeQueryAnswering,
+        CollaborativeQueryAnsweringResult,
         DraftedQueryPlan,
         FilteredRelevantAgents,
     )
 
 
-def _register_output_hooks() -> None:
+def register_default_output_hooks() -> None:
     def _write_output_file(filename: str, data: dict) -> None:
         if output_dir := context.get_output_dir():
             path = output_dir / filename
             with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, sort_keys=False, allow_unicode=True, indent=4)
+                json.dump(data, f, sort_keys=False, ensure_ascii=False, indent=4)
+
+    @hooks.on(HookEvent.LOAD_INPUT)
+    def _write_input_file(
+        execution_id: str,
+        input_file: Path,
+        data: CollaborativeQueryAnswering
+        | CollaborativeQueryAnsweringResult
+        | DraftedQueryPlan
+        | FilteredRelevantAgents,
+        extra: dict | None,
+    ) -> None:
+        if output_dir := context.get_output_dir():
+            shutil.copy(input_file, output_dir / input_file.name)
+
+    @hooks.on(HookEvent.LOAD_CONFIG)
+    def _write_config_file(execution_id: str, config: Config) -> None:
+        if output_dir := context.get_output_dir():
+            with open(output_dir / "config.yaml", "w", encoding="utf-8") as f:
+                yaml.dump(config.model_dump(), f, sort_keys=False, allow_unicode=True, default_flow_style=False)
+            logging.info(f"Config: {config.model_dump_json(ensure_ascii=False)}")
+
+    @hooks.on(HookEvent.FILTER_RELEVANT_AGENTS_START)
+    def _write_stage_1_input(execution_id: str, query: str, data_agents: list[DataAgent]) -> None:  # noqa: ARG001
+        _write_output_file(
+            "stage_1_input.json",
+            {"query": query, "data_agents": [a.model_dump() for a in data_agents]},
+        )
 
     @hooks.on(HookEvent.FILTER_RELEVANT_AGENTS_END)
     def _write_stage_1(execution_id: str, filtered_relevant_agents: FilteredRelevantAgents) -> None:
         _write_output_file(
-            "stage_1_filtered_relevant_agents.json",
+            "stage_1_output_filtered_relevant_agents.json",
             filtered_relevant_agents.model_dump(),
+        )
+
+    @hooks.on(HookEvent.DRAFT_QUERY_PLAN_START)
+    def _write_stage_2_input(
+        execution_id: str, query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
+    ) -> None:
+        _write_output_file(
+            "stage_2_input_filtered_relevant_agents.json",
+            {
+                "query": query,
+                "data_agents": [a.model_dump() for a in data_agents],
+                "relevant_data_agents": [a.model_dump() for a in relevant_data_agents],
+            },
         )
 
     @hooks.on(HookEvent.DRAFT_QUERY_PLAN_END)
     def _write_stage_2(execution_id: str, drafted_query_plan: DraftedQueryPlan) -> None:
         _write_output_file(
-            "stage_2_drafted_query_plan.json",
+            "stage_2_output_drafted_query_plan.json",
             drafted_query_plan.model_dump(),
+        )
+
+    @hooks.on(HookEvent.EXECUTE_QUERY_PLAN_START)
+    def _write_stage_3_input(
+        execution_id: str, attempt: int, query_plan: QueryPlan, current_data_agents: list[DataAgent]
+    ) -> None:
+        _write_output_file(
+            "stage_3_input_drafted_query_plan.json",
+            {
+                "attempt": attempt,
+                "query_plan": query_plan.model_dump(),
+                "current_data_agents": [a.model_dump() for a in current_data_agents],
+            },
         )
 
     @hooks.on(HookEvent.EXECUTE_QUERY_PLAN_END)
     def _write_stage_3(execution_id: str, attempt: int, result: ExecutionResult) -> None:
         _write_output_file(
-            "stage_3_collaborative_query_answering_result.json",
+            "stage_3_output_collaborative_query_answering_result.json",
             result.model_dump(),
         )
 
 
-def main() -> None:
+def argument_parser(
+    prog: str = "qcp-adaptive-termination", description="Collaborative Query Processing with Adaptive Termination"
+) -> ArgumentParser:
     parser = ArgumentParser(
         prog="qcp-adaptive-termination",
         description="Collaborative Query Processing with Adaptive Termination",
@@ -93,7 +156,11 @@ def main() -> None:
         default=None,
         help="Root directory for agent data files (default: parent of input file)",
     )
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> None:
+    args = argument_parser().parse_args()
 
     datetime_str = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
 
@@ -106,7 +173,7 @@ def main() -> None:
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    _register_output_hooks()
+    register_default_output_hooks()
 
     result = asyncio.run(
         run_pipeline(

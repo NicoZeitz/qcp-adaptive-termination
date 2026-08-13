@@ -3,11 +3,12 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 from uuid import uuid4
 
 if TYPE_CHECKING:
-    from qcp_adaptive_termination.models import DataAgent, EstimatorStatistics, ScoredDataAgent
+    from qcp_adaptive_termination.models import Config, DataAgent, EstimatorStatistics, ScoredDataAgent
     from qcp_adaptive_termination.models.estimation import AlignedResultList
     from qcp_adaptive_termination.models.execution import (
         AdditionalInformation,
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
         QueryPlanStep,
     )
     from qcp_adaptive_termination.models.stages import (
+        CollaborativeQueryAnswering,
         CollaborativeQueryAnsweringResult,
         DraftedQueryPlan,
         FilteredRelevantAgents,
@@ -46,6 +48,8 @@ def get_execution_id() -> str:
 
 
 class HookEvent(StrEnum):
+    LOAD_INPUT = "load_input"
+    LOAD_CONFIG = "load_config"
     FILTER_RELEVANT_AGENTS_START = "filter_relevant_agents_start"
     FILTER_RELEVANT_AGENTS_END = "filter_relevant_agents_end"
     DRAFT_QUERY_PLAN_START = "draft_query_plan_start"
@@ -64,6 +68,23 @@ class HookEvent(StrEnum):
     MULTI_AGENT_STEP_BATCH_START = "multi_agent_step_batch_start"
     MULTI_AGENT_STEP_BATCH_END = "multi_agent_step_batch_end"
     MULTI_AGENT_STEP_END = "multi_agent_step_end"
+
+
+class LOAD_INPUT_HANDLER(Protocol):
+    def __call__(
+        self,
+        execution_id: str,
+        input_file: Path,
+        data: CollaborativeQueryAnswering
+        | FilteredRelevantAgents
+        | DraftedQueryPlan
+        | CollaborativeQueryAnsweringResult,
+        extra: dict[str, Any] | None,
+    ) -> None: ...
+
+
+class LOAD_CONFIG_HANDLER(Protocol):
+    def __call__(self, execution_id: str, config: Config) -> None: ...
 
 
 class FILTER_RELEVANT_AGENTS_START_HANDLER(Protocol):
@@ -207,6 +228,14 @@ class MULTI_AGENT_STEP_END_HANDLER(Protocol):
 
 @overload
 def on(
+    event: Literal[HookEvent.LOAD_INPUT],
+) -> Callable[[LOAD_INPUT_HANDLER], LOAD_INPUT_HANDLER]: ...
+@overload
+def on(
+    event: Literal[HookEvent.LOAD_CONFIG],
+) -> Callable[[LOAD_CONFIG_HANDLER], LOAD_CONFIG_HANDLER]: ...
+@overload
+def on(
     event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_START],
 ) -> Callable[[FILTER_RELEVANT_AGENTS_START_HANDLER], FILTER_RELEVANT_AGENTS_START_HANDLER]: ...
 @overload
@@ -286,6 +315,10 @@ def on(event: HookEvent) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
 
 
 @overload
+def register(event: Literal[HookEvent.LOAD_INPUT], handler: LOAD_INPUT_HANDLER) -> None: ...
+@overload
+def register(event: Literal[HookEvent.LOAD_CONFIG], handler: LOAD_CONFIG_HANDLER) -> None: ...
+@overload
 def register(
     event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_START], handler: FILTER_RELEVANT_AGENTS_START_HANDLER
 ) -> None: ...
@@ -337,6 +370,16 @@ def register(event: HookEvent, handler: Callable[..., Any]) -> None:
     _handlers[event].append(handler)
 
 
+@overload
+def emit(
+    event: Literal[HookEvent.LOAD_INPUT],
+    *,
+    input_file: Path,
+    data: CollaborativeQueryAnswering | FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult,
+    extra: dict[str, Any] | None,
+) -> None: ...
+@overload
+def emit(event: Literal[HookEvent.LOAD_CONFIG], *, config: Config) -> None: ...
 @overload
 def emit(
     event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_START], *, query: str, data_agents: list[DataAgent]

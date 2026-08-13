@@ -297,7 +297,7 @@ async def answer_step_multiple_agents(
         if isinstance(outcome, FinalResultOutcome):
             answer.set_answer(outcome.result)
 
-            if not context.get_config().continue_after_final_result:
+            if not context.get_config().continue_after_final_result or not remaining_selections:
                 break
 
         selector.update(result_list, agent_names=[r.agent for r in new_records])

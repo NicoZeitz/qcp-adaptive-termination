@@ -1,4 +1,4 @@
-import uuid
+import hashlib
 from collections import OrderedDict
 
 import pandas as pd
@@ -34,7 +34,7 @@ async def align_schema(
         agents, AgentRegistryType.TECHNICAL, include_capabilities=False
     )
 
-    source_agent_column = f"source_agent_{uuid.uuid4().hex[:8]}"
+    source_agent_column = f"source_agent_{hashlib.sha256(query.encode()).hexdigest()[:8]}"
     schema_metadata: AlignedSchemaMetadata | None = None
 
     @function_tool

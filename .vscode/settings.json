@@ -35,6 +35,7 @@
         "Bonferroni's",
         "burkina",
         "chao",
+        "clusterer",
         "cunha",
         "cura",
         "dach",
@@ -92,6 +93,7 @@
         "venv",
         "visegrad",
         "vldbsigmod",
+        "worldcup",
         "xhigh",
         "yearfirst"
     ],

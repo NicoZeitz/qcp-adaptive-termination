@@ -32,6 +32,8 @@ class PosteriorState:
 
 
 def _normalize_probability(values: list[float]) -> list[float]:
+    if not values:
+        return []
     total = sum(values)
     if total == 0:
         return [1.0 / len(values)] * len(values)
@@ -84,6 +86,9 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> list[float]:
+        if not remaining:
+            return []
+
         if len(state.queried_embeddings) == 0:
             # uniform prior if no agents have been queried yet
             return [1.0 / len(remaining)] * len(remaining)
@@ -142,14 +147,18 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> list[float]:
+        # EVoC's knn graph requires n_samples > n_neighbors (default 15); fall back for small sets
+        if len(remaining) <= 15:
+            return self._calculate_non_clustered_prior(remaining, state, precomputed)
+
         reference_embeddings = np.array(state.queried_embeddings, dtype=float)
 
         agent_embeddings = np.array([precomputed[s.agent.name].embedding for s in remaining], dtype=float)
 
         min_cluster_size = max(5, int(len(remaining) * self.min_cluster_size_ratio))
-        labels = evoc.EVoC(base_min_cluster_size=min_cluster_size, min_samples=self.min_samples).fit_predict(
-            agent_embeddings.astype(np.float32)
-        )
+        labels = evoc.EVoC(
+            base_min_cluster_size=min_cluster_size, min_samples=self.min_samples, random_state=42
+        ).fit_predict(agent_embeddings.astype(np.float32))
 
         centroids: dict[int, np.ndarray] = {}
         for lbl in set(labels):

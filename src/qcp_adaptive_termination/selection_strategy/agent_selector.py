@@ -1,3 +1,4 @@
+import dataclasses
 from typing import Any
 
 import qcp_adaptive_termination.agent_registry as agent_registry
@@ -30,24 +31,29 @@ from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrate
 
 
 def _build_strategy(selection_type: SelectionStrategyType, kwargs: dict[str, Any]) -> SelectionStrategy:
+    strategy_cls: type[SelectionStrategy]
     if selection_type == SelectionStrategyType.SEQUENTIAL:
-        return SequentialStrategy(**kwargs)
+        strategy_cls = SequentialStrategy
     elif selection_type == SelectionStrategyType.EMBEDDING:
-        return EmbeddingStrategy(**kwargs)
+        strategy_cls = EmbeddingStrategy
     elif selection_type == SelectionStrategyType.COUNT:
-        return CountStrategy(**kwargs)
+        strategy_cls = CountStrategy
     elif selection_type == SelectionStrategyType.DISTINCT_COUNT:
-        return DistinctCountStrategy(**kwargs)
+        strategy_cls = DistinctCountStrategy
     elif selection_type == SelectionStrategyType.HLL_SKETCH:
-        return HllSketchStrategy(**kwargs)
+        strategy_cls = HllSketchStrategy
     elif selection_type == SelectionStrategyType.THETA_SKETCH:
-        return ThetaSketchStrategy(**kwargs)
+        strategy_cls = ThetaSketchStrategy
     elif selection_type == SelectionStrategyType.MIN_HASH:
-        return MinHashStrategy(**kwargs)
+        strategy_cls = MinHashStrategy
     elif selection_type == SelectionStrategyType.POSTERIOR:
-        return PosteriorStrategy(**kwargs)
+        strategy_cls = PosteriorStrategy
     else:
         raise ValueError(f"Unsupported SelectionType: {selection_type}")
+
+    valid = {f.name for f in dataclasses.fields(strategy_cls)}
+    kwargs = {k: v for k, v in kwargs.items() if k in valid}
+    return strategy_cls(**kwargs)
 
 
 async def _resolve_table(agents: list[DataAgent], query: str) -> dict[str, str]:

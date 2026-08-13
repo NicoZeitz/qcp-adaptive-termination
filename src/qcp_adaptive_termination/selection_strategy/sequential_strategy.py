@@ -1,9 +1,12 @@
+from dataclasses import dataclass
+
 from qcp_adaptive_termination.models import DataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import (
     StaticSelectionStrategy,
 )
 
 
+@dataclass(slots=True)
 class SequentialStrategy(StaticSelectionStrategy[float]):
     ascending: bool = True
 

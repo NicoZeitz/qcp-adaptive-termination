@@ -72,7 +72,7 @@ def _add_provider(
 
     client = AsyncOpenAI(
         base_url=base_url,
-        api_key=api_key,
+        api_key=api_key or "not-required",
         http_client=http_client,
     )
     provider = OpenAIProvider(

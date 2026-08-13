@@ -1,11 +1,12 @@
-import logging
-import shutil
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal, cast, overload
 
 import yaml
 
+import qcp_adaptive_termination.hooks as hooks
 import qcp_adaptive_termination.stages as stages
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import CacheMode, Config
 from qcp_adaptive_termination.models.stages import (
     CollaborativeQueryAnswering,
@@ -16,6 +17,7 @@ from qcp_adaptive_termination.models.stages import (
 from qcp_adaptive_termination.observability import cache, context
 
 
+@lru_cache(maxsize=32)
 def load_config(source: str | Path | None) -> Config:
     if source is None:
         return Config()
@@ -23,9 +25,12 @@ def load_config(source: str | Path | None) -> Config:
     config_path = Path(source)
     is_file = len(str(source)) <= 255 and config_path.exists()
     raw_config = yaml.safe_load(config_path.read_text() if is_file else str(source))
-    return Config.model_validate(raw_config)
+    config = Config.model_validate(raw_config)
+    hooks.emit(HookEvent.LOAD_CONFIG, config=config)
+    return config
 
 
+@lru_cache(maxsize=32)
 def load_input(
     path: str | Path,
 ) -> tuple[
@@ -41,6 +46,7 @@ def load_input(
             CollaborativeQueryAnsweringResult,
         ],
     )
+    hooks.emit(HookEvent.LOAD_INPUT, input_file=Path(path), data=data, extra=extra)
     return data, extra
 
 
@@ -158,20 +164,6 @@ async def run_stages(
         raise ValueError("start_stage must be <= end_stage")
 
     data, _extra = load_input(input_file)
-
-    if output_dir := context.get_output_dir():
-        # copy input file to output dir for record-keeping
-        output_file = output_dir / input_file.name
-        shutil.copy(input_file, output_file)
-
-        # copy the config file to the output dir for record-keeping
-        if config := context.get_config():
-            config_output_file = output_dir / "config.yaml"
-            with open(config_output_file, "w", encoding="utf-8") as f:
-                yaml.dump(config.model_dump(), f, sort_keys=False, allow_unicode=True, default_flow_style=False)
-
-        # log the config
-        logging.info(f"Config: {config.model_dump_json(ensure_ascii=False)}")
 
     if start_stage == 1:
         data = cast(CollaborativeQueryAnswering, data)

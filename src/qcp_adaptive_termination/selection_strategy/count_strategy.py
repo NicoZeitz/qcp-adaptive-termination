@@ -1,8 +1,11 @@
+from dataclasses import dataclass
+
 import qcp_adaptive_termination.database as database
 from qcp_adaptive_termination.models import DataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import StaticSelectionStrategy
 
 
+@dataclass(slots=True)
 class CountStrategy(StaticSelectionStrategy[int]):
     def needs_table(self) -> bool:
         return True
@@ -21,6 +24,7 @@ class CountStrategy(StaticSelectionStrategy[int]):
         }
 
 
+@dataclass(slots=True)
 class DistinctCountStrategy(StaticSelectionStrategy[int]):
     def needs_table(self) -> bool:
         return True

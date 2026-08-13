@@ -87,7 +87,7 @@ async def answer_query_data_agent(
         def final_answer(new_answer: Any):
             answer_df = result_type.try_parse_value(new_answer)
             if schema_metadata is not None:
-                validate_agent_output(answer_df, schema_metadata)
+                answer_df = validate_agent_output(answer_df, schema_metadata)
             partial_answer.set_answer(answer_df)
 
         code_environment = CodeExecutionEnvironment(
