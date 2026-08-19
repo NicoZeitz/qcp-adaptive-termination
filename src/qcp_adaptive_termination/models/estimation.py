@@ -8,7 +8,7 @@ and `AlignedSchemaMetadata` (schema-aligned result accumulation).
 
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from qcp_adaptive_termination.models.result_type import ResultType, SerializedResultType
 
@@ -93,10 +93,10 @@ class EstimatorMode(StrEnum):
 class AlignedSchemaMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    aggregation_type: AggregationType
-    keys: list[str]
+    aggregation_types: list[AggregationType] = Field(..., min_length=2)
+    keys: list[str] = Field(..., min_length=1)
     value_column: str | None = None
-    columns: list[str] = []
+    columns: list[str] = Field(default_factory=list, min_length=1)
     source_agent_column: str
 
 
@@ -117,14 +117,23 @@ class EstimatorStatistics(BaseModel):
     agents_queried: int
     agents_total: int
 
-    aggregation_type: AggregationType
+    aggregation_types: list[AggregationType]
 
     observed_count: int
     estimated_count: float | None = None
     estimated_count_lower: float | None = None
     estimated_count_upper: float | None = None
 
-    observed_value: float | None = None
-    estimated_value: float | None = None
-    estimated_value_lower: float | None = None
-    estimated_value_upper: float | None = None
+    observed_value_sum: float | None = None
+    observed_value_avg: float | None = None
+    observed_value_min: float | None = None
+    observed_value_max: float | None = None
+
+    estimated_value_sum: float | None = None
+    estimated_value_sum_lower: float | None = None
+    estimated_value_sum_upper: float | None = None
+    estimated_value_avg: float | None = None
+    estimated_value_avg_lower: float | None = None
+    estimated_value_avg_upper: float | None = None
+    estimated_value_min: float | None = None
+    estimated_value_max: float | None = None

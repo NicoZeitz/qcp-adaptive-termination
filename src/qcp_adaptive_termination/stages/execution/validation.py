@@ -2,6 +2,7 @@ import pandas as pd
 from pandas import DataFrame
 
 from qcp_adaptive_termination.models import (
+    AggregationType,
     AlignedSchemaMetadata,
 )
 
@@ -50,7 +51,7 @@ def validate_schema_output(
     keys: set[str],
     value_column: str | None,
     source_agent_column: str,
-    aggregation_type: str,
+    aggregation_types: list[AggregationType],
 ):
     errors = []
 
@@ -64,8 +65,10 @@ def validate_schema_output(
     if value_column is not None and value_column in keys:
         errors.append(f"value_column '{value_column}' must not overlap with keys")
 
-    if aggregation_type not in {"count", "min", "max", "sum", "avg"}:
-        errors.append(f"aggregation_type '{aggregation_type}' is not valid")
+    valid_aggregation_types = {"count", "min", "max", "sum", "avg"}
+    for aggregation_type in aggregation_types:
+        if aggregation_type.value not in valid_aggregation_types:
+            errors.append(f"aggregation_type '{aggregation_type}' is not valid")
 
     if source_agent_column in columns:
         errors.append(f"{source_agent_column} is not an allowed column name")
