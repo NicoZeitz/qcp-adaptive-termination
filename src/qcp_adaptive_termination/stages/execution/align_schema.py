@@ -40,7 +40,7 @@ async def align_schema(
     @function_tool
     def set_schema(
         columns: list[str],
-        aggregation_type: AggregationType,
+        aggregation_types: list[AggregationType],
         keys: list[str],
         value_column: str | None = None,
     ) -> AlignedSchemaMetadata:
@@ -55,11 +55,11 @@ async def align_schema(
             set(keys_set),
             value_column,
             source_agent_column,
-            aggregation_type,
+            aggregation_types,
         )
 
         schema_metadata = AlignedSchemaMetadata(
-            aggregation_type=aggregation_type,
+            aggregation_types=aggregation_types,
             keys=list(keys_set),
             value_column=value_column,
             columns=list(columns_set),

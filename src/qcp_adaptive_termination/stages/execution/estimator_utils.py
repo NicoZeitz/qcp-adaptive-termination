@@ -2,6 +2,7 @@ import pandas as pd
 
 from qcp_adaptive_termination.estimator import DataItem, Estimator
 from qcp_adaptive_termination.models import (
+    AggregationType,
     AlignedResultList,
     EstimatorStatistics,
 )
@@ -29,7 +30,7 @@ def compute_estimator_statistics(
     config = context.get_config()
     schema = result_list.schema_metadata
     data = result_list.data
-    agg = schema.aggregation_type
+    aggregation_types = set(schema.aggregation_types)
 
     source_samples: list[list[DataItem]] = []
     for agent_name in data[schema.source_agent_column].unique():
@@ -46,7 +47,7 @@ def compute_estimator_statistics(
         return EstimatorStatistics(
             agents_queried=agents_queried,
             agents_total=agents_total,
-            aggregation_type=agg,
+            aggregation_types=sorted(aggregation_types),
             new_unique_count=0,
             observed_count=0,
         )
@@ -66,7 +67,7 @@ def compute_estimator_statistics(
         sample_coverage=estimator.sample_coverage() if has_overlap else None,
         agents_queried=agents_queried,
         agents_total=agents_total,
-        aggregation_type=agg,
+        aggregation_types=sorted(aggregation_types),
         new_unique_count=new_unique_count,
         observed_count=estimator.sample_count(),
     )
@@ -81,42 +82,42 @@ def compute_estimator_statistics(
         result.estimated_count_lower = count_lower
         result.estimated_count_upper = count_upper
 
-    if agg == "sum":
-        result.observed_value = estimator.sample_sum()
+    if AggregationType.SUM in aggregation_types:
+        result.observed_value_sum = estimator.sample_sum()
         if has_overlap:
-            result.estimated_value = estimator.estimated_sum(
+            result.estimated_value_sum = estimator.estimated_sum(
                 config.value_estimator,
                 config.count_estimator,
                 use_bucket=config.use_bucket,
                 use_monte_carlo=config.use_monte_carlo,
             )
             lower, upper = estimator.estimated_sum_bounds()
-            result.estimated_value_lower = lower
-            result.estimated_value_upper = upper
-    elif agg == "avg":
-        result.observed_value = estimator.sample_avg()
+            result.estimated_value_sum_lower = lower
+            result.estimated_value_sum_upper = upper
+    elif AggregationType.AVG in aggregation_types:
+        result.observed_value_avg = estimator.sample_avg()
         if has_overlap:
-            result.estimated_value = estimator.estimated_avg(
+            result.estimated_value_avg = estimator.estimated_avg(
                 use_bucket=config.use_bucket,
                 bucket_count_estimator=config.count_estimator,
                 bucket_value_estimator=config.value_estimator,
                 bucket_use_monte_carlo=config.use_monte_carlo,
             )
             lower, upper = estimator.estimated_avg_bounds()
-            result.estimated_value_lower = lower
-            result.estimated_value_upper = upper
-    elif agg == "min":
-        result.observed_value = estimator.sample_min()
+            result.estimated_value_avg_lower = lower
+            result.estimated_value_avg_upper = upper
+    elif AggregationType.MIN in aggregation_types:
+        result.observed_value_min = estimator.sample_min()
         if has_overlap:
-            result.estimated_value = estimator.estimated_min(
+            result.estimated_value_min = estimator.estimated_min(
                 config.count_estimator,
                 bucket_value_estimator=config.value_estimator,
                 use_monte_carlo=config.use_monte_carlo,
             )
-    elif agg == "max":
-        result.observed_value = estimator.sample_max()
+    elif AggregationType.MAX in aggregation_types:
+        result.observed_value_max = estimator.sample_max()
         if has_overlap:
-            result.estimated_value = estimator.estimated_max(
+            result.estimated_value_max = estimator.estimated_max(
                 config.count_estimator,
                 bucket_value_estimator=config.value_estimator,
                 use_monte_carlo=config.use_monte_carlo,
