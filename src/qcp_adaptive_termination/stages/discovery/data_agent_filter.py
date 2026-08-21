@@ -1,0 +1,46 @@
+import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.hooks as hooks
+from qcp_adaptive_termination.hooks import HookEvent
+from qcp_adaptive_termination.llm import runner
+from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
+from qcp_adaptive_termination.observability import tracing
+
+
+async def _data_agent_relevance_llm(
+    query: str,
+    item: tuple[DataAgent, str],
+    additional_context: str | None = None,
+) -> DataAgent | None:
+    data_agent, reasoning = item
+    prompt_parameters: dict[str, str | None] = {
+        "query": query,
+        "reasoning": reasoning,
+        "additional_context": additional_context,
+        "m_schema": await agent_registry.build_registry_string(
+            data_agent, AgentRegistryType.TECHNICAL, include_capabilities=False
+        ),
+    }
+
+    is_relevant = await runner.run_llm(
+        role=AgentRole.DATA_AGENT_RELEVANCE,
+        agent_name=data_agent.name,
+        prompt_parameters=prompt_parameters,
+        output_type=bool,
+    )
+
+    tracing.append_to_span_output({f"{data_agent.name}_relevant": is_relevant})
+    return data_agent if is_relevant else None
+
+
+async def filter_data_agent_with_reasoning(
+    query: str,
+    item: tuple[DataAgent, str],
+    additional_context: str | None = None,
+) -> DataAgent | None:
+    return await hooks.call_override(
+        HookEvent.DATA_AGENT_RELEVANCE_OVERRIDE,
+        default=lambda: _data_agent_relevance_llm(query, item, additional_context),
+        query=query,
+        item=item,
+        additional_context=additional_context,
+    )

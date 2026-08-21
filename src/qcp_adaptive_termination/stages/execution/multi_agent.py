@@ -223,7 +223,7 @@ async def run_agent_batch(
         return outcome, new_records
 
 
-async def answer_step_multiple_agents(
+async def _answer_step_multiple_agents_via_loop(
     data_agents: list[DataAgent],
     query_plan_step: MultiAgentQueryPlanStep,
     additional_information: list[AdditionalInformation],
@@ -323,3 +323,20 @@ async def answer_step_multiple_agents(
     )
 
     return answer
+
+
+async def answer_step_multiple_agents(
+    data_agents: list[DataAgent],
+    query_plan_step: MultiAgentQueryPlanStep,
+    additional_information: list[AdditionalInformation],
+    batch_size: int = 1,
+) -> PartialQueryAnswer:
+    return await hooks.call_override(
+        HookEvent.ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE,
+        default=lambda: _answer_step_multiple_agents_via_loop(
+            data_agents, query_plan_step, additional_information, batch_size
+        ),
+        data_agents=data_agents,
+        query_plan_step=query_plan_step,
+        additional_information=additional_information,
+    )

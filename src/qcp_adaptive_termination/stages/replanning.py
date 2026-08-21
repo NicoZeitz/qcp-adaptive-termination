@@ -3,6 +3,8 @@ import json
 from pydantic import BaseModel
 
 import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.hooks as hooks
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent, ResultType, need_type, result_type
 from qcp_adaptive_termination.models.execution import FailedExecution
@@ -87,6 +89,22 @@ def map_query_replan_model_to_query_plan(
 
 
 async def replan_query_plan(
+    data_agents: list[DataAgent],
+    relevant_data_agents: list[DataAgent],
+    query_plan: QueryPlan,
+    reason: FailedExecution,
+) -> QueryPlan:
+    return await hooks.call_override(
+        HookEvent.REPLAN_QUERY_PLAN_OVERRIDE,
+        default=lambda: _replan_via_llm(data_agents, relevant_data_agents, query_plan, reason),
+        data_agents=data_agents,
+        relevant_data_agents=relevant_data_agents,
+        query_plan=query_plan,
+        reason=reason,
+    )
+
+
+async def _replan_via_llm(
     data_agents: list[DataAgent],
     relevant_data_agents: list[DataAgent],
     query_plan: QueryPlan,
