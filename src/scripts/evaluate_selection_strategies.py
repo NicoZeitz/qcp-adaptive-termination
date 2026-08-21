@@ -70,6 +70,7 @@ def _query_agent_canonical(
     canonical_table: str,
     canonical_cols: list[str],
     meta_mapping: dict[str, Any],
+    data_dir: Path,
 ) -> pd.DataFrame | None:
     """Query agent DB, return df with canonical column names. None if agent has no relevant data."""
     slug = _slug_from_agent(agent)
@@ -79,12 +80,11 @@ def _query_agent_canonical(
 
     actual_table: str = table_meta["name"]
     col_map: dict[str, str] = table_meta.get("columns", {})
-    # canonical -> actual for the columns we care about
     actual_cols = [col_map[c] for c in canonical_cols if c in col_map]
     if not actual_cols:
         return None
 
-    db_path = Path(agent.path)
+    db_path = data_dir / agent.path
     engine = create_engine(f"sqlite:///{db_path}")
     try:
         col_list = ", ".join(f"{actual_table}.{c}" for c in actual_cols)
@@ -93,7 +93,6 @@ def _query_agent_canonical(
             df = pd.read_sql(text(sql), conn)
         if df.empty:
             return None
-        # rename actual -> canonical
         reverse_map = {col_map[c]: c for c in canonical_cols if c in col_map}
         df = df.rename(columns=reverse_map)
         return df
@@ -113,8 +112,9 @@ def _make_align_schema_override(step_meta: dict[str, Any], query: str):
     ) -> AlignedResultList:
         meta = step_meta["aligned_schema_metadata"]
         source_col = f"source_agent_{hashlib.sha256(query.encode()).hexdigest()[:8]}"
+        agg_types = [AggregationType(a) for a in meta["aggregation_types"]]
         schema = AlignedSchemaMetadata(
-            aggregation_types=[AggregationType(a) for a in meta["aggregation_types"]],
+            aggregation_types=agg_types,
             keys=meta["keys"],
             value_column=meta.get("value_column"),
             columns=meta["columns"],
@@ -133,6 +133,7 @@ def _make_data_agent_override(
     canonical_cols: list[str],
     meta_mapping: dict[str, Any],
     data_cache: dict[str, pd.DataFrame | None],
+    data_dir: Path,
 ):
     def _handler(
         data_agent: DataAgent,
@@ -142,7 +143,7 @@ def _make_data_agent_override(
     ) -> PartialQueryAnswer:
         if data_agent.name not in data_cache:
             data_cache[data_agent.name] = _query_agent_canonical(
-                data_agent, canonical_table, canonical_cols, meta_mapping
+                data_agent, canonical_table, canonical_cols, meta_mapping, data_dir
             )
 
         df = data_cache[data_agent.name]
@@ -194,10 +195,11 @@ def _get_total_unique(
     canonical_cols: list[str],
     key_cols: list[str],
     meta_mapping: dict[str, Any],
+    data_dir: Path,
 ) -> int:
     frames: list[pd.DataFrame] = []
     for agent in relevant_agents:
-        df = _query_agent_canonical(agent, canonical_table, canonical_cols, meta_mapping)
+        df = _query_agent_canonical(agent, canonical_table, canonical_cols, meta_mapping, data_dir)
         if df is not None and not df.empty:
             frames.append(df)
     if not frames:
@@ -312,14 +314,18 @@ async def _run(ctx: ScriptContext) -> None:
     print(f"Query: {query}")
     print(f"Step: {step.id}, table: {canonical_table}, cols: {canonical_cols}, key_cols: {key_cols}")
 
-    total_unique = _get_total_unique(relevant_data_agents, canonical_table, canonical_cols, key_cols, meta_mapping)
+    total_unique = _get_total_unique(
+        relevant_data_agents, canonical_table, canonical_cols, key_cols, meta_mapping, ctx.data_dir
+    )
     print(f"Total unique rows (ground truth): {total_unique}")
 
     data_cache: dict[str, pd.DataFrame | None] = {}
     results: list[tuple[str, EvaluationCurve]] = []
 
     align_schema_handler = _make_align_schema_override(step_meta, query)
-    data_agent_handler = _make_data_agent_override(canonical_table, canonical_cols, meta_mapping, data_cache)
+    data_agent_handler = _make_data_agent_override(
+        canonical_table, canonical_cols, meta_mapping, data_cache, ctx.data_dir
+    )
 
     for strategy in SelectionStrategyType:
         print(f"Running strategy: {strategy}")
