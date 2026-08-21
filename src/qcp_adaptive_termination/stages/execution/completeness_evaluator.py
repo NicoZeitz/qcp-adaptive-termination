@@ -9,9 +9,11 @@ from agents import (
 )
 from pydantic import BaseModel, ConfigDict
 
+import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
     AgentRole,
@@ -137,7 +139,28 @@ async def run_completeness_evaluator(
     merge_task: str,
 ) -> QueryMoreAgentsOutcome | FinalResultOutcome:
     force_result = estimator_statistics.agents_queried == estimator_statistics.agents_total
+    return await hooks.call_override(
+        HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE,
+        default=lambda: _evaluate_via_llm(
+            aligned_result_list, estimator_statistics, query, previous_estimator_statistics, merge_task, force_result
+        ),
+        aligned_result_list=aligned_result_list,
+        estimator_statistics=estimator_statistics,
+        query=query,
+        previous_estimator_statistics=previous_estimator_statistics,
+        merge_task=merge_task,
+        force_result=force_result,
+    )
 
+
+async def _evaluate_via_llm(
+    aligned_result_list: AlignedResultList,
+    estimator_statistics: EstimatorStatistics,
+    query: str,
+    previous_estimator_statistics: list[EstimatorStatistics],
+    merge_task: str,
+    force_result: bool,
+) -> QueryMoreAgentsOutcome | FinalResultOutcome:
     evaluator_result = CompletenessEvaluatorResult()
 
     def final_result(result: Any):

@@ -27,7 +27,6 @@ from qcp_adaptive_termination.models.query_plan import QueryPlan
 from qcp_adaptive_termination.models.stages import CollaborativeQueryAnsweringResult
 from qcp_adaptive_termination.observability import cache, tracing
 from qcp_adaptive_termination.stages.discovery import (
-    FilterType,
     filter_relevant_agents_internal,
 )
 from qcp_adaptive_termination.stages.execution.execute_query_plan_next_step import (
@@ -116,8 +115,8 @@ async def replan(
                     query=query_plan.query,
                     data_agents=remaining_agents,
                     registry_type=AgentRegistryType.NATURAL_LANGUAGE,
-                    filter_type=FilterType.REASONING,
                     additional_context=needs_context,
+                    pre_filter=False,
                 )
                 updated_data_agents = current_data_agents + result.relevant_data_agents
             else:

@@ -10,6 +10,8 @@ from agents import (
 )
 
 import qcp_adaptive_termination.agent_registry as agent_registry
+import qcp_adaptive_termination.hooks as hooks
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
     AgentRegistryType,
@@ -24,6 +26,22 @@ from qcp_adaptive_termination.stages.execution.validation import validate_schema
 
 
 async def align_schema(
+    data_agents: list[DataAgent],
+    agent_names: list[str],
+    query: str,
+    merge_task: str,
+) -> AlignedResultList:
+    return await hooks.call_override(
+        HookEvent.ALIGN_SCHEMA_OVERRIDE,
+        default=lambda: _align_via_llm(data_agents, agent_names, query, merge_task),
+        data_agents=data_agents,
+        agent_names=agent_names,
+        query=query,
+        merge_task=merge_task,
+    )
+
+
+async def _align_via_llm(
     data_agents: list[DataAgent],
     agent_names: list[str],
     query: str,

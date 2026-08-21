@@ -94,6 +94,25 @@ async def execute_query_plan_next_step(
         )
 
 
+async def _dispatch_query_plan_step(
+    data_agents: list[DataAgent],
+    query_plan_step: QueryPlanStep,
+    additional_information: list[AdditionalInformation],
+) -> PartialQueryAnswer:
+    if isinstance(query_plan_step, SingleAgentQueryPlanStep):
+        return await execute_query_plan_step_for_single_agent(
+            data_agents,
+            query_plan_step,
+            query_plan_step.to_agent,
+            additional_information,
+        )
+    return await answer_step_multiple_agents(
+        data_agents=data_agents,
+        query_plan_step=cast(MultiAgentQueryPlanStep, query_plan_step),
+        additional_information=additional_information,
+    )
+
+
 async def execute_query_plan_step(
     data_agents: list[DataAgent],
     query_plan_step: QueryPlanStep,
@@ -107,19 +126,13 @@ async def execute_query_plan_step(
             "additional_information": additional_information,
         },
     ):
-        if isinstance(query_plan_step, SingleAgentQueryPlanStep):
-            result = await execute_query_plan_step_for_single_agent(
-                data_agents,
-                query_plan_step,
-                query_plan_step.to_agent,
-                additional_information,
-            )
-        else:
-            result = await answer_step_multiple_agents(
-                data_agents=data_agents,
-                query_plan_step=cast(MultiAgentQueryPlanStep, query_plan_step),
-                additional_information=additional_information,
-            )
+        result = await hooks.call_override(
+            HookEvent.EXECUTE_QUERY_PLAN_STEP_OVERRIDE,
+            default=lambda: _dispatch_query_plan_step(data_agents, query_plan_step, additional_information),
+            data_agents=data_agents,
+            query_plan_step=query_plan_step,
+            additional_information=additional_information,
+        )
 
         tracing.append_to_span_output({"partial_answer": result})
         hooks.emit(HookEvent.EXECUTE_STEP_END, query_plan_step=query_plan_step, partial_answer=result)

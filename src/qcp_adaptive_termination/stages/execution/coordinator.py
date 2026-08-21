@@ -7,9 +7,11 @@ from agents import (
     ToolsToFinalOutputResult,
 )
 
+import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
     CodeExecutionEnvironment,
 )
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
     AgentRole,
@@ -24,7 +26,7 @@ from qcp_adaptive_termination.models.query_plan import QueryPlanStep
 from qcp_adaptive_termination.observability import tracing
 
 
-async def answer_step_coordinator(
+async def _answer_step_coordinator_via_llm(
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
 ) -> PartialQueryAnswer:
@@ -86,3 +88,15 @@ async def answer_step_coordinator(
             }
         )
         return result
+
+
+async def answer_step_coordinator(
+    query_plan_step: QueryPlanStep,
+    additional_information: list[AdditionalInformation],
+) -> PartialQueryAnswer:
+    return await hooks.call_override(
+        HookEvent.ANSWER_STEP_COORDINATOR_OVERRIDE,
+        default=lambda: _answer_step_coordinator_via_llm(query_plan_step, additional_information),
+        query_plan_step=query_plan_step,
+        additional_information=additional_information,
+    )
