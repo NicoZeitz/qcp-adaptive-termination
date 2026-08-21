@@ -49,7 +49,7 @@ _META_MAPPING_CACHE: dict[str, Any] | None = None
 def _load_meta_mapping(data_dir: Path) -> dict[str, Any]:
     global _META_MAPPING_CACHE
     if _META_MAPPING_CACHE is None:
-        mapping_path = data_dir / "meta_mapping.yaml"
+        mapping_path = data_dir / "dataset" / "meta_mapping.yaml"
         with open(mapping_path) as f:
             _META_MAPPING_CACHE = cast(dict[str, Any], yaml.safe_load(f) or {})
     return _META_MAPPING_CACHE
@@ -57,6 +57,10 @@ def _load_meta_mapping(data_dir: Path) -> dict[str, Any]:
 
 def _slug_from_agent(agent: DataAgent) -> str:
     return Path(agent.path).stem
+
+
+def _agent_db_path(agent: DataAgent, data_dir: Path) -> Path:
+    return data_dir / agent.path
 
 
 def _parse_canonical_table(sql: str) -> str | None:
@@ -84,7 +88,7 @@ def _query_agent_canonical(
     if not actual_cols:
         return None
 
-    db_path = data_dir / agent.path
+    db_path = _agent_db_path(agent, data_dir)
     engine = create_engine(f"sqlite:///{db_path}")
     try:
         col_list = ", ".join(f"{actual_table}.{c}" for c in actual_cols)
