@@ -36,7 +36,7 @@ TEST=false
 
 # write stdout and stderr to log files (in addition to printing to console)
 mkdir -p "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"
-exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stderr.log" >&2)
+# exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stderr.log" >&2)
 
 # Load all input files from directory
 shopt -s nullglob
@@ -107,9 +107,9 @@ for FILE in "${FILES[@]}"; do
       --input "${INPUT_FILE}" \
       --output_dir "${LOG_DIR}" \
       --data_dir "${DATA_DIR}" \
-      --start-stage 3 --end-stage 3 \
-      > >(tee "${LOG_DIR}/stdout.log") \
-      2> >(tee "${LOG_DIR}/stderr.log" >&2) &
+      --start-stage 3 --end-stage 3 #\
+    #   > >(tee "${LOG_DIR}/stdout.log") \
+    #   2> >(tee "${LOG_DIR}/stderr.log" >&2) &
 
     if [[ "${PARALLEL}" != "true" ]]; then
         wait

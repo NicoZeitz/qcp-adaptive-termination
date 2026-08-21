@@ -183,6 +183,7 @@ def tracing_context(name: str, output_dir: Path, *, metadata: dict[str, JsonValu
             provider = otel_trace.get_tracer_provider()
             if isinstance(provider, TracerProvider):
                 provider.shutdown()
+            langfuse.flush()
             langfuse.shutdown()
 
         t = threading.Thread(target=_friendly_shutdown, daemon=True)
@@ -194,7 +195,6 @@ def tracing_context(name: str, output_dir: Path, *, metadata: dict[str, JsonValu
             openai_processor.shutdown(timeout=0)
 
         atexit.unregister(vars(_agents_tracing_setup)["_shutdown_global_trace_provider"])
-
 
 @contextmanager
 def data_context(data_dir: Path) -> Generator[None]:

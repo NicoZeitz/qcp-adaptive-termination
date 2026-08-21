@@ -227,23 +227,26 @@ def _save_results(
     rows.append({"strategy": "oracle", "auc": oracle_curve.auc})
     pd.DataFrame(rows).to_csv(output_dir / f"{query_slug}_auc.csv", index=False)
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(
-        oracle_curve.x,
-        oracle_curve.y,
-        "--",
-        color="black",
-        label=f"oracle (AUC={oracle_curve.auc:.3f})",
-        linewidth=2,
-    )
-    for strategy, curve in results:
-        ax.plot(curve.x, curve.y, label=f"{strategy} (AUC={curve.auc:.3f})")
-    ax.set_xlabel("Fraction of agents queried")
-    ax.set_ylabel("Fraction of unique rows covered")
-    ax.set_title(f"Selection strategy comparison\n{query_slug}")
-    ax.legend(fontsize=8)
-    ax.set_xlim(0.0, 1.0)
-    ax.set_ylim(0.0, 1.05)
+    fig, axes = plt.subplots(1, 2, figsize=(18, 6))
+    for ax, xscale in zip(axes, ["linear", "log"]):
+        ax.plot(
+            oracle_curve.x,
+            oracle_curve.y,
+            "--",
+            color="black",
+            label=f"oracle (AUC={oracle_curve.auc:.3f})",
+            linewidth=2,
+        )
+        for strategy, curve in results:
+            ax.plot(curve.x, curve.y, label=f"{strategy} (AUC={curve.auc:.3f})")
+        ax.set_xlabel("Fraction of agents queried")
+        ax.set_ylabel("Fraction of unique rows covered")
+        ax.set_title(f"Selection strategy comparison ({xscale} x)\n{query_slug}")
+        ax.legend(fontsize=8)
+        ax.set_xscale(xscale)
+        if xscale == "linear":
+            ax.set_xlim(0.0, 1.0)
+        ax.set_ylim(0.0, 1.05)
     fig.tight_layout()
     fig.savefig(output_dir / f"{query_slug}_curves.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -375,3 +378,6 @@ if __name__ == "__main__":
         description="Benchmark selection strategies on a single-step federated query",
         run_fn=_run,
     )
+    # TODO: remove
+    import os
+    os._exit(0)
