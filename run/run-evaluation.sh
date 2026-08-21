@@ -32,7 +32,7 @@ RUN_NAME="evaluate-selection-strategies"
 # TODO: Set to true to run files in parallel, false for sequential execution
 PARALLEL=false
 # TODO: set to true, then only print out the commands that would be executed, without actually running them
-TEST=true
+TEST=false
 
 # write stdout and stderr to log files (in addition to printing to console)
 mkdir -p "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"

@@ -28,8 +28,8 @@ from qcp_adaptive_termination.models.execution import (
     PartialQueryAnswer,
     QueryMoreAgentsOutcome,
 )
-from qcp_adaptive_termination.models.query_plan import MultiAgentQueryPlanStep
-from qcp_adaptive_termination.models.stages import DraftedQueryPlan
+from qcp_adaptive_termination.models.query_plan import MultiAgentQueryPlanStep, QueryPlan
+from qcp_adaptive_termination.models.stages import CollaborativeQueryAnswering
 from qcp_adaptive_termination.observability import context
 from qcp_adaptive_termination.stages import execute_query_plan
 from scripts.utils import ScriptContext, run_script
@@ -182,8 +182,13 @@ async def _run(ctx: ScriptContext) -> None:
     extra = ctx.extra or {}
     steps_metadata: dict[str, Any] = extra.get("steps_metadata", {})
 
-    data = cast(DraftedQueryPlan, ctx.data)
-    multi_steps = [s for s in data.query_plan.steps if isinstance(s, MultiAgentQueryPlanStep)]
+    raw_query_plan = extra.get("query_plan")
+    if raw_query_plan is None:
+        logging.warning("%s: no query_plan in extra — skipping", ctx.input_file.stem)
+        return
+
+    query_plan = QueryPlan.model_validate(raw_query_plan)
+    multi_steps = [s for s in query_plan.steps if isinstance(s, MultiAgentQueryPlanStep)]
 
     if len(multi_steps) != 1:
         logging.warning(
@@ -204,8 +209,12 @@ async def _run(ctx: ScriptContext) -> None:
     canonical_sql: str = step_meta["sql_query"]
     schema_meta = step_meta["aligned_schema_metadata"]
     key_cols: list[str] = schema_meta["keys"]
-    query = data.query_plan.query
+    query = query_plan.query
     query_slug = ctx.input_file.stem
+
+    all_agents = cast(CollaborativeQueryAnswering, ctx.data).data_agents
+    relevant_agent_names: set[str] = set(extra.get("relevant_data_agents", []))
+    relevant_data_agents = [a for a in all_agents if a.name in relevant_agent_names]
 
     print(f"Query: {query}")
     print(f"Step: {step.id}, agents: {len(step.to_agent)}, key_cols: {key_cols}")
@@ -223,6 +232,7 @@ async def _run(ctx: ScriptContext) -> None:
         print(f"Running strategy: {strategy}")
         strategy_config = ctx.config.model_copy(update={"selection_type": strategy})
         ordered_agents = _register_batch_tracking()
+        fresh_query_plan = QueryPlan.model_validate(raw_query_plan)
 
         hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
         hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
@@ -231,9 +241,9 @@ async def _run(ctx: ScriptContext) -> None:
         try:
             with context.config_context(strategy_config):
                 await execute_query_plan(
-                    query_plan=data.query_plan,
-                    relevant_data_agents=data.relevant_data_agents,
-                    data_agents=data.data_agents,
+                    query_plan=fresh_query_plan,
+                    relevant_data_agents=relevant_data_agents,
+                    data_agents=all_agents,
                 )
         except Exception as exc:
             logging.warning("Strategy %s failed: %s", strategy, exc)
