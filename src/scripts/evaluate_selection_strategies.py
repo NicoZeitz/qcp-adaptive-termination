@@ -2,14 +2,15 @@
 
 import hashlib
 import logging
+import re
 from pathlib import Path
 from typing import Any, Literal, cast
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from sqlalchemy import create_engine
+import yaml
+from sqlalchemy import create_engine, text
 
-import qcp_adaptive_termination.database as database
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import (
@@ -42,6 +43,66 @@ _OVERRIDE_EVENTS = [
     HookEvent.MULTI_AGENT_STEP_BATCH_END,
 ]
 
+_META_MAPPING_CACHE: dict[str, Any] | None = None
+
+
+def _load_meta_mapping(data_dir: Path) -> dict[str, Any]:
+    global _META_MAPPING_CACHE
+    if _META_MAPPING_CACHE is None:
+        mapping_path = data_dir / "meta_mapping.yaml"
+        with open(mapping_path) as f:
+            _META_MAPPING_CACHE = cast(dict[str, Any], yaml.safe_load(f) or {})
+    return _META_MAPPING_CACHE
+
+
+def _slug_from_agent(agent: DataAgent) -> str:
+    return Path(agent.path).stem
+
+
+def _parse_canonical_table(sql: str) -> str | None:
+    """Extract first table name from FROM clause."""
+    match = re.search(r"\bFROM\s+(\w+)", sql, re.IGNORECASE)
+    return match.group(1) if match else None
+
+
+def _query_agent_canonical(
+    agent: DataAgent,
+    canonical_table: str,
+    canonical_cols: list[str],
+    meta_mapping: dict[str, Any],
+) -> pd.DataFrame | None:
+    """Query agent DB, return df with canonical column names. None if agent has no relevant data."""
+    slug = _slug_from_agent(agent)
+    table_meta = meta_mapping.get(canonical_table, {}).get(slug)
+    if table_meta is None:
+        return None
+
+    actual_table: str = table_meta["name"]
+    col_map: dict[str, str] = table_meta.get("columns", {})
+    # canonical -> actual for the columns we care about
+    actual_cols = [col_map[c] for c in canonical_cols if c in col_map]
+    if not actual_cols:
+        return None
+
+    db_path = Path(agent.path)
+    engine = create_engine(f"sqlite:///{db_path}")
+    try:
+        col_list = ", ".join(f"{actual_table}.{c}" for c in actual_cols)
+        sql = f"SELECT {col_list} FROM {actual_table}"
+        with engine.connect() as conn:
+            df = pd.read_sql(text(sql), conn)
+        if df.empty:
+            return None
+        # rename actual -> canonical
+        reverse_map = {col_map[c]: c for c in canonical_cols if c in col_map}
+        df = df.rename(columns=reverse_map)
+        return df
+    except Exception as exc:
+        logging.warning("Failed to query %s (%s): %s", agent.name, slug, exc)
+        return None
+    finally:
+        engine.dispose()
+
 
 def _make_align_schema_override(step_meta: dict[str, Any], query: str):
     def _handler(
@@ -67,7 +128,12 @@ def _make_align_schema_override(step_meta: dict[str, Any], query: str):
     return _handler
 
 
-def _make_data_agent_override(canonical_sql: str, data_cache: dict[str, pd.DataFrame | None]):
+def _make_data_agent_override(
+    canonical_table: str,
+    canonical_cols: list[str],
+    meta_mapping: dict[str, Any],
+    data_cache: dict[str, pd.DataFrame | None],
+):
     def _handler(
         data_agent: DataAgent,
         query: str,
@@ -75,17 +141,9 @@ def _make_data_agent_override(canonical_sql: str, data_cache: dict[str, pd.DataF
         schema_metadata: AlignedSchemaMetadata | None,
     ) -> PartialQueryAnswer:
         if data_agent.name not in data_cache:
-            try:
-                engine = database.get_database_engine(data_agent)
-                df = pd.DataFrame(pd.read_sql_query(canonical_sql, engine))
-                if schema_metadata is not None and not df.empty:
-                    cols = [c for c in schema_metadata.columns if c in df.columns]
-                    if cols:
-                        df = cast(pd.DataFrame, df[cols])
-                data_cache[data_agent.name] = df if not df.empty else None
-            except Exception as exc:
-                logging.warning("Failed to query %s: %s", data_agent.name, exc)
-                data_cache[data_agent.name] = None
+            data_cache[data_agent.name] = _query_agent_canonical(
+                data_agent, canonical_table, canonical_cols, meta_mapping
+            )
 
         df = data_cache[data_agent.name]
         partial = PartialQueryAnswer()
@@ -130,17 +188,25 @@ def _register_batch_tracking() -> list[str]:
     return ordered
 
 
-def _get_total_unique(data_dir: Path, sql_query: str, key_cols: list[str]) -> int:
-    gt_db = data_dir / "ground-truth.db"
-    engine = create_engine(f"sqlite:///{gt_db}")
-    try:
-        df = pd.read_sql_query(sql_query, engine)
-    finally:
-        engine.dispose()
-    if df.empty:
+def _get_total_unique(
+    relevant_agents: list[DataAgent],
+    canonical_table: str,
+    canonical_cols: list[str],
+    key_cols: list[str],
+    meta_mapping: dict[str, Any],
+) -> int:
+    frames: list[pd.DataFrame] = []
+    for agent in relevant_agents:
+        df = _query_agent_canonical(agent, canonical_table, canonical_cols, meta_mapping)
+        if df is not None and not df.empty:
+            frames.append(df)
+    if not frames:
         return 0
-    cols = [c for c in key_cols if c in df.columns]
-    return int(len(df[cols].drop_duplicates())) if cols else int(len(df))
+    combined = pd.concat(frames, ignore_index=True)
+    cols = [c for c in key_cols if c in combined.columns]
+    if not cols:
+        cols = list(combined.columns)
+    return int(len(combined[cols].drop_duplicates()))
 
 
 def _save_results(
@@ -178,6 +244,22 @@ def _save_results(
     print(f"Saved to {output_dir}")
 
 
+def _parse_canonical_cols(sql: str) -> list[str]:
+    """Extract column names from SELECT clause (strips table prefix)."""
+    match = re.search(r"\bSELECT\b(.*?)\bFROM\b", sql, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return []
+    cols_str = match.group(1)
+    cols = []
+    for part in cols_str.split(","):
+        part = part.strip()
+        # strip table prefix (table.col -> col), strip aliases
+        col = part.split(".")[-1].split()[0].strip()
+        if col and col != "*":
+            cols.append(col)
+    return cols
+
+
 async def _run(ctx: ScriptContext) -> None:
     extra = ctx.extra or {}
     steps_metadata: dict[str, Any] = extra.get("steps_metadata", {})
@@ -212,21 +294,32 @@ async def _run(ctx: ScriptContext) -> None:
     query = query_plan.query
     query_slug = ctx.input_file.stem
 
+    canonical_table = _parse_canonical_table(canonical_sql)
+    if canonical_table is None:
+        logging.warning("%s: could not parse table from sql %r — skipping", ctx.input_file.stem, canonical_sql)
+        return
+    canonical_cols = _parse_canonical_cols(canonical_sql)
+    if not canonical_cols:
+        logging.warning("%s: could not parse columns from sql %r — skipping", ctx.input_file.stem, canonical_sql)
+        return
+
+    meta_mapping = _load_meta_mapping(ctx.data_dir)
+
     all_agents = cast(CollaborativeQueryAnswering, ctx.data).data_agents
     relevant_agent_names: set[str] = set(extra.get("relevant_data_agents", []))
     relevant_data_agents = [a for a in all_agents if a.name in relevant_agent_names]
 
     print(f"Query: {query}")
-    print(f"Step: {step.id}, agents: {len(step.to_agent)}, key_cols: {key_cols}")
+    print(f"Step: {step.id}, table: {canonical_table}, cols: {canonical_cols}, key_cols: {key_cols}")
 
-    total_unique = _get_total_unique(ctx.data_dir, canonical_sql, key_cols)
+    total_unique = _get_total_unique(relevant_data_agents, canonical_table, canonical_cols, key_cols, meta_mapping)
     print(f"Total unique rows (ground truth): {total_unique}")
 
     data_cache: dict[str, pd.DataFrame | None] = {}
     results: list[tuple[str, EvaluationCurve]] = []
 
     align_schema_handler = _make_align_schema_override(step_meta, query)
-    data_agent_handler = _make_data_agent_override(canonical_sql, data_cache)
+    data_agent_handler = _make_data_agent_override(canonical_table, canonical_cols, meta_mapping, data_cache)
 
     for strategy in SelectionStrategyType:
         print(f"Running strategy: {strategy}")
@@ -256,11 +349,11 @@ async def _run(ctx: ScriptContext) -> None:
             results.append((str(strategy), EvaluationCurve(x=[0.0, 1.0], y=[0.0, 0.0], auc=0.0)))
             continue
 
-        curve = build_curve(ordered_agents, data_cache, total_unique, key_cols)
+        curve = build_curve(ordered_agents, data_cache, total_unique, canonical_cols)
         print(f"  AUC={curve.auc:.4f}, agents queried={len(ordered_agents)}")
         results.append((str(strategy), curve))
 
-    oracle_curve = compute_greedy_oracle(step.to_agent, data_cache, total_unique, key_cols)
+    oracle_curve = compute_greedy_oracle(step.to_agent, data_cache, total_unique, canonical_cols)
     print(f"Oracle AUC={oracle_curve.auc:.4f}")
 
     output_dir = ctx.output_dir or ctx.input_file.parent / "evaluation"
