@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 from sqlalchemy import Engine, create_engine, text
@@ -6,6 +7,7 @@ from qcp_adaptive_termination.models import DataAgent
 from qcp_adaptive_termination.observability import context
 
 _engine_cache: dict[str, Engine] = {}
+_schema_engine_cache: dict[str, "SchemaEngine"] = {}  # type: ignore[name-defined]  # noqa: F821
 
 
 def _get_db_engine_for_path(resolved_path: str) -> Engine:
@@ -23,6 +25,20 @@ def get_database_engine(data_agent: DataAgent) -> Engine:
         raise RuntimeError("data_dir context not set. Use data_context() or pipeline_context(data_dir=...).")
     resolved_path = os.path.abspath(os.path.join(data_dir, data_agent.path))
     return _get_db_engine_for_path(resolved_path)
+
+
+async def get_schema_engine(data_agent: DataAgent) -> "SchemaEngine":  # type: ignore[name-defined]  # noqa: F821
+    from qcp_adaptive_termination.database.mschema import SchemaEngine
+
+    data_dir = context.get_data_dir()
+    if data_dir is None:
+        raise RuntimeError("data_dir context not set. Use data_context() or pipeline_context(data_dir=...).")
+    resolved_path = os.path.abspath(os.path.join(data_dir, data_agent.path))
+    if resolved_path not in _schema_engine_cache:
+        db_engine = _get_db_engine_for_path(resolved_path)
+        schema_engine = await asyncio.to_thread(SchemaEngine, db_engine, db_name=data_agent.name)
+        _schema_engine_cache[resolved_path] = schema_engine
+    return _schema_engine_cache[resolved_path]
 
 
 def quote_table(name: str) -> str:
