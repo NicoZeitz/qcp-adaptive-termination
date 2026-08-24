@@ -9,7 +9,6 @@ import atexit
 import contextlib
 import logging
 import os
-import threading
 from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -177,24 +176,19 @@ def tracing_context(name: str, output_dir: Path, *, metadata: dict[str, JsonValu
     finally:
         shutdown_timeout = float(os.getenv("TRACING_SHUTDOWN_TIMEOUT", "10.0"))
 
-        def _friendly_shutdown() -> None:
-            if openai_processor is not None:
-                openai_processor.shutdown(timeout=shutdown_timeout)
-            provider = otel_trace.get_tracer_provider()
-            if isinstance(provider, TracerProvider):
-                provider.shutdown()
-            langfuse.flush()
-            langfuse.shutdown()
+        if openai_processor is not None:
+            openai_processor.shutdown(timeout=shutdown_timeout)
 
-        t = threading.Thread(target=_friendly_shutdown, daemon=True)
-        t.start()
-        t.join(timeout=shutdown_timeout)
+        provider = otel_trace.get_tracer_provider()
+        if isinstance(provider, TracerProvider):
+            provider.force_flush(timeout_millis=int(shutdown_timeout * 1000))
+            provider.shutdown()
 
-        if t.is_alive() and openai_processor is not None:
-            # Friendly shutdown timed out — force by signaling events and skipping joins.
-            openai_processor.shutdown(timeout=0)
+        langfuse.flush()
+        langfuse.shutdown()
 
         atexit.unregister(vars(_agents_tracing_setup)["_shutdown_global_trace_provider"])
+
 
 @contextmanager
 def data_context(data_dir: Path) -> Generator[None]:

@@ -228,7 +228,7 @@ def _save_results(
     pd.DataFrame(rows).to_csv(output_dir / f"{query_slug}_auc.csv", index=False)
 
     fig, axes = plt.subplots(1, 2, figsize=(18, 6))
-    for ax, xscale in zip(axes, ["linear", "log"]):
+    for ax, xscale in zip(axes, ["linear", "log"], strict=True):
         ax.plot(
             oracle_curve.x,
             oracle_curve.y,
