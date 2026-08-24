@@ -76,7 +76,7 @@ async def _filter_embeddings_internal(
         logging.info("  %s: L2=%.4f (table: %s)", agent_name, dist, table_name)
 
     similarity_scores = [1.0 / (1.0 + dist) for _, (dist, _) in sorted_agents]
-    cutoff_idx = find_similarity_clusters(similarity_scores + [0.0], min_cluster_size=1)
+    cutoff_idx = find_similarity_clusters(similarity_scores, min_cluster_size=1)
     sorted_agents = sorted_agents[:cutoff_idx]
 
     logging.info("Embedding pre-filter: kept %d / %d agents", len(sorted_agents), len(data_agents))
