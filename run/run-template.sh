@@ -136,7 +136,7 @@ PYEOF
           --cache_dir "${CACHE_DIR}" \
           --data_dir "${DATA_DIR}" \
           --config "${CONFIG}" \
-          --start-stage 1 --end-stage 3 #\
+          --start-stage 1 --end-stage 3 &
         #   > >(tee "${LOG_DIR}/stdout.log") \
         #   2> >(tee "${LOG_DIR}/stderr.log" >&2) &
 

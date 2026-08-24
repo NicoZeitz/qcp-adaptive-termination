@@ -107,7 +107,7 @@ for FILE in "${FILES[@]}"; do
       --input "${INPUT_FILE}" \
       --output_dir "${LOG_DIR}" \
       --data_dir "${DATA_DIR}" \
-      --start-stage 3 --end-stage 3 #\
+      --start-stage 3 --end-stage 3 &
     #   > >(tee "${LOG_DIR}/stdout.log") \
     #   2> >(tee "${LOG_DIR}/stderr.log" >&2) &
 
