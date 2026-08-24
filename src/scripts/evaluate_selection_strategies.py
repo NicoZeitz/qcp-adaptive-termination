@@ -227,6 +227,15 @@ def _save_results(
     rows.append({"strategy": "oracle", "auc": oracle_curve.auc})
     pd.DataFrame(rows).to_csv(output_dir / f"{query_slug}_auc.csv", index=False)
 
+    # save a more detailed CSV with the full curves
+    curve_rows = []
+    for strategy, curve in results:
+        for x, y in zip(curve.x, curve.y, strict=True):
+            curve_rows.append({"strategy": strategy, "x": x, "y": y})
+    for x, y in zip(oracle_curve.x, oracle_curve.y, strict=True):
+        curve_rows.append({"strategy": "oracle", "x": x, "y": y})
+    pd.DataFrame(curve_rows).to_csv(output_dir / f"{query_slug}_curves.csv", index=False)
+
     fig, axes = plt.subplots(1, 2, figsize=(18, 6))
     for ax, xscale in zip(axes, ["linear", "log"], strict=True):
         ax.plot(

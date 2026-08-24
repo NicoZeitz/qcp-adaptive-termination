@@ -82,6 +82,15 @@ FILES=(
 
 ############################################################ RUN EVERYTHING ############################################################
 
+CONFIG=$(python3 - <<PYEOF
+import yaml, sys
+with open("config.yaml") as f:
+    cfg = yaml.safe_load(f)
+
+print(yaml.dump(cfg, default_flow_style=False))
+PYEOF
+)
+
 echo "================== Running '${RUN_NAME}' with dataset '${DATASET_NAME}'"
 for FILE in "${FILES[@]}"; do
 
@@ -107,6 +116,8 @@ for FILE in "${FILES[@]}"; do
       --input "${INPUT_FILE}" \
       --output_dir "${LOG_DIR}" \
       --data_dir "${DATA_DIR}" \
+      --cache_dir "${CACHE_DIR}" \
+      --config "${CONFIG}" \
       --start-stage 3 --end-stage 3 &
     #   > >(tee "${LOG_DIR}/stdout.log") \
     #   2> >(tee "${LOG_DIR}/stderr.log" >&2) &
