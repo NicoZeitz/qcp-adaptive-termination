@@ -1,8 +1,6 @@
 from collections.abc import Callable
-import os
 from typing import Any, overload
 
-import yaml
 from pydantic import BaseModel, Field, create_model
 
 import qcp_adaptive_termination.database as database
@@ -150,55 +148,6 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
     return AgentRegistryData(
         natural_language_description=natural_language_description,
         technical_description=schema_engine.mschema.to_mschema(),
-        query_capabilities=["Text-to-SQL"],
-        individual_descriptions=individual_descriptions,
-    )
-
-
-def load_registry_data_nl_only(data_agent: DataAgent, data_dir: str) -> AgentRegistryData:
-    """Fast path: read only the .comments.yaml sidecar, no DB queries.
-
-    Populates natural_language_description fields only. Use for the embedding
-    pre-filter where technical descriptions and examples are not needed.
-    """
-    db_path = os.path.abspath(os.path.join(data_dir, data_agent.path))
-    comments_path = os.path.splitext(db_path)[0] + ".comments.yaml"
-    comments: dict = {}
-    try:
-        with open(comments_path) as f:
-            comments = yaml.safe_load(f) or {}
-    except FileNotFoundError:
-        pass
-
-    db_comment = comments.get("__database__", "")
-    individual_descriptions: dict[str, TableDescription] = {}
-    for table_name, table_entry in comments.items():
-        if table_name.startswith("__"):
-            continue
-        if isinstance(table_entry, dict):
-            table_comment = table_entry.get("__table__", "")
-            columns = {
-                col: ColumnDescription(
-                    column_name=col,
-                    natural_language_description=val if isinstance(val, str) else "",
-                    technical_description="",
-                )
-                for col, val in table_entry.items()
-                if not col.startswith("__")
-            }
-        else:
-            table_comment = table_entry if isinstance(table_entry, str) else ""
-            columns = {}
-        individual_descriptions[table_name] = TableDescription(
-            table_name=table_name,
-            natural_language_description=table_comment,
-            technical_description="",
-            columns=columns,
-        )
-
-    return AgentRegistryData(
-        natural_language_description=db_comment,
-        technical_description="",
         query_capabilities=["Text-to-SQL"],
         individual_descriptions=individual_descriptions,
     )

@@ -14,7 +14,6 @@ from qcp_adaptive_termination.models import (
     AgentRegistryType,
     DataAgent,
 )
-from qcp_adaptive_termination.observability import context
 
 
 @overload
@@ -214,15 +213,7 @@ async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryT
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
 
-    if registry_type == AgentRegistryType.NATURAL_LANGUAGE:
-        data_dir = context.get_data_dir()
-        if data_dir is None:
-            raise RuntimeError("data_dir context not set.")
-        agent_data: dict[str, AgentRegistryData] = {
-            a.name: utils.load_registry_data_nl_only(a, str(data_dir)) for a in agent_list
-        }
-    else:
-        agent_data = await load(agent_list)
+    agent_data = await load(agent_list)
 
     result: dict[str, dict[str, list[float]]] = {}
     for agent in agent_list:
@@ -235,10 +226,6 @@ async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryT
             else data.individual_descriptions[table].technical_description
             for table in table_names
         ]
-
-        if not embedding_descriptions:
-            result[agent.name] = {}
-            continue
 
         embeddings = await embedding.create(embedding_descriptions)
         result[agent.name] = {table: embeddings[i] for i, table in enumerate(table_names)}
