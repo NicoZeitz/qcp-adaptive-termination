@@ -16,6 +16,7 @@ from scripts.utils.evoc import (
 )
 from scripts.utils.geo import DB_GEO
 from scripts.utils.setup import ScriptContext, run_script
+from scripts.utils.sql import parse_select_columns, rewrite_sql_identifiers
 
 __all__ = [
     "CATEGORICAL_COLORS",
@@ -30,5 +31,7 @@ __all__ = [
     "build_evoc_layout",
     "compute_auc",
     "compute_greedy_oracle",
+    "parse_select_columns",
+    "rewrite_sql_identifiers",
     "run_script",
 ]

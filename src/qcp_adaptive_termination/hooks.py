@@ -44,7 +44,9 @@ _execution_id: ContextVar[str] = ContextVar("execution_id", default="")
 
 @contextmanager
 def stage_context(execution_id: str | None = None) -> Generator[str]:
-    id_ = execution_id or uuid4().hex[:12]
+    parent = _execution_id.get()
+    new_id = execution_id or uuid4().hex[:12]
+    id_ = f"{parent}/{new_id}" if parent else new_id
     token = _execution_id.set(id_)
     try:
         yield id_

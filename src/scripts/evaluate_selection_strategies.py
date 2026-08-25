@@ -11,8 +11,6 @@ from uuid import uuid4
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import sqlglot
-import sqlglot.expressions as exp
 import yaml
 from sqlalchemy import create_engine, text
 
@@ -30,6 +28,7 @@ from qcp_adaptive_termination.models import (
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
     EvaluatorDecision,
+    FailedExecution,
     FinalResultOutcome,
     PartialQueryAnswer,
     QueryMoreAgentsOutcome,
@@ -40,6 +39,7 @@ from qcp_adaptive_termination.observability import context
 from qcp_adaptive_termination.stages import execute_query_plan
 from scripts.utils import ScriptContext, run_script
 from scripts.utils.evaluation import EvaluationCurve, build_curve, compute_greedy_oracle
+from scripts.utils.sql import parse_select_columns, rewrite_sql_identifiers
 
 _OVERRIDE_EVENTS = [
     HookEvent.ALIGN_SCHEMA_OVERRIDE,
@@ -89,7 +89,7 @@ def _query_agent_canonical(
 
     col_map: dict[str, str] = table_meta.get("columns", {})
     try:
-        actual_sql = _rewrite_sql_for_agent(canonical_sql, canonical_table, table_meta)
+        actual_sql = rewrite_sql_identifiers(canonical_sql, canonical_table, table_meta["name"], col_map)
     except Exception as exc:
         logging.warning("Failed to rewrite SQL for %s (%s): %s", agent.name, slug, exc)
         return None
@@ -158,8 +158,7 @@ def _make_data_agent_override(
 
         df = data_cache[data_agent.name]
         partial = PartialQueryAnswer()
-        if df is not None and not df.empty:
-            partial.set_answer(df)
+        partial.set_answer(df if df is not None and not df.empty else pd.DataFrame())
         return partial
 
     return _handler
@@ -180,6 +179,17 @@ def _completeness_override(
     return QueryMoreAgentsOutcome(result_list=aligned_result_list)
 
 
+def _replan_error(
+    execution_id: str,
+    data_agents: list[DataAgent],
+    relevant_data_agents: list[DataAgent],
+    query_plan: QueryPlan,
+    reason: FailedExecution,
+) -> QueryPlan:
+    del execution_id, data_agents, relevant_data_agents, query_plan
+    raise RuntimeError(f"Unexpected replan triggered in benchmark. Step: {reason.step.id!r}")
+
+
 def _register_batch_tracking(target_execution_id: str) -> tuple[list[str], Any]:
     ordered: list[str] = []
 
@@ -194,7 +204,8 @@ def _register_batch_tracking(target_execution_id: str) -> tuple[list[str], Any]:
         estimators: list[EstimatorStatistics | None],
         decision: EvaluatorDecision | Literal["need"],
     ) -> None:
-        if execution_id == target_execution_id:
+        del query_plan_step, additional_information, iteration, remaining, result_list, estimators, decision
+        if execution_id.startswith(target_execution_id + "/"):
             ordered.extend(sda.agent.name for sda in batch)
 
     hooks.register(HookEvent.MULTI_AGENT_STEP_BATCH_END, _on_batch_end)
@@ -270,52 +281,7 @@ def _save_results(
     fig.tight_layout()
     fig.savefig(output_dir / f"{query_slug}_curves.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved to {output_dir}")
-
-
-def _parse_canonical_cols_sqlglot(canonical_sql: str) -> list[str]:
-    """Return SELECT output column names (alias > column name > output_name)."""
-    tree = sqlglot.parse_one(canonical_sql, dialect="sqlite")
-    if not isinstance(tree, exp.Select):
-        return []
-    cols = []
-    for sel in tree.selects:
-        if isinstance(sel, exp.Alias):
-            cols.append(sel.alias)
-        elif isinstance(sel, exp.Column):
-            cols.append(sel.name)
-        elif not isinstance(sel, exp.Star):
-            name = sel.output_name
-            if name:
-                cols.append(name)
-    return cols
-
-
-def _rewrite_sql_for_agent(
-    canonical_sql: str,
-    canonical_table: str,
-    table_meta: dict[str, Any],
-) -> str:
-    """Rewrite canonical SQL identifiers to per-agent actual names."""
-    actual_table: str = table_meta["name"]
-    col_map: dict[str, str] = table_meta.get("columns", {})
-
-    tree = sqlglot.parse_one(canonical_sql, dialect="sqlite")
-
-    def _transformer(node: Any) -> Any:
-        if isinstance(node, exp.Table) and node.name.lower() == canonical_table.lower():
-            new_node = node.copy()
-            new_node.set("this", exp.to_identifier(actual_table))
-            return new_node
-        if isinstance(node, exp.Column) and node.name in col_map:
-            new_node = node.copy()
-            new_node.set("this", exp.to_identifier(col_map[node.name]))
-            if node.table and node.table.lower() == canonical_table.lower():
-                new_node.set("table", exp.to_identifier(actual_table))
-            return new_node
-        return node
-
-    return tree.transform(_transformer).sql(dialect="sqlite")
+    logging.info("Saved to %s", output_dir)
 
 
 async def _run(ctx: ScriptContext) -> None:
@@ -356,7 +322,7 @@ async def _run(ctx: ScriptContext) -> None:
     if canonical_table is None:
         logging.warning("%s: could not parse table from sql %r — skipping", ctx.input_file.stem, canonical_sql)
         return
-    canonical_cols = _parse_canonical_cols_sqlglot(canonical_sql)
+    canonical_cols = parse_select_columns(canonical_sql)
     if not canonical_cols:
         logging.warning("%s: could not parse columns from sql %r — skipping", ctx.input_file.stem, canonical_sql)
         return
@@ -367,13 +333,13 @@ async def _run(ctx: ScriptContext) -> None:
     relevant_agent_names: set[str] = set(extra.get("relevant_data_agents", []))
     relevant_data_agents = [a for a in all_agents if a.name in relevant_agent_names]
 
-    print(f"Query: {query}")
-    print(f"Step: {step.id}, table: {canonical_table}, cols: {canonical_cols}, key_cols: {key_cols}")
+    logging.info("Query: %s", query)
+    logging.info("Step: %s, table: %s, cols: %s, key_cols: %s", step.id, canonical_table, canonical_cols, key_cols)
 
     total_unique = _get_total_unique(
         relevant_data_agents, canonical_sql, canonical_table, key_cols, meta_mapping, ctx.data_dir
     )
-    print(f"Total unique rows (ground truth): {total_unique}")
+    logging.info("Total unique rows (ground truth): %d", total_unique)
 
     data_cache: dict[str, pd.DataFrame | None] = {}
     with ThreadPoolExecutor() as pool:
@@ -394,9 +360,10 @@ async def _run(ctx: ScriptContext) -> None:
     hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
     hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
     hooks.register(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
+    hooks.register(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
 
     async def _run_one_strategy(strategy: SelectionStrategyType) -> tuple[str, EvaluationCurve]:
-        print(f"Running strategy: {strategy}")
+        logging.info("Running strategy: %s", strategy)
         execution_id = uuid4().hex[:12]
         strategy_config = ctx.config.model_copy(update={"selection_type": strategy})
         ordered_agents, batch_end_handler = _register_batch_tracking(execution_id)
@@ -414,12 +381,20 @@ async def _run(ctx: ScriptContext) -> None:
         finally:
             hooks.unregister(HookEvent.MULTI_AGENT_STEP_BATCH_END, batch_end_handler)
 
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for name in ordered_agents:
+            if name not in seen:
+                seen.add(name)
+                deduped.append(name)
+        ordered_agents = deduped
+
         if not ordered_agents:
             logging.warning("Strategy %s: no agents queried", strategy)
             return str(strategy), EvaluationCurve(x=[0.0, 1.0], y=[0.0, 0.0], auc=0.0)
 
         curve = build_curve(ordered_agents, data_cache, total_unique, canonical_cols)
-        print(f"  {strategy} AUC={curve.auc:.4f}, agents queried={len(ordered_agents)}")
+        logging.info("  %s AUC=%.4f, agents queried=%d", strategy, curve.auc, len(ordered_agents))
         return str(strategy), curve
 
     try:
@@ -428,9 +403,10 @@ async def _run(ctx: ScriptContext) -> None:
         hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
         hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
         hooks.unregister(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
+        hooks.unregister(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
 
     oracle_curve = compute_greedy_oracle(step.to_agent, data_cache, total_unique, canonical_cols)
-    print(f"Oracle AUC={oracle_curve.auc:.4f}")
+    logging.info("Oracle AUC=%.4f", oracle_curve.auc)
 
     output_dir = ctx.output_dir or ctx.input_file.parent / "evaluation"
     _save_results(results, oracle_curve, query_slug, output_dir)
