@@ -30,7 +30,7 @@ INPUT_DIR="${DATASET_DIR}/input"
 RUN_NAME="stage_1_solo"
 
 # TODO: Set to true to run files in parallel, false for sequential execution
-PARALLEL=false
+PARALLEL=true
 # TODO: set to true, then only print out the commands that would be executed, without actually running them
 TEST=false
 
@@ -46,16 +46,16 @@ mkdir -p "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"
 
 # Or use a specific list of files
 FILES=(
-    "How_many_countries_have_a_human_development_index_above_08.json"
-    # "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
-    # "How_many_people_live_in_the_middle_east.json"
-    # "Since_how_many_years_do_bundesliga_clubs_exist_on_average_Today_is_the_20022032.json"
-    # "What_is_the_average_area_in_square_kilometers_of_Chinese_provinces.json"
-    # "What_is_the_average_attendance_of_NBA_matches.json"
-    # "What_is_the_average_capacity_of_UEFA_Champions_League_venues.json"
-    # "What_is_the_average_life_expectancy_in_countries_with_a_population_greater_than_.json"
-    # "What_is_the_average_maximum_passenger_capacity_of_all_aircraft.json"
-    # "What_is_the_average_number_of_participants_in_Mens_FIFA_World_Cup.json"
+    # "How_many_countries_have_a_human_development_index_above_08.json"
+    "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
+    "How_many_people_live_in_the_middle_east.json"
+    "Since_how_many_years_do_bundesliga_clubs_exist_on_average_Today_is_the_20022032.json"
+    "What_is_the_average_area_in_square_kilometers_of_Chinese_provinces.json"
+    "What_is_the_average_attendance_of_NBA_matches.json"
+    "What_is_the_average_capacity_of_UEFA_Champions_League_venues.json"
+    "What_is_the_average_life_expectancy_in_countries_with_a_population_greater_than_.json"
+    "What_is_the_average_maximum_passenger_capacity_of_all_aircraft.json"
+    "What_is_the_average_number_of_participants_in_Mens_FIFA_World_Cup.json"
     # "What_is_the_average_passenger_capacity_of_all_aircraft_manufactured_by_Saab_AB.json"
     # "What_is_the_average_population_of_German_states.json"
     # "What_is_the_combined_area_of_all_continents_in_square_kilometers.json"
@@ -108,6 +108,7 @@ for FILE in "${FILES[@]}"; do
       --output_dir "${LOG_DIR}" \
       --data_dir "${DATA_DIR}" \
       --cache_dir "${CACHE_DIR}" \
+      --config "${PROJECT_DIR}/config.yaml" \
       --start-stage 1 --end-stage 1 &
     #   > >(tee "${LOG_DIR}/stdout.log") \
     #   2> >(tee "${LOG_DIR}/stderr.log" >&2) &
