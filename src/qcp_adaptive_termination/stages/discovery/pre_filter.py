@@ -11,12 +11,12 @@ from qcp_adaptive_termination.models import AgentRegistryType, DataAgent
 from qcp_adaptive_termination.observability import tracing
 
 
-def find_similarity_clusters(scores: list[float], min_cluster_size: int = 1) -> int:
-    """Find cutoff by detecting the largest gap in descending similarity scores."""
+def find_l2_clusters(scores: list[float], min_cluster_size: int = 1) -> int:
+    """Find cutoff by detecting the largest gap in ascending L2 distance scores."""
     if len(scores) <= min_cluster_size:
         return len(scores)
 
-    gaps = [(scores[i] - scores[i + 1], i + 1) for i in range(len(scores) - 1)]
+    gaps = [(scores[i + 1] - scores[i], i + 1) for i in range(len(scores) - 1)]
 
     if not gaps:
         return len(scores)
@@ -32,7 +32,7 @@ def find_similarity_clusters(scores: list[float], min_cluster_size: int = 1) -> 
         return min_cluster_size
 
     logging.info(
-        "Largest gap of %.4f at position %d (score: %.3f to %.3f)",
+        "Largest gap of %.4f at position %d (L2: %.3f to %.3f)",
         max_gap,
         cutoff_idx,
         scores[cutoff_idx - 1],
@@ -71,12 +71,12 @@ async def _filter_embeddings_internal(
 
     sorted_agents = sorted(agent_best_dist.items(), key=lambda x: x[1][0])
 
-    logging.info("Embedding similarity per agent (L2, ascending):")
+    logging.info("Embedding similarity per agent (L2 distance, ascending):")
     for agent_name, (dist, table_name) in sorted_agents:
         logging.info("  %s: L2=%.4f (table: %s)", agent_name, dist, table_name)
 
-    similarity_scores = [1.0 / (1.0 + dist) for _, (dist, _) in sorted_agents]
-    cutoff_idx = find_similarity_clusters(similarity_scores, min_cluster_size=1)
+    l2_scores = [dist for _, (dist, _) in sorted_agents]
+    cutoff_idx = find_l2_clusters(l2_scores, min_cluster_size=1)
     sorted_agents = sorted_agents[:cutoff_idx]
 
     logging.info("Embedding pre-filter: kept %d / %d agents", len(sorted_agents), len(data_agents))
@@ -87,7 +87,7 @@ async def _filter_embeddings_internal(
     tracing.append_to_span_output(
         {
             "filtered_agents": [a.name for a in filtered],
-            "similarity_scores": {name: round(1.0 / (1.0 + dist), 4) for name, (dist, _) in agent_best_dist.items()},
+            "l2_scores": {name: round(dist, 4) for name, (dist, _) in agent_best_dist.items()},
             "best_tables": {name: table for name, (_, table) in agent_best_dist.items()},
         }
     )
