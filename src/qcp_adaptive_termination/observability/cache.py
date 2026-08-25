@@ -197,3 +197,43 @@ def cached[**Param, RetType](
         return wrapper
 
     return decorator
+
+
+async def get_or_compute_batch[T, R](
+    items: list[T],
+    batch_fn: Callable[[list[T]], Awaitable[list[R]]],
+    *,
+    argument_name: str,
+    name_prefix: str = "",
+    deserializable_classes: list[type[BaseModel]] | None = None,
+) -> list[R]:
+    # deferred: context imports Cache, so top-level would be circular
+    from qcp_adaptive_termination.observability.context import get_cache
+
+    cache_instance = get_cache()
+    if cache_instance is None:
+        return await batch_fn(items)
+
+    deserializable = deserializable_classes or []
+    results: list[R | None] = []
+    miss_indices: list[int] = []
+    miss_items: list[T] = []
+
+    for i, item in enumerate(items):
+        key = _serialize_value({argument_name: item})
+        cached_value, found = cache_instance.get(key=key, name_prefix=name_prefix)
+        if found:
+            results.append(_deserialize_value(cached_value, deserializable))
+        else:
+            results.append(None)
+            miss_indices.append(i)
+            miss_items.append(item)
+
+    if miss_items:
+        miss_results = await batch_fn(miss_items)
+        for idx, item, result in zip(miss_indices, miss_items, miss_results, strict=True):
+            key = _serialize_value({argument_name: item})
+            cache_instance.store(key=key, value=_serialize_value(result), name_prefix=name_prefix)
+            results[idx] = result
+
+    return cast(list[R], results)
