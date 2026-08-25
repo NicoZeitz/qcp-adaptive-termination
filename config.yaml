@@ -24,9 +24,8 @@ agent_configs:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
   coordinator_planning:
-    model: "openai/gpt-5"
-    reasoning_effort: "high"
-    reasoning_summary: "concise"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    reasoning_effort: "none"
   coordinator_code:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"

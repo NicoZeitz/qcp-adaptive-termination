@@ -441,7 +441,3 @@ if __name__ == "__main__":
         description="Benchmark selection strategies on a single-step federated query",
         run_fn=_run,
     )
-    # TODO: remove
-    import os
-
-    os._exit(0)
