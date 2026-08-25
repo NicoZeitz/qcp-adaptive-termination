@@ -3,7 +3,7 @@ import math
 import random
 import sys
 from collections.abc import Sequence
-from functools import lru_cache
+from functools import cache
 
 import numpy as np
 from scipy.interpolate import RBFInterpolator
@@ -123,7 +123,7 @@ class Estimator:
         self._mc_random_seed: int | None = MC_RANDOM_SEED
         self._mc_max_theta_points: int = MC_DEFAULT_MAX_THETA_POINTS
         self._mc_laplace_alpha: float = MC_LAPLACE_ALPHA
-        self._dynamic_buckets = lru_cache(maxsize=None)(self._raw_dynamic_buckets)
+        self._dynamic_buckets = cache(self._raw_dynamic_buckets)
 
     def set_monte_carlo_parameters(
         self,

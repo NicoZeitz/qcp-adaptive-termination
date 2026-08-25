@@ -251,6 +251,7 @@ class MULTI_AGENT_STEP_END_HANDLER(Protocol):
 class COORDINATOR_RELEVANCE_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         query: str,
         data_agents: list[DataAgent],
         registry_string: str,
@@ -261,6 +262,7 @@ class COORDINATOR_RELEVANCE_OVERRIDE_HANDLER(Protocol):
 class DATA_AGENT_RELEVANCE_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         query: str,
         item: tuple[DataAgent, str],
         additional_context: str | None,
@@ -270,6 +272,7 @@ class DATA_AGENT_RELEVANCE_OVERRIDE_HANDLER(Protocol):
 class FILTER_RELEVANT_AGENTS_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         query: str,
         data_agents: list[DataAgent],
     ) -> FilteredRelevantAgents: ...
@@ -278,6 +281,7 @@ class FILTER_RELEVANT_AGENTS_OVERRIDE_HANDLER(Protocol):
 class DRAFT_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         query: str,
         data_agents: list[DataAgent],
         relevant_data_agents: list[DataAgent],
@@ -287,6 +291,7 @@ class DRAFT_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
 class ALIGN_SCHEMA_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         data_agents: list[DataAgent],
         agent_names: list[str],
         query: str,
@@ -297,6 +302,7 @@ class ALIGN_SCHEMA_OVERRIDE_HANDLER(Protocol):
 class DATA_AGENT_QUERY_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         data_agent: DataAgent,
         query: str,
         additional_information: list[AdditionalInformation],
@@ -307,6 +313,7 @@ class DATA_AGENT_QUERY_OVERRIDE_HANDLER(Protocol):
 class COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         aligned_result_list: AlignedResultList,
         estimator_statistics: EstimatorStatistics,
         query: str,
@@ -319,6 +326,7 @@ class COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER(Protocol):
 class REPLAN_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         data_agents: list[DataAgent],
         relevant_data_agents: list[DataAgent],
         query_plan: QueryPlan,
@@ -329,6 +337,7 @@ class REPLAN_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
 class ANSWER_STEP_COORDINATOR_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         query_plan_step: QueryPlanStep,
         additional_information: list[AdditionalInformation],
     ) -> PartialQueryAnswer: ...
@@ -337,6 +346,7 @@ class ANSWER_STEP_COORDINATOR_OVERRIDE_HANDLER(Protocol):
 class ANSWER_STEP_DATA_AGENT_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         data_agents: list[DataAgent],
         query: str,
         to_agent: str,
@@ -348,6 +358,7 @@ class ANSWER_STEP_DATA_AGENT_OVERRIDE_HANDLER(Protocol):
 class EXECUTE_QUERY_PLAN_STEP_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         data_agents: list[DataAgent],
         query_plan_step: QueryPlanStep,
         additional_information: list[AdditionalInformation],
@@ -357,6 +368,7 @@ class EXECUTE_QUERY_PLAN_STEP_OVERRIDE_HANDLER(Protocol):
 class ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         data_agents: list[DataAgent],
         query_plan_step: MultiAgentQueryPlanStep,
         additional_information: list[AdditionalInformation],
@@ -366,6 +378,7 @@ class ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE_HANDLER(Protocol):
 class EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
+        execution_id: str,
         query: str,
         data_agents: list[DataAgent],
     ) -> list[DataAgent]: ...
@@ -888,9 +901,10 @@ async def call_override(
     data_agents: list[DataAgent],
 ) -> list[DataAgent]: ...
 async def call_override(event: HookEvent, *, default: Callable[[], Any], **kwargs: Any) -> Any:
+    execution_id = get_execution_id()
     handlers = _handlers.get(str(event), [])
     if handlers:
-        result = handlers[0](**kwargs)
+        result = handlers[0](execution_id, **kwargs)
         if inspect.isawaitable(result):
             return await result
         return result

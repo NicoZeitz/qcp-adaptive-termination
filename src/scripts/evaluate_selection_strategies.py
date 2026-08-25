@@ -1,10 +1,13 @@
 """Benchmark all 8 selection strategies on a single-step federated query."""
 
+import asyncio
 import hashlib
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Literal, cast
+from uuid import uuid4
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -109,6 +112,7 @@ def _query_agent_canonical(
 
 def _make_align_schema_override(step_meta: dict[str, Any], query: str):
     def _handler(
+        execution_id: str,
         data_agents: list[DataAgent],
         agent_names: list[str],
         query: str,
@@ -140,6 +144,7 @@ def _make_data_agent_override(
     data_dir: Path,
 ):
     def _handler(
+        execution_id: str,
         data_agent: DataAgent,
         query: str,
         additional_information: list[AdditionalInformation],
@@ -160,6 +165,7 @@ def _make_data_agent_override(
 
 
 def _completeness_override(
+    execution_id: str,
     aligned_result_list: AlignedResultList,
     estimator_statistics: EstimatorStatistics,
     query: str,
@@ -173,7 +179,7 @@ def _completeness_override(
     return QueryMoreAgentsOutcome(result_list=aligned_result_list)
 
 
-def _register_batch_tracking() -> list[str]:
+def _register_batch_tracking(target_execution_id: str) -> tuple[list[str], Any]:
     ordered: list[str] = []
 
     def _on_batch_end(
@@ -187,10 +193,11 @@ def _register_batch_tracking() -> list[str]:
         estimators: list[EstimatorStatistics | None],
         decision: EvaluatorDecision | Literal["need"],
     ) -> None:
-        ordered.extend(sda.agent.name for sda in batch)
+        if execution_id == target_execution_id:
+            ordered.extend(sda.agent.name for sda in batch)
 
     hooks.register(HookEvent.MULTI_AGENT_STEP_BATCH_END, _on_batch_end)
-    return ordered
+    return ordered, _on_batch_end
 
 
 def _get_total_unique(
@@ -201,11 +208,14 @@ def _get_total_unique(
     meta_mapping: dict[str, Any],
     data_dir: Path,
 ) -> int:
-    frames: list[pd.DataFrame] = []
-    for agent in relevant_agents:
-        df = _query_agent_canonical(agent, canonical_table, canonical_cols, meta_mapping, data_dir)
-        if df is not None and not df.empty:
-            frames.append(df)
+    with ThreadPoolExecutor() as pool:
+        dfs = list(
+            pool.map(
+                lambda a: _query_agent_canonical(a, canonical_table, canonical_cols, meta_mapping, data_dir),
+                relevant_agents,
+            )
+        )
+    frames = [df for df in dfs if df is not None and not df.empty]
     if not frames:
         return 0
     combined = pd.concat(frames, ignore_index=True)
@@ -336,25 +346,34 @@ async def _run(ctx: ScriptContext) -> None:
     print(f"Total unique rows (ground truth): {total_unique}")
 
     data_cache: dict[str, pd.DataFrame | None] = {}
-    results: list[tuple[str, EvaluationCurve]] = []
+    with ThreadPoolExecutor() as pool:
+        futures = {
+            agent.name: pool.submit(
+                _query_agent_canonical, agent, canonical_table, canonical_cols, meta_mapping, ctx.data_dir
+            )
+            for agent in relevant_data_agents
+        }
+        for name, future in futures.items():
+            data_cache[name] = future.result()
 
     align_schema_handler = _make_align_schema_override(step_meta, query)
     data_agent_handler = _make_data_agent_override(
         canonical_table, canonical_cols, meta_mapping, data_cache, ctx.data_dir
     )
 
-    for strategy in SelectionStrategyType:
+    hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
+    hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
+    hooks.register(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
+
+    async def _run_one_strategy(strategy: SelectionStrategyType) -> tuple[str, EvaluationCurve]:
         print(f"Running strategy: {strategy}")
+        execution_id = uuid4().hex[:12]
         strategy_config = ctx.config.model_copy(update={"selection_type": strategy})
-        ordered_agents = _register_batch_tracking()
+        ordered_agents, batch_end_handler = _register_batch_tracking(execution_id)
         fresh_query_plan = QueryPlan.model_validate(raw_query_plan)
 
-        hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
-        hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
-        hooks.register(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
-
         try:
-            with context.config_context(strategy_config):
+            with hooks.stage_context(execution_id), context.config_context(strategy_config):
                 await execute_query_plan(
                     query_plan=fresh_query_plan,
                     relevant_data_agents=relevant_data_agents,
@@ -363,17 +382,22 @@ async def _run(ctx: ScriptContext) -> None:
         except Exception as exc:
             logging.warning("Strategy %s failed: %s", strategy, exc)
         finally:
-            for event in _OVERRIDE_EVENTS:
-                hooks.clear(event)
+            hooks.unregister(HookEvent.MULTI_AGENT_STEP_BATCH_END, batch_end_handler)
 
         if not ordered_agents:
             logging.warning("Strategy %s: no agents queried", strategy)
-            results.append((str(strategy), EvaluationCurve(x=[0.0, 1.0], y=[0.0, 0.0], auc=0.0)))
-            continue
+            return str(strategy), EvaluationCurve(x=[0.0, 1.0], y=[0.0, 0.0], auc=0.0)
 
         curve = build_curve(ordered_agents, data_cache, total_unique, canonical_cols)
-        print(f"  AUC={curve.auc:.4f}, agents queried={len(ordered_agents)}")
-        results.append((str(strategy), curve))
+        print(f"  {strategy} AUC={curve.auc:.4f}, agents queried={len(ordered_agents)}")
+        return str(strategy), curve
+
+    try:
+        results = list(await asyncio.gather(*[_run_one_strategy(s) for s in SelectionStrategyType]))
+    finally:
+        hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
+        hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
+        hooks.unregister(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
 
     oracle_curve = compute_greedy_oracle(step.to_agent, data_cache, total_unique, canonical_cols)
     print(f"Oracle AUC={oracle_curve.auc:.4f}")

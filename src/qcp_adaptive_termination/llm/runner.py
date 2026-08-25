@@ -1,3 +1,4 @@
+import functools
 from collections.abc import Mapping
 from typing import Literal, cast
 
@@ -22,6 +23,11 @@ from qcp_adaptive_termination.models import AgentRole, CacheMode, RoleConfig
 from qcp_adaptive_termination.observability import cache, context, tracing
 
 
+@functools.cache
+def _cached_json_schema(output_type: type[BaseModel]) -> dict:
+    return output_type.model_json_schema()
+
+
 def _resolve_model_config(role: AgentRole) -> tuple[str, Reasoning]:
     role_cfg: RoleConfig = context.get_config().agent_configs[role.value]
     reasoning = Reasoning(effort=role_cfg.reasoning_effort, summary=role_cfg.reasoning_summary)
@@ -43,7 +49,7 @@ def _get_output_and_deserializable_classes(
     elif output_type is float:
         output = {"type": "number"}
     elif isinstance(output_type, type) and issubclass(output_type, BaseModel):
-        output = output_type.model_json_schema()
+        output = _cached_json_schema(output_type)
         deserializable_classes.append(output_type)
     else:
         raise ValueError(f"Unsupported output type: {output_type}")
