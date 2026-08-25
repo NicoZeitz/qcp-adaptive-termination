@@ -32,21 +32,21 @@ RUN_NAME="eval_stage1_recall"
 # TODO: Set to true to run files in parallel, false for sequential execution
 PARALLEL=false
 # TODO: set to true, then only print out the commands that would be executed, without actually running them
-TEST=true
+TEST=false
 
 # write stdout and stderr to log files (in addition to printing to console)
 mkdir -p "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"
 exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stderr.log" >&2)
 
 # Load all input files from directory
-shopt -s nullglob
-FILES=("${INPUT_DIR}"/*.json)
-FILES=("${FILES[@]#${INPUT_DIR}/}")
-shopt -u nullglob
+# shopt -s nullglob
+# FILES=("${INPUT_DIR}"/*.json)
+# FILES=("${FILES[@]#${INPUT_DIR}/}")
+# shopt -u nullglob
 
 # Or use a specific list of files
-# FILES=(
-#     "How_many_countries_have_a_human_development_index_above_08.json"
+FILES=(
+    "How_many_countries_have_a_human_development_index_above_08.json"
 #     "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
 #     "How_many_people_live_in_the_middle_east.json"
 #     "Since_how_many_years_do_bundesliga_clubs_exist_on_average_Today_is_the_20022032.json"
@@ -78,7 +78,7 @@ shopt -u nullglob
 #     "Which_NBA_team_has_the_largest_number_of_followers.json"
 #     "Which_province_is_the_northernmost_province_in_China.json"
 #     "Which_Womens_World_cup_had_the_most_goals_scored.json"
-# )
+)
 
 ############################################################ RUN EVERYTHING ############################################################
 

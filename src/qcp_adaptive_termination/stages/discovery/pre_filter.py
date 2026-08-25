@@ -76,7 +76,7 @@ async def _filter_embeddings_internal(
         logging.info("  %s: L2=%.4f (table: %s)", agent_name, dist, table_name)
 
     l2_scores = [dist for _, (dist, _) in sorted_agents]
-    cutoff_idx = find_l2_clusters(l2_scores, min_cluster_size=1)
+    cutoff_idx = find_l2_clusters(l2_scores + [2.0], min_cluster_size=1)
     sorted_agents = sorted_agents[:cutoff_idx]
 
     logging.info("Embedding pre-filter: kept %d / %d agents", len(sorted_agents), len(data_agents))
