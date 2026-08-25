@@ -46,7 +46,7 @@ TEST=true
 
 # write stdout and stderr to log files (in addition to printing to console)
 mkdir -p "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"
-exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stderr.log" >&2)
+#exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stderr.log" >&2)
 
 # TODO: CHANGE
 # Load all input files from directory
@@ -136,9 +136,9 @@ PYEOF
           --cache_dir "${CACHE_DIR}" \
           --data_dir "${DATA_DIR}" \
           --config "${CONFIG}" \
-          --start-stage 1 --end-stage 3 \
-          > >(tee "${LOG_DIR}/stdout.log") \
-          2> >(tee "${LOG_DIR}/stderr.log" >&2) &
+          --start-stage 1 --end-stage 3 &
+        #   > >(tee "${LOG_DIR}/stdout.log") \
+        #   2> >(tee "${LOG_DIR}/stderr.log" >&2) &
 
         if [[ "${PARALLEL}" != "true" ]]; then
             wait

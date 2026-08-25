@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass, field
 from typing import cast
 
@@ -64,18 +65,19 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
 
         vectors = await agent_registry.embedding_vector_for_table(agents, table_per_agent)
 
-        result: dict[str, PosteriorPrecomputedState] = {}
-        for agent in agents:
+        async def _build(agent: DataAgent) -> tuple[str, PosteriorPrecomputedState]:
+            values = await asyncio.to_thread(
+                database.fetch_column_values, agent, table_per_agent[agent.name], column_per_agent[agent.name]
+            )
             sketch = update_theta_sketch(self.lg_k)
-            for v in database.fetch_column_values(agent, table_per_agent[agent.name], column_per_agent[agent.name]):
+            for v in values:
                 sketch.update(v)
-
-            result[agent.name] = PosteriorPrecomputedState(
+            return agent.name, PosteriorPrecomputedState(
                 embedding=vectors[agent.name],
                 theta_sketch=sketch.compact(),
             )
 
-        return result
+        return dict(await asyncio.gather(*[_build(a) for a in agents]))
 
     def init_state(self) -> PosteriorState:
         return PosteriorState(theta=update_theta_sketch(self.lg_k))
