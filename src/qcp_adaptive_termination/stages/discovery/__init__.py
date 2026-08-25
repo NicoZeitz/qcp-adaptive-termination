@@ -73,26 +73,24 @@ async def filter_relevant_agents_internal(
     else:
         candidate_data_agents = data_agents
 
-    with tracing.own_span(
-        "Building Agent Registry",
-        input={
-            "registry_type": registry_type.value,
-            "candidate_data_agents": candidate_data_agents,
-        },
-    ):
-        registry_string = await agent_registry.build_registry_string(candidate_data_agents, registry_type)
-        tracing.append_to_span_input({"agent_registry": registry_string})
+    CHUNK_SIZE = 10
 
     with tracing.own_span(
         "Filtering with Coordinator",
         input={
             "query": query,
             "candidate_data_agents": candidate_data_agents,
+            "chunk_size": CHUNK_SIZE,
         },
     ):
-        result = await filter_coordinator_with_reasoning(
-            query, candidate_data_agents, registry_string, additional_context
-        )
+        chunks = [candidate_data_agents[i:i + CHUNK_SIZE] for i in range(0, len(candidate_data_agents), CHUNK_SIZE)]
+        result: list[tuple[DataAgent, str]] = []
+        for chunk in chunks:
+            chunk_registry = await agent_registry.build_registry_string(chunk, registry_type)
+            chunk_result = await filter_coordinator_with_reasoning(
+                query, chunk, chunk_registry, additional_context
+            )
+            result.extend(chunk_result)
 
     with tracing.own_span(
         "Filtering with Agents",
