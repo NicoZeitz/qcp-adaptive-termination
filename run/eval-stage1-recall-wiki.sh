@@ -83,6 +83,7 @@ shopt -u nullglob
 ############################################################ RUN EVERYTHING ############################################################
 
 echo "================== Running '${RUN_NAME}' with dataset '${DATASET_NAME}'"
+PIDS=()
 for FILE in "${FILES[@]}"; do
 
     INPUT_FILE="${INPUT_DIR}/${FILE}"
@@ -108,17 +109,19 @@ for FILE in "${FILES[@]}"; do
       --output_dir "${LOG_DIR}" \
       --cache_dir "${CACHE_DIR}" \
       --data_dir "${DATA_DIR}" \
+      --config "${PROJECT_DIR}/config.yaml" \
       --start-stage 1 --end-stage 1 \
       > >(tee "${LOG_DIR}/stdout.log") \
       2> >(tee "${LOG_DIR}/stderr.log" >&2) &
+    PIDS+=($!)
 
     if [[ "${PARALLEL}" != "true" ]]; then
-        wait
+        wait "${PIDS[-1]}"
     fi
 done
 
 if [[ "${PARALLEL}" == "true" ]]; then
-    wait
+    wait "${PIDS[@]}"
 fi
 
 ############################################################ EVALUATE ############################################################
