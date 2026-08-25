@@ -1,6 +1,8 @@
+import asyncio
 from collections.abc import Callable
 from typing import Any, overload
 
+from async_lru import alru_cache
 from pydantic import BaseModel, Field, create_model
 
 import qcp_adaptive_termination.database as database
@@ -83,9 +85,13 @@ def _create_database_description_model(
     return create_model("DatabaseDescriptionModel", **schema_dict)
 
 
+def _load_schema_engine(data_agent: DataAgent) -> SchemaEngine:
+    return SchemaEngine(database.get_database_engine(data_agent), db_name=data_agent.name)
+
+
+@alru_cache(maxsize=None)
 async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
-    db_engine = database.get_database_engine(data_agent)
-    schema_engine = SchemaEngine(db_engine, db_name=data_agent.name)
+    schema_engine = await asyncio.to_thread(_load_schema_engine, data_agent)
 
     missing_tables, missing_fields, db_missing = _missing_comments(schema_engine.mschema)
     needs_llm = missing_tables or missing_fields or db_missing

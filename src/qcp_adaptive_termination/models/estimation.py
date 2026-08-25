@@ -93,7 +93,7 @@ class EstimatorMode(StrEnum):
 class AlignedSchemaMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    aggregation_types: list[AggregationType] = Field(..., min_length=2)
+    aggregation_types: list[AggregationType] = Field(..., min_length=1)
     keys: list[str] = Field(..., min_length=1)
     value_column: str | None = None
     columns: list[str] = Field(default_factory=list, min_length=1)

@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass, field
 from typing import cast
 
@@ -51,13 +52,17 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
         query: str = "",
     ) -> dict[str, hll_sketch]:
         assert table_per_agent and column_per_agent
-        result: dict[str, hll_sketch] = {}
-        for agent in agents:
+
+        async def _build(agent: DataAgent) -> tuple[str, hll_sketch]:
+            values = await asyncio.to_thread(
+                database.fetch_column_values, agent, table_per_agent[agent.name], column_per_agent[agent.name]
+            )
             sketch = hll_sketch(self.lg_k)
-            for v in database.fetch_column_values(agent, table_per_agent[agent.name], column_per_agent[agent.name]):
+            for v in values:
                 sketch.update(v)
-            result[agent.name] = sketch
-        return result
+            return agent.name, sketch
+
+        return dict(await asyncio.gather(*[_build(a) for a in agents]))
 
     def init_state(self) -> hll_sketch:
         return hll_sketch(self.lg_k)
@@ -122,15 +127,20 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
         query: str = "",
     ) -> dict[str, compact_theta_sketch]:
         assert table_per_agent and column_per_agent
-        result: dict[str, compact_theta_sketch] = {}
-        for agent in agents:
+
+        async def _build(agent: DataAgent) -> tuple[str, compact_theta_sketch] | None:
             if agent.name not in table_per_agent or agent.name not in column_per_agent:
-                continue
+                return None
+            values = await asyncio.to_thread(
+                database.fetch_column_values, agent, table_per_agent[agent.name], column_per_agent[agent.name]
+            )
             sketch = update_theta_sketch(self.lg_k)
-            for v in database.fetch_column_values(agent, table_per_agent[agent.name], column_per_agent[agent.name]):
+            for v in values:
                 sketch.update(v)
-            result[agent.name] = sketch.compact()
-        return result
+            return agent.name, sketch.compact()
+
+        pairs = [p for p in await asyncio.gather(*[_build(a) for a in agents]) if p is not None]
+        return dict(pairs)
 
     def init_state(self) -> update_theta_sketch:
         return update_theta_sketch(self.lg_k)
@@ -198,16 +208,20 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
         query: str = "",
     ) -> dict[str, tuple[MinHash, int]]:
         assert table_per_agent and column_per_agent
-        result: dict[str, tuple[MinHash, int]] = {}
-        for agent in agents:
+
+        async def _build(agent: DataAgent) -> tuple[str, tuple[MinHash, int]] | None:
             if agent.name not in table_per_agent or agent.name not in column_per_agent:
-                continue
-            values = database.fetch_column_values(agent, table_per_agent[agent.name], column_per_agent[agent.name])
+                return None
+            values = await asyncio.to_thread(
+                database.fetch_column_values, agent, table_per_agent[agent.name], column_per_agent[agent.name]
+            )
             mh = MinHash(num_perm=self.num_perm)
             for v in values:
                 mh.update(v.encode("utf8"))
-            result[agent.name] = (mh, len(set(values)))
-        return result
+            return agent.name, (mh, len(set(values)))
+
+        pairs = [p for p in await asyncio.gather(*[_build(a) for a in agents]) if p is not None]
+        return dict(pairs)
 
     def init_state(self) -> MinHashState:
         return MinHashState(minhash=MinHash(num_perm=self.num_perm))

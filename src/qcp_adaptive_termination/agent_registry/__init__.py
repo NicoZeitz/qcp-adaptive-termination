@@ -143,18 +143,25 @@ async def embedding_vectors_for_all_columns(agents, table_per_agent):
 
     agent_data = await load(agent_list)
 
-    result: dict[str, dict[str, list[float]]] = {}
+    all_descriptions: list[str] = []
+    offsets: list[tuple[str, list[str]]] = []
     for agent in agent_list:
         table = table_map[agent.name]
         data = agent_data[agent.name]
         column_names = list(data.individual_descriptions[table].columns.keys())
-
-        embedding_descriptions: list[str] = [
+        all_descriptions.extend(
             data.individual_descriptions[table].columns[col].technical_description for col in column_names
-        ]
+        )
+        offsets.append((agent.name, column_names))
 
-        embeddings = await embedding.create(embedding_descriptions)
-        result[agent.name] = {col: embeddings[i] for i, col in enumerate(column_names)}
+    all_embeddings = await embedding.create(all_descriptions)
+
+    result: dict[str, dict[str, list[float]]] = {}
+    pos = 0
+    for agent_name, column_names in offsets:
+        n = len(column_names)
+        result[agent_name] = {col: all_embeddings[pos + i] for i, col in enumerate(column_names)}
+        pos += n
 
     if single:
         return result[agents.name]
@@ -215,20 +222,27 @@ async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryT
 
     agent_data = await load(agent_list)
 
-    result: dict[str, dict[str, list[float]]] = {}
+    all_descriptions: list[str] = []
+    offsets: list[tuple[str, list[str]]] = []
     for agent in agent_list:
         data = agent_data[agent.name]
         table_names = list(data.individual_descriptions.keys())
-
-        embedding_descriptions: list[str] = [
+        all_descriptions.extend(
             data.individual_descriptions[table].natural_language_description
             if registry_type == AgentRegistryType.NATURAL_LANGUAGE
             else data.individual_descriptions[table].technical_description
             for table in table_names
-        ]
+        )
+        offsets.append((agent.name, table_names))
 
-        embeddings = await embedding.create(embedding_descriptions)
-        result[agent.name] = {table: embeddings[i] for i, table in enumerate(table_names)}
+    all_embeddings = await embedding.create(all_descriptions)
+
+    result: dict[str, dict[str, list[float]]] = {}
+    pos = 0
+    for agent_name, table_names in offsets:
+        n = len(table_names)
+        result[agent_name] = {table: all_embeddings[pos + i] for i, table in enumerate(table_names)}
+        pos += n
 
     if single:
         return result[agents.name]

@@ -4,8 +4,7 @@ import yaml
 from llama_index.core import SQLDatabase
 from sqlalchemy import (
     MetaData,
-    Table,
-    select,
+    text,
 )
 from sqlalchemy.engine import Engine
 
@@ -139,31 +138,77 @@ class SchemaEngine(SQLDatabase):
     def get_unique_constraints(self, table_name: str):
         return self._inspector.get_unique_constraints(table_name, self._tables_schemas[table_name])
 
-    def fetch_distinct_values(self, table_name: str, column_name: str, max_num: int = 5):
-        table = Table(
-            table_name,
-            self.metadata_obj,
-            autoload_with=self._engine,
-            schema=self._tables_schemas[table_name],
-        )
-        # Construct SELECT DISTINCT query
-        query = select(table.c[column_name]).distinct().limit(max_num)
-        values = []
-        with self._engine.connect() as connection:
-            result = connection.execute(query)
-            distinct_values = result.fetchall()
-            for value in distinct_values:
-                if value[0] is not None and value[0] != "":
-                    values.append(value[0])
-        return values
+    def fetch_distinct_values(self, table_name: str, column_names: list[str], max_num: int = 5) -> dict[str, list]:
+        """Fetch distinct example values for all columns in one DB round-trip via CTE + UNION ALL."""
+        if not column_names:
+            return {}
+        schema = self._tables_schemas[table_name]
+        table_ref = f'"{schema}"."{table_name}"' if schema else f'"{table_name}"'
+
+        cte_clauses = []
+        select_clauses = []
+        for i, col in enumerate(column_names):
+            col_id = col.replace('"', '""')
+            col_str = col.replace("'", "''")
+            cte_clauses.append(
+                f'd_{i} AS (SELECT DISTINCT "{col_id}" AS val FROM {table_ref}'
+                f' WHERE "{col_id}" IS NOT NULL AND "{col_id}" != \'\' LIMIT {max_num})'
+            )
+            select_clauses.append(f"SELECT '{col_str}' AS col_name, val FROM d_{i}")
+
+        sql = "WITH " + ", ".join(cte_clauses) + " " + " UNION ALL ".join(select_clauses)
+
+        out: dict[str, list] = {col: [] for col in column_names}
+        try:
+            with self._engine.connect() as connection:
+                for col_name, val in connection.execute(text(sql)).fetchall():
+                    if col_name in out:
+                        out[col_name].append(val)
+        except Exception:
+            pass
+        return out
+
+    def _fetch_all_tables_distinct_values(self, table_meta: dict, max_num: int = 5) -> dict[str, dict[str, list]]:
+        """Fetch distinct example values for every column in every table in one DB round-trip."""
+        cte_clauses: list[str] = []
+        select_clauses: list[str] = []
+        idx = 0
+        for table_name, meta in table_meta.items():
+            schema = self._tables_schemas[table_name]
+            table_ref = f'"{schema}"."{table_name}"' if schema else f'"{table_name}"'
+            tbl_str = table_name.replace("'", "''")
+            for col in meta["column_names"]:
+                col_id = col.replace('"', '""')
+                col_str = col.replace("'", "''")
+                cte_clauses.append(
+                    f'd_{idx} AS (SELECT DISTINCT "{col_id}" AS val FROM {table_ref}'
+                    f' WHERE "{col_id}" IS NOT NULL AND "{col_id}" != \'\' LIMIT {max_num})'
+                )
+                select_clauses.append(f"SELECT '{tbl_str}' AS tbl_name, '{col_str}' AS col_name, val FROM d_{idx}")
+                idx += 1
+
+        out: dict[str, dict[str, list]] = {
+            tname: {col: [] for col in meta["column_names"]} for tname, meta in table_meta.items()
+        }
+        if not cte_clauses:
+            return out
+
+        sql = "WITH " + ", ".join(cte_clauses) + " " + " UNION ALL ".join(select_clauses)
+        try:
+            with self._engine.connect() as connection:
+                for tbl_name, col_name, val in connection.execute(text(sql)).fetchall():
+                    if tbl_name in out and col_name in out[tbl_name]:
+                        out[tbl_name][col_name].append(val)
+        except Exception:
+            pass
+        return out
 
     def init_mschema(self):
+        # Step 1: Sequential — gather inspector metadata (Inspector is not thread-safe)
+        table_meta: dict = {}
         for table_name in self._usable_tables:
             table_comment = self.get_table_comment(table_name)
-            table_comment = (
-                "" if table_comment is None else table_comment.strip()
-            )  # For MySQL, avoid duplicate schema name in table identifier
-            # For PostgreSQL, include schema name if it's not 'public'
+            table_comment = "" if table_comment is None else table_comment.strip()
             schema_name = self._tables_schemas[table_name]
             if (
                 self._engine.dialect.name == "mysql"
@@ -174,35 +219,48 @@ class SchemaEngine(SQLDatabase):
                 table_with_schema = table_name
             else:
                 table_with_schema = schema_name + "." + table_name
-            self._mschema.add_table(table_with_schema, fields={}, comment=table_comment)
             pks = self.get_pk_constraint(table_name)
-
             fks = self.get_foreign_keys(table_name)
-            for fk in fks:
+            fields = self._inspector.get_columns(table_name, schema=schema_name)
+            column_names = [f["name"] for f in fields]
+            table_meta[table_name] = {
+                "table_with_schema": table_with_schema,
+                "table_comment": table_comment,
+                "pks": pks,
+                "fks": fks,
+                "fields": fields,
+                "column_names": column_names,
+            }
+
+        # Step 2: Single query — fetch all distinct values across all tables at once
+        examples_results = self._fetch_all_tables_distinct_values(table_meta)
+
+        # Step 3: Sequential — assemble mschema
+        for table_name in self._usable_tables:
+            meta = table_meta[table_name]
+            table_with_schema = meta["table_with_schema"]
+            examples_map = examples_results[table_name]
+
+            self._mschema.add_table(table_with_schema, fields={}, comment=meta["table_comment"])
+
+            for fk in meta["fks"]:
                 referred_schema = fk["referred_schema"]
                 for c, r in zip(fk["constrained_columns"], fk["referred_columns"], strict=True):
                     self._mschema.add_foreign_key(table_with_schema, c, referred_schema, fk["referred_table"], r)
 
-            fields = self._inspector.get_columns(table_name, schema=self._tables_schemas[table_name])
-            for field in fields:
-                field_type = f"{field['type']!s}"
+            for field in meta["fields"]:
                 field_name = field["name"]
-                primary_key = field_name in pks
-                field_comment = field.get("comment", None)
-                field_comment = "" if field_comment is None else field_comment.strip()
+                field_type = f"{field['type']!s}"
+                primary_key = field_name in meta["pks"]
+                field_comment = (field.get("comment") or "").strip()
                 yaml_field_comment = self.get_field_comment(table_name, field_name)
                 if yaml_field_comment:
                     field_comment = yaml_field_comment
                 autoincrement = field.get("autoincrement", False)
-                default = field.get("default", None)
+                default = field.get("default")
                 if default is not None:
                     default = f"{default}"
-
-                try:
-                    examples = self.fetch_distinct_values(table_name, field_name, 5)
-                except Exception:
-                    examples = []
-                examples = examples_to_str(examples)
+                examples = examples_to_str(examples_map.get(field_name, []))
 
                 self._mschema.add_field(
                     table_with_schema,
