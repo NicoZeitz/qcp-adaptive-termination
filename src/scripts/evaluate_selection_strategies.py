@@ -11,6 +11,8 @@ from uuid import uuid4
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import sqlglot
+import sqlglot.expressions as exp
 import yaml
 from sqlalchemy import create_engine, text
 
@@ -74,33 +76,32 @@ def _parse_canonical_table(sql: str) -> str | None:
 
 def _query_agent_canonical(
     agent: DataAgent,
+    canonical_sql: str,
     canonical_table: str,
-    canonical_cols: list[str],
     meta_mapping: dict[str, Any],
     data_dir: Path,
 ) -> pd.DataFrame | None:
-    """Query agent DB, return df with canonical column names. None if agent has no relevant data."""
+    """Execute rewritten step SQL on agent DB, return df with canonical column names."""
     slug = _slug_from_agent(agent)
     table_meta = meta_mapping.get(canonical_table, {}).get(slug)
     if table_meta is None:
         return None
 
-    actual_table: str = table_meta["name"]
     col_map: dict[str, str] = table_meta.get("columns", {})
-    actual_cols = [col_map[c] for c in canonical_cols if c in col_map]
-    if not actual_cols:
+    try:
+        actual_sql = _rewrite_sql_for_agent(canonical_sql, canonical_table, table_meta)
+    except Exception as exc:
+        logging.warning("Failed to rewrite SQL for %s (%s): %s", agent.name, slug, exc)
         return None
 
     db_path = _agent_db_path(agent, data_dir)
     engine = create_engine(f"sqlite:///{db_path}")
     try:
-        col_list = ", ".join(f"{actual_table}.{c}" for c in actual_cols)
-        sql = f"SELECT {col_list} FROM {actual_table}"
         with engine.connect() as conn:
-            df = pd.read_sql(text(sql), conn)
+            df = pd.read_sql(text(actual_sql), conn)
         if df.empty:
             return None
-        reverse_map = {col_map[c]: c for c in canonical_cols if c in col_map}
+        reverse_map = {v: k for k, v in col_map.items()}
         df = df.rename(columns=reverse_map)
         return df
     except Exception as exc:
@@ -137,8 +138,8 @@ def _make_align_schema_override(step_meta: dict[str, Any], query: str):
 
 
 def _make_data_agent_override(
+    canonical_sql: str,
     canonical_table: str,
-    canonical_cols: list[str],
     meta_mapping: dict[str, Any],
     data_cache: dict[str, pd.DataFrame | None],
     data_dir: Path,
@@ -152,7 +153,7 @@ def _make_data_agent_override(
     ) -> PartialQueryAnswer:
         if data_agent.name not in data_cache:
             data_cache[data_agent.name] = _query_agent_canonical(
-                data_agent, canonical_table, canonical_cols, meta_mapping, data_dir
+                data_agent, canonical_sql, canonical_table, meta_mapping, data_dir
             )
 
         df = data_cache[data_agent.name]
@@ -202,8 +203,8 @@ def _register_batch_tracking(target_execution_id: str) -> tuple[list[str], Any]:
 
 def _get_total_unique(
     relevant_agents: list[DataAgent],
+    canonical_sql: str,
     canonical_table: str,
-    canonical_cols: list[str],
     key_cols: list[str],
     meta_mapping: dict[str, Any],
     data_dir: Path,
@@ -211,7 +212,7 @@ def _get_total_unique(
     with ThreadPoolExecutor() as pool:
         dfs = list(
             pool.map(
-                lambda a: _query_agent_canonical(a, canonical_table, canonical_cols, meta_mapping, data_dir),
+                lambda a: _query_agent_canonical(a, canonical_sql, canonical_table, meta_mapping, data_dir),
                 relevant_agents,
             )
         )
@@ -272,20 +273,49 @@ def _save_results(
     print(f"Saved to {output_dir}")
 
 
-def _parse_canonical_cols(sql: str) -> list[str]:
-    """Extract column names from SELECT clause (strips table prefix)."""
-    match = re.search(r"\bSELECT\b(.*?)\bFROM\b", sql, re.IGNORECASE | re.DOTALL)
-    if not match:
+def _parse_canonical_cols_sqlglot(canonical_sql: str) -> list[str]:
+    """Return SELECT output column names (alias > column name > output_name)."""
+    tree = sqlglot.parse_one(canonical_sql, dialect="sqlite")
+    if not isinstance(tree, exp.Select):
         return []
-    cols_str = match.group(1)
     cols = []
-    for part in cols_str.split(","):
-        part = part.strip()
-        # strip table prefix (table.col -> col), strip aliases
-        col = part.split(".")[-1].split()[0].strip()
-        if col and col != "*":
-            cols.append(col)
+    for sel in tree.selects:
+        if isinstance(sel, exp.Alias):
+            cols.append(sel.alias)
+        elif isinstance(sel, exp.Column):
+            cols.append(sel.name)
+        elif not isinstance(sel, exp.Star):
+            name = sel.output_name
+            if name:
+                cols.append(name)
     return cols
+
+
+def _rewrite_sql_for_agent(
+    canonical_sql: str,
+    canonical_table: str,
+    table_meta: dict[str, Any],
+) -> str:
+    """Rewrite canonical SQL identifiers to per-agent actual names."""
+    actual_table: str = table_meta["name"]
+    col_map: dict[str, str] = table_meta.get("columns", {})
+
+    tree = sqlglot.parse_one(canonical_sql, dialect="sqlite")
+
+    def _transformer(node: Any) -> Any:
+        if isinstance(node, exp.Table) and node.name.lower() == canonical_table.lower():
+            new_node = node.copy()
+            new_node.set("this", exp.to_identifier(actual_table))
+            return new_node
+        if isinstance(node, exp.Column) and node.name in col_map:
+            new_node = node.copy()
+            new_node.set("this", exp.to_identifier(col_map[node.name]))
+            if node.table and node.table.lower() == canonical_table.lower():
+                new_node.set("table", exp.to_identifier(actual_table))
+            return new_node
+        return node
+
+    return tree.transform(_transformer).sql(dialect="sqlite")
 
 
 async def _run(ctx: ScriptContext) -> None:
@@ -326,7 +356,7 @@ async def _run(ctx: ScriptContext) -> None:
     if canonical_table is None:
         logging.warning("%s: could not parse table from sql %r — skipping", ctx.input_file.stem, canonical_sql)
         return
-    canonical_cols = _parse_canonical_cols(canonical_sql)
+    canonical_cols = _parse_canonical_cols_sqlglot(canonical_sql)
     if not canonical_cols:
         logging.warning("%s: could not parse columns from sql %r — skipping", ctx.input_file.stem, canonical_sql)
         return
@@ -341,7 +371,7 @@ async def _run(ctx: ScriptContext) -> None:
     print(f"Step: {step.id}, table: {canonical_table}, cols: {canonical_cols}, key_cols: {key_cols}")
 
     total_unique = _get_total_unique(
-        relevant_data_agents, canonical_table, canonical_cols, key_cols, meta_mapping, ctx.data_dir
+        relevant_data_agents, canonical_sql, canonical_table, key_cols, meta_mapping, ctx.data_dir
     )
     print(f"Total unique rows (ground truth): {total_unique}")
 
@@ -349,7 +379,7 @@ async def _run(ctx: ScriptContext) -> None:
     with ThreadPoolExecutor() as pool:
         futures = {
             agent.name: pool.submit(
-                _query_agent_canonical, agent, canonical_table, canonical_cols, meta_mapping, ctx.data_dir
+                _query_agent_canonical, agent, canonical_sql, canonical_table, meta_mapping, ctx.data_dir
             )
             for agent in relevant_data_agents
         }
@@ -358,7 +388,7 @@ async def _run(ctx: ScriptContext) -> None:
 
     align_schema_handler = _make_align_schema_override(step_meta, query)
     data_agent_handler = _make_data_agent_override(
-        canonical_table, canonical_cols, meta_mapping, data_cache, ctx.data_dir
+        canonical_sql, canonical_table, meta_mapping, data_cache, ctx.data_dir
     )
 
     hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
