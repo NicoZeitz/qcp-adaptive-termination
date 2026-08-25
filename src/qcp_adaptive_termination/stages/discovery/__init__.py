@@ -96,9 +96,13 @@ async def filter_relevant_agents_internal(
         "Filtering with Agents",
         input={"query": query},
     ):
-        agents = await asyncio.gather(
-            *[filter_data_agent_with_reasoning(query, item, additional_context) for item in result]
-        )
+        semaphore = asyncio.Semaphore(5)
+
+        async def _filtered(item):
+            async with semaphore:
+                return await filter_data_agent_with_reasoning(query, item, additional_context)
+
+        agents = await asyncio.gather(*[_filtered(item) for item in result])
         relevant_data_agents = [agent for agent in agents if agent is not None]
 
     return FilteredRelevantAgents(data_agents=data_agents, relevant_data_agents=relevant_data_agents, query=query)

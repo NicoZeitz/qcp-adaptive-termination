@@ -157,7 +157,10 @@ def main() -> None:
 
     input_dir = Path(args.input_dir) if args.input_dir else None
 
-    query_dirs = sorted(d for d in log_dir.iterdir() if d.is_dir())
+    query_dirs = sorted(
+        d for d in log_dir.iterdir()
+        if d.is_dir() and any(d.glob("*/stage_1_output_filtered_relevant_agents.json"))
+    )
     if not query_dirs:
         print(f"No subdirectories found in {log_dir}")
         sys.exit(1)
