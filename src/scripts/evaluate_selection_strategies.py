@@ -1,5 +1,4 @@
 """Benchmark all 8 selection strategies on a single-step federated query."""
-
 import asyncio
 import hashlib
 import logging
@@ -11,6 +10,7 @@ from uuid import uuid4
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import requests
 import yaml
 from sqlalchemy import create_engine, text
 
@@ -379,6 +379,15 @@ async def _run(ctx: ScriptContext) -> None:
                 logging.info("Strategy %s completed successfully", strategy)
         except Exception as exc:
             logging.warning("Strategy %s failed: %s", strategy, exc)
+            # print all information about the exception to the log
+            logging.exception(exc)
+            if isinstance(exc, requests.exceptions.Timeout):
+                # log all information about the timeout exception
+                logging.error("Timeout exception: %s", exc)
+                logging.error("Timeout request: %s", str(exc.request))
+                logging.error("Timeout response: %s", str(exc.response))
+                # exit program with non-zero exit code to indicate failure
+                raise SystemExit(1) from exc
         finally:
             hooks.unregister(HookEvent.MULTI_AGENT_STEP_BATCH_END, batch_end_handler)
 
