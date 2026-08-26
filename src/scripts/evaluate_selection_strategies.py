@@ -376,6 +376,7 @@ async def _run(ctx: ScriptContext) -> None:
                     relevant_data_agents=relevant_data_agents,
                     data_agents=all_agents,
                 )
+                logging.info("Strategy %s completed successfully", strategy)
         except Exception as exc:
             logging.warning("Strategy %s failed: %s", strategy, exc)
         finally:
