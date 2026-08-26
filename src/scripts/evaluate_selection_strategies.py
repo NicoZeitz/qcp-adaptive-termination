@@ -1,4 +1,5 @@
 """Benchmark all 8 selection strategies on a single-step federated query."""
+
 import asyncio
 import hashlib
 import logging

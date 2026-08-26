@@ -117,7 +117,6 @@ async def _create_with_inflight(texts: list[str]) -> list[list[float]]:
             for text in to_request:
                 if text in _inflight and not _inflight[text].done():
                     _inflight[text].set_exception(exc)
-            raise
         finally:
             for text in to_request:
                 _inflight.pop(text, None)

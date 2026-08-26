@@ -10,6 +10,7 @@ import contextlib
 import io
 import logging
 import os
+import subprocess
 import sys
 import time
 from collections.abc import Generator
@@ -173,6 +174,13 @@ def logging_context(output_dir: Path) -> Generator[None]:
             try:
                 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
                 logging.info(f"Logging initialized. Log file: {output_dir / 'stdout.log'}")
+                try:
+                    git_log = subprocess.check_output(
+                        ["git", "log", "-1", "--oneline"], text=True, stderr=subprocess.DEVNULL
+                    ).strip()
+                    logging.info("Git commit: %s", git_log)
+                except Exception:
+                    pass
 
                 yield
             finally:
