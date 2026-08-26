@@ -1,6 +1,7 @@
 """Benchmark all 8 selection strategies on a single-step federated query."""
 
 import asyncio
+import contextlib
 import hashlib
 import logging
 import re
@@ -413,7 +414,14 @@ async def _run(ctx: ScriptContext) -> None:
 
 
 if __name__ == "__main__":
-    run_script(
-        description="Benchmark selection strategies on a single-step federated query",
-        run_fn=_run,
-    )
+    import cProfile
+
+    with cProfile.Profile() as pr, contextlib.suppress(KeyboardInterrupt):
+        run_script(
+            description="Benchmark selection strategies on a single-step federated query",
+            run_fn=_run,
+        )
+
+    pr.print_stats(sort="cumtime")
+    import os
+    os._exit(1)
