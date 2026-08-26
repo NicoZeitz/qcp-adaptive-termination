@@ -48,6 +48,3 @@ agent_configs:
   data_agent_code:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
-  query_decomposer:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"

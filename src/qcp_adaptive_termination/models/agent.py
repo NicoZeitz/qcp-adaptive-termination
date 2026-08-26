@@ -62,7 +62,6 @@ class AgentRole(StrEnum):
     DATA_AGENT_SCHEMA_DESCRIPTION = "data_agent_schema_description"
     DATA_AGENT_RELEVANCE = "data_agent_relevance"
     DATA_AGENT_CODE = "data_agent_code"
-    QUERY_DECOMPOSER = "query_decomposer"
 
     @property
     def prompt_name(self) -> str:
@@ -76,5 +75,4 @@ class AgentRole(StrEnum):
             AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION: "discovery-data-agent-sql-schema-description",
             AgentRole.DATA_AGENT_RELEVANCE: "discovery-data-agent-sql-relevance",
             AgentRole.DATA_AGENT_CODE: "execution-data-agent-sql-code",
-            AgentRole.QUERY_DECOMPOSER: "discovery-query-decomposer",
         }[self]
