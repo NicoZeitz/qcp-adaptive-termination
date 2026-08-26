@@ -68,7 +68,6 @@ FILES=(
     "What_is_the_total_population_of_countries_with_a_GDP_above_1_trillion_USD.json"
     "What_was_the_combined_area_of_the_German_states_that_were_part_of_the_DDR_measur.json"
     "Which_aircraft_has_the_highest_maximum_passenger_capacity.json"
-    "Which_airline_has_the_largest_fleet.json"
     "Which_Champions_League_venue_has_the_highest_capacity.json"
     "Which_continent_has_the_second_largest_total_population.json"
     "Which_country_has_the_largest_population_among_countries_with_a_life_expectancy_.json"

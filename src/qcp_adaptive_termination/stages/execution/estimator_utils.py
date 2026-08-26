@@ -12,13 +12,21 @@ from qcp_adaptive_termination.observability import context, tracing
 def dataframe_to_data_items(
     dataframe: pd.DataFrame, key_cols: list[str], value_col: str | None, source_id: str
 ) -> list[DataItem]:
-    items = []
-    for _, row in dataframe.iterrows():
-        name = "|".join(str(row[k]) for k in key_cols if k in row)
-        raw = row[value_col] if value_col and value_col in row else 1.0
-        value = float(raw)  # type: ignore[arg-type]
-        items.append(DataItem(name=name, value=value, source_id=source_id))
-    return items
+    valid_keys = [k for k in key_cols if k in dataframe.columns]
+    if valid_keys:
+        names: pd.Series = dataframe[valid_keys[0]].astype(str)  # type: ignore[assignment]
+        for k in valid_keys[1:]:
+            names = names + "|" + dataframe[k].astype(str)
+    else:
+        names = pd.Series([""] * len(dataframe), index=dataframe.index)
+
+    if value_col and value_col in dataframe.columns:
+        raw_values: pd.Series = pd.to_numeric(dataframe[value_col], errors="coerce")  # type: ignore[assignment]
+        values = raw_values.fillna(1.0)
+    else:
+        values = pd.Series([1.0] * len(dataframe), index=dataframe.index)
+
+    return [DataItem(name=n, value=float(v), source_id=source_id) for n, v in zip(names, values, strict=False)]
 
 
 def compute_estimator_statistics(
@@ -55,7 +63,12 @@ def compute_estimator_statistics(
     if not has_overlap:
         tracing.indented_logging("Estimator: no overlap data (fewer than 2 agents with results)")
 
-    key_series = data[schema.keys].astype(str).agg("|".join, axis=1)
+    if schema.keys:
+        key_series: pd.Series = data[schema.keys[0]].astype(str)  # type: ignore[assignment]
+        for _k in schema.keys[1:]:
+            key_series = key_series + "|" + data[_k].astype(str)
+    else:
+        key_series = pd.Series([""] * len(data), index=data.index)
     is_current = data[schema.source_agent_column].isin(agents_current)
     prev_keys = set(key_series[~is_current])
     current_keys = set(key_series[is_current])

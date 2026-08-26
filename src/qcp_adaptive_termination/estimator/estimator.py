@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from functools import cache
 
 import numpy as np
+import pandas as pd
 from scipy.interpolate import RBFInterpolator
 from scipy.optimize import linprog
 from scipy.stats import norm, poisson
@@ -50,6 +51,7 @@ class Estimator:
     DEFAULT_COUNT_ESTIMATOR: CountEstimator = CountEstimator.CHAO92
     DEFAULT_VALUE_ESTIMATOR: ValueEstimator = ValueEstimator.NAIVE
     DEFAULT_CONFIDENCE_INTERVAL_TYPE: ConfidenceIntervalType = ConfidenceIntervalType.CHAO84
+    DEFAULT_MAX_BUCKET_SPLITS: int = 100
 
     # ── Class-level attribute annotations (typed, for IDE support) ───────────
 
@@ -90,33 +92,35 @@ class Estimator:
         if not self._all_samples:
             raise ValueError("Estimator requires at least one sample")
 
-        self._observed_min = min(s.value for s in self._all_samples)
-        self._observed_max = max(s.value for s in self._all_samples)
+        values = np.array([s.value for s in self._all_samples], dtype=np.float64)
+        self._observed_min = float(values.min())
+        self._observed_max = float(values.max())
 
-        # name -> [abundance, first_observed_value]
-        self._entities: dict[str, list[float]] = {}
-        for item in self._all_samples:
-            if item.name in self._entities:
-                self._entities[item.name][0] += 1.0
-            else:
-                self._entities[item.name] = [1.0, float(item.value)]
+        # groupby preserves first-occurrence order, matching original semantics
+        names = np.array([s.name for s in self._all_samples])
+        df = pd.DataFrame({"name": names, "value": values})
+        grp = df.groupby("name", sort=False)["value"]
+        first_series = grp.first()
+        first_vals: np.ndarray = first_series.to_numpy(dtype=np.float64)
+        abundances: np.ndarray = grp.count().to_numpy(dtype=np.int64)
+        entity_names: np.ndarray = first_series.index.to_numpy()
 
-        self._c: int = len(self._entities)
-        self._φ_K: float = sum(v[1] for v in self._entities.values())
-        self._n: int = sum(int(v[0]) for v in self._entities.values())
+        # dict still needed by ACE (iterates entities with abundance ≤ 10)
+        self._entities = {
+            n: [float(cnt), float(fv)] for n, cnt, fv in zip(entity_names, abundances, first_vals, strict=True)
+        }
 
-        # Frequency vector: _freq[i] = number of entities seen exactly i+1 times.
-        self._freq: list[int] = [0] * self._n
-        self._φ_f1 = 0.0
-        self._φ_f12 = 0.0
-        for abundance, value in self._entities.values():
-            cnt = int(abundance)
-            self._freq[cnt - 1] += 1
-            if cnt == 1:
-                self._φ_f1 += value
-                self._φ_f12 += value
-            elif cnt == 2:
-                self._φ_f12 += value
+        self._c: int = int(len(entity_names))
+        self._φ_K: float = float(first_vals.sum())
+        self._n: int = int(abundances.sum())
+
+        freq_arr = np.bincount(abundances - 1, minlength=self._n)
+        self._freq: list[int] = freq_arr.tolist()
+
+        mask1 = abundances == 1
+        mask2 = abundances == 2
+        self._φ_f1 = float(first_vals[mask1].sum())
+        self._φ_f12 = float(first_vals[mask1 | mask2].sum())
 
         self._mc_nb_runs: int = MC_DEFAULT_NB_RUNS
         self._mc_lambda_grid: tuple[float, ...] = MC_DEFAULT_LAMBDA_GRID
@@ -211,6 +215,7 @@ class Estimator:
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
         bucket_value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float:
         """Estimated total unique entity count (observed + missing)."""
         if use_bucket:
@@ -222,7 +227,7 @@ class Estimator:
                         use_bucket=False,
                         use_monte_carlo=use_monte_carlo,
                     )
-                    for b in self._dynamic_buckets(bucket_value_estimator, count_estimator)
+                    for b in self._dynamic_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
                 ),
             )
 
@@ -431,6 +436,7 @@ class Estimator:
         *,
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS
     ) -> float:
         """Corrected SUM including the estimated contribution from missing entities.
 
@@ -441,6 +447,7 @@ class Estimator:
             count_estimator,
             use_bucket=use_bucket,
             use_monte_carlo=use_monte_carlo,
+            max_buckets=max_buckets
         )
         return math.inf if not math.isfinite(d) else self._φ_K + d
 
@@ -451,10 +458,11 @@ class Estimator:
         *,
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float:
         """Estimated SUM contribution of missing entities (Δ = φ_D - φ_K)."""
         if use_bucket:
-            return self._bucket_delta(value_estimator, count_estimator, use_monte_carlo=use_monte_carlo)
+            return self._bucket_delta(value_estimator, count_estimator, use_monte_carlo=use_monte_carlo, max_buckets=max_buckets)
 
         if value_estimator is ValueEstimator.NAIVE:
             return self._naive_delta(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
@@ -473,6 +481,7 @@ class Estimator:
         count_estimator: CountEstimator,
         *,
         use_monte_carlo: bool = False,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float:
         """Sum of per-bucket deltas across all dynamically generated buckets."""
         return sum(
@@ -482,7 +491,7 @@ class Estimator:
                 use_bucket=False,
                 use_monte_carlo=use_monte_carlo,
             )
-            for b in self._dynamic_buckets(value_estimator, count_estimator)
+            for b in self._dynamic_buckets(value_estimator, count_estimator, max_buckets=max_buckets)
         )
 
     def _naive_delta(
@@ -608,6 +617,7 @@ class Estimator:
         bucket_count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
         bucket_value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
         bucket_use_monte_carlo: bool = False,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float:
         """Estimated average across all entities (observed + missing).
 
@@ -618,7 +628,7 @@ class Estimator:
         if not use_bucket:
             return self.sample_avg()
 
-        buckets = self._dynamic_buckets(bucket_value_estimator, bucket_count_estimator)
+        buckets = self._dynamic_buckets(bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets)
 
         total_weight = 0.0
         weighted_sum = 0.0
@@ -680,6 +690,7 @@ class Estimator:
         *,
         bucket_value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
         use_monte_carlo: bool = False,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float | None:
         """Confirmed minimum value, or None if unknown unknowns may lie below it.
 
@@ -688,7 +699,7 @@ class Estimator:
         likely observed the true minimum and return it; otherwise we return None
         to signal that the true minimum is unknown.
         """
-        buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator)
+        buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
         sub = Estimator(buckets[0].to_sources())
         if sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo) - sub._c == 0:
             return self._observed_min
@@ -700,6 +711,7 @@ class Estimator:
         *,
         bucket_value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
         use_monte_carlo: bool = False,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float | None:
         """Confirmed maximum value, or None if unknown unknowns may lie above it.
 
@@ -708,7 +720,7 @@ class Estimator:
         likely observed the true maximum and return it; otherwise we return None
         to signal that the true maximum is unknown.
         """
-        buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator)
+        buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
         sub = Estimator(buckets[-1].to_sources())
         if sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo) - sub._c == 0:
             return self._observed_max
@@ -828,6 +840,8 @@ class Estimator:
         self,
         bucket_value_estimator: ValueEstimator,
         bucket_count_estimator: CountEstimator,
+        *,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> list[Bucket]:
         """Split the value range into adaptive buckets that minimize total estimated delta.
 
@@ -858,8 +872,13 @@ class Estimator:
 
                 lb, ub = bucket.lower_bound, bucket.upper_bound
 
+                bucket_score = self._bucket_sum_est(bucket, bucket_value_estimator, bucket_count_estimator)
                 best_left, best_right, best_score = None, None, math.inf
-                for split_value in [(lb + ub) / 2.0] + [item.value for item in bucket.sorted_samples()]:
+                _all_values = [item.value for item in bucket.sorted_samples()]
+                if len(_all_values) > max_buckets:
+                    _step = len(_all_values) // max_buckets
+                    _all_values = _all_values[::_step]
+                for split_value in [(lb + ub) / 2.0] + _all_values:
                     left, right = self._split_bucket(bucket, split_value)
                     if left.number_of_samples == 0 or right.number_of_samples == 0:
                         continue
@@ -872,11 +891,7 @@ class Estimator:
                     if score < best_score:
                         best_left, best_right, best_score = left, right, score
 
-                if (
-                    best_left is None
-                    or best_right is None
-                    or best_score >= self._bucket_sum_est(bucket, bucket_value_estimator, bucket_count_estimator)
-                ):
+                if best_left is None or best_right is None or best_score >= bucket_score:
                     bucket.split_locked = True
                     next_buckets.append(bucket)
                 else:
