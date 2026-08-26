@@ -10,7 +10,6 @@ from typing import cast, overload
 
 import tiktoken
 from agents import OpenAIProvider
-from async_lru import alru_cache
 from openai import AsyncOpenAI
 
 from qcp_adaptive_termination.embedding.vector_index import VectorIndex
@@ -42,16 +41,12 @@ def _num_tokens_from_string(string: list[str], encoding_name: str = "cl100k_base
     return list(map(lambda x: len(x), encoding.encode_batch(string)))
 
 
-@overload
-async def _create_batched(texts: str) -> list[float]: ...
-@overload
-async def _create_batched(texts: list[str]) -> list[list[float]]: ...
-async def _create_batched(texts):
+async def _create_batched(texts: list[str]) -> list[list[float]]:
     client, model = _get_embedding_client_and_model()
 
-    if not isinstance(texts, list):
+    if len(texts) == 1:
         result = await client.embeddings.create(model=model, input=texts)
-        return result.data[0].embedding
+        return [result.data[0].embedding]
 
     # https://developers.openai.com/api/reference/resources/embeddings/methods/create#embeddings-create-input
     # https://community.openai.com/t/max-total-embeddings-tokens-per-request/1254699/6
@@ -98,14 +93,36 @@ async def _create_batched(texts):
     return embeddings
 
 
-@alru_cache(maxsize=None)
-async def _create_cached(texts: tuple[str, ...]) -> list[list[float]]:
-    return await get_or_compute_batch(
-        list(texts),
-        _create_batched,
-        argument_name="text",
-        name_prefix="Embedding",
-    )
+_inflight: dict[str, asyncio.Future[list[float]]] = {}
+
+
+async def _create_with_inflight(texts: list[str]) -> list[list[float]]:
+    loop = asyncio.get_running_loop()
+
+    to_request: list[str] = []
+    for text in texts:
+        if text not in _inflight:
+            fut: asyncio.Future[list[float]] = loop.create_future()
+            _inflight[text] = fut
+            to_request.append(text)
+
+    futures = [_inflight[text] for text in texts]
+
+    if to_request:
+        try:
+            new_embeddings = await _create_batched(to_request)
+            for text, embedding in zip(to_request, new_embeddings, strict=True):
+                _inflight[text].set_result(embedding)
+        except Exception as exc:
+            for text in to_request:
+                if text in _inflight and not _inflight[text].done():
+                    _inflight[text].set_exception(exc)
+            raise
+        finally:
+            for text in to_request:
+                _inflight.pop(text, None)
+
+    return list(await asyncio.gather(*futures))
 
 
 @overload
@@ -115,8 +132,13 @@ async def create(text: list[str]) -> list[list[float]]: ...
 async def create(text):
     with tracing.own_span("Embedding", input={"text": text}):
         is_single = not isinstance(text, list)
-        texts = (text,) if is_single else tuple(text)
-        results = await _create_cached(texts)
+        texts = [text] if is_single else text
+        results = await get_or_compute_batch(
+            texts,
+            _create_with_inflight,
+            argument_name="text",
+            name_prefix="Embedding",
+        )
         return results[0] if is_single else results
 
 

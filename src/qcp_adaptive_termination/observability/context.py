@@ -11,6 +11,7 @@ import io
 import logging
 import os
 import sys
+import time
 from collections.abc import Generator
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from contextvars import ContextVar
@@ -168,12 +169,15 @@ def logging_context(output_dir: Path) -> Generator[None]:
             redirect_stdout(stdout_tee),
             redirect_stderr(stderr_tee),
         ):
+            _start = time.monotonic()
             try:
                 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
                 logging.info(f"Logging initialized. Log file: {output_dir / 'stdout.log'}")
 
                 yield
             finally:
+                elapsed = time.monotonic() - _start
+                logging.info("Execution time: %.2fs", elapsed)
                 _output_dir_var.reset(token_dir)
                 _logging_active_var.reset(token_active)
 
