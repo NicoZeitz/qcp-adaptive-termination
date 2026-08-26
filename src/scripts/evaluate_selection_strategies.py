@@ -416,12 +416,21 @@ async def _run(ctx: ScriptContext) -> None:
 if __name__ == "__main__":
     import cProfile
     import signal
+    from pstats import Stats
 
     with cProfile.Profile() as pr, contextlib.suppress(KeyboardInterrupt):
 
         def timeout_handler(signum, frame):
             print("Time is up! Killing script...")
-            pr.print_stats(sort="cumtime")
+            # pr.print_stats(sort="cumtime")
+
+            # print top 100 most time-consuming functions
+            stats = Stats(pr)
+            stats.sort_stats("cumtime").print_stats(100)
+
+            # save to file
+            stats.dump_stats("evaluate_selection_strategies.prof")
+
             import sys
             sys.exit(1)
 
