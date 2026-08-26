@@ -110,7 +110,9 @@ for FILE in "${FILES[@]}"; do
         continue
     fi
 
-    python3 -m scripts.evaluate_selection_strategies \
+    python -m python -m profiling.sampling run --flamegraph -o profile.html script.py
+
+    python3 -m cProfile -o "${LOG_DIR}/profile.prof" -m scripts.evaluate_selection_strategies \
       --name "${NAME}" \
       --input "${INPUT_FILE}" \
       --output_dir "${LOG_DIR}" \
@@ -129,3 +131,4 @@ done
 if [[ "${PARALLEL}" == "true" ]]; then
     wait
 fi
+# python3 -m scripts.evaluate_selection_strategies \
