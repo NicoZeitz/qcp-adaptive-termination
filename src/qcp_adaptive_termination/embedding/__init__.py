@@ -10,6 +10,7 @@ from typing import cast, overload
 
 import tiktoken
 from agents import OpenAIProvider
+from async_lru import alru_cache
 from openai import AsyncOpenAI
 
 from qcp_adaptive_termination.embedding.vector_index import VectorIndex
@@ -97,6 +98,16 @@ async def _create_batched(texts):
     return embeddings
 
 
+@alru_cache(maxsize=None)
+async def _create_cached(texts: tuple[str, ...]) -> list[list[float]]:
+    return await get_or_compute_batch(
+        list(texts),
+        _create_batched,
+        argument_name="text",
+        name_prefix="Embedding",
+    )
+
+
 @overload
 async def create(text: str) -> list[float]: ...
 @overload
@@ -104,13 +115,8 @@ async def create(text: list[str]) -> list[list[float]]: ...
 async def create(text):
     with tracing.own_span("Embedding", input={"text": text}):
         is_single = not isinstance(text, list)
-        texts = [text] if is_single else text
-        results = await get_or_compute_batch(
-            texts,
-            _create_batched,
-            argument_name="text",
-            name_prefix="Embedding",
-        )
+        texts = (text,) if is_single else tuple(text)
+        results = await _create_cached(texts)
         return results[0] if is_single else results
 
 
