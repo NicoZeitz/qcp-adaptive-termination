@@ -414,47 +414,7 @@ async def _run(ctx: ScriptContext) -> None:
 
 
 if __name__ == "__main__":
-    import cProfile
-    import signal
-    from pstats import Stats
-
-    with cProfile.Profile() as pr, contextlib.suppress(KeyboardInterrupt):
-
-        def timeout_handler(signum, frame):
-            print("Time is up! Killing script...")
-            # pr.print_stats(sort="cumtime")
-
-            # print top 100 most time-consuming functions
-            stats = Stats(pr)
-            stats.sort_stats("cumtime").print_stats(100)
-
-            # save to file
-            stats.dump_stats("evaluate_selection_strategies.prof")
-
-            import sys
-            sys.exit(1)
-
-            import os
-            os._exit(1)
-
-        # 1. Register the signal handler
-        signal.signal(signal.SIGALRM, timeout_handler)
-
-        # 2. Set the alarm for 10 minutes (600 seconds)
-        signal.alarm(600)
-
-        try:
-            run_script(
-                description="Benchmark selection strategies on a single-step federated query",
-                run_fn=_run,
-            )
-        except BaseException as e:
-            print(f"An error occurred: {e}")
-            pr.print_stats(sort="cumtime")
-            import os
-            os._exit(1)
-
-    pr.print_stats(sort="cumtime")
-    import os
-    os._exit(1)
-
+    run_script(
+        description="Benchmark selection strategies on a single-step federated query",
+        run_fn=_run,
+    )
