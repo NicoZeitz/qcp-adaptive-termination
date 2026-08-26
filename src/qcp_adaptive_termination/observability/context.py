@@ -7,13 +7,16 @@ Use individually (stacking) or via `pipeline_context` which composes all four.
 
 import atexit
 import contextlib
+import io
 import logging
 import os
+import sys
 from collections.abc import Generator
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
+from typing import IO
 
 import agents.tracing.setup as _agents_tracing_setup
 import nest_asyncio2
@@ -42,6 +45,21 @@ _config_var: ContextVar[Config | None] = ContextVar("config", default=None)
 _data_dir_var: ContextVar[Path | None] = ContextVar("data_dir", default=None)
 _output_dir_var: ContextVar[Path | None] = ContextVar("output_dir", default=None)
 _logging_active_var: ContextVar[bool] = ContextVar("logging_active", default=False)
+
+
+class _Tee(io.TextIOBase):
+    def __init__(self, *streams: IO[str]) -> None:
+        super().__init__()
+        self.streams = streams
+
+    def write(self, data: str) -> int:
+        for stream in self.streams:
+            stream.write(data)
+        return len(data)
+
+    def flush(self) -> None:
+        for stream in self.streams:
+            stream.flush()
 
 
 def get_cache() -> Cache | None:
@@ -137,23 +155,27 @@ def logging_context(output_dir: Path) -> Generator[None]:
     """Set up logging to file + stderr. Stacks with existing logging context."""
     token_dir = _output_dir_var.set(output_dir)
     token_active = _logging_active_var.set(True)
-    file_handler: logging.FileHandler | None = None
 
-    try:
-        output_dir.mkdir(parents=True, exist_ok=True)
-        log_file = output_dir / "stdout.log"
-        logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
-        file_handler = logging.FileHandler(log_file)
-        logging.getLogger().addHandler(file_handler)
-        logging.info(f"Logging initialized. Log file: {log_file}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with (
+        open(output_dir / "stdout.log", "a") as stdout_file,
+        open(output_dir / "stderr.log", "a") as stderr_file,
+    ):
+        stdout_tee = _Tee(stdout_file, sys.stdout)
+        stderr_tee = _Tee(stderr_file, sys.stderr)
 
-        yield
-    finally:
-        if file_handler is not None:
-            logging.getLogger().removeHandler(file_handler)
-            file_handler.close()
-        _output_dir_var.reset(token_dir)
-        _logging_active_var.reset(token_active)
+        with (
+            redirect_stdout(stdout_tee),
+            redirect_stderr(stderr_tee),
+        ):
+            try:
+                logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
+                logging.info(f"Logging initialized. Log file: {output_dir / 'stdout.log'}")
+
+                yield
+            finally:
+                _output_dir_var.reset(token_dir)
+                _logging_active_var.reset(token_active)
 
 
 @contextmanager

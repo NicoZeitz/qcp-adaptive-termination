@@ -436,7 +436,7 @@ class Estimator:
         *,
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
-        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float:
         """Corrected SUM including the estimated contribution from missing entities.
 
@@ -447,7 +447,7 @@ class Estimator:
             count_estimator,
             use_bucket=use_bucket,
             use_monte_carlo=use_monte_carlo,
-            max_buckets=max_buckets
+            max_buckets=max_buckets,
         )
         return math.inf if not math.isfinite(d) else self._φ_K + d
 
@@ -462,7 +462,9 @@ class Estimator:
     ) -> float:
         """Estimated SUM contribution of missing entities (Δ = φ_D - φ_K)."""
         if use_bucket:
-            return self._bucket_delta(value_estimator, count_estimator, use_monte_carlo=use_monte_carlo, max_buckets=max_buckets)
+            return self._bucket_delta(
+                value_estimator, count_estimator, use_monte_carlo=use_monte_carlo, max_buckets=max_buckets
+            )
 
         if value_estimator is ValueEstimator.NAIVE:
             return self._naive_delta(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
