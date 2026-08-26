@@ -73,7 +73,7 @@ async def filter_relevant_agents_internal(
     else:
         candidate_data_agents = data_agents
 
-    CHUNK_SIZE = 100
+    CHUNK_SIZE = 10
 
     with tracing.own_span(
         "Filtering with Coordinator",
