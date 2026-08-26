@@ -110,8 +110,6 @@ for FILE in "${FILES[@]}"; do
         continue
     fi
 
-    python -m python -m profiling.sampling run --flamegraph -o profile.html script.py
-
     python3 -m cProfile -o "${LOG_DIR}/profile.prof" -m scripts.evaluate_selection_strategies \
       --name "${NAME}" \
       --input "${INPUT_FILE}" \
