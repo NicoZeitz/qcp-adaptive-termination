@@ -1,6 +1,5 @@
 """Benchmark all 8 selection strategies on a single-step federated query."""
 
-import asyncio
 import hashlib
 import logging
 import re
@@ -409,7 +408,7 @@ async def _run(ctx: ScriptContext) -> None:
         return str(strategy), curve
 
     try:
-        results = list(await asyncio.gather(*[_run_one_strategy(s) for s in SelectionStrategyType]))
+        results = [await _run_one_strategy(s) for s in SelectionStrategyType]
     finally:
         hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
         hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
