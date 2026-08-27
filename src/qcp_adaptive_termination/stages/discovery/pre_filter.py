@@ -15,7 +15,7 @@ from qcp_adaptive_termination.observability import tracing
 
 
 class QueryDecomposition(BaseModel):
-    information_needs: list[str]
+    topics: list[str]
 
 
 async def decompose_query(query: str) -> list[str]:
@@ -24,7 +24,7 @@ async def decompose_query(query: str) -> list[str]:
         {"query": query},
         output_type=QueryDecomposition,
     )
-    return result.information_needs
+    return result.topics
 
 
 def find_l2_clusters(scores: list[float], min_cluster_size: int = 1) -> int:
@@ -79,7 +79,7 @@ async def _filter_embeddings_internal(
     vector_index: VectorIndex[tuple[str, str]] = VectorIndex.build(index_data)
 
     needs = await decompose_query(query)
-    logging.info("Query decomposed into %d information need(s): %s", len(needs), needs)
+    logging.info("Query decomposed into %d topic(s): %s", len(needs), needs)
 
     all_query_texts = [query] + needs
     all_embeddings = await embedding.create(all_query_texts)
