@@ -11,6 +11,19 @@ from qcp_adaptive_termination.models import AgentRegistryType, DataAgent
 from qcp_adaptive_termination.observability import tracing
 
 
+class QueryDecomposition(BaseModel):
+    topics: list[str]
+
+
+async def decompose_query(query: str) -> list[str]:
+    result = await run_llm(
+        AgentRole.QUERY_DECOMPOSER,
+        {"query": query},
+        output_type=QueryDecomposition,
+    )
+    return result.topics
+
+
 def find_l2_clusters(scores: list[float], min_cluster_size: int = 1) -> int:
     """Find cutoff by detecting the largest gap in ascending L2 distance scores."""
     if len(scores) <= min_cluster_size:
@@ -61,8 +74,12 @@ async def _filter_embeddings_internal(
         return data_agents
 
     vector_index: VectorIndex[tuple[str, str]] = VectorIndex.build(index_data)
-    query_embedding = await embedding.create(query)
-    results = vector_index.search_all(query_embedding)
+
+    needs = await decompose_query(query)
+    logging.info("Query decomposed into %d topic(s): %s", len(needs), needs)
+
+    all_query_texts = [query] + needs
+    all_embeddings = await embedding.create(all_query_texts)
 
     agent_best_dist: dict[str, tuple[float, str]] = {}
     for (agent_name, table_name), dist in results:
@@ -90,6 +107,14 @@ async def _filter_embeddings_internal(
             "l2_scores": {name: round(dist, 4) for name, (dist, _) in agent_best_dist.items()},
             "best_tables": {name: table for name, (_, table) in agent_best_dist.items()},
         }
+    )
+
+    hooks.emit(
+        HookEvent.EMBEDDING_PRE_FILTER_END,
+        query=query,
+        topics=needs,
+        embedding_filtered_agents=filtered,
+        total_agents=len(data_agents),
     )
 
     return filtered

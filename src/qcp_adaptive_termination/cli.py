@@ -68,6 +68,24 @@ def register_default_output_hooks() -> None:
             filtered_relevant_agents.model_dump(),
         )
 
+    @hooks.on(HookEvent.EMBEDDING_PRE_FILTER_END)
+    def _write_embedding_pre_filter(
+        execution_id: str,  # noqa: ARG001
+        query: str,
+        topics: list[str],
+        embedding_filtered_agents: list[DataAgent],
+        total_agents: int,
+    ) -> None:
+        _write_output_file(
+            "stage_1_output_embedding_pre_filter.json",
+            {
+                "query": query,
+                "topics": topics,
+                "embedding_filtered_agents": [a.name for a in embedding_filtered_agents],
+                "total_agents": total_agents,
+            },
+        )
+
     @hooks.on(HookEvent.DRAFT_QUERY_PLAN_START)
     def _write_stage_2_input(
         execution_id: str, query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]

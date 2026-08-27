@@ -3,9 +3,11 @@ Evaluate stage-1 recall over a log directory produced by eval-stage1-recall-wiki
 
 For each query subdirectory, reads:
   - the original input JSON (for ground-truth relevant_data_agents from extra)
-  - the most recent stage_1_output_filtered_relevant_agents.json (for selected agents)
+  - the most recent stage_1_output_filtered_relevant_agents.json (for final selected agents)
+  - the most recent stage_1_output_embedding_pre_filter.json (for embedding-filter intermediate results)
 
-Then prints per-query and aggregate precision / recall / F1.
+Then prints per-query and aggregate precision / recall / F1, both after embedding filtering
+and after the full LLM filtering pipeline.
 
 Usage:
     python3 -m scripts.eval_stage1_recall --log_dir /mnt/labstore/fwolf/.logs/wikidata-federated-overlap-dataset/eval_stage1_recall
@@ -18,9 +20,8 @@ import sys
 from pathlib import Path
 
 
-def find_stage1_output(query_log_dir: Path) -> dict | None:
-    """Find the most recent stage_1_output file under any timestamped subdir."""
-    candidates = sorted(query_log_dir.glob("*/stage_1_output_filtered_relevant_agents.json"))
+def find_latest_json(query_log_dir: Path, filename: str) -> dict | None:
+    candidates = sorted(query_log_dir.glob(f"*/{filename}"))
     if not candidates:
         return None
     with open(candidates[-1]) as f:
@@ -28,7 +29,6 @@ def find_stage1_output(query_log_dir: Path) -> dict | None:
 
 
 def find_input_file(query_log_dir: Path, input_dir: Path | None) -> Path | None:
-    """Locate the original input JSON for a query."""
     slug = query_log_dir.name
 
     if input_dir:
@@ -36,12 +36,19 @@ def find_input_file(query_log_dir: Path, input_dir: Path | None) -> Path | None:
         if p.exists():
             return p
 
-    # fallback: the run script copies the input file into the output dir
     candidates = sorted(query_log_dir.glob(f"*/{slug}.json"))
     if candidates:
         return candidates[-1]
 
     return None
+
+
+def compute_metrics(relevant: list[str], selected: list[str]) -> tuple[float, float, float]:
+    tp = len(set(relevant) & set(selected))
+    precision = tp / len(selected) if selected else 0.0
+    recall = tp / len(relevant) if relevant else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    return precision, recall, f1
 
 
 def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
@@ -50,92 +57,150 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     input_file = find_input_file(query_log_dir, input_dir)
     if input_file is None:
         print(f"  [ERROR] input file not found for {slug}")
-        return {"file": slug, "status": "error", "relevant": [], "selected": None, "missed": [], "extra_selected": []}
+        return {"file": slug, "status": "error"}
 
     with open(input_file) as f:
         input_data = json.load(f)
 
-    extra = input_data.get("extra", {})
-    relevant = extra.get("relevant_data_agents", [])
+    relevant: list[str] = input_data.get("extra", {}).get("relevant_data_agents", [])
 
-    stage1 = find_stage1_output(query_log_dir)
+    stage1 = find_latest_json(query_log_dir, "stage_1_output_filtered_relevant_agents.json")
     if stage1 is None:
         print(f"  [ERROR] no stage_1 output found for {slug}")
-        return {"file": slug, "status": "error", "relevant": relevant, "selected": None, "missed": [], "extra_selected": []}
+        return {"file": slug, "status": "error", "relevant": relevant}
 
-    selected = [a["name"] for a in stage1.get("relevant_data_agents", [])]
+    embedding_filter = find_latest_json(query_log_dir, "stage_1_output_embedding_pre_filter.json")
+    final_selected = [a["name"] for a in stage1.get("relevant_data_agents", [])]
 
     if not relevant:
         print(f"  [SKIP]  {slug}  (no relevant_data_agents in extra)")
-        return {"file": slug, "status": "skip", "relevant": [], "selected": selected, "missed": [], "extra_selected": []}
+        return {"file": slug, "status": "skip", "relevant": [], "final_selected": final_selected}
 
-    missed = sorted(set(relevant) - set(selected))
-    extra_selected = sorted(set(selected) - set(relevant))
+    # --- embedding filter metrics (optional) ---
+    emb_data: dict | None = None
+    if embedding_filter:
+        emb_selected: list[str] = embedding_filter.get("embedding_filtered_agents", [])
+        emb_topics: list[str] = embedding_filter.get("topics", [])
+        emb_total: int = embedding_filter.get("total_agents", 0)
+        emb_missed = sorted(set(relevant) - set(emb_selected))
+        emb_prec, emb_rec, emb_f1 = compute_metrics(relevant, emb_selected)
+        emb_data = {
+            "selected": emb_selected,
+            "missed": emb_missed,
+            "topics": emb_topics,
+            "total": emb_total,
+            "precision": emb_prec,
+            "recall": emb_rec,
+            "f1": emb_f1,
+        }
 
-    tp = len(set(relevant) & set(selected))
-    precision = tp / len(selected) if selected else 0.0
-    recall = tp / len(relevant) if relevant else 0.0
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    # --- final metrics ---
+    missed = sorted(set(relevant) - set(final_selected))
+    extra_selected = sorted(set(final_selected) - set(relevant))
+    final_prec, final_rec, final_f1 = compute_metrics(relevant, final_selected)
 
     status = "ok" if not missed else "miss"
     icon = "✓" if not missed else "✗"
 
     print(f"  {icon} {slug}")
-    print(f"       relevant={relevant}  selected={selected}")
+    print(f"       relevant={relevant}")
+    if emb_data:
+        print(
+            f"       [embedding]  {emb_data['total']} → {len(emb_data['selected'])} agents"
+            f"  precision={emb_data['precision']:.3f}"
+            f"  recall={emb_data['recall']:.3f}"
+            f"  f1={emb_data['f1']:.3f}"
+            f"  missed={emb_data['missed']}"
+        )
+        print(f"       topics={emb_data['topics']}")
+    print(f"       [final]      selected={final_selected}")
     print(f"       missed={missed}  extra={extra_selected}")
-    print(f"       precision={precision:.3f}  recall={recall:.3f}  f1={f1:.3f}")
+    print(f"       precision={final_prec:.3f}  recall={final_rec:.3f}  f1={final_f1:.3f}")
 
-    return {
+    result: dict = {
         "file": slug,
         "status": status,
         "relevant": relevant,
-        "selected": selected,
+        "final_selected": final_selected,
         "missed": missed,
         "extra_selected": extra_selected,
-        "precision": round(precision, 4),
-        "recall": round(recall, 4),
-        "f1": round(f1, 4),
+        "precision": round(final_prec, 4),
+        "recall": round(final_rec, 4),
+        "f1": round(final_f1, 4),
     }
+    if emb_data is not None:
+        result.update({
+            "embedding_selected": emb_data["selected"],
+            "embedding_missed": emb_data["missed"],
+            "embedding_topics": emb_data["topics"],
+            "embedding_precision": round(emb_data["precision"], 4),
+            "embedding_recall": round(emb_data["recall"], 4),
+            "embedding_f1": round(emb_data["f1"], 4),
+        })
+    return result
+
+
+def macro_avg(results: list[dict], key: str) -> float:
+    vals = [r[key] for r in results if key in r]
+    return sum(vals) / len(vals) if vals else 0.0
 
 
 def print_summary(results: list[dict], log_dir: Path) -> None:
     total = len(results)
-    ok = sum(1 for r in results if r["status"] == "ok")
-    missed = sum(1 for r in results if r["status"] == "miss")
-    errors = sum(1 for r in results if r["status"] == "error")
-    skipped = sum(1 for r in results if r["status"] == "skip")
+    ok = sum(1 for r in results if r.get("status") == "ok")
+    missed_count = sum(1 for r in results if r.get("status") == "miss")
+    errors = sum(1 for r in results if r.get("status") == "error")
+    skipped = sum(1 for r in results if r.get("status") == "skip")
     evaluated = total - skipped - errors
 
-    scored = [r for r in results if r["status"] in ("ok", "miss")]
-    macro_precision = sum(r["precision"] for r in scored) / len(scored) if scored else 0.0
-    macro_recall = sum(r["recall"] for r in scored) / len(scored) if scored else 0.0
-    macro_f1 = sum(r["f1"] for r in scored) / len(scored) if scored else 0.0
+    scored = [r for r in results if r.get("status") in ("ok", "miss")]
+    has_embedding = any("embedding_precision" in r for r in scored)
 
     print()
     print("=" * 60)
     print(f"  Log dir : {log_dir}")
     print(f"  Queries : {total}  (skipped={skipped}, errors={errors})")
-    print(f"  Perfect recall: {ok}/{evaluated}")
-    print(f"  Macro precision : {macro_precision:.3f}")
-    print(f"  Macro recall    : {macro_recall:.3f}")
-    print(f"  Macro F1        : {macro_f1:.3f}")
+    print(f"  Perfect recall (final): {ok}/{evaluated}")
 
-    if missed > 0:
+    if has_embedding:
+        emb_ok = sum(1 for r in scored if r.get("embedding_recall", 0.0) == 1.0)
+        print(f"  Perfect recall (embedding): {emb_ok}/{evaluated}")
         print()
-        print("  Queries with missed relevant agents:")
+        print("  -- After embedding filter --")
+        print(f"  Macro precision : {macro_avg(scored, 'embedding_precision'):.3f}")
+        print(f"  Macro recall    : {macro_avg(scored, 'embedding_recall'):.3f}")
+        print(f"  Macro F1        : {macro_avg(scored, 'embedding_f1'):.3f}")
+
+    print()
+    print("  -- After full LLM filter --")
+    print(f"  Macro precision : {macro_avg(scored, 'precision'):.3f}")
+    print(f"  Macro recall    : {macro_avg(scored, 'recall'):.3f}")
+    print(f"  Macro F1        : {macro_avg(scored, 'f1'):.3f}")
+
+    if missed_count > 0:
+        print()
+        print("  Queries with missed relevant agents (final):")
         for r in results:
-            if r["status"] == "miss":
-                print(f"    {r['file']}  missed={r['missed']}  selected={r['selected']}")
+            if r.get("status") == "miss":
+                print(f"    {r['file']}  missed={r['missed']}  selected={r['final_selected']}")
 
     print("=" * 60)
 
     summary_path = log_dir / "eval_summary.json"
     summary_path.write_text(json.dumps(
         {
-            "total": total, "ok": ok, "missed": missed, "errors": errors, "skipped": skipped,
-            "macro_precision": round(macro_precision, 4),
-            "macro_recall": round(macro_recall, 4),
-            "macro_f1": round(macro_f1, 4),
+            "total": total, "ok": ok, "missed": missed_count, "errors": errors, "skipped": skipped,
+            "macro_precision": round(macro_avg(scored, "precision"), 4),
+            "macro_recall": round(macro_avg(scored, "recall"), 4),
+            "macro_f1": round(macro_avg(scored, "f1"), 4),
+            **(
+                {
+                    "embedding_macro_precision": round(macro_avg(scored, "embedding_precision"), 4),
+                    "embedding_macro_recall": round(macro_avg(scored, "embedding_recall"), 4),
+                    "embedding_macro_f1": round(macro_avg(scored, "embedding_f1"), 4),
+                }
+                if has_embedding else {}
+            ),
             "results": results,
         },
         indent=2,
