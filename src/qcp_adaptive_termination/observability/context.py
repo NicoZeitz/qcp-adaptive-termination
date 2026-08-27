@@ -61,7 +61,8 @@ class _Tee(io.TextIOBase):
 
     def flush(self) -> None:
         for stream in self.streams:
-            stream.flush()
+            if not getattr(stream, "closed", False):
+                stream.flush()
 
 
 def get_cache() -> Cache | None:
