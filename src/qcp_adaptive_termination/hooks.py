@@ -90,6 +90,7 @@ class HookEvent(StrEnum):
     EXECUTE_QUERY_PLAN_STEP_OVERRIDE = "execute_query_plan_step_override"
     ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE = "answer_step_multiple_agents_override"
     EMBEDDING_PRE_FILTER_OVERRIDE = "embedding_pre_filter_override"
+    EMBEDDING_PRE_FILTER_END = "embedding_pre_filter_end"
 
 
 class LOAD_INPUT_HANDLER(Protocol):
@@ -384,6 +385,17 @@ class EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER(Protocol):
     ) -> list[DataAgent]: ...
 
 
+class EMBEDDING_PRE_FILTER_END_HANDLER(Protocol):
+    def __call__(
+        self,
+        execution_id: str,
+        query: str,
+        topics: list[str],
+        embedding_filtered_agents: list[DataAgent],
+        total_agents: int,
+    ) -> None: ...
+
+
 @overload
 def on(
     event: Literal[HookEvent.LOAD_INPUT],
@@ -516,6 +528,10 @@ def on(
 def on(
     event: Literal[HookEvent.EMBEDDING_PRE_FILTER_OVERRIDE],
 ) -> Callable[[EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER], EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER]: ...
+@overload
+def on(
+    event: Literal[HookEvent.EMBEDDING_PRE_FILTER_END],
+) -> Callable[[EMBEDDING_PRE_FILTER_END_HANDLER], EMBEDDING_PRE_FILTER_END_HANDLER]: ...
 def on(event: HookEvent) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         _handlers[event].append(fn)
@@ -637,6 +653,11 @@ def register(
 def register(
     event: Literal[HookEvent.EMBEDDING_PRE_FILTER_OVERRIDE],
     handler: EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER,
+) -> None: ...
+@overload
+def register(
+    event: Literal[HookEvent.EMBEDDING_PRE_FILTER_END],
+    handler: EMBEDDING_PRE_FILTER_END_HANDLER,
 ) -> None: ...
 def register(event: HookEvent, handler: Callable[..., Any]) -> None:
     _handlers[event].append(handler)
@@ -768,6 +789,15 @@ def emit(
     queried: list[str],
     remaining: list[str],
     estimators: list[EstimatorStatistics | None],
+) -> None: ...
+@overload
+def emit(
+    event: Literal[HookEvent.EMBEDDING_PRE_FILTER_END],
+    *,
+    query: str,
+    topics: list[str],
+    embedding_filtered_agents: list[DataAgent],
+    total_agents: int,
 ) -> None: ...
 def emit(event: HookEvent, **kwargs: Any) -> None:
     execution_id = get_execution_id()
@@ -1029,6 +1059,11 @@ def unregister(
 def unregister(
     event: Literal[HookEvent.EMBEDDING_PRE_FILTER_OVERRIDE],
     handler: EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER,
+) -> None: ...
+@overload
+def unregister(
+    event: Literal[HookEvent.EMBEDDING_PRE_FILTER_END],
+    handler: EMBEDDING_PRE_FILTER_END_HANDLER,
 ) -> None: ...
 def unregister(event: HookEvent, handler: Callable[..., Any]) -> None:
     _handlers[event].remove(handler)

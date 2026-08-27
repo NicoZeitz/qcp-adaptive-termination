@@ -115,6 +115,14 @@ async def _filter_embeddings_internal(
         }
     )
 
+    hooks.emit(
+        HookEvent.EMBEDDING_PRE_FILTER_END,
+        query=query,
+        topics=needs,
+        embedding_filtered_agents=filtered,
+        total_agents=len(data_agents),
+    )
+
     return filtered
 
 
