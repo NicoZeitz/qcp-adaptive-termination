@@ -1,3 +1,4 @@
+import asyncio
 import functools
 from collections.abc import Mapping
 from typing import Literal, cast
@@ -21,6 +22,8 @@ import qcp_adaptive_termination.llm.model_provider as model_provider
 import qcp_adaptive_termination.llm.prompt as prompt
 from qcp_adaptive_termination.models import AgentRole, CacheMode, RoleConfig
 from qcp_adaptive_termination.observability import cache, context, tracing
+
+_AGENT_SEMAPHORE = asyncio.Semaphore(5)
 
 
 @functools.cache
@@ -125,13 +128,14 @@ async def run_agent[TResult](
         tracing.indented_logging(f"Running agent: {display_name}")
 
         try:
-            result = await Runner.run(
-                agent,
-                cast(list[TResponseInputItem], prompts),
-                context=context,
-                max_turns=max_turns,
-                run_config=RunConfig(model_provider=model_provider.get_multi_provider()),
-            )
+            async with _AGENT_SEMAPHORE:
+                result = await Runner.run(
+                    agent,
+                    cast(list[TResponseInputItem], prompts),
+                    context=context,
+                    max_turns=max_turns,
+                    run_config=RunConfig(model_provider=model_provider.get_multi_provider()),
+                )
         except ModelBehaviorError as e:
             tracing.indented_logging(f"Model behavior error: {e}")
             raise e
