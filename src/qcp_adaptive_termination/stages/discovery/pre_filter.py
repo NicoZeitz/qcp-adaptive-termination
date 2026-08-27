@@ -2,12 +2,15 @@
 
 import logging
 
+from pydantic import BaseModel
+
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.embedding import VectorIndex
 from qcp_adaptive_termination.hooks import HookEvent
-from qcp_adaptive_termination.models import AgentRegistryType, DataAgent
+from qcp_adaptive_termination.llm.runner import run_llm
+from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
 from qcp_adaptive_termination.observability import tracing
 
 
@@ -82,9 +85,11 @@ async def _filter_embeddings_internal(
     all_embeddings = await embedding.create(all_query_texts)
 
     agent_best_dist: dict[str, tuple[float, str]] = {}
-    for (agent_name, table_name), dist in results:
-        if agent_name not in agent_best_dist or dist < agent_best_dist[agent_name][0]:
-            agent_best_dist[agent_name] = (dist, table_name)
+    for q_emb in all_embeddings:
+        results = vector_index.search_all(q_emb)
+        for (agent_name, table_name), dist in results:
+            if agent_name not in agent_best_dist or dist < agent_best_dist[agent_name][0]:
+                agent_best_dist[agent_name] = (dist, table_name)
 
     sorted_agents = sorted(agent_best_dist.items(), key=lambda x: x[1][0])
 
@@ -104,6 +109,7 @@ async def _filter_embeddings_internal(
     tracing.append_to_span_output(
         {
             "filtered_agents": [a.name for a in filtered],
+            "information_needs": needs,
             "l2_scores": {name: round(dist, 4) for name, (dist, _) in agent_best_dist.items()},
             "best_tables": {name: table for name, (_, table) in agent_best_dist.items()},
         }
