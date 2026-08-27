@@ -15,7 +15,6 @@ import requests
 import yaml
 from sqlalchemy import create_engine, text
 
-import qcp_adaptive_termination.embedding as embedding
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import (
@@ -287,13 +286,6 @@ def _save_results(
 
 
 async def _run(ctx: ScriptContext) -> None:
-    logging.info("Testing embedding connectivity...")
-    try:
-        await embedding.create("test")
-        logging.info("Embedding connectivity OK")
-    except Exception as exc:
-        logging.warning("Embedding connectivity test failed: %s", exc)
-
     extra = ctx.extra or {}
     steps_metadata: dict[str, Any] = extra.get("steps_metadata", {})
 

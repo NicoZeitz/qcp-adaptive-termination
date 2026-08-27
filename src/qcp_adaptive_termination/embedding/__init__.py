@@ -22,6 +22,7 @@ from qcp_adaptive_termination.observability.cache import get_or_compute_batch
 
 _MAX_TOKENS_PER_REQUEST = 150000
 _MAX_CHUNKS = 1024
+_EMBEDDING_SEMAPHORE = asyncio.Semaphore(5)
 
 
 def _get_embedding_client_and_model() -> tuple[AsyncOpenAI, str]:
@@ -48,7 +49,8 @@ async def _create_batched(texts: list[str]) -> list[list[float]]:
     client, model = _get_embedding_client_and_model()
 
     if len(texts) == 1:
-        result = await client.embeddings.create(model=model, input=texts)
+        async with _EMBEDDING_SEMAPHORE:
+            result = await client.embeddings.create(model=model, input=texts)
         return [result.data[0].embedding]
 
     # https://developers.openai.com/api/reference/resources/embeddings/methods/create#embeddings-create-input
@@ -64,7 +66,8 @@ async def _create_batched(texts: list[str]) -> list[list[float]]:
         and sum(token_estimate_per_text) <= _MAX_TOKENS_PER_REQUEST
         and len(texts) <= _MAX_CHUNKS
     ):
-        result = await client.embeddings.create(model=model, input=texts)
+        async with _EMBEDDING_SEMAPHORE:
+            result = await client.embeddings.create(model=model, input=texts)
         return [item.embedding for item in sorted(result.data, key=lambda x: x.index)]
 
     batches: list[list[str]] = []
@@ -87,8 +90,12 @@ async def _create_batched(texts: list[str]) -> list[list[float]]:
     if current_batch:
         batches.append(current_batch)
 
+    async def _fetch(batch: list[str]):
+        async with _EMBEDDING_SEMAPHORE:
+            return await client.embeddings.create(model=model, input=batch)
+
     # send requests in parallel
-    results = await asyncio.gather(*[client.embeddings.create(model=model, input=batch) for batch in batches])
+    results = await asyncio.gather(*[_fetch(batch) for batch in batches])
 
     embeddings: list[list[float]] = []
     for result in results:
