@@ -17,8 +17,11 @@ from qcp_adaptive_termination.llm import model_provider
 from qcp_adaptive_termination.observability import context, tracing
 from qcp_adaptive_termination.observability.cache import get_or_compute_batch
 
-_MAX_TOKENS_PER_REQUEST = 300000
-_MAX_CHUNKS = 2048
+# _MAX_TOKENS_PER_REQUEST = 300000
+# _MAX_CHUNKS = 2048
+
+_MAX_TOKENS_PER_REQUEST = 150000
+_MAX_CHUNKS = 1024
 
 
 def _get_embedding_client_and_model() -> tuple[AsyncOpenAI, str]:
