@@ -80,14 +80,12 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     emb_data: dict | None = None
     if embedding_filter:
         emb_selected: list[str] = embedding_filter.get("embedding_filtered_agents", [])
-        emb_topics: list[str] = embedding_filter.get("topics", [])
         emb_total: int = embedding_filter.get("total_agents", 0)
         emb_missed = sorted(set(relevant) - set(emb_selected))
         emb_prec, emb_rec, emb_f1 = compute_metrics(relevant, emb_selected)
         emb_data = {
             "selected": emb_selected,
             "missed": emb_missed,
-            "topics": emb_topics,
             "total": emb_total,
             "precision": emb_prec,
             "recall": emb_rec,
@@ -112,7 +110,6 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             f"  f1={emb_data['f1']:.3f}"
             f"  missed={emb_data['missed']}"
         )
-        print(f"       topics={emb_data['topics']}")
     print(f"       [final]      selected={final_selected}")
     print(f"       missed={missed}  extra={extra_selected}")
     print(f"       precision={final_prec:.3f}  recall={final_rec:.3f}  f1={final_f1:.3f}")
@@ -132,7 +129,6 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         result.update({
             "embedding_selected": emb_data["selected"],
             "embedding_missed": emb_data["missed"],
-            "embedding_topics": emb_data["topics"],
             "embedding_precision": round(emb_data["precision"], 4),
             "embedding_recall": round(emb_data["recall"], 4),
             "embedding_f1": round(emb_data["f1"], 4),

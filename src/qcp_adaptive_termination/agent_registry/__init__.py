@@ -216,6 +216,22 @@ async def embedding_vectors_for_all_tables(
     agents: list[DataAgent],
     registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
 ) -> dict[str, dict[str, list[float]]]: ...
+def _build_table_embedding_text(data: AgentRegistryData, table_name: str) -> str:
+    td = data.individual_descriptions[table_name]
+    all_tables = ", ".join(
+        f"{t} ({data.individual_descriptions[t].natural_language_description})"
+        for t in data.individual_descriptions
+    )
+    lines = [
+        data.natural_language_description,
+        f"Tables in this database: {all_tables}",
+        f"Table: {table_name} - {td.natural_language_description}",
+    ]
+    for col in td.columns.values():
+        lines.append(f"{col.column_name}: {col.natural_language_description}")
+    return "\n".join(lines)
+
+
 async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL):
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
@@ -230,7 +246,7 @@ async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryT
         all_descriptions.extend(
             data.individual_descriptions[table].natural_language_description
             if registry_type == AgentRegistryType.NATURAL_LANGUAGE
-            else data.individual_descriptions[table].technical_description
+            else _build_table_embedding_text(data, table)
             for table in table_names
         )
         offsets.append((agent.name, table_names))

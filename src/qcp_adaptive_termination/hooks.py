@@ -390,7 +390,6 @@ class EMBEDDING_PRE_FILTER_END_HANDLER(Protocol):
         self,
         execution_id: str,
         query: str,
-        topics: list[str],
         embedding_filtered_agents: list[DataAgent],
         total_agents: int,
     ) -> None: ...
@@ -795,7 +794,6 @@ def emit(
     event: Literal[HookEvent.EMBEDDING_PRE_FILTER_END],
     *,
     query: str,
-    topics: list[str],
     embedding_filtered_agents: list[DataAgent],
     total_agents: int,
 ) -> None: ...

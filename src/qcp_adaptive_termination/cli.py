@@ -72,7 +72,6 @@ def register_default_output_hooks() -> None:
     def _write_embedding_pre_filter(
         execution_id: str,  # noqa: ARG001
         query: str,
-        topics: list[str],
         embedding_filtered_agents: list[DataAgent],
         total_agents: int,
     ) -> None:
@@ -80,7 +79,6 @@ def register_default_output_hooks() -> None:
             "stage_1_output_embedding_pre_filter.json",
             {
                 "query": query,
-                "topics": topics,
                 "embedding_filtered_agents": [a.name for a in embedding_filtered_agents],
                 "total_agents": total_agents,
             },

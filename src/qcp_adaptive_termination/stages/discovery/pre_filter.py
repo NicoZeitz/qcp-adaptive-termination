@@ -2,29 +2,13 @@
 
 import logging
 
-from pydantic import BaseModel
-
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.embedding import VectorIndex
 from qcp_adaptive_termination.hooks import HookEvent
-from qcp_adaptive_termination.llm.runner import run_llm
-from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
+from qcp_adaptive_termination.models import AgentRegistryType, DataAgent
 from qcp_adaptive_termination.observability import tracing
-
-
-class QueryDecomposition(BaseModel):
-    topics: list[str]
-
-
-async def decompose_query(query: str) -> list[str]:
-    result = await run_llm(
-        AgentRole.QUERY_DECOMPOSER,
-        {"query": query},
-        output_type=QueryDecomposition,
-    )
-    return result.topics
 
 
 def find_l2_clusters(scores: list[float], min_cluster_size: int = 1) -> int:
@@ -78,18 +62,12 @@ async def _filter_embeddings_internal(
 
     vector_index: VectorIndex[tuple[str, str]] = VectorIndex.build(index_data)
 
-    needs = await decompose_query(query)
-    logging.info("Query decomposed into %d topic(s): %s", len(needs), needs)
-
-    all_query_texts = [query] + needs
-    all_embeddings = await embedding.create(all_query_texts)
+    [query_embedding] = await embedding.create([query])
 
     agent_best_dist: dict[str, tuple[float, str]] = {}
-    for q_emb in all_embeddings:
-        results = vector_index.search_all(q_emb)
-        for (agent_name, table_name), dist in results:
-            if agent_name not in agent_best_dist or dist < agent_best_dist[agent_name][0]:
-                agent_best_dist[agent_name] = (dist, table_name)
+    for (agent_name, table_name), dist in vector_index.search_all(query_embedding):
+        if agent_name not in agent_best_dist or dist < agent_best_dist[agent_name][0]:
+            agent_best_dist[agent_name] = (dist, table_name)
 
     sorted_agents = sorted(agent_best_dist.items(), key=lambda x: x[1][0])
 
@@ -109,7 +87,6 @@ async def _filter_embeddings_internal(
     tracing.append_to_span_output(
         {
             "filtered_agents": [a.name for a in filtered],
-            "information_needs": needs,
             "l2_scores": {name: round(dist, 4) for name, (dist, _) in agent_best_dist.items()},
             "best_tables": {name: table for name, (_, table) in agent_best_dist.items()},
         }
@@ -118,7 +95,6 @@ async def _filter_embeddings_internal(
     hooks.emit(
         HookEvent.EMBEDDING_PRE_FILTER_END,
         query=query,
-        topics=needs,
         embedding_filtered_agents=filtered,
         total_agents=len(data_agents),
     )
@@ -129,7 +105,7 @@ async def _filter_embeddings_internal(
 async def filter_embeddings(
     query: str,
     data_agents: list[DataAgent],
-    registry_type: AgentRegistryType = AgentRegistryType.NATURAL_LANGUAGE,
+    registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
 ) -> list[DataAgent]:
     return await hooks.call_override(
         HookEvent.EMBEDDING_PRE_FILTER_OVERRIDE,
