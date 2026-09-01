@@ -112,7 +112,7 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     icon = "✓" if not missed else "✗"
 
     print(f"  {icon} {slug}")
-    print(f"       relevant={relevant}")
+    print(f"       relevant={relevant}  ({len(relevant)} of {emb_data['total'] if emb_data else '?'} agents)")
     if emb_data:
         print(
             f"       [embedding]  {emb_data['total']} → {len(emb_data['selected'])} agents"
@@ -124,6 +124,29 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     print(f"       [final]      selected={final_selected}")
     print(f"       missed={missed}  extra={extra_selected}")
     print(f"       precision={final_prec:.3f}  recall={final_rec:.3f}  f1={final_f1:.3f}")
+
+    if emb_data:
+        emb_ok = 1 if emb_data["recall"] == 1.0 else 0
+        final_ok = 1 if not missed else 0
+        print()
+        print("  " + "-" * 56)
+        print(f"  Perfect recall (final): {final_ok}/1  (embedding): {emb_ok}/1")
+        print()
+        print("  -- After embedding filter --")
+        print(f"  Macro precision : {emb_data['precision']:.3f}")
+        print(f"  Macro recall    : {emb_data['recall']:.3f}")
+        print(f"  Macro F1        : {emb_data['f1']:.3f}")
+        print()
+        print("  -- Embedding top-K% breakdown --")
+        print(f"  {'%':>4}  {'k':>6}  {'precision':>9}  {'recall':>6}  {'f1':>6}")
+        for pm in emb_data["percentile_metrics"]:
+            print(f"  {pm['pct']:>3}%  {pm['k']:>6}  {pm['precision']:>9.3f}  {pm['recall']:>6.3f}  {pm['f1']:>6.3f}")
+        print()
+        print("  -- After full LLM filter --")
+        print(f"  Macro precision : {final_prec:.3f}")
+        print(f"  Macro recall    : {final_rec:.3f}")
+        print(f"  Macro F1        : {final_f1:.3f}")
+        print("  " + "-" * 56)
 
     result: dict = {
         "file": slug,
@@ -138,6 +161,7 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     }
     if emb_data is not None:
         result.update({
+            "embedding_total": emb_data["total"],
             "embedding_selected": emb_data["selected"],
             "embedding_missed": emb_data["missed"],
             "embedding_precision": round(emb_data["precision"], 4),
@@ -169,10 +193,14 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
     scored = [r for r in results if r.get("status") in ("ok", "miss")]
     has_embedding = any("embedding_precision" in r for r in scored)
 
+    avg_relevant = sum(len(r["relevant"]) for r in scored) / len(scored) if scored else 0.0
+    avg_total = sum(r.get("embedding_total", r.get("total_agents", 0)) for r in scored) / len(scored) if scored else 0.0
+
     print()
     print("=" * 60)
     print(f"  Log dir : {log_dir}")
     print(f"  Queries : {total}  (skipped={skipped}, errors={errors})")
+    print(f"  Avg relevant agents : {avg_relevant:.1f} / {avg_total:.0f} total")
     print(f"  Perfect recall (final): {ok}/{evaluated}")
 
     if has_embedding:
