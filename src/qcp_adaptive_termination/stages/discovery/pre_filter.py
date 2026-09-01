@@ -87,7 +87,7 @@ async def _filter_embeddings_internal(
     tracing.append_to_span_output(
         {
             "filtered_agents": [a.name for a in filtered],
-            "l2_scores": {name: round(dist, 4) for name, (dist, _) in agent_best_dist.items()},
+            "l2_scores": {name: round(float(dist), 4) for name, (dist, _) in agent_best_dist.items()},
             "best_tables": {name: table for name, (_, table) in agent_best_dist.items()},
         }
     )
@@ -97,7 +97,7 @@ async def _filter_embeddings_internal(
         query=query,
         embedding_filtered_agents=filtered,
         total_agents=len(data_agents),
-        l2_scores={name: round(dist, 4) for name, (dist, _) in agent_best_dist.items()},
+        l2_scores={name: round(float(dist), 4) for name, (dist, _) in agent_best_dist.items()},
     )
 
     return filtered
