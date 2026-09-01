@@ -27,7 +27,7 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/input"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="eval_stage1_recall_embedding_shotgun"
+RUN_NAME="eval_stage1_recall_nl_tests"
 
 # TODO: Set to true to run files in parallel, false for sequential execution
 PARALLEL=true
@@ -46,7 +46,7 @@ exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(t
 
 # Or use a specific list of files
 FILES=(
-    # "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
+    "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
     # "How_many_FIFA_World_Cup_games_did_England_play.json"
     # "How_many_airlines_are_headquartered_in_UK.json"
     # "How_many_chinese_woman_have_won_a_nobel_prize.json"
@@ -83,7 +83,7 @@ FILES=(
     # "What_is_the_total_GDP_of_all_countries_in_Asia.json"
     # "What_is_the_total_area_in_square_kilometers_of_all_west_german_states.json"
     # "What_is_the_total_attendance_across_all_matches_in_the_2026_World_cup.json"
-    "What_is_the_total_number_of_employees_working_for_Brazilian_companies.json"
+    # "What_is_the_total_number_of_employees_working_for_Brazilian_companies.json"
     # "What_is_the_total_number_of_passengers_handled_by_airports_in_UK_and_France.json"
     # "What_is_the_total_population_of_all_NATO_member_countries.json"
     # "What_is_the_total_population_of_countries_with_a_GDP_above_1_trillion_USD.json"
