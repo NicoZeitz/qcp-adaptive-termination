@@ -97,6 +97,7 @@ async def _filter_embeddings_internal(
         query=query,
         embedding_filtered_agents=filtered,
         total_agents=len(data_agents),
+        l2_scores={name: round(dist, 4) for name, (dist, _) in agent_best_dist.items()},
     )
 
     return filtered

@@ -392,6 +392,7 @@ class EMBEDDING_PRE_FILTER_END_HANDLER(Protocol):
         query: str,
         embedding_filtered_agents: list[DataAgent],
         total_agents: int,
+        l2_scores: dict[str, float],
     ) -> None: ...
 
 
@@ -796,6 +797,7 @@ def emit(
     query: str,
     embedding_filtered_agents: list[DataAgent],
     total_agents: int,
+    l2_scores: dict[str, float],
 ) -> None: ...
 def emit(event: HookEvent, **kwargs: Any) -> None:
     execution_id = get_execution_id()

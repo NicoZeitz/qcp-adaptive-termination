@@ -83,6 +83,16 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         emb_total: int = embedding_filter.get("total_agents", 0)
         emb_missed = sorted(set(relevant) - set(emb_selected))
         emb_prec, emb_rec, emb_f1 = compute_metrics(relevant, emb_selected)
+
+        l2_scores: dict[str, float] = embedding_filter.get("l2_scores", {})
+        sorted_by_dist = sorted(l2_scores.items(), key=lambda x: x[1])
+        percentile_metrics: list[dict] = []
+        for pct in range(10, 110, 10):
+            k = max(1, round(len(sorted_by_dist) * pct / 100))
+            top_k = [name for name, _ in sorted_by_dist[:k]]
+            prec, rec, f1 = compute_metrics(relevant, top_k)
+            percentile_metrics.append({"pct": pct, "k": k, "precision": prec, "recall": rec, "f1": f1})
+
         emb_data = {
             "selected": emb_selected,
             "missed": emb_missed,
@@ -90,6 +100,7 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             "precision": emb_prec,
             "recall": emb_rec,
             "f1": emb_f1,
+            "percentile_metrics": percentile_metrics,
         }
 
     # --- final metrics ---
@@ -133,6 +144,12 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             "embedding_recall": round(emb_data["recall"], 4),
             "embedding_f1": round(emb_data["f1"], 4),
         })
+        for pm in emb_data["percentile_metrics"]:
+            pct_key = f"emb_pct{pm['pct']}"
+            result[pct_key + "_k"] = pm["k"]
+            result[pct_key + "_precision"] = round(pm["precision"], 4)
+            result[pct_key + "_recall"] = round(pm["recall"], 4)
+            result[pct_key + "_f1"] = round(pm["f1"], 4)
     return result
 
 
@@ -166,6 +183,19 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
         print(f"  Macro precision : {macro_avg(scored, 'embedding_precision'):.3f}")
         print(f"  Macro recall    : {macro_avg(scored, 'embedding_recall'):.3f}")
         print(f"  Macro F1        : {macro_avg(scored, 'embedding_f1'):.3f}")
+        print()
+        print("  -- Embedding top-K% breakdown --")
+        print(f"  {'%':>4}  {'k':>6}  {'precision':>9}  {'recall':>6}  {'f1':>6}")
+        for pct in range(10, 110, 10):
+            pct_key = f"emb_pct{pct}"
+            rows = [r for r in scored if pct_key + "_precision" in r]
+            if not rows:
+                continue
+            avg_k = sum(r[pct_key + "_k"] for r in rows) / len(rows)
+            avg_prec = macro_avg(rows, pct_key + "_precision")
+            avg_rec = macro_avg(rows, pct_key + "_recall")
+            avg_f1 = macro_avg(rows, pct_key + "_f1")
+            print(f"  {pct:>3}%  {avg_k:>6.1f}  {avg_prec:>9.3f}  {avg_rec:>6.3f}  {avg_f1:>6.3f}")
 
     print()
     print("  -- After full LLM filter --")

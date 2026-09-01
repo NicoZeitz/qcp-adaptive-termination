@@ -74,6 +74,7 @@ def register_default_output_hooks() -> None:
         query: str,
         embedding_filtered_agents: list[DataAgent],
         total_agents: int,
+        l2_scores: dict[str, float],
     ) -> None:
         _write_output_file(
             "stage_1_output_embedding_pre_filter.json",
@@ -81,6 +82,7 @@ def register_default_output_hooks() -> None:
                 "query": query,
                 "embedding_filtered_agents": [a.name for a in embedding_filtered_agents],
                 "total_agents": total_agents,
+                "l2_scores": l2_scores,
             },
         )
 
