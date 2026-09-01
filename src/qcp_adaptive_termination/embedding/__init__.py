@@ -19,6 +19,7 @@ from qcp_adaptive_termination.observability.cache import get_or_compute_batch
 
 _MAX_TOKENS_PER_REQUEST = 300000
 _MAX_CHUNKS = 2048
+_BATCH_TOKEN_LIMIT = 200000
 
 
 def _get_embedding_client_and_model() -> tuple[AsyncOpenAI, str]:
@@ -61,8 +62,8 @@ async def _create_batched(texts):
     token_estimate_per_text = [len(text.encode("utf-8")) // 4 for text in texts]
 
     if (
-        sum(tokens_per_text) <= _MAX_TOKENS_PER_REQUEST
-        and sum(token_estimate_per_text) <= _MAX_TOKENS_PER_REQUEST
+        sum(tokens_per_text) <= _BATCH_TOKEN_LIMIT
+        and sum(token_estimate_per_text) <= _BATCH_TOKEN_LIMIT
         and len(texts) <= _MAX_CHUNKS
     ):
         result = await client.embeddings.create(model=model, input=texts)
@@ -74,8 +75,8 @@ async def _create_batched(texts):
 
     for text, token_count, token_estimate in zip(texts, tokens_per_text, token_estimate_per_text, strict=True):
         if (
-            current_batch_tokens + token_count > _MAX_TOKENS_PER_REQUEST
-            or current_batch_tokens + token_estimate > _MAX_TOKENS_PER_REQUEST
+            current_batch_tokens + token_count > _BATCH_TOKEN_LIMIT
+            or current_batch_tokens + token_estimate > _BATCH_TOKEN_LIMIT
             or len(current_batch) >= _MAX_CHUNKS
         ) and current_batch:
             batches.append(current_batch)
