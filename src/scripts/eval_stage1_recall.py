@@ -65,12 +65,16 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     relevant: list[str] = input_data.get("extra", {}).get("relevant_data_agents", [])
 
     stage1 = find_latest_json(query_log_dir, "stage_1_output_filtered_relevant_agents.json")
-    if stage1 is None:
+    embedding_filter = find_latest_json(query_log_dir, "stage_1_output_embedding_pre_filter.json")
+
+    if stage1 is None and embedding_filter is None:
         print(f"  [ERROR] no stage_1 output found for {slug}")
         return {"file": slug, "status": "error", "relevant": relevant}
 
-    embedding_filter = find_latest_json(query_log_dir, "stage_1_output_embedding_pre_filter.json")
-    final_selected = [a["name"] for a in stage1.get("relevant_data_agents", [])]
+    if stage1 is not None:
+        final_selected = [a["name"] for a in stage1.get("relevant_data_agents", [])]
+    else:
+        final_selected = embedding_filter.get("embedding_filtered_agents", [])  # type: ignore[union-attr]
 
     if not relevant:
         print(f"  [SKIP]  {slug}  (no relevant_data_agents in extra)")
@@ -278,7 +282,10 @@ def main() -> None:
 
     query_dirs = sorted(
         d for d in log_dir.iterdir()
-        if d.is_dir() and any(d.glob("*/stage_1_output_filtered_relevant_agents.json"))
+        if d.is_dir() and (
+            any(d.glob("*/stage_1_output_filtered_relevant_agents.json"))
+            or any(d.glob("*/stage_1_output_embedding_pre_filter.json"))
+        )
     )
     if not query_dirs:
         print(f"No subdirectories found in {log_dir}")
