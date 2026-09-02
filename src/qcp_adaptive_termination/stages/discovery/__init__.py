@@ -76,24 +76,25 @@ async def filter_relevant_agents_internal(
     CHUNK_SIZE = 1000 # temp full 1000 for dummy, back to 100 for real
 
     with tracing.own_span(
-        "Filtering with Coordinator",
+        "Filtering with Coordinator (DUMMY))",
         input={
             "query": query,
             "candidate_data_agents": candidate_data_agents,
             "chunk_size": CHUNK_SIZE,
         },
     ):
-        chunks = [candidate_data_agents[i:i + CHUNK_SIZE] for i in range(0, len(candidate_data_agents), CHUNK_SIZE)]
-        result: list[tuple[DataAgent, str]] = []
-        for chunk in chunks:
-            chunk_registry = await agent_registry.build_registry_string(chunk, registry_type)
-            chunk_result = await filter_coordinator_with_reasoning(
-                query, chunk, chunk_registry, additional_context
-            )
-            result.extend(chunk_result)
+        # chunks = [candidate_data_agents[i:i + CHUNK_SIZE] for i in range(0, len(candidate_data_agents), CHUNK_SIZE)]
+        # result: list[tuple[DataAgent, str]] = []
+        # for chunk in chunks:
+        #     chunk_registry = await agent_registry.build_registry_string(chunk, registry_type)
+        #     chunk_result = await filter_coordinator_with_reasoning(
+        #         query, chunk, chunk_registry, additional_context
+        #     )
+        #     result.extend(chunk_result)
+        print(f"Filtering with coordinator (DUMMY): returning all {len(candidate_data_agents)} candidate agents as relevant")
 
     with tracing.own_span(
-        "Filtering with Agents",
+        "Filtering with Agents (DUMMY))",
         input={"query": query},
     ):
         # semaphore = asyncio.Semaphore(5)
@@ -105,5 +106,6 @@ async def filter_relevant_agents_internal(
         # agents = await asyncio.gather(*[_filtered(item) for item in result])
         # relevant_data_agents = [agent for agent in agents if agent is not None]
         relevant_data_agents = candidate_data_agents
+        print(f"Filtering with agents (DUMMY): returning all {len(relevant_data_agents)} candidate agents as relevant")
 
     return FilteredRelevantAgents(data_agents=data_agents, relevant_data_agents=relevant_data_agents, query=query)
