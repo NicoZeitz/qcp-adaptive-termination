@@ -143,8 +143,13 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         print()
         print("  -- Embedding top-K% breakdown --")
         print(f"  {'%':>4}  {'k':>6}  {'precision':>9}  {'recall':>6}  {'f1':>6}")
+        n_total = emb_data["total"]
+        ratio = len(relevant) / n_total * 100 if n_total else 0
+        threshold_pct = next((p for p in range(10, 110, 10) if ratio <= p), None)
         for pm in emb_data["percentile_metrics"]:
             print(f"  {pm['pct']:>3}%  {pm['k']:>6}  {pm['precision']:>9.3f}  {pm['recall']:>6.3f}  {pm['f1']:>6.3f}")
+            if threshold_pct and pm["pct"] == threshold_pct:
+                print(f"  {'─' * 48}  {len(relevant)}/{n_total} = {ratio:.1f}% relevant")
         print()
         print("  -- After full LLM filter --")
         print(f"  Macro precision : {final_prec:.3f}")
@@ -218,6 +223,10 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
         print()
         print("  -- Embedding top-K% breakdown --")
         print(f"  {'%':>4}  {'k':>6}  {'precision':>9}  {'recall':>6}  {'f1':>6}")
+        avg_n_relevant = sum(len(r["relevant"]) for r in scored) / len(scored) if scored else 0
+        avg_n_total = sum(r.get("embedding_total", 0) for r in scored) / len(scored) if scored else 0
+        avg_ratio = avg_n_relevant / avg_n_total * 100 if avg_n_total else 0
+        avg_threshold_pct = next((p for p in range(10, 110, 10) if avg_ratio <= p), None)
         for pct in range(10, 110, 10):
             pct_key = f"emb_pct{pct}"
             rows = [r for r in scored if pct_key + "_precision" in r]
@@ -228,6 +237,8 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
             avg_rec = macro_avg(rows, pct_key + "_recall")
             avg_f1 = macro_avg(rows, pct_key + "_f1")
             print(f"  {pct:>3}%  {avg_k:>6.1f}  {avg_prec:>9.3f}  {avg_rec:>6.3f}  {avg_f1:>6.3f}")
+            if avg_threshold_pct and pct == avg_threshold_pct:
+                print(f"  {'─' * 48}  avg {avg_n_relevant:.1f}/{avg_n_total:.0f} = {avg_ratio:.1f}% relevant")
 
     print()
     print("  -- After full LLM filter --")

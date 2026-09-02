@@ -218,7 +218,7 @@ async def embedding_vectors_for_all_tables(
 ) -> dict[str, dict[str, list[float]]]: ...
 def _build_table_embedding_text(data: AgentRegistryData, table_name: str) -> str:  # noqa: ARG001
     td = data.individual_descriptions[table_name]
-    return "\n".join(f"{col.column_name}: {col.natural_language_description}" for col in td.columns.values())
+    return "\n".join(f"{table_name} with {col.column_name}: {col.natural_language_description}" for col in td.columns.values())
 
 
 async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL):
