@@ -27,10 +27,10 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/input"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="eval_stage1_recall_nl_tests"
+RUN_NAME="eval_stage1_recall_nl_tests_table_overload"
 
 # TODO: Set to true to run files in parallel, false for sequential execution
-PARALLEL=true
+PARALLEL=false
 # TODO: set to true, then only print out the commands that would be executed, without actually running them
 TEST=false
 
