@@ -30,7 +30,7 @@ INPUT_DIR="${DATASET_DIR}/input"
 RUN_NAME="eval_stage1_recall_nl_tests_table_single"
 
 # TODO: Set to true to run files in parallel, false for sequential execution
-PARALLEL=true
+PARALLEL=false
 # TODO: set to true, then only print out the commands that would be executed, without actually running them
 TEST=false
 
