@@ -32,7 +32,7 @@ async def filter_relevant_agents(query: str, data_agents: list[DataAgent]) -> Fi
             default=lambda: filter_relevant_agents_internal(
                 query=query,
                 data_agents=data_agents,
-                registry_type=AgentRegistryType.TECHNICAL,
+                registry_type=AgentRegistryType.GENERATED_NL,
             ),
             query=query,
             data_agents=data_agents,
