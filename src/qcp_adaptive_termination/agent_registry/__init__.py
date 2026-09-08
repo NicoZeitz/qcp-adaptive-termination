@@ -232,13 +232,19 @@ def _build_table_schema_for_llm(data: AgentRegistryData, table_name: str) -> str
     return "\n".join(lines)
 
 
-async def _generate_table_nl_embedding_text(data: AgentRegistryData, table_name: str) -> str:
+_EMBEDDING_TEXT_GENERATOR_CONCURRENCY = 50
+
+
+async def _generate_table_nl_embedding_text(
+    data: AgentRegistryData, table_name: str, semaphore: asyncio.Semaphore
+) -> str:
     table_schema = _build_table_schema_for_llm(data, table_name)
-    return await runner.run_llm(
-        role=AgentRole.EMBEDDING_TEXT_GENERATOR,
-        prompt_parameters={"table_name": table_name, "table_schema": table_schema},
-        output_type=str,
-    )
+    async with semaphore:
+        return await runner.run_llm(
+            role=AgentRole.EMBEDDING_TEXT_GENERATOR,
+            prompt_parameters={"table_name": table_name, "table_schema": table_schema},
+            output_type=str,
+        )
 
 
 async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL):
@@ -253,8 +259,9 @@ async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryT
         offsets.append((agent.name, table_names))
 
     if registry_type == AgentRegistryType.GENERATED_NL:
+        semaphore = asyncio.Semaphore(_EMBEDDING_TEXT_GENERATOR_CONCURRENCY)
         all_descriptions = await asyncio.gather(*[
-            _generate_table_nl_embedding_text(agent_data[agent_name], table)
+            _generate_table_nl_embedding_text(agent_data[agent_name], table, semaphore)
             for agent_name, table_names in offsets
             for table in table_names
         ])
