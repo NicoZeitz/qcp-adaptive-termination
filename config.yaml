@@ -51,3 +51,6 @@ agent_configs:
   query_decomposer:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
+  embedding_text_generator:
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    reasoning_effort: "none"

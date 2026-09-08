@@ -50,6 +50,7 @@ class AgentRegistryData:
 class AgentRegistryType(StrEnum):
     NATURAL_LANGUAGE = "natural_language"
     TECHNICAL = "technical"
+    GENERATED_NL = "generated_nl"
 
 
 class AgentRole(StrEnum):
@@ -63,6 +64,7 @@ class AgentRole(StrEnum):
     DATA_AGENT_RELEVANCE = "data_agent_relevance"
     DATA_AGENT_CODE = "data_agent_code"
     QUERY_DECOMPOSER = "query_decomposer"
+    EMBEDDING_TEXT_GENERATOR = "embedding_text_generator"
 
     @property
     def prompt_name(self) -> str:
@@ -77,4 +79,5 @@ class AgentRole(StrEnum):
             AgentRole.DATA_AGENT_RELEVANCE: "discovery-data-agent-sql-relevance",
             AgentRole.DATA_AGENT_CODE: "execution-data-agent-sql-code",
             AgentRole.QUERY_DECOMPOSER: "discovery-query-decomposer",
+            AgentRole.EMBEDDING_TEXT_GENERATOR: "discovery-embedding-text-generator",
         }[self]

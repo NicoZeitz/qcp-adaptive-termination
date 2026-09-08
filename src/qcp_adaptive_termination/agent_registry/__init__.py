@@ -9,9 +9,11 @@ from typing import overload
 
 import qcp_adaptive_termination.agent_registry.utils as utils
 import qcp_adaptive_termination.embedding as embedding
+from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
     AgentRegistryData,
     AgentRegistryType,
+    AgentRole,
     DataAgent,
 )
 
@@ -222,26 +224,50 @@ def _build_table_embedding_text(data: AgentRegistryData, table_name: str) -> str
     return "\n".join(lines)
 
 
+def _build_table_schema_for_llm(data: AgentRegistryData, table_name: str) -> str:
+    td = data.individual_descriptions[table_name]
+    lines = [f"Description: {td.natural_language_description}"] + [
+        f"- {col.column_name}: {col.technical_description}" for col in td.columns.values()
+    ]
+    return "\n".join(lines)
+
+
+async def _generate_table_nl_embedding_text(data: AgentRegistryData, table_name: str) -> str:
+    table_schema = _build_table_schema_for_llm(data, table_name)
+    return await runner.run_llm(
+        role=AgentRole.EMBEDDING_TEXT_GENERATOR,
+        prompt_parameters={"table_name": table_name, "table_schema": table_schema},
+        output_type=str,
+    )
+
+
 async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL):
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
 
     agent_data = await load(agent_list)
 
-    all_descriptions: list[str] = []
     offsets: list[tuple[str, list[str]]] = []
     for agent in agent_list:
-        data = agent_data[agent.name]
-        table_names = list(data.individual_descriptions.keys())
-        all_descriptions.extend(
-            data.individual_descriptions[table].natural_language_description
-            if registry_type == AgentRegistryType.NATURAL_LANGUAGE
-            else _build_table_embedding_text(data, table)
-            for table in table_names
-        )
+        table_names = list(agent_data[agent.name].individual_descriptions.keys())
         offsets.append((agent.name, table_names))
 
-    all_embeddings = await embedding.create(all_descriptions)
+    if registry_type == AgentRegistryType.GENERATED_NL:
+        all_descriptions = await asyncio.gather(*[
+            _generate_table_nl_embedding_text(agent_data[agent_name], table)
+            for agent_name, table_names in offsets
+            for table in table_names
+        ])
+    else:
+        all_descriptions = [
+            agent_data[agent_name].individual_descriptions[table].natural_language_description
+            if registry_type == AgentRegistryType.NATURAL_LANGUAGE
+            else _build_table_embedding_text(agent_data[agent_name], table)
+            for agent_name, table_names in offsets
+            for table in table_names
+        ]
+
+    all_embeddings = await embedding.create(list(all_descriptions))
 
     result: dict[str, dict[str, list[float]]] = {}
     pos = 0
