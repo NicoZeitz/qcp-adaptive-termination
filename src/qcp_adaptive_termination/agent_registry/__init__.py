@@ -232,7 +232,7 @@ def _build_table_schema_for_llm(data: AgentRegistryData, table_name: str) -> str
     return "\n".join(lines)
 
 
-_EMBEDDING_TEXT_GENERATOR_CONCURRENCY = 50
+_EMBEDDING_TEXT_GENERATOR_CONCURRENCY = 100
 
 
 async def _generate_table_nl_embedding_text(
