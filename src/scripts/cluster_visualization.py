@@ -113,6 +113,7 @@ def main() -> None:
     parser.add_argument("--config", default="config.yaml", help="Config YAML")
     parser.add_argument("--data-dir", default="/mnt/labstore/nzeitz/dataset/wikidata-federated-overlap-dataset", help="Data directory")
     parser.add_argument("--query", default=None, help="Query string to embed (default: read from input file)")
+    parser.add_argument("--cache_dir", default=None, help="Cache directory")
     parser.add_argument("--output", default="cluster_visualization.png", help="Output PNG path")
     parser.add_argument(
         "--registry-type",
@@ -140,13 +141,13 @@ def main() -> None:
             name="cluster-viz",
             trace_name="cluster-viz",
             output_dir=None,
-            cache_dir=None,
+            cache_dir=Path(args.cache_dir) if args.cache_dir else None,
             data_dir=data_dir,
             cache_mode=config.cache_mode,
             config=config,
             trace_metadata={},
         ):
-            await _run(args.query, data_agents, registry_type, Path(args.output))
+            await _run(query, data_agents, registry_type, Path(args.output))
 
     asyncio.run(_runner())
 
