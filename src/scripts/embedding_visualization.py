@@ -424,21 +424,10 @@ def _build_plot_jobs(
     emb: _Embeddings,
     umap_coords: np.ndarray,
     hdb: _HdbscanResult,
-    evoc: _EvocResult,
+    evoc: _EvocResult | None,
     title_prefix: str,
     output_dir: Path,
 ) -> list[tuple]:
-    def _evoc_color(fine_lbl: int) -> str:
-        if fine_lbl == -1:
-            return NOISE_COLOR
-        return evoc.color_map.get(fine_lbl, NOISE_COLOR)
-
-    def _evoc_legend_label(fine_lbl: int) -> str:
-        if fine_lbl == -1:
-            return "Noise"
-        top = int(evoc.top_labels[np.where(evoc.fine_labels == fine_lbl)[0][0]])
-        return f"Cluster {top}.{fine_lbl}"
-
     plot_jobs: list[tuple] = [
         (
             umap_coords,
@@ -450,16 +439,31 @@ def _build_plot_jobs(
             output_dir / "embedding_clusters_umap_hdbscan.png",
             False,
         ),
-        (
-            umap_coords,
-            evoc.fine_labels,
-            emb.agent_labels,
-            _evoc_color,
-            _evoc_legend_label,
-            f"{title_prefix}DB Agent Embeddings — UMAP + EVoC clusters (hierarchical)",
-            output_dir / "embedding_clusters_umap_evoc.png",
-            False,
-        ),
+    ]
+
+    if evoc is not None:
+        def _evoc_color(fine_lbl: int) -> str:
+            if fine_lbl == -1:
+                return NOISE_COLOR
+            return evoc.color_map.get(fine_lbl, NOISE_COLOR)
+
+        def _evoc_legend_label(fine_lbl: int) -> str:
+            if fine_lbl == -1:
+                return "Noise"
+            top = int(evoc.top_labels[np.where(evoc.fine_labels == fine_lbl)[0][0]])
+            return f"Cluster {top}.{fine_lbl}"
+
+        plot_jobs += [
+            (
+                umap_coords,
+                evoc.fine_labels,
+                emb.agent_labels,
+                _evoc_color,
+                _evoc_legend_label,
+                f"{title_prefix}DB Agent Embeddings — UMAP + EVoC clusters (hierarchical)",
+                output_dir / "embedding_clusters_umap_evoc.png",
+                False,
+            ),
         (
             evoc.dr_coords,
             evoc.fine_labels,
@@ -488,17 +492,20 @@ def _build_plot_jobs(
                 output_dir / "embedding_clusters_fixed_hdbscan.png",
                 True,
             ),
-            (
-                fixed_coords,
-                evoc.fine_labels,
-                emb.agent_labels,
-                _evoc_color,
-                _evoc_legend_label,
-                f"{title_prefix}DB Agent Embeddings — Fixed lon/lat + EVoC clusters (hierarchical)",
-                output_dir / "embedding_clusters_fixed_evoc.png",
-                True,
-            ),
         ]
+        if evoc is not None:
+            plot_jobs += [
+                (
+                    fixed_coords,
+                    evoc.fine_labels,
+                    emb.agent_labels,
+                    _evoc_color,
+                    _evoc_legend_label,
+                    f"{title_prefix}DB Agent Embeddings — Fixed lon/lat + EVoC clusters (hierarchical)",
+                    output_dir / "embedding_clusters_fixed_evoc.png",
+                    True,
+                ),
+            ]
 
     return plot_jobs
 
@@ -527,11 +534,10 @@ def _md_cluster_section(cluster_map: dict[int, list[str]]) -> list[str]:
 def _write_markdown_report(
     emb: _Embeddings,
     hdb: _HdbscanResult,
-    evoc: _EvocResult,
+    evoc: _EvocResult | None,
     output_dir: Path,
 ) -> None:
     hdbscan_cluster_map = _cluster_summary(hdb.labels, emb.agent_labels)
-    evoc_cluster_map = _cluster_summary(evoc.top_labels, emb.agent_labels)
 
     md_lines = [
         "# DB Embedding Clusters",
@@ -547,19 +553,24 @@ def _write_markdown_report(
         "![HDBSCAN visualization](embedding_clusters_umap_hdbscan.png)",
         "",
         *_md_cluster_section(hdbscan_cluster_map),
-        "## EVoC",
-        "",
-        f"**min_samples:** {MIN_SAMPLES}  ",
-        f"**Top-level clusters:** {evoc.n_clusters}  ",
-        f"**Fine clusters:** {evoc.n_fine_clusters}  ",
-        f"**Noise points:** {evoc.n_noise}",
-        "",
-        "![EVoC visualization](embedding_clusters_umap_evoc.png)",
-        "",
-        "![EVoC DR visualization](embedding_clusters_evoc.png)",
-        "",
-        *_md_cluster_section(evoc_cluster_map),
     ]
+
+    if evoc is not None:
+        evoc_cluster_map = _cluster_summary(evoc.top_labels, emb.agent_labels)
+        md_lines += [
+            "## EVoC",
+            "",
+            f"**min_samples:** {MIN_SAMPLES}  ",
+            f"**Top-level clusters:** {evoc.n_clusters}  ",
+            f"**Fine clusters:** {evoc.n_fine_clusters}  ",
+            f"**Noise points:** {evoc.n_noise}",
+            "",
+            "![EVoC visualization](embedding_clusters_umap_evoc.png)",
+            "",
+            "![EVoC DR visualization](embedding_clusters_evoc.png)",
+            "",
+            *_md_cluster_section(evoc_cluster_map),
+        ]
 
     md_path = output_dir / "embedding_clusters.md"
     md_path.write_text("\n".join(md_lines), encoding="utf-8")
@@ -574,7 +585,11 @@ async def _run(ctx: ScriptContext) -> None:
     embeddings = await _load_embeddings(ctx, registry_type)
     umap_coords = cast(np.ndarray, umap.UMAP(random_state=42, n_jobs=1).fit_transform(embeddings.X))
     hdb = _compute_hdbscan(umap_coords)
-    evoc = _compute_evoc(embeddings.X)
+    try:
+        evoc = _compute_evoc(embeddings.X)
+    except Exception as e:
+        print(f"EVoC failed ({e}), skipping EVoC plots")
+        evoc = None
 
     title_prefix = f"[{ctx.name} / {registry_type}] " if ctx.name else f"[{registry_type}] "
     plot_jobs = _build_plot_jobs(embeddings, umap_coords, hdb, evoc, title_prefix, output_dir)
