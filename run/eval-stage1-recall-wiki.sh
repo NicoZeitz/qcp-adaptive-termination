@@ -27,10 +27,10 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/input"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="eval_stage1_recall_nl_table_description_$(date +%Y%m%d_%H%M%S)"
+RUN_NAME="eval_stage1_recall_nl_table_description_without_filter_knee_$(date +%Y%m%d_%H%M%S)"
 
 # TODO: Set to true to run files in parallel, false for sequential execution
-PARALLEL=false
+PARALLEL=true
 # TODO: set to true, then only print out the commands that would be executed, without actually running them
 TEST=false
 
