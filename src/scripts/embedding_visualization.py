@@ -374,14 +374,12 @@ async def _load_embeddings(ctx: ScriptContext, registry_type: AgentRegistryType)
     vectors: list[list[float]] = []
     for agent in ctx.data_agents:
         tables = all_table_embeddings.get(agent.name, {})
-        if not tables:
-            continue
-        mat = np.array(list(tables.values()), dtype=float)
-        agent_names.append(agent.name)
-        agent_labels.append(_db_label(agent))
-        vectors.append(mat.mean(axis=0).tolist())
+        for table_name, vec in tables.items():
+            agent_names.append(agent.name)
+            agent_labels.append(f"{_db_label(agent)}/{table_name}")
+            vectors.append(vec)
     X = np.array(vectors, dtype=float)
-    print(f"Embedding matrix: {X.shape}")
+    print(f"Embedding matrix: {X.shape} ({len(ctx.data_agents)} agents, {len(vectors)} tables)")
     return _Embeddings(agent_names=agent_names, agent_labels=agent_labels, X=X)
 
 
