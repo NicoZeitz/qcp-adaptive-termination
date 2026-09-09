@@ -41,6 +41,42 @@ def find_l2_clusters(scores: list[float], min_cluster_size: int = 1) -> int:
     return cutoff_idx
 
 
+def find_knee(scores: list[float], min_cluster_size: int = 1) -> int:
+    """Find cutoff using the Kneedle algorithm on ascending L2 distance scores.
+
+    Normalizes the curve to [0,1]x[0,1], then finds the point of maximum
+    distance from the diagonal — the knee of the curve.
+    """
+    n = len(scores)
+    if n <= min_cluster_size:
+        return n
+
+    score_min, score_max = scores[0], scores[-1]
+    score_range = score_max - score_min
+
+    if score_range == 0:
+        return min_cluster_size
+
+    # normalized curve: x in [0,1], y in [0,1]
+    xs = [i / (n - 1) for i in range(n)]
+    ys = [(s - score_min) / score_range for s in scores]
+
+    # distance of each point from the diagonal y=x
+    distances = [ys[i] - xs[i] for i in range(n)]
+
+    knee_idx = max(range(n), key=lambda i: distances[i])
+
+    knee_idx = max(knee_idx, min_cluster_size)
+
+    logging.info(
+        "Knee at position %d (L2: %.3f, normalized distance from diagonal: %.4f)",
+        knee_idx,
+        scores[knee_idx],
+        distances[knee_idx],
+    )
+    return knee_idx
+
+
 async def _filter_embeddings_internal(
     query: str,
     data_agents: list[DataAgent],
@@ -76,7 +112,7 @@ async def _filter_embeddings_internal(
         logging.info("  %s: L2=%.4f (table: %s)", agent_name, dist, table_name)
 
     l2_scores = [dist for _, (dist, _) in sorted_agents]
-    cutoff_idx = find_l2_clusters(l2_scores, min_cluster_size=1)
+    cutoff_idx = find_knee(l2_scores, min_cluster_size=1)
     sorted_agents = sorted_agents[:cutoff_idx]
 
     logging.info("Embedding pre-filter: kept %d / %d agents", len(sorted_agents), len(data_agents))
