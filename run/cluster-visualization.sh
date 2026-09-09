@@ -16,18 +16,39 @@ BASE_LOG_DIR="/mnt/labstore/${USER}/.logs"
 
 DATASET_NAME="wikidata-federated-overlap-dataset"
 DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
+INPUT_DIR="${DATASET_DIR}/input"
 
-# TODO: set input file
-INPUT_FILE="${DATASET_DIR}/input/How_many_airlines_are_headquartered_in_UK.json"
-OUTPUT_FILE="${BASE_LOG_DIR}/cluster_visualization.png"
+RUN_NAME="clustering_$(date +%Y%m%d_%H%M%S)"
+OUT_DIR="${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"
 
-mkdir -p "${BASE_LOG_DIR}"
+mkdir -p "${OUT_DIR}"
 
-python3 -m scripts.cluster_visualization \
-  --input "${INPUT_FILE}" \
-  --data-dir "${DATASET_DIR}" \
-  --cache_dir "${CACHE_DIR}" \
-  --config "${PROJECT_DIR}/config.yaml" \
-  --output "${OUTPUT_FILE}"
+echo "================== Running '${RUN_NAME}' — output: ${OUT_DIR}"
 
-echo "Saved to ${OUTPUT_FILE}"
+shopt -s nullglob
+FILES=("${INPUT_DIR}"/*.json)
+shopt -u nullglob
+
+PIDS=()
+for INPUT_FILE in "${FILES[@]}"; do
+    SLUG=$(basename "${INPUT_FILE}" .json)
+    OUTPUT_FILE="${OUT_DIR}/${SLUG}.png"
+    LOG_FILE="${OUT_DIR}/${SLUG}.log"
+
+    echo "  Queuing: ${SLUG}"
+
+    python3 -m scripts.cluster_visualization \
+      --input "${INPUT_FILE}" \
+      --data-dir "${DATASET_DIR}" \
+      --cache_dir "${CACHE_DIR}" \
+      --config "${PROJECT_DIR}/config.yaml" \
+      --output "${OUTPUT_FILE}" \
+      --log "${LOG_FILE}" \
+      > "${OUT_DIR}/${SLUG}.stdout.log" 2>&1 &
+
+    PIDS+=($!)
+done
+
+echo "Waiting for ${#PIDS[@]} jobs..."
+wait "${PIDS[@]}"
+echo "================== Done. Results in ${OUT_DIR}"
