@@ -1,12 +1,8 @@
 """
-Embed all tables for every agent in an input file and visualize with UMAP + HDBSCAN and UMAP + EVoC.
+Embed all tables for every agent in an input file and visualize with UMAP + Agglomerative clustering.
 
 Reads agent list from the input file, fetches embeddings (cached), and writes:
-  - embedding_clusters_umap_hdbscan.png
-  - embedding_clusters_umap_evoc.png
-  - embedding_clusters_evoc.png             (EVoC node embedding 2D layout + EVoC clusters)
-  - embedding_clusters_fixed_hdbscan.png    (fixed lon/lat coords, no UMAP)
-  - embedding_clusters_fixed_evoc.png       (fixed lon/lat coords, no UMAP)
+  - embedding_clusters.png     (UMAP 2D + agglomerative clusters)
   - embedding_clusters.md
 into the output directory.
 """
@@ -17,7 +13,6 @@ import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
 
 import matplotlib
 import matplotlib.artist
@@ -39,12 +34,8 @@ from scripts.utils import (
     DB_GEO,
     NOISE_COLOR,
     ScriptContext,
-    build_color_map,
-    build_evoc_layout,
     run_script,
 )
-
-MIN_SAMPLES = 1
 
 _SVG_PATH = Path(__file__).parent / "res" / "Continents.svg"
 
@@ -351,18 +342,6 @@ class _AgglomerativeResult:
     labels: np.ndarray
     n_clusters: int
 
-
-@dataclass(slots=True)
-class _EvocResult:
-    dr_coords: np.ndarray
-    top_labels: np.ndarray
-    fine_labels: np.ndarray
-    color_map: dict[int, str]
-    n_clusters: int
-    n_fine_clusters: int
-    n_noise: int
-
-
 async def _load_embeddings(ctx: ScriptContext, registry_type: AgentRegistryType) -> _Embeddings:
     print(f"Loading embeddings for {len(ctx.data_agents)} agents …")
     all_table_embeddings: dict[str, dict[str, list[float]]] = await agent_registry.embedding_vectors_for_all_tables(
@@ -383,11 +362,10 @@ async def _load_embeddings(ctx: ScriptContext, registry_type: AgentRegistryType)
 
 
 def _compute_agglomerative(X: np.ndarray) -> _AgglomerativeResult:
-    print("Computing agglomerative clustering (Ward, automatic elbow threshold)…")
+    print("Computing agglomerative clustering (centroid linkage, automatic elbow threshold)…")
     dists = pdist(X, metric="euclidean")
-    Z = linkage(dists, method="ward")
+    Z = linkage(dists, method="centroid")
 
-    # find threshold at the largest acceleration in merge heights (elbow)
     merge_heights = Z[:, 2]
     acceleration = np.diff(merge_heights, 2)
     elbow_idx = int(np.argmax(acceleration))
@@ -401,116 +379,25 @@ def _compute_agglomerative(X: np.ndarray) -> _AgglomerativeResult:
     return _AgglomerativeResult(labels=labels, n_clusters=n_clusters)
 
 
-def _compute_evoc(X: np.ndarray) -> _EvocResult:
-    dr_coords, clusterer = build_evoc_layout(X)
-    top_labels: np.ndarray = cast(np.ndarray, clusterer.labels_)
-    # finest layer for coloring; falls back to top labels if only one layer
-    fine_labels: np.ndarray = clusterer.cluster_layers_[0] if len(clusterer.cluster_layers_) > 1 else top_labels
-    n_clusters = len(set(top_labels)) - (1 if -1 in top_labels else 0)
-    n_fine_clusters = len(set(fine_labels)) - (1 if -1 in fine_labels else 0)
-    n_noise = int((fine_labels == -1).sum())
-    print(f"EVoC: {n_clusters} top-level clusters, {n_fine_clusters} fine clusters, {n_noise} noise points")
-    print(f"EVoC DR: 2D node embedding shape {dr_coords.shape}")
-    color_map = build_color_map(clusterer.cluster_layers_, top_labels)
-    return _EvocResult(
-        dr_coords=dr_coords,
-        top_labels=top_labels,
-        fine_labels=fine_labels,
-        color_map=color_map,
-        n_clusters=n_clusters,
-        n_fine_clusters=n_fine_clusters,
-        n_noise=n_noise,
-    )
-
-
 def _build_plot_jobs(
     emb: _Embeddings,
     umap_coords: np.ndarray,
-    hdb: _AgglomerativeResult,
-    evoc: _EvocResult | None,
+    agg: _AgglomerativeResult,
     title_prefix: str,
     output_dir: Path,
 ) -> list[tuple]:
-    plot_jobs: list[tuple] = [
+    return [
         (
             umap_coords,
-            hdb.labels,
+            agg.labels,
             emb.agent_labels,
             _color_for_label,
             lambda lbl: f"Cluster {lbl}",
             f"{title_prefix}DB Agent Embeddings — UMAP + Agglomerative clusters",
-            output_dir / "embedding_clusters_umap_hdbscan.png",
+            output_dir / "embedding_clusters.png",
             False,
         ),
     ]
-
-    if evoc is not None:
-        def _evoc_color(fine_lbl: int) -> str:
-            if fine_lbl == -1:
-                return NOISE_COLOR
-            return evoc.color_map.get(fine_lbl, NOISE_COLOR)
-
-        def _evoc_legend_label(fine_lbl: int) -> str:
-            if fine_lbl == -1:
-                return "Noise"
-            top = int(evoc.top_labels[np.where(evoc.fine_labels == fine_lbl)[0][0]])
-            return f"Cluster {top}.{fine_lbl}"
-
-        plot_jobs += [
-            (
-                umap_coords,
-                evoc.fine_labels,
-                emb.agent_labels,
-                _evoc_color,
-                _evoc_legend_label,
-                f"{title_prefix}DB Agent Embeddings — UMAP + EVoC clusters (hierarchical)",
-                output_dir / "embedding_clusters_umap_evoc.png",
-                False,
-            ),
-        (
-            evoc.dr_coords,
-            evoc.fine_labels,
-            emb.agent_labels,
-            _evoc_color,
-            _evoc_legend_label,
-            f"{title_prefix}DB Agent Embeddings — EVoC node embedding + EVoC clusters (hierarchical)",
-            output_dir / "embedding_clusters_evoc.png",
-            False,
-        ),
-    ]
-
-    geo_result = _build_geo_init(emb.agent_labels)
-    if geo_result is not None:
-        fixed_coords = geo_result[0].copy().astype(float)
-        fixed_coords[:, 0] *= 180.0
-        fixed_coords[:, 1] *= 90.0
-        plot_jobs += [
-            (
-                fixed_coords,
-                hdb.labels,
-                emb.agent_labels,
-                _color_for_label,
-                lambda lbl: f"Cluster {lbl}",
-                f"{title_prefix}DB Agent Embeddings — Fixed lon/lat + Agglomerative clusters",
-                output_dir / "embedding_clusters_fixed_hdbscan.png",
-                True,
-            ),
-        ]
-        if evoc is not None:
-            plot_jobs += [
-                (
-                    fixed_coords,
-                    evoc.fine_labels,
-                    emb.agent_labels,
-                    _evoc_color,
-                    _evoc_legend_label,
-                    f"{title_prefix}DB Agent Embeddings — Fixed lon/lat + EVoC clusters (hierarchical)",
-                    output_dir / "embedding_clusters_fixed_evoc.png",
-                    True,
-                ),
-            ]
-
-    return plot_jobs
 
 
 def _render_plots(plot_jobs: list[tuple]) -> None:
@@ -536,11 +423,10 @@ def _md_cluster_section(cluster_map: dict[int, list[str]]) -> list[str]:
 
 def _write_markdown_report(
     emb: _Embeddings,
-    hdb: _AgglomerativeResult,
-    evoc: _EvocResult | None,
+    agg: _AgglomerativeResult,
     output_dir: Path,
 ) -> None:
-    cluster_map = _cluster_summary(hdb.labels, emb.agent_labels)
+    cluster_map = _cluster_summary(agg.labels, emb.agent_labels)
 
     md_lines = [
         "# DB Embedding Clusters",
@@ -549,30 +435,13 @@ def _write_markdown_report(
         "",
         "## Agglomerative Clustering",
         "",
-        f"**method:** Ward, automatic elbow threshold  ",
-        f"**Clusters:** {hdb.n_clusters}",
+        f"**method:** centroid linkage, automatic elbow threshold  ",
+        f"**Clusters:** {agg.n_clusters}",
         "",
-        "![Agglomerative visualization](embedding_clusters_umap_hdbscan.png)",
+        "![Agglomerative visualization](embedding_clusters.png)",
         "",
         *_md_cluster_section(cluster_map),
     ]
-
-    if evoc is not None:
-        evoc_cluster_map = _cluster_summary(evoc.top_labels, emb.agent_labels)
-        md_lines += [
-            "## EVoC",
-            "",
-            f"**min_samples:** {MIN_SAMPLES}  ",
-            f"**Top-level clusters:** {evoc.n_clusters}  ",
-            f"**Fine clusters:** {evoc.n_fine_clusters}  ",
-            f"**Noise points:** {evoc.n_noise}",
-            "",
-            "![EVoC visualization](embedding_clusters_umap_evoc.png)",
-            "",
-            "![EVoC DR visualization](embedding_clusters_evoc.png)",
-            "",
-            *_md_cluster_section(evoc_cluster_map),
-        ]
 
     md_path = output_dir / "embedding_clusters.md"
     md_path.write_text("\n".join(md_lines), encoding="utf-8")
@@ -585,19 +454,14 @@ async def _run(ctx: ScriptContext) -> None:
     assert output_dir is not None
 
     embeddings = await _load_embeddings(ctx, registry_type)
-    umap_coords = cast(np.ndarray, umap.UMAP(random_state=42, n_jobs=1).fit_transform(embeddings.X))
-    hdb = _compute_agglomerative(embeddings.X)
-    try:
-        evoc = _compute_evoc(embeddings.X)
-    except Exception as e:
-        print(f"EVoC failed ({e}), skipping EVoC plots")
-        evoc = None
+    umap_coords = np.array(umap.UMAP(random_state=42, n_jobs=1).fit_transform(embeddings.X))
+    agg = _compute_agglomerative(embeddings.X)
 
     title_prefix = f"[{ctx.name} / {registry_type}] " if ctx.name else f"[{registry_type}] "
-    plot_jobs = _build_plot_jobs(embeddings, umap_coords, hdb, evoc, title_prefix, output_dir)
+    plot_jobs = _build_plot_jobs(embeddings, umap_coords, agg, title_prefix, output_dir)
     _render_plots(plot_jobs)
-    _write_markdown_report(embeddings, hdb, evoc, output_dir)
+    _write_markdown_report(embeddings, agg, output_dir)
 
 
 if __name__ == "__main__":
-    run_script(description="Visualize agent embeddings via UMAP + HDBSCAN and EVoC", run_fn=_run)
+    run_script(description="Visualize agent embeddings via UMAP + Agglomerative clustering", run_fn=_run)
