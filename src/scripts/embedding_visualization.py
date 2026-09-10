@@ -26,6 +26,7 @@ import numpy as np
 import umap
 
 import qcp_adaptive_termination.agent_registry as agent_registry
+from qcp_adaptive_termination.agent_registry import embedding_vectors_and_texts_for_all_tables
 from qcp_adaptive_termination.models import AgentRegistryType, DataAgent
 from qcp_adaptive_termination.observability import context
 from scripts.utils import (
@@ -336,6 +337,7 @@ class _Embeddings:
     agent_names: list[str]
     agent_labels: list[str]
     X: np.ndarray
+    texts: dict[str, str]  # label -> generated topic text (empty if not GENERATED_NL)
 
 
 @dataclass(slots=True)
@@ -346,21 +348,26 @@ class _HdbscanResult:
 
 async def _load_embeddings(ctx: ScriptContext, registry_type: AgentRegistryType) -> _Embeddings:
     print(f"Loading embeddings for {len(ctx.data_agents)} agents …")
-    all_table_embeddings: dict[str, dict[str, list[float]]] = await agent_registry.embedding_vectors_for_all_tables(
+    all_table_embeddings, all_texts = await embedding_vectors_and_texts_for_all_tables(
         ctx.data_agents, registry_type
     )
     agent_names: list[str] = []
     agent_labels: list[str] = []
     vectors: list[list[float]] = []
+    texts: dict[str, str] = {}
     for agent in ctx.data_agents:
         tables = all_table_embeddings.get(agent.name, {})
+        agent_texts = all_texts.get(agent.name, {})
         for table_name, vec in tables.items():
+            label = f"{_db_label(agent)}/{table_name}"
             agent_names.append(agent.name)
-            agent_labels.append(f"{_db_label(agent)}/{table_name}")
+            agent_labels.append(label)
             vectors.append(vec)
+            if table_name in agent_texts:
+                texts[label] = agent_texts[table_name]
     X = np.array(vectors, dtype=float)
     print(f"Embedding matrix: {X.shape} ({len(ctx.data_agents)} agents, {len(vectors)} tables)")
-    return _Embeddings(agent_names=agent_names, agent_labels=agent_labels, X=X)
+    return _Embeddings(agent_names=agent_names, agent_labels=agent_labels, X=X, texts=texts)
 
 
 def _compute_hdbscan(X: np.ndarray) -> _HdbscanResult:
@@ -406,13 +413,38 @@ def _render_plots(plot_jobs: list[tuple]) -> None:
             f.result()
 
 
-def _md_cluster_section(cluster_map: dict[int, list[str]]) -> list[str]:
+def _cluster_centroid_representative(
+    labels: np.ndarray, X: np.ndarray, agent_labels: list[str]
+) -> dict[int, str]:
+    """For each cluster, return the label of the table closest to the centroid."""
+    result: dict[int, str] = {}
+    for lbl in set(labels):
+        idxs = np.where(labels == lbl)[0]
+        centroid = X[idxs].mean(axis=0)
+        dists = np.linalg.norm(X[idxs] - centroid, axis=1)
+        closest = idxs[int(np.argmin(dists))]
+        result[int(lbl)] = agent_labels[closest]
+    return result
+
+
+def _md_cluster_section(
+    cluster_map: dict[int, list[str]],
+    representatives: dict[int, str] | None = None,
+    rep_texts: dict[int, str] | None = None,
+) -> list[str]:
     section: list[str] = []
     for lbl in sorted(cluster_map.keys()):
         dbs = sorted(cluster_map[lbl])
         heading = "## Noise" if lbl == -1 else f"## Cluster {lbl}"
         section.append(heading)
-        section.append(f"_{len(dbs)} databases_")
+        rep = representatives.get(lbl) if representatives else None
+        text = rep_texts.get(lbl) if rep_texts else None
+        size_line = f"_{len(dbs)} databases_"
+        if rep:
+            size_line += f" — representative: `{rep}`"
+        if text:
+            size_line += f" — *{text}*"
+        section.append(size_line)
         section.append("")
         for db_name in dbs:
             section.append(f"- {db_name}")
@@ -426,6 +458,8 @@ def _write_markdown_report(
     output_dir: Path,
 ) -> None:
     cluster_map = _cluster_summary(hdb.labels, emb.agent_labels)
+    representatives = _cluster_centroid_representative(hdb.labels, emb.X, emb.agent_labels)
+    rep_texts = {lbl: emb.texts.get(label, "") for lbl, label in representatives.items()}
 
     md_lines = [
         "# DB Embedding Clusters",
@@ -440,7 +474,7 @@ def _write_markdown_report(
         "",
         "![HDBSCAN visualization](embedding_clusters.png)",
         "",
-        *_md_cluster_section(cluster_map),
+        *_md_cluster_section(cluster_map, representatives, rep_texts),
     ]
 
     md_path = output_dir / "embedding_clusters.md"

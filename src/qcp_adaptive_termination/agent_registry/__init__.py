@@ -248,6 +248,24 @@ async def _generate_table_nl_embedding_text(
 
 
 async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL):
+    vectors, _ = await _embedding_vectors_and_texts(agents, registry_type)
+    return vectors
+
+
+async def embedding_vectors_and_texts_for_all_tables(
+    agents, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL
+) -> tuple[dict, dict[str, dict[str, str]]]:
+    """Like embedding_vectors_for_all_tables but also returns generated texts.
+
+    Returns (vectors, texts) where texts is dict[agent_name][table_name] -> text.
+    Texts are only populated for GENERATED_NL; other registry types return empty dicts.
+    """
+    return await _embedding_vectors_and_texts(agents, registry_type)
+
+
+async def _embedding_vectors_and_texts(
+    agents, registry_type: AgentRegistryType
+) -> tuple[dict, dict[str, dict[str, str]]]:
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
 
@@ -258,15 +276,16 @@ async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryT
         table_names = list(agent_data[agent.name].individual_descriptions.keys())
         offsets.append((agent.name, table_names))
 
+    texts: list[str] = []
     if registry_type == AgentRegistryType.GENERATED_NL:
         semaphore = asyncio.Semaphore(_EMBEDDING_TEXT_GENERATOR_CONCURRENCY)
-        all_descriptions = await asyncio.gather(*[
+        texts = list(await asyncio.gather(*[
             _generate_table_nl_embedding_text(agent_data[agent_name], table, semaphore)
             for agent_name, table_names in offsets
             for table in table_names
-        ])
+        ]))
     else:
-        all_descriptions = [
+        texts = [
             agent_data[agent_name].individual_descriptions[table].natural_language_description
             if registry_type == AgentRegistryType.NATURAL_LANGUAGE
             else _build_table_embedding_text(agent_data[agent_name], table)
@@ -274,18 +293,21 @@ async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryT
             for table in table_names
         ]
 
-    all_embeddings = await embedding.create(list(all_descriptions))
+    all_embeddings = await embedding.create(texts)
 
-    result: dict[str, dict[str, list[float]]] = {}
+    result_vectors: dict[str, dict[str, list[float]]] = {}
+    result_texts: dict[str, dict[str, str]] = {}
     pos = 0
     for agent_name, table_names in offsets:
         n = len(table_names)
-        result[agent_name] = {table: all_embeddings[pos + i] for i, table in enumerate(table_names)}
+        result_vectors[agent_name] = {table: all_embeddings[pos + i] for i, table in enumerate(table_names)}
+        if registry_type == AgentRegistryType.GENERATED_NL:
+            result_texts[agent_name] = {table: texts[pos + i] for i, table in enumerate(table_names)}
         pos += n
 
     if single:
-        return result[agents.name]
-    return result
+        return result_vectors[agents.name], result_texts.get(agents.name, {})
+    return result_vectors, result_texts
 
 
 __all__ = [
