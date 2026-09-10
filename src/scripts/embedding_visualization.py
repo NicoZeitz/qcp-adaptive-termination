@@ -370,6 +370,21 @@ async def _load_embeddings(ctx: ScriptContext, registry_type: AgentRegistryType)
     return _Embeddings(agent_names=agent_names, agent_labels=agent_labels, X=X, texts=texts)
 
 
+def _assign_noise_to_nearest(labels: np.ndarray, X: np.ndarray) -> np.ndarray:
+    """Assign noise points (label == -1) to the nearest cluster centroid."""
+    noise_mask = labels == -1
+    if not noise_mask.any():
+        return labels
+    cluster_ids = sorted(set(labels[~noise_mask]))
+    centroids = np.array([X[labels == c].mean(axis=0) for c in cluster_ids])
+    noise_indices = np.where(noise_mask)[0]
+    dists = np.linalg.norm(X[noise_indices][:, None] - centroids[None, :], axis=2)
+    nearest = np.array([cluster_ids[i] for i in np.argmin(dists, axis=1)], dtype=np.int32)
+    result = labels.copy()
+    result[noise_indices] = nearest
+    return result
+
+
 def _compute_hdbscan(X: np.ndarray) -> _HdbscanResult:
     print(f"Computing HDBSCAN (eom, min_cluster_size={HDBSCAN_MIN_CLUSTER_SIZE})…")
     hdb = fast_hdbscan.HDBSCAN(
@@ -379,6 +394,10 @@ def _compute_hdbscan(X: np.ndarray) -> _HdbscanResult:
         cluster_selection_method="eom",
     ).fit(X)
     labels = np.array(hdb.labels_, dtype=np.int32)
+    n_noise_raw = int((labels == -1).sum())
+    if n_noise_raw > 0:
+        print(f"HDBSCAN: assigning {n_noise_raw} noise points to nearest cluster…")
+        labels = _assign_noise_to_nearest(labels, X)
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     n_noise = int((labels == -1).sum())
     print(f"HDBSCAN: {n_clusters} clusters, {n_noise} noise points")
@@ -488,7 +507,7 @@ async def _run(ctx: ScriptContext) -> None:
     assert output_dir is not None
 
     embeddings = await _load_embeddings(ctx, registry_type)
-    umap_coords = np.array(umap.UMAP(random_state=42, n_jobs=1).fit_transform(embeddings.X))
+    umap_coords = np.array(umap.UMAP(n_neighbors=50, random_state=42, n_jobs=1).fit_transform(embeddings.X))
     hdb = _compute_hdbscan(embeddings.X)
 
     title_prefix = f"[{ctx.name} / {registry_type}] " if ctx.name else f"[{registry_type}] "
