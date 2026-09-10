@@ -1,8 +1,8 @@
 """
-Embed all tables for every agent in an input file and visualize with UMAP + Agglomerative clustering.
+Embed all tables for every agent in an input file and visualize with UMAP + HDBSCAN (eom).
 
 Reads agent list from the input file, fetches embeddings (cached), and writes:
-  - embedding_clusters.png     (UMAP 2D + agglomerative clusters)
+  - embedding_clusters.png     (UMAP 2D + HDBSCAN eom clusters)
   - embedding_clusters.md
 into the output directory.
 """
@@ -14,6 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+import fast_hdbscan
 import matplotlib
 import matplotlib.artist
 import matplotlib.axes
@@ -23,8 +24,6 @@ import matplotlib.path
 import matplotlib.pyplot as plt
 import numpy as np
 import umap
-from scipy.cluster.hierarchy import fcluster, linkage
-from scipy.spatial.distance import pdist
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 from qcp_adaptive_termination.models import AgentRegistryType, DataAgent
@@ -36,6 +35,8 @@ from scripts.utils import (
     ScriptContext,
     run_script,
 )
+
+HDBSCAN_MIN_CLUSTER_SIZE = 5
 
 _SVG_PATH = Path(__file__).parent / "res" / "Continents.svg"
 
@@ -338,9 +339,10 @@ class _Embeddings:
 
 
 @dataclass(slots=True)
-class _AgglomerativeResult:
+class _HdbscanResult:
     labels: np.ndarray
     n_clusters: int
+    n_noise: int
 
 async def _load_embeddings(ctx: ScriptContext, registry_type: AgentRegistryType) -> _Embeddings:
     print(f"Loading embeddings for {len(ctx.data_agents)} agents …")
@@ -361,39 +363,36 @@ async def _load_embeddings(ctx: ScriptContext, registry_type: AgentRegistryType)
     return _Embeddings(agent_names=agent_names, agent_labels=agent_labels, X=X)
 
 
-def _compute_agglomerative(X: np.ndarray) -> _AgglomerativeResult:
-    print("Computing agglomerative clustering (centroid linkage, automatic elbow threshold)…")
-    dists = pdist(X, metric="euclidean")
-    Z = linkage(dists, method="centroid")
-
-    merge_heights = Z[:, 2]
-    acceleration = np.diff(merge_heights, 2)
-    elbow_idx = int(np.argmax(acceleration))
-    threshold = float(merge_heights[-(len(acceleration) - elbow_idx + 1)])
-    print(f"Elbow threshold: {threshold:.4f}")
-
-    raw_labels = fcluster(Z, t=threshold, criterion="distance")
-    labels = (raw_labels - 1).astype(np.int32)
-    n_clusters = int(labels.max()) + 1
-    print(f"Agglomerative: {n_clusters} clusters (no noise points)")
-    return _AgglomerativeResult(labels=labels, n_clusters=n_clusters)
+def _compute_hdbscan(X: np.ndarray) -> _HdbscanResult:
+    print(f"Computing HDBSCAN (eom, min_cluster_size={HDBSCAN_MIN_CLUSTER_SIZE})…")
+    hdb = fast_hdbscan.HDBSCAN(
+        min_cluster_size=HDBSCAN_MIN_CLUSTER_SIZE,
+        min_samples=1,
+        metric="euclidean",
+        cluster_selection_method="eom",
+    ).fit(X)
+    labels = np.array(hdb.labels_, dtype=np.int32)
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    n_noise = int((labels == -1).sum())
+    print(f"HDBSCAN: {n_clusters} clusters, {n_noise} noise points")
+    return _HdbscanResult(labels=labels, n_clusters=n_clusters, n_noise=n_noise)
 
 
 def _build_plot_jobs(
     emb: _Embeddings,
     umap_coords: np.ndarray,
-    agg: _AgglomerativeResult,
+    hdb: _HdbscanResult,
     title_prefix: str,
     output_dir: Path,
 ) -> list[tuple]:
     return [
         (
             umap_coords,
-            agg.labels,
+            hdb.labels,
             emb.agent_labels,
             _color_for_label,
-            lambda lbl: f"Cluster {lbl}",
-            f"{title_prefix}DB Agent Embeddings — UMAP + Agglomerative clusters",
+            lambda lbl: "Noise" if lbl == -1 else f"Cluster {lbl}",
+            f"{title_prefix}DB Agent Embeddings — UMAP + HDBSCAN (eom) clusters",
             output_dir / "embedding_clusters.png",
             False,
         ),
@@ -423,22 +422,23 @@ def _md_cluster_section(cluster_map: dict[int, list[str]]) -> list[str]:
 
 def _write_markdown_report(
     emb: _Embeddings,
-    agg: _AgglomerativeResult,
+    hdb: _HdbscanResult,
     output_dir: Path,
 ) -> None:
-    cluster_map = _cluster_summary(agg.labels, emb.agent_labels)
+    cluster_map = _cluster_summary(hdb.labels, emb.agent_labels)
 
     md_lines = [
         "# DB Embedding Clusters",
         "",
         f"**Total agents:** {len(emb.agent_names)}  ",
         "",
-        "## Agglomerative Clustering",
+        "## HDBSCAN (eom)",
         "",
-        f"**method:** centroid linkage, automatic elbow threshold  ",
-        f"**Clusters:** {agg.n_clusters}",
+        f"**min_cluster_size:** {HDBSCAN_MIN_CLUSTER_SIZE}, min_samples: 1  ",
+        f"**Clusters:** {hdb.n_clusters}  ",
+        f"**Noise points:** {hdb.n_noise}",
         "",
-        "![Agglomerative visualization](embedding_clusters.png)",
+        "![HDBSCAN visualization](embedding_clusters.png)",
         "",
         *_md_cluster_section(cluster_map),
     ]
@@ -455,12 +455,12 @@ async def _run(ctx: ScriptContext) -> None:
 
     embeddings = await _load_embeddings(ctx, registry_type)
     umap_coords = np.array(umap.UMAP(random_state=42, n_jobs=1).fit_transform(embeddings.X))
-    agg = _compute_agglomerative(embeddings.X)
+    hdb = _compute_hdbscan(embeddings.X)
 
     title_prefix = f"[{ctx.name} / {registry_type}] " if ctx.name else f"[{registry_type}] "
-    plot_jobs = _build_plot_jobs(embeddings, umap_coords, agg, title_prefix, output_dir)
+    plot_jobs = _build_plot_jobs(embeddings, umap_coords, hdb, title_prefix, output_dir)
     _render_plots(plot_jobs)
-    _write_markdown_report(embeddings, agg, output_dir)
+    _write_markdown_report(embeddings, hdb, output_dir)
 
 
 if __name__ == "__main__":
