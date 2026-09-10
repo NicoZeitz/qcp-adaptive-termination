@@ -9,6 +9,9 @@ For each query subdirectory, reads:
 Then prints per-query and aggregate precision / recall / F1, both after embedding filtering
 and after the full LLM filtering pipeline.
 
+Macro averaging: average of per-query metrics (each query weighted equally).
+Micro averaging: pool all TP/FP/FN across queries, then compute metrics (larger queries dominate).
+
 Usage:
     python3 -m scripts.eval_stage1_recall --log_dir /mnt/labstore/fwolf/.logs/wikidata-federated-overlap-dataset/eval_stage1_recall
     python3 -m scripts.eval_stage1_recall --log_dir ... --input_dir /mnt/labstore/nzeitz/dataset/wikidata-federated-overlap-dataset/input
@@ -20,6 +23,10 @@ import sys
 from pathlib import Path
 
 
+# ---------------------------------------------------------------------------
+# I/O helpers
+# ---------------------------------------------------------------------------
+
 def find_latest_json(query_log_dir: Path, filename: str) -> dict | None:
     candidates = sorted(query_log_dir.glob(f"*/{filename}"))
     if not candidates:
@@ -30,26 +37,44 @@ def find_latest_json(query_log_dir: Path, filename: str) -> dict | None:
 
 def find_input_file(query_log_dir: Path, input_dir: Path | None) -> Path | None:
     slug = query_log_dir.name
-
     if input_dir:
         p = input_dir / f"{slug}.json"
         if p.exists():
             return p
-
     candidates = sorted(query_log_dir.glob(f"*/{slug}.json"))
-    if candidates:
-        return candidates[-1]
-
-    return None
+    return candidates[-1] if candidates else None
 
 
-def compute_metrics(relevant: list[str], selected: list[str]) -> tuple[float, float, float]:
+# ---------------------------------------------------------------------------
+# Metrics
+# ---------------------------------------------------------------------------
+
+def compute_metrics(relevant: list[str], selected: list[str]) -> tuple[float, float, float, int, int, int]:
+    """Return (precision, recall, f1, tp, fp, fn)."""
     tp = len(set(relevant) & set(selected))
-    precision = tp / len(selected) if selected else 0.0
-    recall = tp / len(relevant) if relevant else 0.0
+    fp = len(set(selected) - set(relevant))
+    fn = len(set(relevant) - set(selected))
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    return precision, recall, f1, tp, fp, fn
+
+
+def micro_metrics(tp_total: int, fp_total: int, fn_total: int) -> tuple[float, float, float]:
+    precision = tp_total / (tp_total + fp_total) if (tp_total + fp_total) > 0 else 0.0
+    recall = tp_total / (tp_total + fn_total) if (tp_total + fn_total) > 0 else 0.0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
     return precision, recall, f1
 
+
+def macro_avg(results: list[dict], key: str) -> float:
+    vals = [r[key] for r in results if key in r]
+    return sum(vals) / len(vals) if vals else 0.0
+
+
+# ---------------------------------------------------------------------------
+# Per-query processing
+# ---------------------------------------------------------------------------
 
 def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     slug = query_log_dir.name
@@ -86,7 +111,7 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         emb_selected: list[str] = embedding_filter.get("embedding_filtered_agents", [])
         emb_total: int = embedding_filter.get("total_agents", 0)
         emb_missed = sorted(set(relevant) - set(emb_selected))
-        emb_prec, emb_rec, emb_f1 = compute_metrics(relevant, emb_selected)
+        emb_prec, emb_rec, emb_f1, emb_tp, emb_fp, emb_fn = compute_metrics(relevant, emb_selected)
 
         l2_scores: dict[str, float] = embedding_filter.get("l2_scores", {})
         sorted_by_dist = sorted(l2_scores.items(), key=lambda x: x[1])
@@ -94,8 +119,8 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         for pct in range(10, 110, 10):
             k = max(1, round(len(sorted_by_dist) * pct / 100))
             top_k = [name for name, _ in sorted_by_dist[:k]]
-            prec, rec, f1 = compute_metrics(relevant, top_k)
-            percentile_metrics.append({"pct": pct, "k": k, "precision": prec, "recall": rec, "f1": f1})
+            prec, rec, f1, tp, fp, fn = compute_metrics(relevant, top_k)
+            percentile_metrics.append({"pct": pct, "k": k, "precision": prec, "recall": rec, "f1": f1, "tp": tp, "fp": fp, "fn": fn})
 
         emb_data = {
             "selected": emb_selected,
@@ -104,13 +129,16 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             "precision": emb_prec,
             "recall": emb_rec,
             "f1": emb_f1,
+            "tp": emb_tp,
+            "fp": emb_fp,
+            "fn": emb_fn,
             "percentile_metrics": percentile_metrics,
         }
 
     # --- final metrics ---
     missed = sorted(set(relevant) - set(final_selected))
     extra_selected = sorted(set(final_selected) - set(relevant))
-    final_prec, final_rec, final_f1 = compute_metrics(relevant, final_selected)
+    final_prec, final_rec, final_f1, final_tp, final_fp, final_fn = compute_metrics(relevant, final_selected)
 
     status = "ok" if not missed else "miss"
     icon = "✓" if not missed else "✗"
@@ -137,9 +165,9 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         print(f"  Perfect recall (final): {final_ok}/1  (embedding): {emb_ok}/1")
         print()
         print("  -- After embedding filter --")
-        print(f"  Macro precision : {emb_data['precision']:.3f}")
-        print(f"  Macro recall    : {emb_data['recall']:.3f}")
-        print(f"  Macro F1        : {emb_data['f1']:.3f}")
+        print(f"  Precision : {emb_data['precision']:.3f}")
+        print(f"  Recall    : {emb_data['recall']:.3f}")
+        print(f"  F1        : {emb_data['f1']:.3f}")
         print()
         print("  -- Embedding top-K% breakdown --")
         print(f"  {'%':>4}  {'k':>6}  {'precision':>9}  {'recall':>6}  {'f1':>6}")
@@ -152,9 +180,9 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
                 print(f"  {'─' * 48}  {len(relevant)}/{n_total} = {ratio:.1f}% relevant")
         print()
         print("  -- After full LLM filter --")
-        print(f"  Macro precision : {final_prec:.3f}")
-        print(f"  Macro recall    : {final_rec:.3f}")
-        print(f"  Macro F1        : {final_f1:.3f}")
+        print(f"  Precision : {final_prec:.3f}")
+        print(f"  Recall    : {final_rec:.3f}")
+        print(f"  F1        : {final_f1:.3f}")
         print("  " + "-" * 56)
 
     result: dict = {
@@ -167,6 +195,9 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         "precision": round(final_prec, 4),
         "recall": round(final_rec, 4),
         "f1": round(final_f1, 4),
+        "tp": final_tp,
+        "fp": final_fp,
+        "fn": final_fn,
     }
     if emb_data is not None:
         result.update({
@@ -176,6 +207,9 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             "embedding_precision": round(emb_data["precision"], 4),
             "embedding_recall": round(emb_data["recall"], 4),
             "embedding_f1": round(emb_data["f1"], 4),
+            "embedding_tp": emb_data["tp"],
+            "embedding_fp": emb_data["fp"],
+            "embedding_fn": emb_data["fn"],
         })
         for pm in emb_data["percentile_metrics"]:
             pct_key = f"emb_pct{pm['pct']}"
@@ -183,13 +217,15 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             result[pct_key + "_precision"] = round(pm["precision"], 4)
             result[pct_key + "_recall"] = round(pm["recall"], 4)
             result[pct_key + "_f1"] = round(pm["f1"], 4)
+            result[pct_key + "_tp"] = pm["tp"]
+            result[pct_key + "_fp"] = pm["fp"]
+            result[pct_key + "_fn"] = pm["fn"]
     return result
 
 
-def macro_avg(results: list[dict], key: str) -> float:
-    vals = [r[key] for r in results if key in r]
-    return sum(vals) / len(vals) if vals else 0.0
-
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
 
 def print_summary(results: list[dict], log_dir: Path) -> None:
     total = len(results)
@@ -217,11 +253,22 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
         print(f"  Perfect recall (embedding): {emb_ok}/{evaluated}")
         print()
         print("  -- After embedding filter --")
-        print(f"  Macro precision : {macro_avg(scored, 'embedding_precision'):.3f}")
-        print(f"  Macro recall    : {macro_avg(scored, 'embedding_recall'):.3f}")
-        print(f"  Macro F1        : {macro_avg(scored, 'embedding_f1'):.3f}")
+
+        # macro
+        macro_p = macro_avg(scored, "embedding_precision")
+        macro_r = macro_avg(scored, "embedding_recall")
+        macro_f = macro_avg(scored, "embedding_f1")
+        # micro
+        micro_tp = sum(r.get("embedding_tp", 0) for r in scored)
+        micro_fp = sum(r.get("embedding_fp", 0) for r in scored)
+        micro_fn = sum(r.get("embedding_fn", 0) for r in scored)
+        micro_p, micro_r, micro_f = micro_metrics(micro_tp, micro_fp, micro_fn)
+
+        print(f"  Macro precision : {macro_p:.3f}  |  Micro precision : {micro_p:.3f}")
+        print(f"  Macro recall    : {macro_r:.3f}  |  Micro recall    : {micro_r:.3f}")
+        print(f"  Macro F1        : {macro_f:.3f}  |  Micro F1        : {micro_f:.3f}")
         print()
-        print("  -- Embedding top-K% breakdown --")
+        print("  -- Embedding top-K% breakdown (macro avg) --")
         print(f"  {'%':>4}  {'k':>6}  {'precision':>9}  {'recall':>6}  {'f1':>6}")
         avg_n_relevant = sum(len(r["relevant"]) for r in scored) / len(scored) if scored else 0
         avg_n_total = sum(r.get("embedding_total", 0) for r in scored) / len(scored) if scored else 0
@@ -242,9 +289,20 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
 
     print()
     print("  -- After full LLM filter --")
-    print(f"  Macro precision : {macro_avg(scored, 'precision'):.3f}")
-    print(f"  Macro recall    : {macro_avg(scored, 'recall'):.3f}")
-    print(f"  Macro F1        : {macro_avg(scored, 'f1'):.3f}")
+
+    # macro
+    macro_p = macro_avg(scored, "precision")
+    macro_r = macro_avg(scored, "recall")
+    macro_f = macro_avg(scored, "f1")
+    # micro
+    micro_tp = sum(r.get("tp", 0) for r in scored)
+    micro_fp = sum(r.get("fp", 0) for r in scored)
+    micro_fn = sum(r.get("fn", 0) for r in scored)
+    micro_p, micro_r, micro_f = micro_metrics(micro_tp, micro_fp, micro_fn)
+
+    print(f"  Macro precision : {macro_p:.3f}  |  Micro precision : {micro_p:.3f}")
+    print(f"  Macro recall    : {macro_r:.3f}  |  Micro recall    : {micro_r:.3f}")
+    print(f"  Macro F1        : {macro_f:.3f}  |  Micro F1        : {micro_f:.3f}")
 
     if missed_count > 0:
         print()
@@ -262,11 +320,41 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
             "macro_precision": round(macro_avg(scored, "precision"), 4),
             "macro_recall": round(macro_avg(scored, "recall"), 4),
             "macro_f1": round(macro_avg(scored, "f1"), 4),
+            "micro_precision": round(micro_metrics(
+                sum(r.get("tp", 0) for r in scored),
+                sum(r.get("fp", 0) for r in scored),
+                sum(r.get("fn", 0) for r in scored),
+            )[0], 4),
+            "micro_recall": round(micro_metrics(
+                sum(r.get("tp", 0) for r in scored),
+                sum(r.get("fp", 0) for r in scored),
+                sum(r.get("fn", 0) for r in scored),
+            )[1], 4),
+            "micro_f1": round(micro_metrics(
+                sum(r.get("tp", 0) for r in scored),
+                sum(r.get("fp", 0) for r in scored),
+                sum(r.get("fn", 0) for r in scored),
+            )[2], 4),
             **(
                 {
                     "embedding_macro_precision": round(macro_avg(scored, "embedding_precision"), 4),
                     "embedding_macro_recall": round(macro_avg(scored, "embedding_recall"), 4),
                     "embedding_macro_f1": round(macro_avg(scored, "embedding_f1"), 4),
+                    "embedding_micro_precision": round(micro_metrics(
+                        sum(r.get("embedding_tp", 0) for r in scored),
+                        sum(r.get("embedding_fp", 0) for r in scored),
+                        sum(r.get("embedding_fn", 0) for r in scored),
+                    )[0], 4),
+                    "embedding_micro_recall": round(micro_metrics(
+                        sum(r.get("embedding_tp", 0) for r in scored),
+                        sum(r.get("embedding_fp", 0) for r in scored),
+                        sum(r.get("embedding_fn", 0) for r in scored),
+                    )[1], 4),
+                    "embedding_micro_f1": round(micro_metrics(
+                        sum(r.get("embedding_tp", 0) for r in scored),
+                        sum(r.get("embedding_fp", 0) for r in scored),
+                        sum(r.get("embedding_fn", 0) for r in scored),
+                    )[2], 4),
                 }
                 if has_embedding else {}
             ),
@@ -277,6 +365,10 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
     ))
     print(f"\n  Full results -> {summary_path}")
 
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate stage-1 recall from run logs")
