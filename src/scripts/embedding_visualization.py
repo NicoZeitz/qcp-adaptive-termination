@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
-import fast_hdbscan
 import matplotlib
 import matplotlib.artist
 import matplotlib.axes
@@ -29,6 +28,8 @@ import matplotlib.path
 import matplotlib.pyplot as plt
 import numpy as np
 import umap
+from scipy.cluster.hierarchy import fcluster, linkage
+from scipy.spatial.distance import pdist
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 from qcp_adaptive_termination.models import AgentRegistryType, DataAgent
@@ -44,7 +45,6 @@ from scripts.utils import (
 )
 
 MIN_SAMPLES = 1
-HDBSCAN_MIN_CLUSTER_SIZE = 5
 
 _SVG_PATH = Path(__file__).parent / "res" / "Continents.svg"
 
@@ -347,10 +347,9 @@ class _Embeddings:
 
 
 @dataclass(slots=True)
-class _HdbscanResult:
+class _AgglomerativeResult:
     labels: np.ndarray
     n_clusters: int
-    n_noise: int
 
 
 @dataclass(slots=True)
@@ -383,17 +382,23 @@ async def _load_embeddings(ctx: ScriptContext, registry_type: AgentRegistryType)
     return _Embeddings(agent_names=agent_names, agent_labels=agent_labels, X=X)
 
 
-def _compute_hdbscan(X: np.ndarray) -> _HdbscanResult:
-    hdb = fast_hdbscan.HDBSCAN(
-        min_cluster_size=HDBSCAN_MIN_CLUSTER_SIZE,
-        min_samples=MIN_SAMPLES,
-        metric="euclidean",
-    ).fit(X)
-    labels: np.ndarray = cast(np.ndarray, hdb.labels_)
-    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-    n_noise = int((labels == -1).sum())
-    print(f"HDBSCAN: {n_clusters} clusters, {n_noise} noise points (min_cluster_size={HDBSCAN_MIN_CLUSTER_SIZE})")
-    return _HdbscanResult(labels=labels, n_clusters=n_clusters, n_noise=n_noise)
+def _compute_agglomerative(X: np.ndarray) -> _AgglomerativeResult:
+    print("Computing agglomerative clustering (Ward, automatic elbow threshold)…")
+    dists = pdist(X, metric="euclidean")
+    Z = linkage(dists, method="ward")
+
+    # find threshold at the largest acceleration in merge heights (elbow)
+    merge_heights = Z[:, 2]
+    acceleration = np.diff(merge_heights, 2)
+    elbow_idx = int(np.argmax(acceleration))
+    threshold = float(merge_heights[-(len(acceleration) - elbow_idx + 1)])
+    print(f"Elbow threshold: {threshold:.4f}")
+
+    raw_labels = fcluster(Z, t=threshold, criterion="distance")
+    labels = (raw_labels - 1).astype(np.int32)
+    n_clusters = int(labels.max()) + 1
+    print(f"Agglomerative: {n_clusters} clusters (no noise points)")
+    return _AgglomerativeResult(labels=labels, n_clusters=n_clusters)
 
 
 def _compute_evoc(X: np.ndarray) -> _EvocResult:
@@ -421,7 +426,7 @@ def _compute_evoc(X: np.ndarray) -> _EvocResult:
 def _build_plot_jobs(
     emb: _Embeddings,
     umap_coords: np.ndarray,
-    hdb: _HdbscanResult,
+    hdb: _AgglomerativeResult,
     evoc: _EvocResult | None,
     title_prefix: str,
     output_dir: Path,
@@ -432,8 +437,8 @@ def _build_plot_jobs(
             hdb.labels,
             emb.agent_labels,
             _color_for_label,
-            lambda lbl: "Noise" if lbl == -1 else f"Cluster {lbl}",
-            f"{title_prefix}DB Agent Embeddings — UMAP + HDBSCAN clusters",
+            lambda lbl: f"Cluster {lbl}",
+            f"{title_prefix}DB Agent Embeddings — UMAP + Agglomerative clusters",
             output_dir / "embedding_clusters_umap_hdbscan.png",
             False,
         ),
@@ -485,8 +490,8 @@ def _build_plot_jobs(
                 hdb.labels,
                 emb.agent_labels,
                 _color_for_label,
-                lambda lbl: "Noise" if lbl == -1 else f"Cluster {lbl}",
-                f"{title_prefix}DB Agent Embeddings — Fixed lon/lat + HDBSCAN clusters",
+                lambda lbl: f"Cluster {lbl}",
+                f"{title_prefix}DB Agent Embeddings — Fixed lon/lat + Agglomerative clusters",
                 output_dir / "embedding_clusters_fixed_hdbscan.png",
                 True,
             ),
@@ -531,26 +536,25 @@ def _md_cluster_section(cluster_map: dict[int, list[str]]) -> list[str]:
 
 def _write_markdown_report(
     emb: _Embeddings,
-    hdb: _HdbscanResult,
+    hdb: _AgglomerativeResult,
     evoc: _EvocResult | None,
     output_dir: Path,
 ) -> None:
-    hdbscan_cluster_map = _cluster_summary(hdb.labels, emb.agent_labels)
+    cluster_map = _cluster_summary(hdb.labels, emb.agent_labels)
 
     md_lines = [
         "# DB Embedding Clusters",
         "",
         f"**Total agents:** {len(emb.agent_names)}  ",
         "",
-        "## HDBSCAN",
+        "## Agglomerative Clustering",
         "",
-        f"**min_cluster_size:** {HDBSCAN_MIN_CLUSTER_SIZE}, min_samples: {MIN_SAMPLES}  ",
-        f"**Clusters:** {hdb.n_clusters}  ",
-        f"**Noise points:** {hdb.n_noise}",
+        f"**method:** Ward, automatic elbow threshold  ",
+        f"**Clusters:** {hdb.n_clusters}",
         "",
-        "![HDBSCAN visualization](embedding_clusters_umap_hdbscan.png)",
+        "![Agglomerative visualization](embedding_clusters_umap_hdbscan.png)",
         "",
-        *_md_cluster_section(hdbscan_cluster_map),
+        *_md_cluster_section(cluster_map),
     ]
 
     if evoc is not None:
@@ -582,7 +586,7 @@ async def _run(ctx: ScriptContext) -> None:
 
     embeddings = await _load_embeddings(ctx, registry_type)
     umap_coords = cast(np.ndarray, umap.UMAP(random_state=42, n_jobs=1).fit_transform(embeddings.X))
-    hdb = _compute_hdbscan(umap_coords)
+    hdb = _compute_agglomerative(embeddings.X)
     try:
         evoc = _compute_evoc(embeddings.X)
     except Exception as e:
