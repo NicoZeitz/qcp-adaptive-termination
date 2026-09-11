@@ -1,7 +1,6 @@
 """Embedding-based pre-filter for data agent selection."""
 
 import logging
-from pathlib import Path
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
@@ -48,12 +47,6 @@ def find_l2_clusters(scores: list[float], min_cluster_size: int = 1) -> int:
     return cutoff_idx
 
 
-def _selected_clusters(query_embedding: list[float], index, agents_before: list[DataAgent], agents_after: list[DataAgent]) -> set[int]:
-    """Derive which cluster IDs were selected based on which agents survived the filter."""
-    kept_names = {a.name for a in agents_after}
-    return {index.agent_to_cluster[n] for n in kept_names if n in index.agent_to_cluster}
-
-
 async def _filter_embeddings_internal(
     query: str,
     data_agents: list[DataAgent],
@@ -63,17 +56,16 @@ async def _filter_embeddings_internal(
     cluster_index = await get_or_build_cluster_index(data_agents, registry_type)
     [query_embedding] = await embedding.create([query])
     agents_before = data_agents
-    data_agents = filter_agents_by_cluster(query_embedding, cluster_index, data_agents, find_l2_clusters)
+    data_agents, selected_clusters = filter_agents_by_cluster(query_embedding, cluster_index, data_agents, find_l2_clusters)
     logging.info("Cluster pre-filter: %d / %d agents remaining", len(data_agents), len(agents_before))
 
     # render per-query visualization into the run output dir
     output_dir = get_output_dir()
     if output_dir is not None:
-        sel_clusters = _selected_clusters(query_embedding, cluster_index, agents_before, data_agents)
         query_slug = query[:60].replace(" ", "_").replace("/", "-")
         viz_path = output_dir / f"cluster_filter_{query_slug}.png"
         try:
-            render_query_visualization(query, query_embedding, cluster_index, sel_clusters, viz_path)
+            render_query_visualization(query, query_embedding, cluster_index, selected_clusters, viz_path)
         except Exception as exc:
             logging.warning("ClusterIndex: visualization failed: %s", exc)
 
