@@ -21,6 +21,26 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import TextIO
+
+
+class _Tee:
+    """Write to both a primary stream and a file simultaneously."""
+
+    def __init__(self, primary: TextIO, secondary: TextIO) -> None:
+        self._primary = primary
+        self._secondary = secondary
+
+    def write(self, data: str) -> int:
+        self._secondary.write(data)
+        return self._primary.write(data)
+
+    def flush(self) -> None:
+        self._primary.flush()
+        self._secondary.flush()
+
+    def __getattr__(self, name: str):
+        return getattr(self._primary, name)
 
 
 # ---------------------------------------------------------------------------
@@ -374,6 +394,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate stage-1 recall from run logs")
     parser.add_argument("--log_dir", required=True, help="Base log dir, e.g. .logs/<dataset>/<run_name>")
     parser.add_argument("--input_dir", default=None, help="Input dir with original JSON files (optional)")
+    parser.add_argument("--output_dir", default=None, help="Directory to save a copy of the printed output as eval_stage1_recall.log")
     args = parser.parse_args()
 
     log_dir = Path(args.log_dir)
@@ -383,21 +404,35 @@ def main() -> None:
 
     input_dir = Path(args.input_dir) if args.input_dir else None
 
-    query_dirs = sorted(
-        d for d in log_dir.iterdir()
-        if d.is_dir() and (
-            any(d.glob("*/stage_1_output_filtered_relevant_agents.json"))
-            or any(d.glob("*/stage_1_output_embedding_pre_filter.json"))
+    log_file = None
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        log_path = output_dir / f"{log_dir.name}.log"
+        log_file = open(log_path, "w", encoding="utf-8")
+        sys.stdout = _Tee(sys.__stdout__, log_file)  # type: ignore[assignment]
+        print(f"Logging output to {log_path}")
+
+    try:
+        query_dirs = sorted(
+            d for d in log_dir.iterdir()
+            if d.is_dir() and (
+                any(d.glob("*/stage_1_output_filtered_relevant_agents.json"))
+                or any(d.glob("*/stage_1_output_embedding_pre_filter.json"))
+            )
         )
-    )
-    if not query_dirs:
-        print(f"No subdirectories found in {log_dir}")
-        sys.exit(1)
+        if not query_dirs:
+            print(f"No subdirectories found in {log_dir}")
+            sys.exit(1)
 
-    print(f"Evaluating stage-1 recall over {len(query_dirs)} queries in {log_dir}\n")
+        print(f"Evaluating stage-1 recall over {len(query_dirs)} queries in {log_dir}\n")
 
-    results = [process_query(d, input_dir) for d in query_dirs]
-    print_summary(results, log_dir)
+        results = [process_query(d, input_dir) for d in query_dirs]
+        print_summary(results, log_dir)
+    finally:
+        if log_file is not None:
+            sys.stdout = sys.__stdout__
+            log_file.close()
 
 
 if __name__ == "__main__":
