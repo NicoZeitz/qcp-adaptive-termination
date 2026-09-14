@@ -249,24 +249,30 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
 
 def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> None:
     """Write one JS data file per query into chart_output directory for l2_chart.html."""
-    scored = [r for r in results if r.get("status") in ("ok", "miss")]
-    if not scored:
-        print("  [chart] No scored queries — skipping chart output.")
+    eligible = [r for r in results if r.get("status") in ("ok", "miss", "skip") and r.get("file")]
+    if not eligible:
+        print("  [chart] No queries to chart — skipping.")
         return
 
     chart_output.mkdir(parents=True, exist_ok=True)
 
     written = 0
-    for r in scored:
+    skipped = 0
+    for r in eligible:
         query_dir = log_dir / r["file"]
         emb_json_paths = sorted(query_dir.glob("*/stage_1_output_embedding_pre_filter.json"))
         if not emb_json_paths:
+            skipped += 1
             continue
         with open(emb_json_paths[-1]) as f:
             emb = json.load(f)
 
         l2_scores: dict[str, float] = emb.get("l2_scores", {})
         best_columns: dict[str, str] = emb.get("best_columns", {})
+
+        if not l2_scores:
+            skipped += 1
+            continue
 
         agent_rows: dict[str, tuple[float, str, str]] = {}
         for name, l2 in l2_scores.items():
@@ -290,7 +296,7 @@ def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> No
         out_file.write_text(js, encoding="utf-8")
         written += 1
 
-    print(f"  [chart] Written {written} files -> {chart_output}/")
+    print(f"  [chart] Written {written} files -> {chart_output}/  (skipped {skipped} without embedding data)")
 
 
 
