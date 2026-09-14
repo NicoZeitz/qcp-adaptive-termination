@@ -79,7 +79,7 @@ async def _filter_embeddings_internal(
         for table_name, table_desc in data.individual_descriptions.items():
             for col_name, col_desc in table_desc.columns.items():
                 col_entries.append((agent.name, table_name, col_name))
-                col_descriptions.append(col_desc.technical_description)
+                col_descriptions.append(f"{col_name}: {col_desc.natural_language_description}")
 
     if not col_entries:
         logging.warning("No column embeddings found, returning all agents unfiltered")

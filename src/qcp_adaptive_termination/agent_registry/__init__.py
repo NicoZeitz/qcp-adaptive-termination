@@ -119,7 +119,8 @@ async def embedding_vector_for_column(agents, table_per_agent, column_per_agent)
         table = table_map[agent.name]
         column = column_map[agent.name]
         data = agent_data[agent.name]
-        embedding_descriptions.append(data.individual_descriptions[table].columns[column].technical_description)
+        col = data.individual_descriptions[table].columns[column]
+        embedding_descriptions.append(f"{column}: {col.natural_language_description}")
 
     embeddings = await embedding.create(embedding_descriptions)
 
@@ -152,7 +153,7 @@ async def embedding_vectors_for_all_columns(agents, table_per_agent):
         data = agent_data[agent.name]
         column_names = list(data.individual_descriptions[table].columns.keys())
         all_descriptions.extend(
-            data.individual_descriptions[table].columns[col].technical_description for col in column_names
+            f"{col}: {data.individual_descriptions[table].columns[col].natural_language_description}" for col in column_names
         )
         offsets.append((agent.name, column_names))
 
