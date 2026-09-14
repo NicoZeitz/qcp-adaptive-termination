@@ -184,7 +184,10 @@
 <body>
 
 <h1>Embedding Similarity — L2 Distance per Agent</h1>
-<p class="subtitle" id="chartSubtitle"></p>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+  <p class="subtitle" id="chartSubtitle" style="margin:0"></p>
+  <select id="dataSelect" style="display:none;font-size:12px;padding:3px 8px;border-radius:4px;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-primary);outline:none;max-width:420px"></select>
+</div>
 
 <div class="controls">
   <span class="filter-label">Agent:</span>
@@ -220,39 +223,86 @@
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
-// CHART ENGINE  —  data loaded from ?data=<filename>.js
-// Generate data file with:
-//   python3 -m scripts.eval_stage1_recall --log_dir ... --chart_output my_query.js
-// Open as: l2_chart.html?data=my_query.js
+// CHART ENGINE  —  loads index.js + per-query .js files via <script> tags
+// Generate with:
+//   python3 -m scripts.eval_stage1_recall --log_dir ... --chart_output ./chart_data
+// Open: l2_chart.html  (index.js must be in the same folder as l2_chart.html)
 // ─────────────────────────────────────────────────────────────────────────────
+
+function loadScript(src) {
+  const old = document.getElementById('_dataScript');
+  if (old) old.remove();
+  window.RAW = undefined;
+  window.RELEVANT = undefined;
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.id = '_dataScript';
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error(`Not found: ${src}`));
+    document.head.appendChild(s);
+  });
+}
+
 (async function bootstrap() {
-  const dataFile = new URLSearchParams(location.search).get('data') || 'chart_data.js';
+  const sel = document.getElementById('dataSelect');
+
+  // Load index.js (defines window.FILES = [...])
+  window.FILES = undefined;
   try {
     await new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = dataFile;
+      s.src = 'index.js';
       s.onload = resolve;
-      s.onerror = () => reject(new Error(`Datei nicht gefunden: ${dataFile}`));
+      s.onerror = reject;
       document.head.appendChild(s);
     });
-  } catch (err) {
-    document.body.innerHTML = `<p style="padding:24px;color:#dc2626;font-family:sans-serif">
-      <strong>Fehler:</strong> ${err.message}<br><br>
-      Verwendung: <code>l2_chart.html?data=meine_query.js</code><br>
-      Datei erzeugen mit:<br>
-      <code>python3 -m scripts.eval_stage1_recall --log_dir ... --chart_output meine_query.js</code>
-    </p>`;
+  } catch (_) {}
+
+  const files = Array.isArray(window.FILES) ? window.FILES : [];
+
+  if (files.length === 0) {
+    document.getElementById('chartSubtitle').textContent =
+      'No data files found in same folder as this visualization script.';
     return;
   }
-  if (typeof RAW === 'undefined') {
-    alert('RAW nicht definiert – ungültige Datendatei: ' + dataFile);
-    return;
+
+  // Build selector
+  sel.style.display = 'inline-block';
+  files.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f;
+    opt.textContent = f.replace(/\.js$/, '');
+    sel.appendChild(opt);
+  });
+
+  async function loadAndRender(file) {
+    try {
+      await loadScript(file);
+    } catch (err) {
+      document.getElementById('chartSubtitle').textContent = 'Fehler: ' + err.message;
+      return;
+    }
+    if (typeof RAW === 'undefined') {
+      document.getElementById('chartSubtitle').textContent = 'Ungültige Datendatei: ' + file;
+      return;
+    }
+    // Reset state between queries
+    document.getElementById('agentSearch').value = '';
+    document.getElementById('colSearch').value = '';
+    document.getElementById('yMin').value = '';
+    document.getElementById('yMax').value = '';
+    initChart(RAW, typeof RELEVANT !== 'undefined' ? RELEVANT : '');
   }
+
+  sel.addEventListener('change', () => loadAndRender(sel.value));
+  loadAndRender(files[0]);
+})();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CHART ENGINE
 // ─────────────────────────────────────────────────────────────────────────────
-(function initChart(raw, relevant) {
+function initChart(raw, relevant) {
 
   // Parse
   const data = raw.trim().split('\n').map((line, i) => {
@@ -282,17 +332,28 @@
   let viewMin   = 1, viewMax = data.length;
   let isDragging = false, dragStartX = 0, dragStartViewMin = 0;
 
-  // ── DOM refs ─────────────────────────────────────────────────────────────
+  // ── DOM refs — clone inputs to clear any stale event listeners from prior load
+  function freshClone(id) {
+    const el = document.getElementById(id);
+    const clone = el.cloneNode(true);
+    el.parentNode.replaceChild(clone, el);
+    return clone;
+  }
   const svgEl      = document.getElementById('chart');
   const tooltipEl  = document.getElementById('tooltip');
   const wrapEl     = document.getElementById('chartWrap');
-  const resetBtn   = document.getElementById('resetBtn');
-  const agentInput = document.getElementById('agentSearch');
-  const colInput   = document.getElementById('colSearch');
+  const resetBtn   = freshClone('resetBtn');
+  const agentInput = freshClone('agentSearch');
+  const colInput   = freshClone('colSearch');
   const colDropdown= document.getElementById('colDropdown');
-  const colClearBtn= document.getElementById('colClear');
-  const yMinEl     = document.getElementById('yMin');
-  const yMaxEl     = document.getElementById('yMax');
+  const colClearBtn= freshClone('colClear');
+  const yMinEl     = freshClone('yMin');
+  const yMaxEl     = freshClone('yMax');
+
+  // Abort controller to clean up wrapEl/window listeners on next initChart call
+  if (window._chartAbort) window._chartAbort.abort();
+  window._chartAbort = new AbortController();
+  const sig = { signal: window._chartAbort.signal };
 
   // ── Layout ───────────────────────────────────────────────────────────────
   const PAD = { top: 24, right: 20, bottom: 44, left: 64 };
@@ -525,7 +586,7 @@
   }
   wrapEl.addEventListener('mousemove', e => {
     if (tooltipEl.style.opacity === '1') positionTooltip(e);
-  });
+  }, sig);
 
   // ── Agent search ─────────────────────────────────────────────────────────
   agentInput.addEventListener('input', e => {
@@ -681,14 +742,14 @@
     viewMin = Math.max(1, viewMax - newRange);
     resetBtn.classList.toggle('visible', viewMin !== 1 || viewMax !== data.length);
     draw();
-  }, { passive: false });
+  }, { passive: false, signal: window._chartAbort.signal });
 
   wrapEl.addEventListener('mousedown', e => {
     if (e.target.classList.contains('dot') || e.target.id === 'hitRect' || e.target.tagName === 'path') {
       isDragging = true; dragStartX = e.clientX; dragStartViewMin = viewMin;
       wrapEl.style.cursor = 'grabbing'; e.preventDefault();
     }
-  });
+  }, sig);
   window.addEventListener('mousemove', e => {
     if (!isDragging) return;
     const { pw } = getSize();
@@ -700,11 +761,11 @@
     if (nMax > data.length) { nMax = data.length; nMin = data.length - range; }
     viewMin = nMin; viewMax = nMax;
     draw();
-  });
+  }, sig);
   window.addEventListener('mouseup', () => {
     isDragging = false; wrapEl.style.cursor = 'default';
     resetBtn.classList.toggle('visible', viewMin !== 1 || viewMax !== data.length);
-  });
+  }, sig);
 
   window.resetZoom = function() {
     viewMin = 1; viewMax = data.length;
@@ -723,10 +784,9 @@
   });
 
   draw();
-  window.addEventListener('resize', draw);
+  window.addEventListener('resize', draw, sig);
 
-})(RAW, RELEVANT);
-})(); // end bootstrap
+} // end initChart
 </script>
 </body>
 </html>

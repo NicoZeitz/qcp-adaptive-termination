@@ -248,15 +248,19 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
 # ---------------------------------------------------------------------------
 
 def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> None:
-    """Write one JS data file per query into chart_output directory for l2_chart.html."""
+    """Write a single self-contained HTML with all query data inlined for file:// opening."""
     eligible = [r for r in results if r.get("status") in ("ok", "miss", "skip") and r.get("file")]
     if not eligible:
         print("  [chart] No queries to chart — skipping.")
         return
 
-    chart_output.mkdir(parents=True, exist_ok=True)
+    html_src = Path(__file__).parents[3] / "l2_chart.html"
+    if not html_src.exists():
+        print(f"  [chart] l2_chart.html not found at {html_src} — skipping.")
+        return
 
-    written = 0
+    # Collect per-query data
+    queries: list[dict] = []
     skipped = 0
     for r in eligible:
         query_dir = log_dir / r["file"]
@@ -269,7 +273,6 @@ def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> No
 
         l2_scores: dict[str, float] = emb.get("l2_scores", {})
         best_columns: dict[str, str] = emb.get("best_columns", {})
-
         if not l2_scores:
             skipped += 1
             continue
@@ -285,21 +288,71 @@ def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> No
         sorted_agents = sorted(agent_rows.items(), key=lambda x: x[1][0])
         relevant_names = r.get("relevant", [])
 
-        relevant_js = ",".join(sorted(relevant_names))
-        raw_lines = "\n".join(
-            f"{name},{l2:.4f},{table},{col}"
-            for name, (l2, table, col) in sorted_agents
-        )
+        queries.append({
+            "label": r["file"].replace("_", " "),
+            "relevant": ",".join(sorted(relevant_names)),
+            "raw": "\n".join(
+                f"{name},{l2:.4f},{table},{col}"
+                for name, (l2, table, col) in sorted_agents
+            ),
+        })
 
-        js = f'const RELEVANT = `{relevant_js}`;\nconst RAW = `{raw_lines}`;\n'
-        out_file = chart_output / f"{r['file']}.js"
-        out_file.write_text(js, encoding="utf-8")
-        written += 1
+    if not queries:
+        print("  [chart] No embedding data found in any query log — skipping.")
+        return
 
-    print(f"  [chart] Written {written} files -> {chart_output}/  (skipped {skipped} without embedding data)")
+    # Build the inline data block that replaces the bootstrap section
+    queries_json = json.dumps(queries, ensure_ascii=False)
+    inline_bootstrap = f"""<script>
+// ── Inlined query data ────────────────────────────────────────────────────────
+const QUERIES = {queries_json};
+
+(function bootstrap() {{
+  const sel = document.getElementById('dataSelect');
+  sel.style.display = 'inline-block';
+  QUERIES.forEach((q, i) => {{
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = q.label;
+    sel.appendChild(opt);
+  }});
+
+  function loadAndRender(idx) {{
+    const q = QUERIES[idx];
+    document.getElementById('agentSearch').value = '';
+    document.getElementById('colSearch').value = '';
+    document.getElementById('yMin').value = '';
+    document.getElementById('yMax').value = '';
+    initChart(q.raw, q.relevant);
+  }}
+
+  sel.addEventListener('change', () => loadAndRender(+sel.value));
+  loadAndRender(0);
+}})();
+"""
+
+    # Read template and splice out the old bootstrap + engine comment, keep initChart
+    html = html_src.read_text(encoding="utf-8")
+
+    # Replace everything between <script> and `function initChart` with our inline bootstrap
+    import re
+    html = re.sub(
+        r'<script>.*?(?=^function initChart)',
+        inline_bootstrap + "\n",
+        html,
+        flags=re.DOTALL | re.MULTILINE,
+    )
+
+    chart_output.mkdir(parents=True, exist_ok=True)
+    out_path = chart_output / "l2_chart.html"
+    out_path.write_text(html, encoding="utf-8")
+    print(f"  [chart] Written {len(queries)} queries -> {out_path}")
+    if skipped:
+        print(f"  [chart] Skipped {skipped} queries without embedding data")
+    print(f"  [chart] Open: file://{out_path}")
 
 
-
+def print_summary(results: list[dict], log_dir: Path) -> None:
     total = len(results)
     ok = sum(1 for r in results if r.get("status") == "ok")
     missed_count = sum(1 for r in results if r.get("status") == "miss")
