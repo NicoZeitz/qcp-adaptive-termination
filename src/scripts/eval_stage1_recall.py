@@ -254,7 +254,7 @@ def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> No
         print("  [chart] No queries to chart — skipping.")
         return
 
-    html_src = Path(__file__).parents[3] / "l2_chart.html"
+    html_src = Path(__file__).parents[3] / "qcp-adaptive-termination" / "l2_chart.html"
     if not html_src.exists():
         print(f"  [chart] l2_chart.html not found at {html_src} — skipping.")
         return
@@ -354,7 +354,6 @@ const QUERIES = {queries_json};
     print(f"  [chart] Open: file://{out_path}")
 
 
-def print_summary(results: list[dict], log_dir: Path) -> None:
 def print_summary(results: list[dict], log_dir: Path) -> None:
     total = len(results)
     ok = sum(1 for r in results if r.get("status") == "ok")
