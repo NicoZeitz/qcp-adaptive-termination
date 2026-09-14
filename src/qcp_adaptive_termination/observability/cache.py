@@ -33,7 +33,7 @@ class Cache:
         try:
             with cache_file.open("r", encoding="utf-8") as f:
                 payload = json.load(f)
-                tracing.indented_logging(f"Cache: HIT ({cache_file})")
+                # tracing.indented_logging(f"Cache: HIT ({cache_file})")
                 return payload.get("value"), True
         except FileNotFoundError, Exception:
             self._throw_on_miss(key)

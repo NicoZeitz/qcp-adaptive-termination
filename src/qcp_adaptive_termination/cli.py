@@ -75,6 +75,7 @@ def register_default_output_hooks() -> None:
         embedding_filtered_agents: list[DataAgent],
         total_agents: int,
         l2_scores: dict[str, float],
+        best_columns: dict[str, str] | None = None,
     ) -> None:
         _write_output_file(
             "stage_1_output_embedding_pre_filter.json",
@@ -83,6 +84,7 @@ def register_default_output_hooks() -> None:
                 "embedding_filtered_agents": [a.name for a in embedding_filtered_agents],
                 "total_agents": total_agents,
                 "l2_scores": l2_scores,
+                **({"best_columns": best_columns} if best_columns is not None else {}),
             },
         )
 

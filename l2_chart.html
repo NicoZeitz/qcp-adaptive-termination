@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L2 Distance per Agent</title>
+<style>
+  :root {
+    --surface: #ffffff;
+    --surface-raised: #f8f8f8;
+    --border: #e2e2e2;
+    --ink-primary: #1a1a1a;
+    --ink-secondary: #555;
+    --ink-muted: #888;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--surface);
+    color: var(--ink-primary);
+    padding: 24px;
+  }
+
+  h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: var(--ink-secondary); margin-bottom: 20px; }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .filter-label {
+    font-size: 12px;
+    color: var(--ink-muted);
+    align-self: center;
+  }
+
+  /* shared input style */
+  .ctrl-input {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--ink-primary);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .ctrl-input:focus  { border-color: #2563eb; }
+  .ctrl-input.match  { border-color: #16a34a; }
+  .ctrl-input.no-match { border-color: #dc2626; }
+  .ctrl-input.invalid  { border-color: #dc2626; }
+  .ctrl-input.col-active { border-color: #9333ea; background: #faf5ff; }
+
+  /* column filter autocomplete */
+  .col-wrap { position: relative; }
+  .col-input { width: 160px; }
+  .col-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 20;
+    min-width: 200px;
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+  }
+  .col-dropdown.open { display: block; }
+  .col-option {
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .col-option:hover, .col-option.focused { background: #f0f4ff; }
+  .col-option .col-count {
+    font-size: 11px;
+    color: var(--ink-muted);
+    flex-shrink: 0;
+  }
+  .col-clear {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    cursor: pointer;
+    color: var(--ink-secondary);
+    display: none;
+  }
+  .col-clear.visible { display: inline-block; }
+
+  /* yrange */
+  .yrange-group { display: flex; align-items: center; gap: 6px; }
+  .yrange-input { width: 76px; }
+  .yrange-sep { font-size: 12px; color: var(--ink-muted); }
+  .icon-btn {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    cursor: pointer;
+    color: var(--ink-secondary);
+  }
+
+  /* zoom reset */
+  .reset-btn { display: none; }
+  .reset-btn.visible { display: inline-block; }
+
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  svg { display: block; }
+
+  .tooltip {
+    position: absolute;
+    background: rgba(15,15,15,0.9);
+    color: #fff;
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 5px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+    max-width: 240px;
+    line-height: 1.5;
+    white-space: nowrap;
+    z-index: 10;
+  }
+  .tooltip strong { font-size: 13px; display: block; margin-bottom: 2px; }
+
+  .col-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #ede9fe;
+    color: #7c3aed;
+    margin-left: 4px;
+    font-weight: 500;
+  }
+
+  .zoom-hint { font-size: 11px; color: var(--ink-muted); margin-top: 8px; }
+
+  .relevant-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-secondary);
+    cursor: pointer;
+    user-select: none;
+  }
+  .relevant-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #dc2626;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>Embedding Similarity — L2 Distance per Agent</h1>
+<p class="subtitle" id="chartSubtitle"></p>
+
+<div class="controls">
+  <span class="filter-label">Agent:</span>
+  <input type="search" id="agentSearch" class="ctrl-input" style="width:130px" placeholder="z.B. A985" autocomplete="off"/>
+
+  <span class="filter-label">Spalte:</span>
+  <div class="col-wrap">
+    <input type="search" id="colSearch" class="ctrl-input col-input" placeholder="Spaltenname…" autocomplete="off"/>
+    <div class="col-dropdown" id="colDropdown"></div>
+  </div>
+  <button class="col-clear icon-btn" id="colClear">✕ Filter</button>
+
+  <span class="filter-label" style="margin-left:4px">Y:</span>
+  <div class="yrange-group">
+    <input type="number" id="yMin" class="ctrl-input yrange-input" placeholder="Min" step="0.001"/>
+    <span class="yrange-sep">–</span>
+    <input type="number" id="yMax" class="ctrl-input yrange-input" placeholder="Max" step="0.001"/>
+    <button class="icon-btn" id="yRangeReset" title="Y-Achse zurücksetzen">↺</button>
+  </div>
+  <button class="icon-btn reset-btn" id="resetBtn" onclick="resetZoom()">Zoom zurücksetzen</button>
+  <label id="relevantLabel" class="relevant-label" style="display:none">
+    <input type="checkbox" id="relevantToggle" checked/>
+    <span class="relevant-dot"></span>Relevant
+  </label>
+</div>
+
+<div class="chart-wrap" id="chartWrap">
+  <svg id="chart"></svg>
+  <div class="tooltip" id="tooltip"></div>
+</div>
+
+<p class="zoom-hint">Scrollen zum Zoomen · Klicken &amp; Ziehen zum Verschieben</p>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART ENGINE  —  data loaded from ?data=<filename>.js
+// Generate data file with:
+//   python3 -m scripts.eval_stage1_recall --log_dir ... --chart_output my_query.js
+// Open as: l2_chart.html?data=my_query.js
+// ─────────────────────────────────────────────────────────────────────────────
+(async function bootstrap() {
+  const dataFile = new URLSearchParams(location.search).get('data') || 'chart_data.js';
+  try {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = dataFile;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error(`Datei nicht gefunden: ${dataFile}`));
+      document.head.appendChild(s);
+    });
+  } catch (err) {
+    document.body.innerHTML = `<p style="padding:24px;color:#dc2626;font-family:sans-serif">
+      <strong>Fehler:</strong> ${err.message}<br><br>
+      Verwendung: <code>l2_chart.html?data=meine_query.js</code><br>
+      Datei erzeugen mit:<br>
+      <code>python3 -m scripts.eval_stage1_recall --log_dir ... --chart_output meine_query.js</code>
+    </p>`;
+    return;
+  }
+  if (typeof RAW === 'undefined') {
+    alert('RAW nicht definiert – ungültige Datendatei: ' + dataFile);
+    return;
+  }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+(function initChart(raw, relevant) {
+
+  // Parse
+  const data = raw.trim().split('\n').map((line, i) => {
+    const [id, l2, tableRaw, col] = line.split(',');
+    return { idx: i + 1, id, l2: parseFloat(l2), table: tableRaw.replace('main.', ''), col };
+  });
+
+  // Subtitle
+  document.getElementById('chartSubtitle').textContent =
+    `${data.length} Agenten, aufsteigend nach L2-Score sortiert. Niedrigere Werte = höhere Ähnlichkeit.`;
+
+  // Column index: col -> count
+  const colCounts = {};
+  data.forEach(d => { colCounts[d.col] = (colCounts[d.col] || 0) + 1; });
+  const allCols = Object.entries(colCounts).sort((a, b) => b[1] - a[1]).map(([c]) => c);
+
+  // Relevant agent set
+  const relevantSet = new Set(
+    relevant ? relevant.split(',').map(s => s.trim()).filter(Boolean) : []
+  );
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let searchId  = '';
+  let showRelevant = relevantSet.size > 0;
+  let searchCol = '';           // exact col name being highlighted
+  let userYMin  = null, userYMax = null;
+  let viewMin   = 1, viewMax = data.length;
+  let isDragging = false, dragStartX = 0, dragStartViewMin = 0;
+
+  // ── DOM refs ─────────────────────────────────────────────────────────────
+  const svgEl      = document.getElementById('chart');
+  const tooltipEl  = document.getElementById('tooltip');
+  const wrapEl     = document.getElementById('chartWrap');
+  const resetBtn   = document.getElementById('resetBtn');
+  const agentInput = document.getElementById('agentSearch');
+  const colInput   = document.getElementById('colSearch');
+  const colDropdown= document.getElementById('colDropdown');
+  const colClearBtn= document.getElementById('colClear');
+  const yMinEl     = document.getElementById('yMin');
+  const yMaxEl     = document.getElementById('yMax');
+
+  // ── Layout ───────────────────────────────────────────────────────────────
+  const PAD = { top: 24, right: 20, bottom: 44, left: 64 };
+
+  function getSize() {
+    const w = wrapEl.clientWidth;
+    const h = Math.max(340, Math.min(520, w * 0.45));
+    return { w, h, pw: w - PAD.left - PAD.right, ph: h - PAD.top - PAD.bottom };
+  }
+
+  function idxToX(idx, pw) {
+    return ((idx - viewMin) / (viewMax - viewMin)) * pw;
+  }
+  function l2ToY(l2, ph, yMin, yMax) {
+    return ph - ((l2 - yMin) / (yMax - yMin)) * ph;
+  }
+
+  // ── Draw ─────────────────────────────────────────────────────────────────
+  function draw() {
+    const { w, h, pw, ph } = getSize();
+    svgEl.setAttribute('width', w);
+    svgEl.setAttribute('height', h);
+    wrapEl.style.height = h + 'px';
+
+    const visible = data.filter(d => d.idx >= viewMin && d.idx <= viewMax);
+    if (!visible.length) { svgEl.innerHTML = ''; return; }
+
+    // Y range — compute nice axis bounds so grid steps are round numbers
+    const l2s = visible.map(d => d.l2);
+    let dataMin = Math.min(...l2s);
+    let dataMax = Math.max(...l2s);
+    if (dataMax - dataMin < 0.001) { dataMin -= 0.005; dataMax += 0.005; }
+
+    function niceStep(rawRange, targetSteps) {
+      const rough = rawRange / targetSteps;
+      const mag   = Math.pow(10, Math.floor(Math.log10(rough)));
+      const norm  = rough / mag;
+      let nice;
+      if      (norm < 1.5) nice = 1;
+      else if (norm < 3)   nice = 2;
+      else if (norm < 7)   nice = 5;
+      else                 nice = 10;
+      return nice * mag;
+    }
+    let yMin, yMax, step;
+    if (userYMin !== null && userYMax !== null) {
+      yMin = userYMin; yMax = userYMax;
+      step = niceStep(yMax - yMin, 5);
+    } else {
+      step = niceStep(dataMax - dataMin, 5);
+      yMin = userYMin !== null ? userYMin : Math.floor(dataMin / step) * step;
+      yMax = userYMax !== null ? userYMax : Math.ceil(dataMax  / step) * step;
+      // ensure at least one step above/below data
+      if (yMin >= dataMin) yMin -= step;
+      if (yMax <= dataMax) yMax += step;
+      yMin = Math.floor(yMin / step) * step;
+      yMax = Math.ceil(yMax  / step) * step;
+    }
+    if (yMax - yMin < step * 0.5) yMax = yMin + step;
+
+    // decimal places: enough to distinguish adjacent ticks
+    const tickDecimals = Math.max(0, -Math.floor(Math.log10(step)) + 1);
+
+    // Grid + Y labels — evenly spaced at `step`
+    let gridLines = '', yLabels = '';
+    // start at the first tick >= yMin
+    const firstTick = Math.ceil(yMin / step) * step;
+    for (let v = firstTick; v <= yMax + step * 0.01; v = Math.round((v + step) * 1e9) / 1e9) {
+      const y = PAD.top + l2ToY(v, ph, yMin, yMax);
+      gridLines += `<line x1="${PAD.left}" y1="${y.toFixed(1)}" x2="${PAD.left+pw}" y2="${y.toFixed(1)}" stroke="#ebebeb" stroke-width="1"/>`;
+      yLabels   += `<text x="${PAD.left-8}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" fill="#888" font-size="11">${v.toFixed(tickDecimals)}</text>`;
+    }
+
+    // X ticks
+    const xTickCount = Math.min(8, Math.floor(pw / 70));
+    let xTicks = '';
+    for (let i = 0; i <= xTickCount; i++) {
+      const idx = Math.round(viewMin + (viewMax - viewMin) * (i / xTickCount));
+      const x   = PAD.left + idxToX(idx, pw);
+      xTicks += `<line x1="${x.toFixed(1)}" y1="${PAD.top+ph}" x2="${x.toFixed(1)}" y2="${PAD.top+ph+5}" stroke="#ccc" stroke-width="1"/>`;
+      xTicks += `<text x="${x.toFixed(1)}" y="${PAD.top+ph+18}" text-anchor="middle" fill="#888" font-size="11">#${idx}</text>`;
+    }
+
+    // Main line
+    const linePts = visible.map((p, i) => {
+      const x = PAD.left + idxToX(p.idx, pw);
+      const y = PAD.top  + l2ToY(p.l2, ph, yMin, yMax);
+      return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    const mainLine = `<path d="${linePts}" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+
+    // Column highlight band: dim everything else, bright matched points
+    let colHighlightLine = '';
+    let colDots = '';
+    if (searchCol) {
+      const dimPts = visible.map((p, i) => {
+        const x = PAD.left + idxToX(p.idx, pw);
+        const y = PAD.top  + l2ToY(p.l2, ph, yMin, yMax);
+        return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+      }).join(' ');
+      // Dim base line
+      colHighlightLine = `<path d="${dimPts}" fill="none" stroke="#2563eb" stroke-width="1.5" opacity="0.08" stroke-linejoin="round" stroke-linecap="round"/>`;
+
+      // Highlighted segments & dots for matched column
+      const matched = visible.filter(d => d.col === searchCol);
+      if (matched.length) {
+        // Draw dots for each match
+        matched.forEach(p => {
+          const x = PAD.left + idxToX(p.idx, pw);
+          const y = PAD.top  + l2ToY(p.l2, ph, yMin, yMax);
+          colDots += `<circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#9333ea" stroke="white" stroke-width="1.5" data-idx="${p.idx}" data-id="${p.id}" data-l2="${p.l2}" data-table="${p.table}" data-col="${p.col}"/>`;
+        });
+      }
+    }
+
+    // Dots when zoomed in (no col filter)
+    const range = viewMax - viewMin;
+    let dots = '';
+    if (!searchCol && range < 100) {
+      visible.forEach(d => {
+        const x = PAD.left + idxToX(d.idx, pw);
+        const y = PAD.top  + l2ToY(d.l2, ph, yMin, yMax);
+        dots += `<circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="#2563eb" stroke="white" stroke-width="1.5" data-idx="${d.idx}" data-id="${d.id}" data-l2="${d.l2}" data-table="${d.table}" data-col="${d.col}"/>`;
+      });
+    }
+
+    // Relevant agent dots (always on top, below agent highlight)
+    let relevantDots = '';
+    if (showRelevant && relevantSet.size > 0) {
+      visible.filter(d => relevantSet.has(d.id)).forEach(d => {
+        const x = PAD.left + idxToX(d.idx, pw);
+        const y = PAD.top  + l2ToY(d.l2, ph, yMin, yMax);
+        relevantDots += `<circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="#dc2626" stroke="white" stroke-width="1.5" data-idx="${d.idx}" data-id="${d.id}" data-l2="${d.l2}" data-table="${d.table}" data-col="${d.col}"/>`;
+        relevantDots += `<text x="${(x+8).toFixed(1)}" y="${(y-6).toFixed(1)}" font-size="11" font-weight="600" fill="#dc2626">${d.id}</text>`;
+      });
+    }
+
+    // Agent highlight
+    let agentHighlight = '';
+    if (searchId) {
+      const target = data.find(d => d.id === searchId);
+      if (target) {
+        if (target.idx < viewMin || target.idx > viewMax) {
+          const r = viewMax - viewMin;
+          viewMin = Math.max(1, target.idx - Math.floor(r / 2));
+          viewMax = Math.min(data.length, viewMin + r);
+          viewMin = Math.max(1, viewMax - r);
+        }
+        const tx = PAD.left + idxToX(target.idx, pw);
+        const ty = PAD.top  + l2ToY(target.l2, ph, yMin, yMax);
+        agentHighlight = `
+          <circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="12" fill="#2563eb" opacity="0.15"/>
+          <circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="5" fill="#2563eb" stroke="white" stroke-width="2"/>
+          <text x="${(tx+13).toFixed(1)}" y="${(ty-6).toFixed(1)}" font-size="12" font-weight="600" fill="#2563eb">${target.id}</text>
+          <text x="${(tx+13).toFixed(1)}" y="${(ty+7).toFixed(1)}" font-size="11" fill="#555">L2=${target.l2.toFixed(4)}</text>
+        `;
+      }
+    }
+
+    // Axes
+    const axes = `
+      <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+ph}" stroke="#ccc" stroke-width="1"/>
+      <line x1="${PAD.left}" y1="${PAD.top+ph}" x2="${PAD.left+pw}" y2="${PAD.top+ph}" stroke="#ccc" stroke-width="1"/>
+    `;
+    const axisLabels = `
+      <text x="${PAD.left+pw/2}" y="${h-4}" text-anchor="middle" fill="#555" font-size="12">Agent-Rang (aufsteigend nach L2)</text>
+      <text transform="rotate(-90)" x="${-(PAD.top+ph/2)}" y="16" text-anchor="middle" fill="#555" font-size="12">L2-Distanz</text>
+    `;
+    const hitRect = `<rect x="${PAD.left}" y="${PAD.top}" width="${pw}" height="${ph}" fill="transparent" id="hitRect"/>`;
+
+    // Compose: if col filter active, replace main line with dimmed version + col dots on top
+    const lineLayer = searchCol ? colHighlightLine : mainLine;
+    svgEl.innerHTML = gridLines + yLabels + xTicks + axes + lineLayer + dots + colDots + relevantDots + agentHighlight + hitRect + axisLabels;
+
+    // Re-attach dot events
+    svgEl.querySelectorAll('.dot').forEach(dot => {
+      dot.addEventListener('mouseenter', e => showTooltip(e, dot.dataset));
+      dot.addEventListener('mouseleave', hideTooltip);
+    });
+    const hr = document.getElementById('hitRect');
+    hr.addEventListener('mousemove', e => hoverLine(e, visible, yMin, yMax, pw, ph));
+    hr.addEventListener('mouseleave', hideTooltip);
+  }
+
+  // ── Tooltip & crosshair ──────────────────────────────────────────────────
+  function hoverLine(e, visible, yMin, yMax, pw, ph) {
+    const rect = svgEl.getBoundingClientRect();
+    const fraction = (e.clientX - rect.left - PAD.left) / pw;
+    const hoverIdx = viewMin + fraction * (viewMax - viewMin);
+    let closest = null, minDist = Infinity;
+    visible.forEach(d => {
+      const dx = Math.abs(d.idx - hoverIdx);
+      if (dx < minDist) { minDist = dx; closest = d; }
+    });
+    if (!closest) return;
+    const x = PAD.left + idxToX(closest.idx, pw);
+    const y = PAD.top  + l2ToY(closest.l2, ph, yMin, yMax);
+    const old = svgEl.querySelector('.crosshair');
+    if (old) old.remove();
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'crosshair');
+    const dotColor = (searchCol && closest.col === searchCol) ? '#9333ea' : '#2563eb';
+    g.innerHTML = `
+      <line x1="${x}" y1="${PAD.top}" x2="${x}" y2="${PAD.top+ph}" stroke="#1a1a1a" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
+      <circle cx="${x}" cy="${y}" r="5" fill="none" stroke="${dotColor}" stroke-width="2"/>
+    `;
+    svgEl.insertBefore(g, svgEl.lastElementChild);
+    showTooltip(e, closest);
+  }
+
+  function showTooltip(e, d) {
+    const colBadge = searchCol && d.col === searchCol
+      ? `<span class="col-badge">${d.col}</span>` : '';
+    tooltipEl.innerHTML = `<strong>${d.id}${colBadge}</strong>L2 = ${parseFloat(d.l2).toFixed(4)}<br>Tabelle: ${d.table}<br>Spalte: ${d.col}`;
+    tooltipEl.style.opacity = '1';
+    positionTooltip(e);
+  }
+  function hideTooltip() {
+    tooltipEl.style.opacity = '0';
+    const old = svgEl.querySelector('.crosshair');
+    if (old) old.remove();
+  }
+  function positionTooltip(e) {
+    const rect = wrapEl.getBoundingClientRect();
+    let x = e.clientX - rect.left + 14;
+    let y = e.clientY - rect.top  - 10;
+    if (x + 220 > wrapEl.clientWidth) x = e.clientX - rect.left - 220;
+    tooltipEl.style.left = x + 'px';
+    tooltipEl.style.top  = y + 'px';
+  }
+  wrapEl.addEventListener('mousemove', e => {
+    if (tooltipEl.style.opacity === '1') positionTooltip(e);
+  });
+
+  // ── Agent search ─────────────────────────────────────────────────────────
+  agentInput.addEventListener('input', e => {
+    searchId = e.target.value.trim().toUpperCase();
+    const found = searchId && data.some(d => d.id === searchId);
+    e.target.className = 'ctrl-input' + (searchId ? (found ? ' match' : ' no-match') : '');
+    draw();
+  });
+
+  // ── Column filter dropdown ───────────────────────────────────────────────
+  let focusedOptIdx = -1;
+
+  function buildDropdown(filter) {
+    const q = filter.toLowerCase();
+    const matches = allCols.filter(c => c.toLowerCase().includes(q));
+    colDropdown.innerHTML = '';
+    focusedOptIdx = -1;
+    if (!matches.length) { colDropdown.classList.remove('open'); return; }
+    matches.forEach((col, i) => {
+      const div = document.createElement('div');
+      div.className = 'col-option';
+      div.dataset.col = col;
+      const nameSpan = document.createElement('span');
+      // bold the matching part
+      if (q) {
+        const idx = col.toLowerCase().indexOf(q);
+        nameSpan.innerHTML = col.slice(0, idx) +
+          `<strong>${col.slice(idx, idx + q.length)}</strong>` +
+          col.slice(idx + q.length);
+      } else {
+        nameSpan.textContent = col;
+      }
+      const countSpan = document.createElement('span');
+      countSpan.className = 'col-count';
+      countSpan.textContent = `${colCounts[col]}×`;
+      div.appendChild(nameSpan);
+      div.appendChild(countSpan);
+      div.addEventListener('mousedown', e => {
+        e.preventDefault();
+        selectCol(col);
+      });
+      colDropdown.appendChild(div);
+    });
+    colDropdown.classList.add('open');
+  }
+
+  function selectCol(col) {
+    searchCol = col;
+    colInput.value = col;
+    colInput.className = 'ctrl-input col-input col-active';
+    colDropdown.classList.remove('open');
+    colClearBtn.classList.add('visible');
+    draw();
+  }
+
+  colInput.addEventListener('input', e => {
+    const q = e.target.value.trim();
+    if (!q) {
+      clearColFilter();
+      return;
+    }
+    // If exact match typed, apply immediately but keep dropdown open for others
+    buildDropdown(q);
+    // Don't auto-select — user picks from list or presses Enter
+    colInput.className = 'ctrl-input col-input';
+    searchCol = '';
+    colClearBtn.classList.remove('visible');
+    draw();
+  });
+
+  colInput.addEventListener('focus', e => {
+    buildDropdown(e.target.value.trim());
+  });
+
+  colInput.addEventListener('blur', () => {
+    // small delay so mousedown on option fires first
+    setTimeout(() => colDropdown.classList.remove('open'), 150);
+  });
+
+  colInput.addEventListener('keydown', e => {
+    const opts = colDropdown.querySelectorAll('.col-option');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusedOptIdx = Math.min(focusedOptIdx + 1, opts.length - 1);
+      opts.forEach((o, i) => o.classList.toggle('focused', i === focusedOptIdx));
+      if (opts[focusedOptIdx]) opts[focusedOptIdx].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusedOptIdx = Math.max(focusedOptIdx - 1, 0);
+      opts.forEach((o, i) => o.classList.toggle('focused', i === focusedOptIdx));
+      if (opts[focusedOptIdx]) opts[focusedOptIdx].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (focusedOptIdx >= 0 && opts[focusedOptIdx]) {
+        selectCol(opts[focusedOptIdx].dataset.col);
+      } else if (opts.length === 1) {
+        selectCol(opts[0].dataset.col);
+      }
+    } else if (e.key === 'Escape') {
+      clearColFilter();
+    }
+  });
+
+  function clearColFilter() {
+    searchCol = '';
+    colInput.value = '';
+    colInput.className = 'ctrl-input col-input';
+    colDropdown.classList.remove('open');
+    colClearBtn.classList.remove('visible');
+    draw();
+  }
+  colClearBtn.addEventListener('click', clearColFilter);
+
+  // ── Y-axis range ─────────────────────────────────────────────────────────
+  function parseYInput(el) {
+    const v = parseFloat(el.value);
+    if (el.value === '' || isNaN(v)) { el.classList.remove('invalid'); return null; }
+    el.classList.remove('invalid');
+    return v;
+  }
+  function applyYRange() {
+    const mn = parseYInput(yMinEl);
+    const mx = parseYInput(yMaxEl);
+    if (mn !== null && mx !== null && mn >= mx) {
+      yMinEl.classList.add('invalid'); yMaxEl.classList.add('invalid'); return;
+    }
+    yMinEl.classList.remove('invalid'); yMaxEl.classList.remove('invalid');
+    userYMin = mn; userYMax = mx;
+    draw();
+  }
+  yMinEl.addEventListener('change', applyYRange);
+  yMaxEl.addEventListener('change', applyYRange);
+  yMinEl.addEventListener('keydown', e => { if (e.key === 'Enter') applyYRange(); });
+  yMaxEl.addEventListener('keydown', e => { if (e.key === 'Enter') applyYRange(); });
+  document.getElementById('yRangeReset').addEventListener('click', () => {
+    userYMin = null; userYMax = null;
+    yMinEl.value = ''; yMaxEl.value = '';
+    yMinEl.classList.remove('invalid'); yMaxEl.classList.remove('invalid');
+    draw();
+  });
+
+  // ── Zoom & pan ───────────────────────────────────────────────────────────
+  wrapEl.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect = svgEl.getBoundingClientRect();
+    const { pw } = getSize();
+    const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left - PAD.left) / pw));
+    const range    = viewMax - viewMin;
+    const factor   = e.deltaY > 0 ? 1.15 : 0.87;
+    const newRange = Math.max(5, Math.min(data.length, Math.round(range * factor)));
+    const center   = viewMin + fraction * range;
+    viewMin = Math.max(1, Math.round(center - fraction * newRange));
+    viewMax = Math.min(data.length, viewMin + newRange);
+    viewMin = Math.max(1, viewMax - newRange);
+    resetBtn.classList.toggle('visible', viewMin !== 1 || viewMax !== data.length);
+    draw();
+  }, { passive: false });
+
+  wrapEl.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('dot') || e.target.id === 'hitRect' || e.target.tagName === 'path') {
+      isDragging = true; dragStartX = e.clientX; dragStartViewMin = viewMin;
+      wrapEl.style.cursor = 'grabbing'; e.preventDefault();
+    }
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    const { pw } = getSize();
+    const range = viewMax - viewMin;
+    const shift = Math.round(-(e.clientX - dragStartX) / pw * range);
+    let nMin = dragStartViewMin + shift;
+    let nMax = nMin + range;
+    if (nMin < 1) { nMin = 1; nMax = range + 1; }
+    if (nMax > data.length) { nMax = data.length; nMin = data.length - range; }
+    viewMin = nMin; viewMax = nMax;
+    draw();
+  });
+  window.addEventListener('mouseup', () => {
+    isDragging = false; wrapEl.style.cursor = 'default';
+    resetBtn.classList.toggle('visible', viewMin !== 1 || viewMax !== data.length);
+  });
+
+  window.resetZoom = function() {
+    viewMin = 1; viewMax = data.length;
+    resetBtn.classList.remove('visible');
+    draw();
+  };
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  // Show relevant checkbox only if there are relevant agents in this dataset
+  if (relevantSet.size > 0 && data.some(d => relevantSet.has(d.id))) {
+    document.getElementById('relevantLabel').style.display = 'flex';
+  }
+  document.getElementById('relevantToggle').addEventListener('change', e => {
+    showRelevant = e.target.checked;
+    draw();
+  });
+
+  draw();
+  window.addEventListener('resize', draw);
+
+})(RAW, RELEVANT);
+})(); // end bootstrap
+</script>
+</body>
+</html>

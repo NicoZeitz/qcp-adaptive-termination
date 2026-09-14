@@ -125,6 +125,7 @@ async def _filter_embeddings_internal(
         embedding_filtered_agents=filtered,
         total_agents=len(data_agents),
         l2_scores={name: round(float(dist), 4) for name, (dist, _, _) in agent_best_dist.items()},
+        best_columns={name: f"{tbl}.{col}" for name, (_, tbl, col) in agent_best_dist.items()},
     )
 
     return filtered

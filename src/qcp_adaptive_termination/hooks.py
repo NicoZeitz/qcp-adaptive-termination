@@ -393,6 +393,7 @@ class EMBEDDING_PRE_FILTER_END_HANDLER(Protocol):
         embedding_filtered_agents: list[DataAgent],
         total_agents: int,
         l2_scores: dict[str, float],
+        best_columns: dict[str, str] | None = None,
     ) -> None: ...
 
 

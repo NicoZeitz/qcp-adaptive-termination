@@ -128,7 +128,7 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
             natural_language_description = result.database_description
             schema_engine.mschema.database_comment = natural_language_description
     else:
-        tracing.indented_logging(f"{data_agent.name} Skipping LLM call for database description, all comments present")
+        # tracing.indented_logging(f"{data_agent.name} Skipping LLM call for database description, all comments present")
 
     natural_language_description = schema_engine.mschema.database_comment
 

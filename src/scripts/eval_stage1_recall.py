@@ -247,7 +247,58 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
 # Summary
 # ---------------------------------------------------------------------------
 
-def print_summary(results: list[dict], log_dir: Path) -> None:
+def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> None:
+    """Write a JS snippet with RELEVANT and RAW constants for l2_chart.html."""
+    scored = [r for r in results if r.get("status") in ("ok", "miss")]
+    if not scored:
+        print("  [chart] No scored queries — skipping chart output.")
+        return
+
+    # Collect all agents across all queries, keyed by agent name.
+    # Use the last-seen table/col for each agent (consistent within a run).
+    agent_rows: dict[str, tuple[float, str, str]] = {}  # name -> (l2, table, col)
+    relevant_names: set[str] = set()
+
+    for r in scored:
+        relevant_names.update(r.get("relevant", []))
+
+        # Per-query embedding filter data is stored in the result only as summary;
+        # we need to re-read the raw JSON to get best_columns.
+        query_dir = log_dir / r["file"]
+        emb_json_paths = sorted(query_dir.glob("*/stage_1_output_embedding_pre_filter.json"))
+        if not emb_json_paths:
+            continue
+        with open(emb_json_paths[-1]) as f:
+            emb = json.load(f)
+
+        l2_scores: dict[str, float] = emb.get("l2_scores", {})
+        best_columns: dict[str, str] = emb.get("best_columns", {})
+
+        for name, l2 in l2_scores.items():
+            table_col = best_columns.get(name, "unknown.unknown")
+            parts = table_col.split(".", 1)
+            table = parts[0] if len(parts) == 2 else "unknown"
+            col   = parts[1] if len(parts) == 2 else table_col
+            if name not in agent_rows or l2 < agent_rows[name][0]:
+                agent_rows[name] = (l2, f"main.{table}", col)
+
+    if not agent_rows:
+        print("  [chart] No l2_scores found in any embedding_pre_filter JSON — skipping.")
+        return
+
+    sorted_agents = sorted(agent_rows.items(), key=lambda x: x[1][0])
+
+    relevant_js = ",".join(sorted(relevant_names))
+    raw_lines = "\n".join(
+        f"{name},{l2:.4f},{table},{col}"
+        for name, (l2, table, col) in sorted_agents
+    )
+
+    js = f'const RELEVANT = `{relevant_js}`;\nconst RAW = `{raw_lines}`;\n'
+    chart_output.write_text(js, encoding="utf-8")
+    print(f"  [chart] Written -> {chart_output}  ({len(sorted_agents)} agents, {len(relevant_names)} relevant)")
+
+
     total = len(results)
     ok = sum(1 for r in results if r.get("status") == "ok")
     missed_count = sum(1 for r in results if r.get("status") == "miss")
@@ -395,6 +446,7 @@ def main() -> None:
     parser.add_argument("--log_dir", required=True, help="Base log dir, e.g. .logs/<dataset>/<run_name>")
     parser.add_argument("--input_dir", default=None, help="Input dir with original JSON files (optional)")
     parser.add_argument("--output_dir", default=None, help="Directory to save a copy of the printed output as eval_stage1_recall.log")
+    parser.add_argument("--chart_output", default=None, help="Path to write a JS snippet (RELEVANT + RAW consts) for l2_chart.html")
     args = parser.parse_args()
 
     log_dir = Path(args.log_dir)
@@ -429,6 +481,8 @@ def main() -> None:
 
         results = [process_query(d, input_dir) for d in query_dirs]
         print_summary(results, log_dir)
+        if args.chart_output:
+            write_chart_js(results, log_dir, Path(args.chart_output))
     finally:
         if log_file is not None:
             sys.stdout = sys.__stdout__
