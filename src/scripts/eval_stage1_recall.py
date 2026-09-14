@@ -353,6 +353,7 @@ const QUERIES = {queries_json};
 
 
 def print_summary(results: list[dict], log_dir: Path) -> None:
+def print_summary(results: list[dict], log_dir: Path) -> None:
     total = len(results)
     ok = sum(1 for r in results if r.get("status") == "ok")
     missed_count = sum(1 for r in results if r.get("status") == "miss")
