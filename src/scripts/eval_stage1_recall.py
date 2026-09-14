@@ -302,7 +302,7 @@ def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> No
         return
 
     # Build the inline data block that replaces the bootstrap section
-    queries_json = json.dumps(queries, ensure_ascii=False)
+    queries_json = json.dumps(queries, ensure_ascii=False).replace("</script>", "<\\/script>")
     inline_bootstrap = f"""<script>
 // ── Inlined query data ────────────────────────────────────────────────────────
 const QUERIES = {queries_json};
@@ -334,11 +334,13 @@ const QUERIES = {queries_json};
     # Read template and splice out the old bootstrap + engine comment, keep initChart
     html = html_src.read_text(encoding="utf-8")
 
-    # Replace everything between <script> and `function initChart` with our inline bootstrap
+    # Replace everything between <script> and `function initChart` with our inline bootstrap.
+    # Use a callable replacement to prevent re.sub from interpreting \n in the replacement string.
     import re
+    replacement = inline_bootstrap + "\n"
     html = re.sub(
         r'<script>.*?(?=^function initChart)',
-        inline_bootstrap + "\n",
+        lambda _: replacement,
         html,
         flags=re.DOTALL | re.MULTILINE,
     )
