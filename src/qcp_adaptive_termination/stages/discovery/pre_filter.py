@@ -53,21 +53,21 @@ async def _filter_embeddings_internal(
     registry_type: AgentRegistryType,
 ) -> list[DataAgent]:
     # --- Stage 1: cluster-based pre-filter ---
-    cluster_index = await get_or_build_cluster_index(data_agents, registry_type)
+    # cluster_index = await get_or_build_cluster_index(data_agents, registry_type)
     [query_embedding] = await embedding.create([query])
-    agents_before = data_agents
-    data_agents, selected_clusters = filter_agents_by_cluster(query_embedding, cluster_index, data_agents, find_l2_clusters)
-    logging.info("Cluster pre-filter: %d / %d agents remaining", len(data_agents), len(agents_before))
+    # agents_before = data_agents
+    # data_agents, selected_clusters = filter_agents_by_cluster(query_embedding, cluster_index, data_agents, find_l2_clusters)
+    # logging.info("Cluster pre-filter: %d / %d agents remaining", len(data_agents), len(agents_before))
 
     # render per-query visualization into the run output dir
-    output_dir = get_output_dir()
-    if output_dir is not None:
-        query_slug = query[:60].replace(" ", "_").replace("/", "-")
-        viz_path = output_dir / f"cluster_filter_{query_slug}.png"
-        try:
-            render_query_visualization(query, query_embedding, cluster_index, selected_clusters, viz_path)
-        except Exception as exc:
-            logging.warning("ClusterIndex: visualization failed: %s", exc)
+    # output_dir = get_output_dir()
+    # if output_dir is not None:
+    #     query_slug = query[:60].replace(" ", "_").replace("/", "-")
+    #     viz_path = output_dir / f"cluster_filter_{query_slug}.png"
+    #     try:
+    #         render_query_visualization(query, query_embedding, cluster_index, selected_clusters, viz_path)
+    #     except Exception as exc:
+    #         logging.warning("ClusterIndex: visualization failed: %s", exc)
 
     # --- Stage 2: per-column similarity filter with largest-gap cutoff ---
     agent_data = await agent_registry.load(data_agents)
@@ -123,7 +123,7 @@ async def _filter_embeddings_internal(
         HookEvent.EMBEDDING_PRE_FILTER_END,
         query=query,
         embedding_filtered_agents=filtered,
-        total_agents=len(agents_before),
+        total_agents=len(data_agents),
         l2_scores={name: round(float(dist), 4) for name, (dist, _, _) in agent_best_dist.items()},
     )
 
