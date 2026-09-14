@@ -18,7 +18,8 @@ For each agent, decide whether it plays any role in answering the query. An agen
 - Do not reject an agent because a specific value does not appear in the example values. Examples are a small sample only and do not represent all data in the column. If the column type matches what the query needs, the agent is relevant regardless of what the examples show.
 - Do not reject an agent because another agent with the same schema was already marked relevant. All agents sharing a relevant schema must be marked relevant.
 
-Only mark an agent irrelevant if none of its columns appear in any output, filter, or join role.
+Only mark an agent irrelevant if none of its columns appear in any output, filter or join role.
+Use your world knowledge to fill in gaps, needed to answer the query, that are probably not provided (when looking at the agents database schema), when using the agents data.
 
 【Agent Registry】
 {{agent_registry}}
