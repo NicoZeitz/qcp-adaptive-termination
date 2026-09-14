@@ -69,35 +69,40 @@ async def _filter_embeddings_internal(
         except Exception as exc:
             logging.warning("ClusterIndex: visualization failed: %s", exc)
 
-    # --- Stage 2: per-table similarity filter with largest-gap cutoff ---
-    table_vectors: dict[str, dict[str, list[float]]] = await agent_registry.embedding_vectors_for_all_tables(
-        data_agents, registry_type
-    )
+    # --- Stage 2: per-column similarity filter with largest-gap cutoff ---
+    agent_data = await agent_registry.load(data_agents)
 
-    index_data: list[tuple[tuple[str, str], list[float]]] = [
-        ((agent.name, table_name), vector)
-        for agent in data_agents
-        for table_name, vector in table_vectors.get(agent.name, {}).items()
-    ]
+    col_entries: list[tuple[str, str, str]] = []
+    col_descriptions: list[str] = []
+    for agent in data_agents:
+        data = agent_data[agent.name]
+        for table_name, table_desc in data.individual_descriptions.items():
+            for col_name, col_desc in table_desc.columns.items():
+                col_entries.append((agent.name, table_name, col_name))
+                col_descriptions.append(col_desc.technical_description)
 
-    if not index_data:
-        logging.warning("No table embeddings found, returning all agents unfiltered")
+    if not col_entries:
+        logging.warning("No column embeddings found, returning all agents unfiltered")
         return data_agents
 
-    vector_index: VectorIndex[tuple[str, str]] = VectorIndex.build(index_data)
+    col_embeddings = await embedding.create(col_descriptions)
 
-    agent_best_dist: dict[str, tuple[float, str]] = {}
-    for (agent_name, table_name), dist in vector_index.search_all(query_embedding):
+    vector_index: VectorIndex[tuple[str, str, str]] = VectorIndex.build(
+        list(zip(col_entries, col_embeddings))
+    )
+
+    agent_best_dist: dict[str, tuple[float, str, str]] = {}
+    for (agent_name, table_name, col_name), dist in vector_index.search_all(query_embedding):
         if agent_name not in agent_best_dist or dist < agent_best_dist[agent_name][0]:
-            agent_best_dist[agent_name] = (dist, table_name)
+            agent_best_dist[agent_name] = (dist, table_name, col_name)
 
     sorted_agents = sorted(agent_best_dist.items(), key=lambda x: x[1][0])
 
     logging.info("Embedding similarity per agent (L2 distance, ascending):")
-    for agent_name, (dist, table_name) in sorted_agents:
-        logging.info("  %s: L2=%.4f (table: %s)", agent_name, dist, table_name)
+    for agent_name, (dist, table_name, col_name) in sorted_agents:
+        logging.info("  %s: L2=%.4f (table: %s, col: %s)", agent_name, dist, table_name, col_name)
 
-    l2_scores = [dist for _, (dist, _) in sorted_agents]
+    l2_scores = [dist for _, (dist, _, _) in sorted_agents]
     cutoff_idx = find_l2_clusters(l2_scores, min_cluster_size=1)
     sorted_agents = sorted_agents[:cutoff_idx]
 
@@ -109,8 +114,8 @@ async def _filter_embeddings_internal(
     tracing.append_to_span_output(
         {
             "filtered_agents": [a.name for a in filtered],
-            "l2_scores": {name: round(float(dist), 4) for name, (dist, _) in agent_best_dist.items()},
-            "best_tables": {name: table for name, (_, table) in agent_best_dist.items()},
+            "l2_scores": {name: round(float(dist), 4) for name, (dist, _, _) in agent_best_dist.items()},
+            "best_columns": {name: f"{tbl}.{col}" for name, (_, tbl, col) in agent_best_dist.items()},
         }
     )
 
@@ -119,7 +124,7 @@ async def _filter_embeddings_internal(
         query=query,
         embedding_filtered_agents=filtered,
         total_agents=len(agents_before),
-        l2_scores={name: round(float(dist), 4) for name, (dist, _) in agent_best_dist.items()},
+        l2_scores={name: round(float(dist), 4) for name, (dist, _, _) in agent_best_dist.items()},
     )
 
     return filtered

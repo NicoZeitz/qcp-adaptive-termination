@@ -27,7 +27,7 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/input_small"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="eval_stage1_recall_llm_filter_focus_$(date +%Y%m%d_%H%M%S)"
+RUN_NAME="eval_stage1_recall_column_embeddings_$(date +%Y%m%d_%H%M%S)"
 
 # TODO: Set to true to run files in parallel, false for sequential execution
 PARALLEL=true
