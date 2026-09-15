@@ -1,6 +1,7 @@
 """Embedding-based pre-filter for data agent selection."""
 
 import logging
+import resource
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
@@ -86,6 +87,9 @@ async def _filter_embeddings_internal(
         return data_agents
 
     col_embeddings = await embedding.create(col_descriptions)
+
+    peak_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    logging.info("Peak RSS after column embeddings (%d columns): %.1f MB", len(col_descriptions), peak_mb)
 
     vector_index: VectorIndex[tuple[str, str, str]] = VectorIndex.build(
         list(zip(col_entries, col_embeddings))

@@ -111,54 +111,55 @@ FILES=(
 
 ############################################################ RUN EVERYTHING ############################################################
 
-# echo "================== Running '${RUN_NAME}' with dataset '${DATASET_NAME}'"
-# PIDS=()
-# for FILE in "${FILES[@]}"; do
+echo "================== Running '${RUN_NAME}' with dataset '${DATASET_NAME}'"
+COMPLETED=0
+TOTAL="${#FILES[@]}"
 
-#     INPUT_FILE="${INPUT_DIR}/${FILE}"
-#     QUERY=$(jq -r '.value.query' "${INPUT_FILE}")
-#     QUERY_SLUG=$(basename "${INPUT_FILE}" .json)
+for FILE in "${FILES[@]}"; do
 
-#     # take first 2 letter from $USER and uppercase them
-#     USR=$(echo "${USER:0:2}" | tr '[:lower:]' '[:upper:]')
-#     LOG_DIR="${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/${QUERY_SLUG}"
-#     NAME="[$USR] ${RUN_NAME} (${DATASET_NAME}): ${QUERY}"
+    INPUT_FILE="${INPUT_DIR}/${FILE}"
+    QUERY=$(jq -r '.value.query' "${INPUT_FILE}")
+    QUERY_SLUG=$(basename "${INPUT_FILE}" .json)
 
-#     echo "  ================== Running file '${FILE}'"
-#     mkdir -p "${LOG_DIR}"
+    USR=$(echo "${USER:0:2}" | tr '[:lower:]' '[:upper:]')
+    LOG_DIR="${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/${QUERY_SLUG}"
+    NAME="[$USR] ${RUN_NAME} (${DATASET_NAME}): ${QUERY}"
 
-#     if [[ "${TEST}" == "true" ]]; then
-#         echo "      [TEST] Would run: python3 -m scripts.main --name \"${NAME}\" --input \"${INPUT_FILE}\" --output_dir \"${LOG_DIR}\" --cache_dir \"${CACHE_DIR}\" --data_dir \"${DATA_DIR}\" --start-stage 1 --end-stage 1"
-#         continue
-#     fi
+    echo "  ================== Running file '${FILE}'"
+    mkdir -p "${LOG_DIR}"
 
-#     python3 -m scripts.main \
-#       --name "${NAME}" \
-#       --input "${INPUT_FILE}" \
-#       --output_dir "${LOG_DIR}" \
-#       --cache_dir "${CACHE_DIR}" \
-#       --data_dir "${DATA_DIR}" \
-#       --config "${PROJECT_DIR}/config.yaml" \
-#       --start-stage 1 --end-stage 1 \
-#       > >(tee "${LOG_DIR}/stdout.log") \
-#       2> >(tee "${LOG_DIR}/stderr.log" >&2) &
-#     PIDS+=($!)
+    if [[ "${TEST}" == "true" ]]; then
+        echo "      [TEST] Would run: python3 -m scripts.main --name \"${NAME}\" --input \"${INPUT_FILE}\" --output_dir \"${LOG_DIR}\" --cache_dir \"${CACHE_DIR}\" --data_dir \"${DATA_DIR}\" --start-stage 1 --end-stage 1"
+    else
+        python3 -m scripts.main \
+          --name "${NAME}" \
+          --input "${INPUT_FILE}" \
+          --output_dir "${LOG_DIR}" \
+          --cache_dir "${CACHE_DIR}" \
+          --data_dir "${DATA_DIR}" \
+          --config "${PROJECT_DIR}/config.yaml" \
+          --start-stage 1 --end-stage 1 \
+          > >(tee "${LOG_DIR}/stdout.log") \
+          2> >(tee "${LOG_DIR}/stderr.log" >&2)
+    fi
 
-#     if [[ "${PARALLEL}" != "true" ]]; then
-#         wait "${PIDS[-1]}"
-#     fi
-# done
+    COMPLETED=$((COMPLETED + 1))
 
-# if [[ "${PARALLEL}" == "true" ]]; then
-#     wait "${PIDS[@]}"
-# fi
+    echo "  ================== RAM usage after query ${COMPLETED}/${TOTAL}"
+    free -h
 
-############################################################ EVALUATE ############################################################
+    ############################################################ EVALUATE ############################################################
 
-if [[ "${TEST}" != "true" ]]; then
-    echo "================== Computing precision / recall / F1"
-    python3 -m scripts.eval_stage1_recall \
-      --log_dir "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}" \
-      --input_dir "${INPUT_DIR}" \
-      --chart_output "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/chart_data"
-fi
+    if [[ "${TEST}" != "true" ]]; then
+        echo "  ================== Computing precision / recall / F1 (${COMPLETED}/${TOTAL})"
+        python3 -m scripts.eval_stage1_recall \
+          --log_dir "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}" \
+          --input_dir "${INPUT_DIR}" \
+          --chart_output "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/chart_data"
+    fi
+
+    echo "  ================== Query done: ${COMPLETED}/${TOTAL} — ${QUERY_SLUG}"
+
+done
+
+echo "================== All ${TOTAL} queries completed"
