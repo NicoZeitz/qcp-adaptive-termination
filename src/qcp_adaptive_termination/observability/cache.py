@@ -18,14 +18,15 @@ from typing import Any, cast
 from pydantic import BaseModel, JsonValue
 
 import qcp_adaptive_termination.observability.tracing as tracing
-from qcp_adaptive_termination.embedding.numpy_cache import NumpyEmbeddingCache
 from qcp_adaptive_termination.models import CacheMode
 
-_numpy_cache_instances: dict[Path, NumpyEmbeddingCache] = {}
+_numpy_cache_instances: dict[Path, Any] = {}
 
 
-def _get_numpy_cache(cache_dir: Path) -> NumpyEmbeddingCache:
+def _get_numpy_cache(cache_dir: Path) -> Any:
     if cache_dir not in _numpy_cache_instances:
+        from qcp_adaptive_termination.embedding.numpy_cache import NumpyEmbeddingCache  # noqa: PLC0415
+
         _numpy_cache_instances[cache_dir] = NumpyEmbeddingCache(cache_dir)
     return _numpy_cache_instances[cache_dir]
 
