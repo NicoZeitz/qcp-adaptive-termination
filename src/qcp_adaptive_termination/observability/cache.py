@@ -275,8 +275,19 @@ async def _get_or_compute_batch_numpy[T, R](
     cache_instance: "Cache",
 ) -> list[R]:
     """Fast path for embedding vectors: single-file numpy cache, O(1) lookup per item."""
+    from qcp_adaptive_termination.observability.context import get_config  # noqa: PLC0415
+
     numpy_cache = _get_numpy_cache(cache_instance.folder)
     skip_reads = cache_instance.mode in (CacheMode.WRITE_ONLY,)
+
+    # Known embedding dimensions to check on lookup (current model first).
+    # text-embedding-3-large=3072, text-embedding-3-small=1536, ada-002=1536
+    try:
+        _cfg_model = get_config().embedding_model
+        _primary_dim = 3072 if "large" in _cfg_model else 1536
+    except Exception:
+        _primary_dim = 3072
+    _known_dims = [_primary_dim, 1536, 3072]
 
     def _hash(item: T) -> str:
         return hashlib.sha256(
@@ -293,7 +304,7 @@ async def _get_or_compute_batch_numpy[T, R](
     miss_items: list[T] = []
 
     for i, item in enumerate(items):
-        vector = None if skip_reads else numpy_cache.get(_hash(item))
+        vector = None if skip_reads else numpy_cache.get_any_dim(_hash(item), _known_dims)
         if vector is not None:
             results[i] = cast(R, vector)
         else:
