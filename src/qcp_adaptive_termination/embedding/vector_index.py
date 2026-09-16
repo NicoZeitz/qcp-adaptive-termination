@@ -4,6 +4,19 @@ import numpy as np
 from faiss import Index, IndexFlatL2
 
 
+def _maybe_to_gpu(index: Index) -> Index:
+    # Upgrade to GPU index when faiss-gpu is installed and a CUDA device is available.
+    # Falls back silently to the CPU index otherwise.
+    # NOTE: if the index is ever serialized, call faiss.index_gpu_to_cpu first.
+    try:
+        import faiss as _faiss  # noqa: PLC0415
+
+        res = _faiss.StandardGpuResources()
+        return _faiss.index_cpu_to_gpu(res, 0, index)
+    except Exception:
+        return index
+
+
 @dataclass(slots=True)
 class VectorIndex[T]:
     index: Index
@@ -16,12 +29,12 @@ class VectorIndex[T]:
 
         dimension = len(data[0][1])
         index = IndexFlatL2(dimension)
-        mapping: dict[int, T] = {}
 
-        for i, (item, vector) in enumerate(data):
-            index.add(np.array([vector], dtype="float32"))
-            mapping[i] = item
+        items, vectors = zip(*data, strict=True)
+        index.add(np.array(vectors, dtype="float32"))
+        mapping: dict[int, T] = dict(enumerate(items))
 
+        index = _maybe_to_gpu(index)
         return cls(index=index, mapping=mapping)
 
     def search_top_k(self, query: list[float], k: int) -> list[tuple[T, float]]:

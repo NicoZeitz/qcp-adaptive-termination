@@ -36,6 +36,9 @@ dependencies = [
 [project.scripts]
 qcp-adaptive-termination = "qcp_adaptive_termination.cli:main"
 
+[project.optional-dependencies]
+gpu = ["faiss-gpu>=1.15.0"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

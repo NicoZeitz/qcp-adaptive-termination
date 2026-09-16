@@ -1,5 +1,6 @@
 """Embedding-based pre-filter for data agent selection."""
 
+import asyncio
 import logging
 import resource
 
@@ -55,7 +56,6 @@ async def _filter_embeddings_internal(
 ) -> list[DataAgent]:
     # --- Stage 1: cluster-based pre-filter ---
     # cluster_index = await get_or_build_cluster_index(data_agents, registry_type)
-    [query_embedding] = await embedding.create([query])
     # agents_before = data_agents
     # data_agents, selected_clusters = filter_agents_by_cluster(query_embedding, cluster_index, data_agents, find_l2_clusters)
     # logging.info("Cluster pre-filter: %d / %d agents remaining", len(data_agents), len(agents_before))
@@ -70,9 +70,13 @@ async def _filter_embeddings_internal(
     #     except Exception as exc:
     #         logging.warning("ClusterIndex: visualization failed: %s", exc)
 
-    # --- Stage 2: per-column similarity filter with largest-gap cutoff ---
-    agent_data = await agent_registry.load(data_agents)
+    # Fire query embedding and registry load concurrently — they are independent.
+    (query_embedding,), agent_data = await asyncio.gather(
+        embedding.create([query]),
+        agent_registry.load(data_agents),
+    )
 
+    # --- Stage 2: per-column similarity filter with largest-gap cutoff ---
     col_entries: list[tuple[str, str, str]] = []
     col_descriptions: list[str] = []
     for agent in data_agents:

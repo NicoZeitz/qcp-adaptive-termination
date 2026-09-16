@@ -2,6 +2,7 @@
 Cache: storage, lookup, setup, and the `@cached` decorator.
 """
 
+import asyncio
 import hashlib
 import inspect
 import json
@@ -215,19 +216,29 @@ async def get_or_compute_batch[T, R](
         return await batch_fn(items)
 
     deserializable = deserializable_classes or []
-    results: list[R | None] = []
-    miss_indices: list[int] = []
-    miss_items: list[T] = []
 
-    for i, item in enumerate(items):
+    def _read_one(i: int, item: T) -> tuple[int, Any | None, bool]:
         key = _serialize_value({argument_name: item})
         cached_value, found = cache_instance.get(key=key, name_prefix=name_prefix)
         if found:
-            results.append(_deserialize_value(cached_value, deserializable))
+            return i, _deserialize_value(cached_value, deserializable), True
+        return i, None, False
+
+    # Read all cached entries in parallel via the thread pool to avoid serialised I/O.
+    read_results: list[tuple[int, Any | None, bool]] = await asyncio.gather(
+        *[asyncio.to_thread(_read_one, i, item) for i, item in enumerate(items)]
+    )
+
+    results: list[R | None] = [None] * len(items)
+    miss_indices: list[int] = []
+    miss_items: list[T] = []
+
+    for i, value, found in read_results:
+        if found:
+            results[i] = value
         else:
-            results.append(None)
             miss_indices.append(i)
-            miss_items.append(item)
+            miss_items.append(items[i])
 
     if miss_items:
         miss_results = await batch_fn(miss_items)
