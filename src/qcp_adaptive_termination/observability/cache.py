@@ -18,7 +18,16 @@ from typing import Any, cast
 from pydantic import BaseModel, JsonValue
 
 import qcp_adaptive_termination.observability.tracing as tracing
+from qcp_adaptive_termination.embedding.numpy_cache import NumpyEmbeddingCache
 from qcp_adaptive_termination.models import CacheMode
+
+_numpy_cache_instances: dict[Path, NumpyEmbeddingCache] = {}
+
+
+def _get_numpy_cache(cache_dir: Path) -> NumpyEmbeddingCache:
+    if cache_dir not in _numpy_cache_instances:
+        _numpy_cache_instances[cache_dir] = NumpyEmbeddingCache(cache_dir)
+    return _numpy_cache_instances[cache_dir]
 
 
 @dataclass(slots=True)
@@ -215,6 +224,13 @@ async def get_or_compute_batch[T, R](
     if cache_instance is None:
         return await batch_fn(items)
 
+    # Embeddings use the numpy single-file cache: one dict lookup per item,
+    # no per-file JSON I/O. Everything else goes through the JSON file cache.
+    if name_prefix == "Embedding" and cache_instance.mode != CacheMode.DISABLED:
+        return await _get_or_compute_batch_numpy(
+            items, batch_fn, argument_name=argument_name, cache_instance=cache_instance
+        )
+
     deserializable = deserializable_classes or []
 
     def _read_one(i: int, item: T) -> tuple[int, Any | None, bool]:
@@ -248,3 +264,50 @@ async def get_or_compute_batch[T, R](
             results[idx] = result
 
     return cast(list[R], results)
+
+
+async def _get_or_compute_batch_numpy[T, R](
+    items: list[T],
+    batch_fn: Callable[[list[T]], Awaitable[list[R]]],
+    *,
+    argument_name: str,
+    cache_instance: "Cache",
+) -> list[R]:
+    """Fast path for embedding vectors: single-file numpy cache, O(1) lookup per item."""
+    numpy_cache = _get_numpy_cache(cache_instance.folder)
+    skip_reads = cache_instance.mode in (CacheMode.WRITE_ONLY,)
+
+    def _hash(item: T) -> str:
+        return hashlib.sha256(
+            json.dumps(
+                _serialize_value({argument_name: item}),
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest()
+
+    results: list[R | None] = [None] * len(items)
+    miss_indices: list[int] = []
+    miss_items: list[T] = []
+
+    for i, item in enumerate(items):
+        vector = None if skip_reads else numpy_cache.get(_hash(item))
+        if vector is not None:
+            results[i] = cast(R, vector)
+        else:
+            miss_indices.append(i)
+            miss_items.append(item)
+
+    if miss_items:
+        miss_results = await batch_fn(miss_items)
+        store = cache_instance.mode not in (CacheMode.READ_ONLY, CacheMode.READ_ONLY_THROW_ON_MISS)
+        for idx, item, result in zip(miss_indices, miss_items, miss_results, strict=True):
+            if store:
+                numpy_cache.store(_hash(item), cast(list[float], result))
+            results[idx] = cast(R, result)
+        if store:
+            numpy_cache.flush()
+
+    return cast(list[R], results)
+

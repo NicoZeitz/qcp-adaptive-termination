@@ -127,6 +127,16 @@ def cache_context(
         if mode == CacheMode.DISABLED:
             logging.info("Cache completely disabled")
 
+        # One-shot migration: convert legacy Embedding_*.json files to the fast
+        # single-file numpy cache. Runs only when the .npy files are absent but
+        # JSON files exist, so it's a no-op on every subsequent run.
+        if mode not in (CacheMode.DISABLED, CacheMode.WRITE_ONLY):
+            from qcp_adaptive_termination.embedding.numpy_cache import _KEYS_FILENAME, migrate_json_to_npy  # noqa: PLC0415
+
+            if not (cache_dir / _KEYS_FILENAME).exists() and any(cache_dir.glob("Embedding_*.json")):
+                logging.info("NumpyEmbeddingCache: migrating Embedding_*.json files — this runs once")
+                migrate_json_to_npy(cache_dir)
+
         yield
     finally:
         _cache_var.reset(token_cache)
