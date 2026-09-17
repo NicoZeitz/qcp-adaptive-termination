@@ -133,6 +133,15 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         emb_missed = sorted(set(relevant) - set(emb_selected))
         emb_prec, emb_rec, emb_f1, emb_tp, emb_fp, emb_fn = compute_metrics(relevant, emb_selected)
 
+        kneedle_selected: list[str] = embedding_filter.get("after_kneedle_agents", [])
+        llm_selected: list[str] = embedding_filter.get("after_llm_filter_agents", [])
+        kneedle_prec, kneedle_rec, kneedle_f1, kneedle_tp, kneedle_fp, kneedle_fn = (
+            compute_metrics(relevant, kneedle_selected) if kneedle_selected else (0.0, 0.0, 0.0, 0, 0, 0)
+        )
+        llm_prec, llm_rec, llm_f1, llm_tp, llm_fp, llm_fn = (
+            compute_metrics(relevant, llm_selected) if llm_selected else (0.0, 0.0, 0.0, 0, 0, 0)
+        )
+
         l2_scores: dict[str, float] = embedding_filter.get("l2_scores", {})
         sorted_by_dist = sorted(l2_scores.items(), key=lambda x: x[1])
         percentile_metrics: list[dict] = []
@@ -153,6 +162,14 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             "fp": emb_fp,
             "fn": emb_fn,
             "percentile_metrics": percentile_metrics,
+            "kneedle_selected": kneedle_selected,
+            "kneedle_precision": kneedle_prec,
+            "kneedle_recall": kneedle_rec,
+            "kneedle_f1": kneedle_f1,
+            "llm_selected": llm_selected,
+            "llm_precision": llm_prec,
+            "llm_recall": llm_rec,
+            "llm_f1": llm_f1,
         }
 
     # --- final metrics ---
@@ -166,6 +183,24 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     print(f"  {icon} {slug}")
     print(f"       relevant={relevant}  ({len(relevant)} of {emb_data['total'] if emb_data else '?'} agents)")
     if emb_data:
+        if emb_data["kneedle_selected"]:
+            kneedle_missed = sorted(set(relevant) - set(emb_data["kneedle_selected"]))
+            print(
+                f"       [kneedle]    {emb_data['total']} → {len(emb_data['kneedle_selected'])} agents"
+                f"  precision={emb_data['kneedle_precision']:.3f}"
+                f"  recall={emb_data['kneedle_recall']:.3f}"
+                f"  f1={emb_data['kneedle_f1']:.3f}"
+                f"  missed={kneedle_missed}"
+            )
+        if emb_data["llm_selected"]:
+            llm_missed = sorted(set(relevant) - set(emb_data["llm_selected"]))
+            print(
+                f"       [llm]        {len(emb_data['kneedle_selected'] or emb_data['selected'])} → {len(emb_data['llm_selected'])} agents"
+                f"  precision={emb_data['llm_precision']:.3f}"
+                f"  recall={emb_data['llm_recall']:.3f}"
+                f"  f1={emb_data['llm_f1']:.3f}"
+                f"  missed={llm_missed}"
+            )
         print(
             f"       [embedding]  {emb_data['total']} → {len(emb_data['selected'])} agents"
             f"  precision={emb_data['precision']:.3f}"
@@ -184,7 +219,19 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         print("  " + "-" * 56)
         print(f"  Perfect recall (final): {final_ok}/1  (embedding): {emb_ok}/1")
         print()
-        print("  -- After embedding filter --")
+        if emb_data["kneedle_selected"]:
+            print("  -- After kneedle cutoff --")
+            print(f"  Precision : {emb_data['kneedle_precision']:.3f}")
+            print(f"  Recall    : {emb_data['kneedle_recall']:.3f}")
+            print(f"  F1        : {emb_data['kneedle_f1']:.3f}")
+            print()
+        if emb_data["llm_selected"]:
+            print("  -- After column-relevance LLM filter --")
+            print(f"  Precision : {emb_data['llm_precision']:.3f}")
+            print(f"  Recall    : {emb_data['llm_recall']:.3f}")
+            print(f"  F1        : {emb_data['llm_f1']:.3f}")
+            print()
+        print("  -- After embedding filter (final) --")
         print(f"  Precision : {emb_data['precision']:.3f}")
         print(f"  Recall    : {emb_data['recall']:.3f}")
         print(f"  F1        : {emb_data['f1']:.3f}")

@@ -209,13 +209,47 @@ async def _filter_embeddings_internal(
     for agent_name, (dist, table_name, col_name) in sorted_agents:
         logging.info("  %s: L2=%.4f (table: %s, col: %s)", agent_name, dist, table_name, col_name)
 
-    sorted_agents = find_kneedle_cutoff(sorted_agents)
-    sorted_agents = await filter_by_column_relevance(query, sorted_agents, agent_data)
+    sorted_agents_after_kneedle = find_kneedle_cutoff(sorted_agents)
 
-    logging.info("Embedding pre-filter: kept %d / %d agents", len(sorted_agents), len(data_agents))
+    kneedle_names = {name for name, _ in sorted_agents_after_kneedle}
+    logging.info(
+        "After kneedle: %d / %d agents  rejected=%s",
+        len(sorted_agents_after_kneedle),
+        len(sorted_agents),
+        sorted(name for name, _ in sorted_agents if name not in kneedle_names),
+    )
+    tracing.append_to_span_output(
+        {
+            "after_kneedle_agents": [name for name, _ in sorted_agents_after_kneedle],
+            "after_kneedle_count": len(sorted_agents_after_kneedle),
+        }
+    )
+
+    sorted_agents_after_llm = await filter_by_column_relevance(query, sorted_agents_after_kneedle, agent_data)
+
+    llm_names = {name for name, _ in sorted_agents_after_llm}
+    logging.info(
+        "After column-relevance LLM: %d / %d agents  rejected=%s",
+        len(sorted_agents_after_llm),
+        len(sorted_agents_after_kneedle),
+        sorted(name for name, _ in sorted_agents_after_kneedle if name not in llm_names),
+    )
+    tracing.append_to_span_output(
+        {
+            "after_llm_filter_agents": [name for name, _ in sorted_agents_after_llm],
+            "after_llm_filter_count": len(sorted_agents_after_llm),
+        }
+    )
+
+    logging.info(
+        "Embedding pre-filter total: %d → kneedle → %d → llm → %d",
+        len(data_agents),
+        len(sorted_agents_after_kneedle),
+        len(sorted_agents_after_llm),
+    )
 
     agent_map = {a.name: a for a in data_agents}
-    filtered = [agent_map[name] for name, _ in sorted_agents if name in agent_map]
+    filtered = [agent_map[name] for name, _ in sorted_agents_after_llm if name in agent_map]
 
     tracing.append_to_span_output(
         {
@@ -232,6 +266,8 @@ async def _filter_embeddings_internal(
         total_agents=len(data_agents),
         l2_scores={name: round(float(dist), 4) for name, (dist, _, _) in agent_best_dist.items()},
         best_columns={name: f"{tbl}.{col}" for name, (_, tbl, col) in agent_best_dist.items()},
+        after_kneedle_agents=[name for name, _ in sorted_agents_after_kneedle],
+        after_llm_filter_agents=[name for name, _ in sorted_agents_after_llm],
     )
 
     return filtered

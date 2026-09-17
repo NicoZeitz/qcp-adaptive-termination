@@ -394,6 +394,8 @@ class EMBEDDING_PRE_FILTER_END_HANDLER(Protocol):
         total_agents: int,
         l2_scores: dict[str, float],
         best_columns: dict[str, str] | None = None,
+        after_kneedle_agents: list[str] | None = None,
+        after_llm_filter_agents: list[str] | None = None,
     ) -> None: ...
 
 

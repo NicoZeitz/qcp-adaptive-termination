@@ -76,6 +76,8 @@ def register_default_output_hooks() -> None:
         total_agents: int,
         l2_scores: dict[str, float],
         best_columns: dict[str, str] | None = None,
+        after_kneedle_agents: list[str] | None = None,
+        after_llm_filter_agents: list[str] | None = None,
     ) -> None:
         _write_output_file(
             "stage_1_output_embedding_pre_filter.json",
@@ -85,6 +87,8 @@ def register_default_output_hooks() -> None:
                 "total_agents": total_agents,
                 "l2_scores": l2_scores,
                 **({"best_columns": best_columns} if best_columns is not None else {}),
+                **({"after_kneedle_agents": after_kneedle_agents} if after_kneedle_agents is not None else {}),
+                **({"after_llm_filter_agents": after_llm_filter_agents} if after_llm_filter_agents is not None else {}),
             },
         )
 
