@@ -65,6 +65,7 @@ class AgentRole(StrEnum):
     DATA_AGENT_CODE = "data_agent_code"
     QUERY_DECOMPOSER = "query_decomposer"
     EMBEDDING_TEXT_GENERATOR = "embedding_text_generator"
+    EMBEDDING_COLUMN_RELEVANCE = "embedding_column_relevance"
 
     @property
     def prompt_name(self) -> str:
@@ -80,4 +81,5 @@ class AgentRole(StrEnum):
             AgentRole.DATA_AGENT_CODE: "execution-data-agent-sql-code",
             AgentRole.QUERY_DECOMPOSER: "discovery-query-decomposer",
             AgentRole.EMBEDDING_TEXT_GENERATOR: "discovery-embedding-text-generator",
+            AgentRole.EMBEDDING_COLUMN_RELEVANCE: "discovery-embedding-column-relevance",
         }[self]

@@ -54,3 +54,6 @@ agent_configs:
   embedding_text_generator:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
+  embedding_column_relevance:
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    reasoning_effort: "none"

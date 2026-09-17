@@ -11,7 +11,9 @@ import qcp_adaptive_termination.embedding as embedding
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.embedding import VectorIndex
 from qcp_adaptive_termination.hooks import HookEvent
-from qcp_adaptive_termination.models import AgentRegistryType, DataAgent
+from qcp_adaptive_termination.llm import runner
+from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
+from qcp_adaptive_termination.models.agent import AgentRegistryData
 from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.observability.context import get_output_dir
 from qcp_adaptive_termination.stages.discovery.cluster_index import (
@@ -103,6 +105,49 @@ def find_kneedle_cutoff(
     return [entry for g in groups[:cutoff] for entry in g]
 
 
+async def _column_relevance_llm(
+    query: str,
+    agent_name: str,
+    table_name: str,
+    col_name: str,
+    agent_data: dict[str, AgentRegistryData],
+) -> bool:
+    td = agent_data[agent_name].individual_descriptions[table_name]
+    col_desc = td.columns[col_name].natural_language_description
+    return await runner.run_llm(
+        role=AgentRole.EMBEDDING_COLUMN_RELEVANCE,
+        agent_name=agent_name,
+        prompt_parameters={
+            "query": query,
+            "table_name": table_name,
+            "table_description": td.natural_language_description,
+            "column_name": col_name,
+            "column_description": col_desc,
+        },
+        output_type=bool,
+    )
+
+
+async def filter_by_column_relevance(
+    query: str,
+    sorted_agents: list[tuple[str, tuple[float, str, str]]],
+    agent_data: dict[str, AgentRegistryData],
+) -> list[tuple[str, tuple[float, str, str]]]:
+    """Run one LLM call per agent to confirm relevance based on best-matching column."""
+    semaphore = asyncio.Semaphore(100)
+
+    async def _check(entry: tuple[str, tuple[float, str, str]]) -> tuple[str, tuple[float, str, str]] | None:
+        name, (dist, table_name, col_name) = entry
+        async with semaphore:
+            relevant = await _column_relevance_llm(query, name, table_name, col_name, agent_data)
+        return entry if relevant else None
+
+    results = await asyncio.gather(*[_check(e) for e in sorted_agents])
+    kept = [e for e in results if e is not None]
+    logging.info("Column-relevance LLM filter: kept %d / %d agents", len(kept), len(sorted_agents))
+    return kept
+
+
 async def _filter_embeddings_internal(
     query: str,
     data_agents: list[DataAgent],
@@ -165,6 +210,7 @@ async def _filter_embeddings_internal(
         logging.info("  %s: L2=%.4f (table: %s, col: %s)", agent_name, dist, table_name, col_name)
 
     sorted_agents = find_kneedle_cutoff(sorted_agents)
+    sorted_agents = await filter_by_column_relevance(query, sorted_agents, agent_data)
 
     logging.info("Embedding pre-filter: kept %d / %d agents", len(sorted_agents), len(data_agents))
 
