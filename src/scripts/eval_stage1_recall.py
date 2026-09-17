@@ -248,18 +248,17 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
 # ---------------------------------------------------------------------------
 
 def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> None:
-    """Write a single self-contained HTML with all query data inlined for file:// opening."""
+    """Write queries.json and copy l2_chart.html into chart_output for local serving."""
     eligible = [r for r in results if r.get("status") in ("ok", "miss", "skip") and r.get("file")]
     if not eligible:
         print("  [chart] No queries to chart — skipping.")
         return
 
-    html_src = Path(__file__).parents[3] / "qcp-adaptive-termination" / "l2_chart.html"
+    html_src = Path(__file__).parent / "cutoff" / "l2_chart.html"
     if not html_src.exists():
         print(f"  [chart] l2_chart.html not found at {html_src} — skipping.")
         return
 
-    # Collect per-query data
     queries: list[dict] = []
     skipped = 0
     for r in eligible:
@@ -301,57 +300,18 @@ def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> No
         print("  [chart] No embedding data found in any query log — skipping.")
         return
 
-    # Build the inline data block that replaces the bootstrap section
-    queries_json = json.dumps(queries, ensure_ascii=False).replace("</script>", "<\\/script>")
-    inline_bootstrap = f"""<script>
-// ── Inlined query data ────────────────────────────────────────────────────────
-const QUERIES = {queries_json};
-
-(function bootstrap() {{
-  const sel = document.getElementById('dataSelect');
-  sel.style.display = 'inline-block';
-  QUERIES.forEach((q, i) => {{
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = q.label;
-    sel.appendChild(opt);
-  }});
-
-  function loadAndRender(idx) {{
-    const q = QUERIES[idx];
-    document.getElementById('agentSearch').value = '';
-    document.getElementById('colSearch').value = '';
-    document.getElementById('yMin').value = '';
-    document.getElementById('yMax').value = '';
-    initChart(q.raw, q.relevant);
-  }}
-
-  sel.addEventListener('change', () => loadAndRender(+sel.value));
-  loadAndRender(0);
-}})();
-"""
-
-    # Read template and splice out the old bootstrap + engine comment, keep initChart
-    html = html_src.read_text(encoding="utf-8")
-
-    # Replace everything between <script> and `function initChart` with our inline bootstrap.
-    # Use a callable replacement to prevent re.sub from interpreting \n in the replacement string.
-    import re
-    replacement = inline_bootstrap + "\n"
-    html = re.sub(
-        r'<script>.*?(?=^function initChart)',
-        lambda _: replacement,
-        html,
-        flags=re.DOTALL | re.MULTILINE,
-    )
-
     chart_output.mkdir(parents=True, exist_ok=True)
+
+    queries_path = chart_output / "queries.json"
+    queries_path.write_text(json.dumps(queries, indent=2, ensure_ascii=False), encoding="utf-8")
+
     out_path = chart_output / "l2_chart.html"
-    out_path.write_text(html, encoding="utf-8")
-    print(f"  [chart] Written {len(queries)} queries -> {out_path}")
+    out_path.write_text(html_src.read_text(encoding="utf-8"), encoding="utf-8")
+
+    print(f"  [chart] Written {len(queries)} queries -> {queries_path}")
     if skipped:
         print(f"  [chart] Skipped {skipped} queries without embedding data")
-    print(f"  [chart] Open: file://{out_path}")
+    print(f"  [chart] Serve with: python3 -m http.server --directory {chart_output}")
 
 
 def print_summary(results: list[dict], log_dir: Path) -> None:
