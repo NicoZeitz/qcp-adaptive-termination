@@ -10,7 +10,7 @@ class VectorIndex[T]:
     mapping: dict[int, T]
 
     @classmethod
-    def build(cls, data: list[tuple[T, list[float]]]) -> VectorIndex[T]:
+    def build(cls, data: list[tuple[T, np.ndarray]]) -> VectorIndex[T]:
         if not data:
             raise ValueError("Data cannot be empty")
 
@@ -24,7 +24,7 @@ class VectorIndex[T]:
 
         return cls(index=index, mapping=mapping)
 
-    def search_top_k(self, query: list[float], k: int) -> list[tuple[T, float]]:
+    def search_top_k(self, query: np.ndarray, k: int) -> list[tuple[T, float]]:
         query_vector = np.array([query], dtype="float32")
         distances, indices = self.index.search(query_vector, k)
 
@@ -35,5 +35,5 @@ class VectorIndex[T]:
 
         return results
 
-    def search_all(self, query: list[float]) -> list[tuple[T, float]]:
+    def search_all(self, query: np.ndarray) -> list[tuple[T, float]]:
         return self.search_top_k(query, k=len(self.mapping))

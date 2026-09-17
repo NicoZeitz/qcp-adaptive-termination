@@ -366,7 +366,7 @@ class _EvocResult:
 
 async def _load_embeddings(ctx: ScriptContext, registry_type: AgentRegistryType) -> _Embeddings:
     print(f"Loading embeddings for {len(ctx.data_agents)} agents …")
-    all_table_embeddings: dict[str, dict[str, list[float]]] = await agent_registry.embedding_vectors_for_all_tables(
+    all_table_embeddings: dict[str, dict[str, np.ndarray]] = await agent_registry.embedding_vectors_for_all_tables(
         ctx.data_agents, registry_type
     )
     agent_names: list[str] = []

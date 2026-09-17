@@ -8,6 +8,7 @@ Wraps an embedding model to produce dense vectors and provides an in-memory
 import asyncio
 from typing import cast, overload
 
+import numpy as np
 import tiktoken
 from agents import OpenAIProvider
 from openai import AsyncOpenAI
@@ -17,7 +18,7 @@ from qcp_adaptive_termination.llm import model_provider
 from qcp_adaptive_termination.observability import context, tracing
 from qcp_adaptive_termination.observability.cache import get_or_compute_batch
 
-_MAX_TOKENS_PER_REQUEST = 300000
+_MAX_TOKENS_PER_REQUEST = 200000
 _MAX_CHUNKS = 2048
 _EMBEDDING_SEMAPHORE = asyncio.Semaphore(5)
 
@@ -42,13 +43,13 @@ def _num_tokens_from_string(string: list[str], encoding_name: str = "cl100k_base
     return list(map(lambda x: len(x), encoding.encode_batch(string)))
 
 
-async def _create_batched(texts: list[str]) -> list[list[float]]:
+async def _create_batched(texts: list[str]) -> list[np.ndarray]:
     client, model = _get_embedding_client_and_model()
 
     if len(texts) == 1:
         async with _EMBEDDING_SEMAPHORE:
             result = await client.embeddings.create(model=model, input=texts)
-        return [result.data[0].embedding]
+        return [np.asarray(result.data[0].embedding, dtype=np.float32)]
 
     # https://developers.openai.com/api/reference/resources/embeddings/methods/create#embeddings-create-input
     # https://community.openai.com/t/max-total-embeddings-tokens-per-request/1254699/6
@@ -65,7 +66,7 @@ async def _create_batched(texts: list[str]) -> list[list[float]]:
     ):
         async with _EMBEDDING_SEMAPHORE:
             result = await client.embeddings.create(model=model, input=texts)
-        return [item.embedding for item in sorted(result.data, key=lambda x: x.index)]
+        return [np.asarray(item.embedding, dtype=np.float32) for item in sorted(result.data, key=lambda x: x.index)]
 
     batches: list[list[str]] = []
     current_batch: list[str] = []
@@ -94,22 +95,24 @@ async def _create_batched(texts: list[str]) -> list[list[float]]:
     # send requests in parallel
     results = await asyncio.gather(*[_fetch(batch) for batch in batches])
 
-    embeddings: list[list[float]] = []
+    embeddings: list[np.ndarray] = []
     for result in results:
-        embeddings.extend([item.embedding for item in sorted(result.data, key=lambda x: x.index)])
+        embeddings.extend(
+            np.asarray(item.embedding, dtype=np.float32) for item in sorted(result.data, key=lambda x: x.index)
+        )
     return embeddings
 
 
-_inflight: dict[str, asyncio.Future[list[float]]] = {}
+_inflight: dict[str, asyncio.Future[np.ndarray]] = {}
 
 
-async def _create_with_inflight(texts: list[str]) -> list[list[float]]:
+async def _create_with_inflight(texts: list[str]) -> list[np.ndarray]:
     loop = asyncio.get_running_loop()
 
     to_request: list[str] = []
     for text in texts:
         if text not in _inflight:
-            fut: asyncio.Future[list[float]] = loop.create_future()
+            fut: asyncio.Future[np.ndarray] = loop.create_future()
             _inflight[text] = fut
             to_request.append(text)
 
@@ -132,9 +135,9 @@ async def _create_with_inflight(texts: list[str]) -> list[list[float]]:
 
 
 @overload
-async def create(text: str) -> list[float]: ...
+async def create(text: str) -> np.ndarray: ...
 @overload
-async def create(text: list[str]) -> list[list[float]]: ...
+async def create(text: list[str]) -> list[np.ndarray]: ...
 async def create(text):
     with tracing.own_span("Embedding", input={"text": text}):
         is_single = not isinstance(text, list)
@@ -142,8 +145,6 @@ async def create(text):
         results = await get_or_compute_batch(
             texts,
             _create_with_inflight,
-            argument_name="text",
-            name_prefix="Embedding",
         )
         return results[0] if is_single else results
 

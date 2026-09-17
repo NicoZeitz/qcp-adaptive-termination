@@ -22,14 +22,14 @@ DEFAULT_MIN_CLUSTER_SIZE_RATIO = 0.05
 
 @dataclass(slots=True)
 class PosteriorPrecomputedState:
-    embedding: list[float]
+    embedding: np.ndarray
     theta_sketch: compact_theta_sketch
 
 
 @dataclass(slots=True)
 class PosteriorState:
     theta: update_theta_sketch
-    queried_embeddings: list[list[float]] = field(default_factory=list)
+    queried_embeddings: list[np.ndarray] = field(default_factory=list)
 
 
 def _normalize_probability(values: list[float]) -> list[float]:

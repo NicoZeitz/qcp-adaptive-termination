@@ -145,7 +145,7 @@ async def replan(
         return updated_data_agents, new_query_plan
 
 
-@cache.cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
+@cache.cached(mode=CacheMode.WRITE_ONLY)
 async def execute_query_plan(
     query_plan: QueryPlan,
     relevant_data_agents: list[DataAgent],

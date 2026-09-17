@@ -1,7 +1,7 @@
 import asyncio
 import functools
 from collections.abc import Mapping
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from agents import (
     Agent,
@@ -37,27 +37,18 @@ def _resolve_model_config(role: AgentRole) -> tuple[str, Reasoning]:
     return role_cfg.model, reasoning
 
 
-def _get_output_and_deserializable_classes(
-    output_type: type | None,
-) -> tuple[JsonValue, list[type[BaseModel]]]:
-    output: JsonValue = None
-    deserializable_classes: list[type[BaseModel]] = []
-
+def _get_output_schema(output_type: type | None) -> JsonValue:
     if output_type is None or output_type is str:
-        output = {"type": "string"}
-    elif output_type is bool:
-        output = {"type": "boolean"}
-    elif output_type is int:
-        output = {"type": "integer"}
-    elif output_type is float:
-        output = {"type": "number"}
-    elif isinstance(output_type, type) and issubclass(output_type, BaseModel):
-        output = _cached_json_schema(output_type)
-        deserializable_classes.append(output_type)
-    else:
-        raise ValueError(f"Unsupported output type: {output_type}")
-
-    return output, deserializable_classes
+        return {"type": "string"}
+    if output_type is bool:
+        return {"type": "boolean"}
+    if output_type is int:
+        return {"type": "integer"}
+    if output_type is float:
+        return {"type": "number"}
+    if isinstance(output_type, type) and issubclass(output_type, BaseModel):
+        return _cached_json_schema(output_type)
+    raise ValueError(f"Unsupported output type: {output_type}")
 
 
 async def run_agent[TResult](
@@ -91,19 +82,17 @@ async def run_agent[TResult](
         else "function" + getattr(tool_use_behavior, "__name__", repr(tool_use_behavior))
     )
 
-    output, deserializable_classes = _get_output_and_deserializable_classes(output_type)
+    output = _get_output_schema(output_type)
 
     @cache.cached(
-        name_prefix=role.value,
         mode=cache_mode,
-        deserializable_classes=deserializable_classes,
     )
     async def compute_value(
         instructions: str,
         prompts: list[dict[str, str]],
         context: JsonValue,
         output: JsonValue,
-        function_tools: list[dict[str, str]],
+        function_tools: list[dict[str, Any]],
         reset_tool_choice: bool,
         tool_use: str,
         parallel_tool_calls: bool,

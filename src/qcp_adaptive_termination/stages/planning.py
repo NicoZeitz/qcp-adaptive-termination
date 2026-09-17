@@ -115,7 +115,7 @@ def map_query_plan_model_to_query_plan(query_plan_model: BaseModel, query: str) 
     return query_plan
 
 
-@cache.cached(name_prefix=STAGE_NAME, mode=CacheMode.WRITE_ONLY)
+@cache.cached(mode=CacheMode.WRITE_ONLY)
 async def draft_query_plan(
     query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
 ) -> DraftedQueryPlan:

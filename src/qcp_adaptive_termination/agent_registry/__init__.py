@@ -7,6 +7,8 @@ Provides a registry of available agents.
 import asyncio
 from typing import overload
 
+import numpy as np
+
 import qcp_adaptive_termination.agent_registry.utils as utils
 import qcp_adaptive_termination.embedding as embedding
 from qcp_adaptive_termination.models import (
@@ -97,13 +99,13 @@ async def embedding_vector_for_column(
     agents: DataAgent,
     table_per_agent: str,
     column_per_agent: str,
-) -> list[float]: ...
+) -> np.ndarray: ...
 @overload
 async def embedding_vector_for_column(
     agents: list[DataAgent],
     table_per_agent: dict[str, str],
     column_per_agent: dict[str, str],
-) -> dict[str, list[float]]: ...
+) -> dict[str, np.ndarray]: ...
 async def embedding_vector_for_column(agents, table_per_agent, column_per_agent):
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
@@ -130,12 +132,12 @@ async def embedding_vector_for_column(agents, table_per_agent, column_per_agent)
 async def embedding_vectors_for_all_columns(
     agents: DataAgent,
     table_per_agent: str,
-) -> dict[str, list[float]]: ...
+) -> dict[str, np.ndarray]: ...
 @overload
 async def embedding_vectors_for_all_columns(
     agents: list[DataAgent],
     table_per_agent: dict[str, str],
-) -> dict[str, dict[str, list[float]]]: ...
+) -> dict[str, dict[str, np.ndarray]]: ...
 async def embedding_vectors_for_all_columns(agents, table_per_agent):
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
@@ -156,7 +158,7 @@ async def embedding_vectors_for_all_columns(agents, table_per_agent):
 
     all_embeddings = await embedding.create(all_descriptions)
 
-    result: dict[str, dict[str, list[float]]] = {}
+    result: dict[str, dict[str, np.ndarray]] = {}
     pos = 0
     for agent_name, column_names in offsets:
         n = len(column_names)
@@ -173,13 +175,13 @@ async def embedding_vector_for_table(
     agents: DataAgent,
     table_per_agent: str,
     registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
-) -> list[float]: ...
+) -> np.ndarray: ...
 @overload
 async def embedding_vector_for_table(
     agents: list[DataAgent],
     table_per_agent: dict[str, str],
     registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
-) -> dict[str, list[float]]: ...
+) -> dict[str, np.ndarray]: ...
 async def embedding_vector_for_table(
     agents, table_per_agent, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL
 ):
@@ -210,12 +212,12 @@ async def embedding_vector_for_table(
 async def embedding_vectors_for_all_tables(
     agents: DataAgent,
     registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
-) -> dict[str, list[float]]: ...
+) -> dict[str, np.ndarray]: ...
 @overload
 async def embedding_vectors_for_all_tables(
     agents: list[DataAgent],
     registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
-) -> dict[str, dict[str, list[float]]]: ...
+) -> dict[str, dict[str, np.ndarray]]: ...
 async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL):
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
@@ -237,7 +239,7 @@ async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryT
 
     all_embeddings = await embedding.create(all_descriptions)
 
-    result: dict[str, dict[str, list[float]]] = {}
+    result: dict[str, dict[str, np.ndarray]] = {}
     pos = 0
     for agent_name, table_names in offsets:
         n = len(table_names)

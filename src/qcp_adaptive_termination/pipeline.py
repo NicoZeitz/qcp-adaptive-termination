@@ -37,15 +37,7 @@ def load_input(
     CollaborativeQueryAnswering | FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult,
     dict[str, Any] | None,
 ]:
-    data, extra = cache.load_cache_file(
-        Path(path),
-        deserializable_classes=[
-            CollaborativeQueryAnswering,
-            FilteredRelevantAgents,
-            DraftedQueryPlan,
-            CollaborativeQueryAnsweringResult,
-        ],
-    )
+    data, extra = cache.load_cache_file(Path(path))
     hooks.emit(HookEvent.LOAD_INPUT, input_file=Path(path), data=data, extra=extra)
     return data, extra
 

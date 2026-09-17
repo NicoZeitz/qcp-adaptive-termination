@@ -13,7 +13,7 @@ from qcp_adaptive_termination.stages.discovery.pre_filter import filter_embeddin
 DISCOVERY_STAGE_NAME = "Stage 1: Discovery"
 
 
-@cache.cached(name_prefix=DISCOVERY_STAGE_NAME, mode=CacheMode.WRITE_ONLY)
+@cache.cached(mode=CacheMode.WRITE_ONLY)
 async def filter_relevant_agents(query: str, data_agents: list[DataAgent]) -> FilteredRelevantAgents:
     with (
         hooks.stage_context(),

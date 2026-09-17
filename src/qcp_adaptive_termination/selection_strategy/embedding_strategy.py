@@ -2,6 +2,8 @@ from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+import numpy as np
+
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
 from qcp_adaptive_termination.embedding import VectorIndex
@@ -32,7 +34,7 @@ class EmbeddingStrategy(StaticSelectionStrategy[float]):
         agent_vectors = await agent_registry.embedding_vectors_for_all_tables(agents, registry_type=self.registry_type)
         query_embedding = await embedding.create(query)
 
-        flat_data: list[tuple[str, list[float]]] = []
+        flat_data: list[tuple[str, np.ndarray]] = []
         for agent_name, table_vectors in agent_vectors.items():
             for vec in table_vectors.values():
                 flat_data.append((agent_name, vec))

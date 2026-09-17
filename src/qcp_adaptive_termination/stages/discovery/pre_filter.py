@@ -2,6 +2,8 @@
 
 import logging
 
+import numpy as np
+
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
 import qcp_adaptive_termination.hooks as hooks
@@ -46,11 +48,11 @@ async def _filter_embeddings_internal(
     data_agents: list[DataAgent],
     registry_type: AgentRegistryType,
 ) -> list[DataAgent]:
-    table_vectors: dict[str, dict[str, list[float]]] = await agent_registry.embedding_vectors_for_all_tables(
+    table_vectors: dict[str, dict[str, np.ndarray]] = await agent_registry.embedding_vectors_for_all_tables(
         data_agents, registry_type
     )
 
-    index_data: list[tuple[tuple[str, str], list[float]]] = [
+    index_data: list[tuple[tuple[str, str], np.ndarray]] = [
         ((agent.name, table_name), vector)
         for agent in data_agents
         for table_name, vector in table_vectors.get(agent.name, {}).items()

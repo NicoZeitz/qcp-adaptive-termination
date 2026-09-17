@@ -74,7 +74,7 @@ def _add_provider(
         base_url=base_url,
         api_key=api_key or "not-required",
         http_client=http_client,
-        # timeout=httpx.Timeout(connect=5, read=600, write=600, pool=600)
+        # timeout=httpx.Timeout(connect=60, read=600, write=600, pool=60),
     )
     provider = OpenAIProvider(
         openai_client=client,
