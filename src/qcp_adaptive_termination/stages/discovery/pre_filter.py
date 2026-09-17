@@ -4,6 +4,8 @@ import asyncio
 import logging
 import resource
 
+import numpy as np
+
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
 import qcp_adaptive_termination.hooks as hooks
@@ -49,6 +51,58 @@ def find_l2_clusters(scores: list[float], min_cluster_size: int = 1) -> int:
     return cutoff_idx
 
 
+def find_kneedle_cutoff(
+    sorted_agents: list[tuple[str, tuple[float, str, str]]],
+) -> list[tuple[str, tuple[float, str, str]]]:
+    """Geometric elbow (kneedle) cutoff on sorted (ascending) L2-distance agents.
+
+    Mirrors the algorithm used in analyze_best_cutoff.py:
+      1. Collapse agents with identical L2 distances into groups.
+      2. Find the index with maximum perpendicular distance from the diagonal
+         (both axes normalised to [0, 1]).
+      3. Expand the kept groups back to individual agent entries.
+    """
+    if len(sorted_agents) <= 1:
+        return sorted_agents
+
+    # 1. Collapse equal distances
+    groups: list[list[tuple[str, tuple[float, str, str]]]] = []
+    for entry in sorted_agents:
+        dist = entry[1][0]
+        if groups and groups[-1][0][1][0] == dist:
+            groups[-1].append(entry)
+        else:
+            groups.append([entry])
+
+    n = len(groups)
+    if n <= 2:
+        return sorted_agents
+
+    scores = np.array([g[0][1][0] for g in groups], dtype=float)
+    x = np.arange(n, dtype=float)
+
+    x_range = x[-1] - x[0]
+    s_range = float(scores[-1] - scores[0])
+    if x_range == 0 or s_range == 0:
+        return sorted_agents
+
+    xn = (x - x[0]) / x_range
+    yn = (scores - scores[0]) / s_range
+    knee = int(np.argmax(np.abs(yn - xn)))
+    cutoff = knee + 1  # exclusive
+
+    logging.info(
+        "Kneedle cutoff: keeping %d / %d score groups (%d / %d agents), knee at L2=%.4f",
+        cutoff,
+        n,
+        sum(len(g) for g in groups[:cutoff]),
+        len(sorted_agents),
+        float(scores[knee]),
+    )
+
+    return [entry for g in groups[:cutoff] for entry in g]
+
+
 async def _filter_embeddings_internal(
     query: str,
     data_agents: list[DataAgent],
@@ -76,7 +130,7 @@ async def _filter_embeddings_internal(
         agent_registry.load(data_agents),
     )
 
-    # --- Stage 2: per-column similarity filter with largest-gap cutoff ---
+    # --- Stage 2: per-column similarity filter with kneedle (geometric elbow) cutoff ---
     col_entries: list[tuple[str, str, str]] = []
     col_descriptions: list[str] = []
     for agent in data_agents:
@@ -110,9 +164,7 @@ async def _filter_embeddings_internal(
     for agent_name, (dist, table_name, col_name) in sorted_agents:
         logging.info("  %s: L2=%.4f (table: %s, col: %s)", agent_name, dist, table_name, col_name)
 
-    l2_scores = [dist for _, (dist, _, _) in sorted_agents]
-    cutoff_idx = find_l2_clusters(l2_scores, min_cluster_size=1)
-    sorted_agents = sorted_agents[:cutoff_idx]
+    sorted_agents = find_kneedle_cutoff(sorted_agents)
 
     logging.info("Embedding pre-filter: kept %d / %d agents", len(sorted_agents), len(data_agents))
 
