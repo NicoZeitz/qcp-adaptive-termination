@@ -193,9 +193,9 @@
   <span class="filter-label">Agent:</span>
   <input type="search" id="agentSearch" class="ctrl-input" style="width:130px" placeholder="z.B. A985" autocomplete="off"/>
 
-  <span class="filter-label">Spalte:</span>
+  <span class="filter-label">Column:</span>
   <div class="col-wrap">
-    <input type="search" id="colSearch" class="ctrl-input col-input" placeholder="Spaltenname…" autocomplete="off"/>
+    <input type="search" id="colSearch" class="ctrl-input col-input" placeholder="Column name…" autocomplete="off"/>
     <div class="col-dropdown" id="colDropdown"></div>
   </div>
   <button class="col-clear icon-btn" id="colClear">✕ Filter</button>
@@ -205,13 +205,18 @@
     <input type="number" id="yMin" class="ctrl-input yrange-input" placeholder="Min" step="0.001"/>
     <span class="yrange-sep">–</span>
     <input type="number" id="yMax" class="ctrl-input yrange-input" placeholder="Max" step="0.001"/>
-    <button class="icon-btn" id="yRangeReset" title="Y-Achse zurücksetzen">↺</button>
+    <button class="icon-btn" id="yRangeReset" title="Reset Y-axis">↺</button>
   </div>
-  <button class="icon-btn reset-btn" id="resetBtn" onclick="resetZoom()">Zoom zurücksetzen</button>
+  <button class="icon-btn reset-btn" id="resetBtn" onclick="resetZoom()">Reset zoom</button>
   <label id="relevantLabel" class="relevant-label" style="display:none">
     <input type="checkbox" id="relevantToggle" checked/>
     <span class="relevant-dot"></span>Relevant
   </label>
+  <label class="relevant-label">
+    <input type="checkbox" id="deduplicateToggle"/>
+    <span style="font-size:12px;color:var(--ink-secondary)">Collapse equal scores</span>
+  </label>
+  <span id="cutoffToggles" style="display:contents"></span>
 </div>
 
 <div class="chart-wrap" id="chartWrap">
@@ -219,100 +224,47 @@
   <div class="tooltip" id="tooltip"></div>
 </div>
 
-<p class="zoom-hint">Scrollen zum Zoomen · Klicken &amp; Ziehen zum Verschieben</p>
+<p class="zoom-hint">Scroll to zoom · Click &amp; drag to pan</p>
 
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// CHART ENGINE  —  loads index.js + per-query .js files via <script> tags
-// Generate with:
-//   python3 -m scripts.eval_stage1_recall --log_dir ... --chart_output ./chart_data
-// Open: l2_chart.html  (index.js must be in the same folder as l2_chart.html)
-// ─────────────────────────────────────────────────────────────────────────────
 
-function loadScript(src) {
-  const old = document.getElementById('_dataScript');
-  if (old) old.remove();
-  window.RAW = undefined;
-  window.RELEVANT = undefined;
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.id = '_dataScript';
-    s.src = src;
-    s.onload = resolve;
-    s.onerror = () => reject(new Error(`Not found: ${src}`));
-    document.head.appendChild(s);
-  });
-}
+(function bootstrap() {
+  fetch('queries.json')
+    .then(r => r.json())
+    .then(QUERIES => {
+      const sel = document.getElementById('dataSelect');
+      sel.style.display = 'inline-block';
+      QUERIES.forEach((q, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = q.label;
+        sel.appendChild(opt);
+      });
 
-(async function bootstrap() {
-  const sel = document.getElementById('dataSelect');
+      function loadAndRender(idx) {
+        const q = QUERIES[idx];
+        document.getElementById('agentSearch').value = '';
+        document.getElementById('colSearch').value = '';
+        document.getElementById('yMin').value = '';
+        document.getElementById('yMax').value = '';
+        initChart(q.raw, q.relevant, q.label, q.cutoffs || []);
+      }
 
-  // Load index.js (defines window.FILES = [...])
-  window.FILES = undefined;
-  try {
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'index.js';
-      s.onload = resolve;
-      s.onerror = reject;
-      document.head.appendChild(s);
-    });
-  } catch (_) {}
-
-  const files = Array.isArray(window.FILES) ? window.FILES : [];
-
-  if (files.length === 0) {
-    document.getElementById('chartSubtitle').textContent =
-      'No data files found in same folder as this visualization script.';
-    return;
-  }
-
-  // Build selector
-  sel.style.display = 'inline-block';
-  files.forEach(f => {
-    const opt = document.createElement('option');
-    opt.value = f;
-    opt.textContent = f.replace(/\.js$/, '');
-    sel.appendChild(opt);
-  });
-
-  async function loadAndRender(file) {
-    try {
-      await loadScript(file);
-    } catch (err) {
-      document.getElementById('chartSubtitle').textContent = 'Fehler: ' + err.message;
-      return;
-    }
-    if (typeof RAW === 'undefined') {
-      document.getElementById('chartSubtitle').textContent = 'Ungültige Datendatei: ' + file;
-      return;
-    }
-    // Reset state between queries
-    document.getElementById('agentSearch').value = '';
-    document.getElementById('colSearch').value = '';
-    document.getElementById('yMin').value = '';
-    document.getElementById('yMax').value = '';
-    initChart(RAW, typeof RELEVANT !== 'undefined' ? RELEVANT : '');
-  }
-
-  sel.addEventListener('change', () => loadAndRender(sel.value));
-  loadAndRender(files[0]);
+      sel.addEventListener('change', () => loadAndRender(+sel.value));
+      loadAndRender(0);
+    })
+    .catch(e => console.error('Failed to load queries.json:', e));
 })();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CHART ENGINE
-// ─────────────────────────────────────────────────────────────────────────────
-function initChart(raw, relevant) {
+const CUTOFF_COLORS = ['#d97706','#7c3aed','#0891b2','#16a34a','#e11d48','#ea580c','#4f46e5'];
+
+function initChart(raw, relevant, queryLabel, cutoffs) {
 
   // Parse
   const data = raw.trim().split('\n').map((line, i) => {
     const [id, l2, tableRaw, col] = line.split(',');
     return { idx: i + 1, id, l2: parseFloat(l2), table: tableRaw.replace('main.', ''), col };
   });
-
-  // Subtitle
-  document.getElementById('chartSubtitle').textContent =
-    `${data.length} Agenten, aufsteigend nach L2-Score sortiert. Niedrigere Werte = höhere Ähnlichkeit.`;
 
   // Column index: col -> count
   const colCounts = {};
@@ -326,11 +278,34 @@ function initChart(raw, relevant) {
 
   // ── State ────────────────────────────────────────────────────────────────
   let searchId  = '';
-  let showRelevant = relevantSet.size > 0;
+  let showRelevant = relevantSet.size > 0 && (document.getElementById('relevantToggle')?.checked ?? true);
+  let deduplicate = document.getElementById('deduplicateToggle')?.checked ?? false;
+  const activeCutoffs = new Set(cutoffs.map(c => c.name));
   let searchCol = '';           // exact col name being highlighted
   let userYMin  = null, userYMax = null;
   let viewMin   = 1, viewMax = data.length;
   let isDragging = false, dragStartX = 0, dragStartViewMin = 0;
+
+  function deduplicatedData(src, tol = 1e-4) {
+    const out = [];
+    for (const d of src) {
+      if (out.length && Math.abs(d.l2 - out[out.length-1].l2) <= tol) {
+        out[out.length-1].dedupCount++;
+        out[out.length-1].idx = d.idx;
+        out[out.length-1].ids.push(d.id);
+      } else {
+        out.push({ ...d, dedupCount: 1, ids: [d.id] });
+      }
+    }
+    out.forEach((d, i) => { d.dedupIdx = i + 1; });
+    return out;
+  }
+
+  function activeData() {
+    return deduplicate ? deduplicatedData(data) : data.map(d => ({ ...d, dedupCount: 1, ids: [d.id], dedupIdx: d.idx }));
+  }
+
+  viewMax = activeData().length;
 
   // ── DOM refs — clone inputs to clear any stale event listeners from prior load
   function freshClone(id) {
@@ -378,8 +353,16 @@ function initChart(raw, relevant) {
     svgEl.setAttribute('height', h);
     wrapEl.style.height = h + 'px';
 
-    const visible = data.filter(d => d.idx >= viewMin && d.idx <= viewMax);
+    const display = activeData();
+    const totalPts = display.length;
+    const visible = display.filter(d => d.dedupIdx >= viewMin && d.dedupIdx <= viewMax);
     if (!visible.length) { svgEl.innerHTML = ''; return; }
+
+    // Update subtitle
+    const baseText = `${data.length} agents, sorted ascending by L2 score. Lower values = higher similarity.`;
+    document.getElementById('chartSubtitle').textContent = deduplicate
+      ? `${baseText} · ${totalPts} unique values (${data.length - totalPts} collapsed)`
+      : baseText;
 
     // Y range — compute nice axis bounds so grid steps are round numbers
     const l2s = visible.map(d => d.l2);
@@ -439,7 +422,7 @@ function initChart(raw, relevant) {
 
     // Main line
     const linePts = visible.map((p, i) => {
-      const x = PAD.left + idxToX(p.idx, pw);
+      const x = PAD.left + idxToX(p.dedupIdx, pw);
       const y = PAD.top  + l2ToY(p.l2, ph, yMin, yMax);
       return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
     }).join(' ');
@@ -450,7 +433,7 @@ function initChart(raw, relevant) {
     let colDots = '';
     if (searchCol) {
       const dimPts = visible.map((p, i) => {
-        const x = PAD.left + idxToX(p.idx, pw);
+        const x = PAD.left + idxToX(p.dedupIdx, pw);
         const y = PAD.top  + l2ToY(p.l2, ph, yMin, yMax);
         return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
       }).join(' ');
@@ -462,9 +445,9 @@ function initChart(raw, relevant) {
       if (matched.length) {
         // Draw dots for each match
         matched.forEach(p => {
-          const x = PAD.left + idxToX(p.idx, pw);
+          const x = PAD.left + idxToX(p.dedupIdx, pw);
           const y = PAD.top  + l2ToY(p.l2, ph, yMin, yMax);
-          colDots += `<circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#9333ea" stroke="white" stroke-width="1.5" data-idx="${p.idx}" data-id="${p.id}" data-l2="${p.l2}" data-table="${p.table}" data-col="${p.col}"/>`;
+          colDots += `<circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#9333ea" stroke="white" stroke-width="1.5" data-idx="${p.dedupIdx}" data-id="${p.ids.join(',')}" data-l2="${p.l2}" data-table="${p.table}" data-col="${p.col}" data-count="${p.dedupCount}"/>`;
         });
       }
     }
@@ -474,35 +457,36 @@ function initChart(raw, relevant) {
     let dots = '';
     if (!searchCol && range < 100) {
       visible.forEach(d => {
-        const x = PAD.left + idxToX(d.idx, pw);
+        const x = PAD.left + idxToX(d.dedupIdx, pw);
         const y = PAD.top  + l2ToY(d.l2, ph, yMin, yMax);
-        dots += `<circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="#2563eb" stroke="white" stroke-width="1.5" data-idx="${d.idx}" data-id="${d.id}" data-l2="${d.l2}" data-table="${d.table}" data-col="${d.col}"/>`;
+        dots += `<circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="#2563eb" stroke="white" stroke-width="1.5" data-idx="${d.dedupIdx}" data-id="${d.ids.join(',')}" data-l2="${d.l2}" data-table="${d.table}" data-col="${d.col}" data-count="${d.dedupCount}"/>`;
       });
     }
 
     // Relevant agent dots (always on top, below agent highlight)
     let relevantDots = '';
     if (showRelevant && relevantSet.size > 0) {
-      visible.filter(d => relevantSet.has(d.id)).forEach(d => {
-        const x = PAD.left + idxToX(d.idx, pw);
+      visible.filter(d => d.ids.some(id => relevantSet.has(id))).forEach(d => {
+        const x = PAD.left + idxToX(d.dedupIdx, pw);
         const y = PAD.top  + l2ToY(d.l2, ph, yMin, yMax);
-        relevantDots += `<circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="#dc2626" stroke="white" stroke-width="1.5" data-idx="${d.idx}" data-id="${d.id}" data-l2="${d.l2}" data-table="${d.table}" data-col="${d.col}"/>`;
-        relevantDots += `<text x="${(x+8).toFixed(1)}" y="${(y-6).toFixed(1)}" font-size="11" font-weight="600" fill="#dc2626">${d.id}</text>`;
+        const label = d.ids.filter(id => relevantSet.has(id)).join(',');
+        relevantDots += `<circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="#dc2626" stroke="white" stroke-width="1.5" data-idx="${d.dedupIdx}" data-id="${d.ids.join(',')}" data-l2="${d.l2}" data-table="${d.table}" data-col="${d.col}" data-count="${d.dedupCount}"/>`;
+        if (!deduplicate) relevantDots += `<text x="${(x+8).toFixed(1)}" y="${(y-6).toFixed(1)}" font-size="11" font-weight="600" fill="#dc2626">${label}</text>`;
       });
     }
 
     // Agent highlight
     let agentHighlight = '';
     if (searchId) {
-      const target = data.find(d => d.id === searchId);
+      const target = display.find(d => d.ids.includes(searchId));
       if (target) {
-        if (target.idx < viewMin || target.idx > viewMax) {
+        if (target.dedupIdx < viewMin || target.dedupIdx > viewMax) {
           const r = viewMax - viewMin;
-          viewMin = Math.max(1, target.idx - Math.floor(r / 2));
-          viewMax = Math.min(data.length, viewMin + r);
+          viewMin = Math.max(1, target.dedupIdx - Math.floor(r / 2));
+          viewMax = Math.min(totalPts, viewMin + r);
           viewMin = Math.max(1, viewMax - r);
         }
-        const tx = PAD.left + idxToX(target.idx, pw);
+        const tx = PAD.left + idxToX(target.dedupIdx, pw);
         const ty = PAD.top  + l2ToY(target.l2, ph, yMin, yMax);
         agentHighlight = `
           <circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="12" fill="#2563eb" opacity="0.15"/>
@@ -519,14 +503,28 @@ function initChart(raw, relevant) {
       <line x1="${PAD.left}" y1="${PAD.top+ph}" x2="${PAD.left+pw}" y2="${PAD.top+ph}" stroke="#ccc" stroke-width="1"/>
     `;
     const axisLabels = `
-      <text x="${PAD.left+pw/2}" y="${h-4}" text-anchor="middle" fill="#555" font-size="12">Agent-Rang (aufsteigend nach L2)</text>
-      <text transform="rotate(-90)" x="${-(PAD.top+ph/2)}" y="16" text-anchor="middle" fill="#555" font-size="12">L2-Distanz</text>
+      <text x="${PAD.left+pw/2}" y="${h-4}" text-anchor="middle" fill="#555" font-size="12">${deduplicate ? 'Unique L2 values (ascending)' : 'Agent rank (ascending by L2)'}</text>
+      <text transform="rotate(-90)" x="${-(PAD.top+ph/2)}" y="16" text-anchor="middle" fill="#555" font-size="12">L2 distance</text>
     `;
     const hitRect = `<rect x="${PAD.left}" y="${PAD.top}" width="${pw}" height="${ph}" fill="transparent" id="hitRect"/>`;
 
+    // Cutoff lines from queries.js cutoffs array
+    let cutoffLines = '';
+    cutoffs.forEach((c, ci) => {
+      if (!activeCutoffs.has(c.name)) return;
+      const pt = display.find(d => d.ids.includes(c.agent));
+      if (!pt) return;
+      const cx = PAD.left + idxToX(pt.dedupIdx, pw);
+      if (cx < PAD.left || cx > PAD.left + pw) return;
+      const color = CUTOFF_COLORS[ci % CUTOFF_COLORS.length];
+      const labelY = PAD.top + 12 + ci * 13;
+      cutoffLines += `<line x1="${cx.toFixed(1)}" y1="${PAD.top}" x2="${cx.toFixed(1)}" y2="${(PAD.top+ph).toFixed(1)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.85"/>`;
+      cutoffLines += `<text x="${(cx+4).toFixed(1)}" y="${labelY.toFixed(1)}" font-size="10" fill="${color}" font-weight="600">${c.name}</text>`;
+    });
+
     // Compose: if col filter active, replace main line with dimmed version + col dots on top
     const lineLayer = searchCol ? colHighlightLine : mainLine;
-    svgEl.innerHTML = gridLines + yLabels + xTicks + axes + lineLayer + dots + colDots + relevantDots + agentHighlight + hitRect + axisLabels;
+    svgEl.innerHTML = gridLines + yLabels + xTicks + axes + lineLayer + dots + colDots + relevantDots + agentHighlight + cutoffLines + hitRect + axisLabels;
 
     // Re-attach dot events
     svgEl.querySelectorAll('.dot').forEach(dot => {
@@ -545,11 +543,11 @@ function initChart(raw, relevant) {
     const hoverIdx = viewMin + fraction * (viewMax - viewMin);
     let closest = null, minDist = Infinity;
     visible.forEach(d => {
-      const dx = Math.abs(d.idx - hoverIdx);
+      const dx = Math.abs(d.dedupIdx - hoverIdx);
       if (dx < minDist) { minDist = dx; closest = d; }
     });
     if (!closest) return;
-    const x = PAD.left + idxToX(closest.idx, pw);
+    const x = PAD.left + idxToX(closest.dedupIdx, pw);
     const y = PAD.top  + l2ToY(closest.l2, ph, yMin, yMax);
     const old = svgEl.querySelector('.crosshair');
     if (old) old.remove();
@@ -567,7 +565,7 @@ function initChart(raw, relevant) {
   function showTooltip(e, d) {
     const colBadge = searchCol && d.col === searchCol
       ? `<span class="col-badge">${d.col}</span>` : '';
-    tooltipEl.innerHTML = `<strong>${d.id}${colBadge}</strong>L2 = ${parseFloat(d.l2).toFixed(4)}<br>Tabelle: ${d.table}<br>Spalte: ${d.col}`;
+    tooltipEl.innerHTML = `<strong>${d.id}${colBadge}</strong>L2 = ${parseFloat(d.l2).toFixed(4)}<br>Table: ${d.table}<br>Column: ${d.col}`;
     tooltipEl.style.opacity = '1';
     positionTooltip(e);
   }
@@ -735,12 +733,13 @@ function initChart(raw, relevant) {
     const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left - PAD.left) / pw));
     const range    = viewMax - viewMin;
     const factor   = e.deltaY > 0 ? 1.15 : 0.87;
-    const newRange = Math.max(5, Math.min(data.length, Math.round(range * factor)));
+    const totalPts = activeData().length;
+    const newRange = Math.max(5, Math.min(totalPts, Math.round(range * factor)));
     const center   = viewMin + fraction * range;
     viewMin = Math.max(1, Math.round(center - fraction * newRange));
-    viewMax = Math.min(data.length, viewMin + newRange);
+    viewMax = Math.min(totalPts, viewMin + newRange);
     viewMin = Math.max(1, viewMax - newRange);
-    resetBtn.classList.toggle('visible', viewMin !== 1 || viewMax !== data.length);
+    resetBtn.classList.toggle('visible', viewMin !== 1 || viewMax !== totalPts);
     draw();
   }, { passive: false, signal: window._chartAbort.signal });
 
@@ -758,17 +757,18 @@ function initChart(raw, relevant) {
     let nMin = dragStartViewMin + shift;
     let nMax = nMin + range;
     if (nMin < 1) { nMin = 1; nMax = range + 1; }
-    if (nMax > data.length) { nMax = data.length; nMin = data.length - range; }
+    const _tot = activeData().length;
+    if (nMax > _tot) { nMax = _tot; nMin = _tot - range; }
     viewMin = nMin; viewMax = nMax;
     draw();
   }, sig);
   window.addEventListener('mouseup', () => {
     isDragging = false; wrapEl.style.cursor = 'default';
-    resetBtn.classList.toggle('visible', viewMin !== 1 || viewMax !== data.length);
+    resetBtn.classList.toggle('visible', viewMin !== 1 || viewMax !== activeData().length);
   }, sig);
 
   window.resetZoom = function() {
-    viewMin = 1; viewMax = data.length;
+    viewMin = 1; viewMax = activeData().length;
     resetBtn.classList.remove('visible');
     draw();
   };
@@ -781,6 +781,30 @@ function initChart(raw, relevant) {
   document.getElementById('relevantToggle').addEventListener('change', e => {
     showRelevant = e.target.checked;
     draw();
+  });
+
+  freshClone('deduplicateToggle').addEventListener('change', e => {
+    deduplicate = e.target.checked;
+    viewMin = 1;
+    viewMax = activeData().length;
+    resetBtn.classList.remove('visible');
+    draw();
+  });
+
+  // Build cutoff toggles dynamically
+  const toggleContainer = document.getElementById('cutoffToggles');
+  toggleContainer.innerHTML = '';
+  cutoffs.forEach((c, ci) => {
+    const color = CUTOFF_COLORS[ci % CUTOFF_COLORS.length];
+    const label = document.createElement('label');
+    label.className = 'relevant-label';
+    label.innerHTML = `<input type="checkbox" checked/><span style="font-size:12px;color:${color}">&#9646; ${c.name}</span>`;
+    const cb = label.querySelector('input');
+    cb.addEventListener('change', e => {
+      if (e.target.checked) activeCutoffs.add(c.name); else activeCutoffs.delete(c.name);
+      draw();
+    });
+    toggleContainer.appendChild(label);
   });
 
   draw();
