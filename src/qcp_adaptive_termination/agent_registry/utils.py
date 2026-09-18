@@ -46,7 +46,8 @@ def _create_database_description_model(
         fields = {}
         for col_name in table_info["fields"]:
             if (table_name, col_name) in missing_fields_set:
-                fields[col_name] = (
+                safe_name = col_name.lstrip("_")
+                fields[safe_name] = (
                     str,
                     Field(
                         description=f"Natural language description of the column '{col_name}' in table '{table_name}'"
@@ -116,7 +117,7 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
             if col_model is not None:
                 for col_name, field_info in table_info["fields"].items():
                     if (table_name, col_name) in missing_fields_set:
-                        field_info["comment"] = getattr(col_model, col_name)
+                        field_info["comment"] = getattr(col_model, col_name.lstrip("_"))
 
         if missing_tables:
             table_desc_result = getattr(result, "table_descriptions", None)
