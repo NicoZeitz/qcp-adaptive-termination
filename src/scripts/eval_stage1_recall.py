@@ -166,10 +166,16 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             "kneedle_precision": kneedle_prec,
             "kneedle_recall": kneedle_rec,
             "kneedle_f1": kneedle_f1,
+            "kneedle_tp": kneedle_tp,
+            "kneedle_fp": kneedle_fp,
+            "kneedle_fn": kneedle_fn,
             "llm_selected": llm_selected,
             "llm_precision": llm_prec,
             "llm_recall": llm_rec,
             "llm_f1": llm_f1,
+            "llm_tp": llm_tp,
+            "llm_fp": llm_fp,
+            "llm_fn": llm_fn,
         }
 
     # --- final metrics ---
@@ -278,6 +284,24 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             "embedding_fp": emb_data["fp"],
             "embedding_fn": emb_data["fn"],
         })
+        if emb_data["kneedle_selected"]:
+            result.update({
+                "kneedle_precision": round(emb_data["kneedle_precision"], 4),
+                "kneedle_recall": round(emb_data["kneedle_recall"], 4),
+                "kneedle_f1": round(emb_data["kneedle_f1"], 4),
+                "kneedle_tp": emb_data["kneedle_tp"],
+                "kneedle_fp": emb_data["kneedle_fp"],
+                "kneedle_fn": emb_data["kneedle_fn"],
+            })
+        if emb_data["llm_selected"]:
+            result.update({
+                "llm_precision": round(emb_data["llm_precision"], 4),
+                "llm_recall": round(emb_data["llm_recall"], 4),
+                "llm_f1": round(emb_data["llm_f1"], 4),
+                "llm_tp": emb_data["llm_tp"],
+                "llm_fp": emb_data["llm_fp"],
+                "llm_fn": emb_data["llm_fn"],
+            })
         for pm in emb_data["percentile_metrics"]:
             pct_key = f"emb_pct{pm['pct']}"
             result[pct_key + "_k"] = pm["k"]
@@ -385,6 +409,39 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
     if has_embedding:
         emb_ok = sum(1 for r in scored if r.get("embedding_recall", 0.0) == 1.0)
         print(f"  Perfect recall (embedding): {emb_ok}/{evaluated}")
+        print()
+        print("  -- After kneedle cutoff --")
+        has_kneedle = any("kneedle_precision" in r for r in scored)
+        has_llm = any("llm_precision" in r for r in scored)
+
+        if has_kneedle:
+            macro_p = macro_avg(scored, "kneedle_precision")
+            macro_r = macro_avg(scored, "kneedle_recall")
+            macro_f = macro_avg(scored, "kneedle_f1")
+            micro_tp = sum(r.get("kneedle_tp", 0) for r in scored)
+            micro_fp = sum(r.get("kneedle_fp", 0) for r in scored)
+            micro_fn = sum(r.get("kneedle_fn", 0) for r in scored)
+            micro_p, micro_r, micro_f = micro_metrics(micro_tp, micro_fp, micro_fn)
+            print(f"  Macro precision : {macro_p:.3f}  |  Micro precision : {micro_p:.3f}")
+            print(f"  Macro recall    : {macro_r:.3f}  |  Micro recall    : {micro_r:.3f}")
+            print(f"  Macro F1        : {macro_f:.3f}  |  Micro F1        : {micro_f:.3f}")
+        else:
+            print("  (no kneedle data in logs)")
+
+        if has_llm:
+            print()
+            print("  -- After column-relevance LLM filter --")
+            macro_p = macro_avg(scored, "llm_precision")
+            macro_r = macro_avg(scored, "llm_recall")
+            macro_f = macro_avg(scored, "llm_f1")
+            micro_tp = sum(r.get("llm_tp", 0) for r in scored)
+            micro_fp = sum(r.get("llm_fp", 0) for r in scored)
+            micro_fn = sum(r.get("llm_fn", 0) for r in scored)
+            micro_p, micro_r, micro_f = micro_metrics(micro_tp, micro_fp, micro_fn)
+            print(f"  Macro precision : {macro_p:.3f}  |  Micro precision : {micro_p:.3f}")
+            print(f"  Macro recall    : {macro_r:.3f}  |  Micro recall    : {micro_r:.3f}")
+            print(f"  Macro F1        : {macro_f:.3f}  |  Micro F1        : {micro_f:.3f}")
+
         print()
         print("  -- After embedding filter --")
 
