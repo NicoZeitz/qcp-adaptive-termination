@@ -119,6 +119,8 @@ async def _column_relevance_llm(
         agent_name=agent_name,
         prompt_parameters={
             "query": query,
+            "database_description": agent_data[agent_name].natural_language_description,
+            "all_tables": list(agent_data[agent_name].individual_descriptions.keys()),
             "table_name": table_name,
             "table_description": td.natural_language_description,
             "column_name": col_name,
@@ -183,7 +185,7 @@ async def _filter_embeddings_internal(
         for table_name, table_desc in data.individual_descriptions.items():
             for col_name, col_desc in table_desc.columns.items():
                 col_entries.append((agent.name, table_name, col_name))
-                col_descriptions.append(f"{col_name}: {col_desc.natural_language_description}")
+                col_descriptions.append(f"{table_name}: {table_desc.natural_language_description}, {col_name}: {col_desc.natural_language_description}")
 
     if not col_entries:
         logging.warning("No column embeddings found, returning all agents unfiltered")
