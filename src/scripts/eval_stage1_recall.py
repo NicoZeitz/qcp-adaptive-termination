@@ -358,6 +358,17 @@ def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> No
         sorted_agents = sorted(agent_rows.items(), key=lambda x: x[1][0])
         relevant_names = r.get("relevant", [])
 
+        cutoffs: list[dict] = []
+        after_kneedle: list[str] = emb.get("after_kneedle_agents", [])
+        if after_kneedle:
+            kneedle_set = set(after_kneedle)
+            kneedle_agent = next(
+                (name for name, _ in reversed(sorted_agents) if name in kneedle_set),
+                None,
+            )
+            if kneedle_agent:
+                cutoffs.append({"name": "kneedle", "agent": kneedle_agent})
+
         queries.append({
             "label": r["file"].replace("_", " "),
             "relevant": ",".join(sorted(relevant_names)),
@@ -365,6 +376,7 @@ def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> No
                 f"{name},{l2:.4f},{table},{col}"
                 for name, (l2, table, col) in sorted_agents
             ),
+            "cutoffs": cutoffs,
         })
 
     if not queries:
