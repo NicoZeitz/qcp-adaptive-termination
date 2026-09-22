@@ -1,4 +1,4 @@
 【Query】
 {{query}}
 
-Return true if this table could hold parts of the information needed to answer the query, false if there is clearly no connection of its data with the query.
+First, briefly reason why this database is or is not relevant to the query, and what would need to change (in the query or the data) to flip the decision to the opposite. Then return your decision as `relevant`.

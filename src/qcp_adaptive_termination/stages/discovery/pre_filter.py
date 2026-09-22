@@ -5,6 +5,7 @@ import logging
 import resource
 
 import numpy as np
+from pydantic import BaseModel
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
@@ -14,6 +15,11 @@ from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
 from qcp_adaptive_termination.models.agent import AgentRegistryData
+
+
+class ColumnRelevanceResult(BaseModel):
+    reasoning: str
+    relevant: bool
 from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.observability.context import get_output_dir
 from qcp_adaptive_termination.stages.discovery.cluster_index import (
@@ -114,7 +120,7 @@ async def _column_relevance_llm(
 ) -> bool:
     td = agent_data[agent_name].individual_descriptions[table_name]
     col_desc = td.columns[col_name].natural_language_description
-    return await runner.run_llm(
+    result = await runner.run_llm(
         role=AgentRole.EMBEDDING_COLUMN_RELEVANCE,
         agent_name=agent_name,
         prompt_parameters={
@@ -126,8 +132,15 @@ async def _column_relevance_llm(
             "column_name": col_name,
             "column_description": col_desc,
         },
-        output_type=bool,
+        output_type=ColumnRelevanceResult,
     )
+    logging.info(
+        "Column-relevance LLM [%s] relevant=%s — %s",
+        agent_name,
+        result.relevant,
+        result.reasoning,
+    )
+    return result.relevant
 
 
 async def filter_by_column_relevance(
