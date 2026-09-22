@@ -18,6 +18,7 @@ selection_kwargs:
 align_schema_agent_limit: 1000
 
 embedding_model: "openai/text-embedding-3-large"
+llm_timeout: 120.0
 
 agent_configs:
   coordinator_relevance:

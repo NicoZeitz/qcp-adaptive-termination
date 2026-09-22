@@ -35,5 +35,6 @@ class Config(BaseModel):
 
     embedding_model: str = "openai/text-embedding-3-large"
     agent_configs: dict[str, RoleConfig] = Field(default_factory=dict)
+    llm_timeout: float = 60.0
 
     cache_mode: CacheMode = CacheMode.READ_AND_WRITE

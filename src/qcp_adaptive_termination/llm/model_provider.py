@@ -11,6 +11,8 @@ from agents.models.multi_provider import MultiProviderMap
 from httpx import AsyncClient
 from openai import AsyncOpenAI
 
+from qcp_adaptive_termination.observability.context import get_config
+
 _multi_provider: MultiProvider | None = None
 
 
@@ -59,6 +61,7 @@ async def _modify_request_hook(request: httpx.Request):
 def _add_provider(
     prefix: str,
     provider_map: MultiProviderMap,
+    timeout: float,
     *,
     responses_api: bool = True,
     http_client: AsyncClient | None = None,
@@ -74,6 +77,7 @@ def _add_provider(
         base_url=base_url,
         api_key=api_key or "not-required",
         http_client=http_client,
+        timeout=timeout,
     )
     provider = OpenAIProvider(
         openai_client=client,
@@ -84,12 +88,14 @@ def _add_provider(
 
 def _setup_multi_provider() -> MultiProvider:
     provider_map = MultiProviderMap()
-    _add_provider("OPENAI", provider_map=provider_map)
+    timeout = get_config().llm_timeout
+    _add_provider("OPENAI", provider_map=provider_map, timeout=timeout)
     _add_provider(
         "UNIVERSITY",
         provider_map=provider_map,
+        timeout=timeout,
         responses_api=False,
         http_client=AsyncClient(event_hooks={"request": [_modify_request_hook]}),
     )
-    _add_provider("LOCAL", provider_map=provider_map)
+    _add_provider("LOCAL", provider_map=provider_map, timeout=timeout)
     return MultiProvider(provider_map=provider_map)
