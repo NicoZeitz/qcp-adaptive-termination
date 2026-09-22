@@ -4,6 +4,8 @@ import asyncio
 import logging
 import resource
 
+from openai import APITimeoutError
+
 import numpy as np
 from pydantic import BaseModel
 
@@ -149,12 +151,18 @@ async def filter_by_column_relevance(
     agent_data: dict[str, AgentRegistryData],
 ) -> list[tuple[str, tuple[float, str, str]]]:
     """Run one LLM call per agent to confirm relevance based on best-matching column."""
-    semaphore = asyncio.Semaphore(25)
+    semaphore = asyncio.Semaphore(10)
 
     async def _check(entry: tuple[str, tuple[float, str, str]]) -> tuple[str, tuple[float, str, str]] | None:
         name, (dist, table_name, col_name) = entry
         async with semaphore:
-            relevant = await _column_relevance_llm(query, name, table_name, col_name, agent_data)
+            while True:
+                try:
+                    relevant = await _column_relevance_llm(query, name, table_name, col_name, agent_data)
+                    break
+                except APITimeoutError:
+                    logging.warning("Column-relevance LLM [%s] timed out — retrying", name)
+                    await asyncio.sleep(2)
         return entry if relevant else None
 
     results = await asyncio.gather(*[_check(e) for e in sorted_agents])
