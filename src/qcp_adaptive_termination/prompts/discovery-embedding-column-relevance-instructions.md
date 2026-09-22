@@ -5,6 +5,9 @@ A embedding search identified a potentially relevant column in this database tab
 【Database Description】
 {{database_description}}
 
+【Full Database Schema】
+{{schema}}
+
 【Table of Identified Potentially Relevant Column】
 {{table_name}}: {{table_description}}
 

@@ -120,7 +120,7 @@ async def _column_relevance_llm(
         prompt_parameters={
             "query": query,
             "database_description": agent_data[agent_name].natural_language_description,
-            "all_tables": list(agent_data[agent_name].individual_descriptions.keys()),
+            "schema": agent_data[agent_name].technical_description,
             "table_name": table_name,
             "table_description": td.natural_language_description,
             "column_name": col_name,
