@@ -24,6 +24,18 @@ def get_multi_provider() -> MultiProvider:
     return _multi_provider
 
 
+async def _log_request_hook(request: httpx.Request):
+    if get_config().log_llm_requests and request.method == "POST":
+        body_bytes = await request.aread()
+        request.stream = httpx.ByteStream(body_bytes)
+        logging.info(
+            "LLM REQUEST %s\ncurl -s -X POST '%s' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer $UNIVERSITY_API_KEY' \\\n  -d '%s'",
+            request.url,
+            request.url,
+            body_bytes.decode("utf-8").replace("'", "'\\''"),
+        )
+
+
 async def _modify_request_hook(request: httpx.Request):
     if request.method == "POST" and "application/json" in request.headers.get("content-type", ""):
         body_bytes = await request.aread()
@@ -76,7 +88,7 @@ def _add_provider(
     client = AsyncOpenAI(
         base_url=base_url,
         api_key=api_key or "not-required",
-        http_client=http_client,
+        http_client=http_client or AsyncClient(event_hooks={"request": [_log_request_hook]}),
         timeout=timeout,
     )
     provider = OpenAIProvider(
@@ -95,7 +107,7 @@ def _setup_multi_provider() -> MultiProvider:
         provider_map=provider_map,
         timeout=timeout,
         responses_api=False,
-        http_client=AsyncClient(event_hooks={"request": [_modify_request_hook]}),
+        http_client=AsyncClient(event_hooks={"request": [_log_request_hook, _modify_request_hook]}),
     )
     _add_provider("LOCAL", provider_map=provider_map, timeout=timeout)
     return MultiProvider(provider_map=provider_map)
