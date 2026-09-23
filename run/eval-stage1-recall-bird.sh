@@ -27,7 +27,7 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/input"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="eval_stage1_recall_test_with_more_database_information"
+RUN_NAME="eval_stage1_recall_lil_big_test_with_reasoning_GLM"
 
 # TODO: Set to true to run files in parallel, false for sequential execution
 PARALLEL=true
@@ -39,10 +39,17 @@ mkdir -p "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"
 exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stderr.log" >&2)
 
 # Load all input files from directory
-shopt -s nullglob
-FILES=("${INPUT_DIR}"/*.json)
-FILES=("${FILES[@]#${INPUT_DIR}/}")
-shopt -u nullglob
+# shopt -s nullglob
+# FILES=("${INPUT_DIR}"/*.json)
+# FILES=("${FILES[@]#${INPUT_DIR}/}")
+# shopt -u nullglob
+
+# Or use a specific list of files
+FILES=(
+    "1084_Among_the_players_born_before_the_year_1986_how_many_of_them_would_remain_in_his_position_and_defense_while_the_team_attacked.json"
+    "3657_List_the_sources_for_the_Net_Migration_in_South_American_countries_in_2002.json"
+    "3733_Which_country_has_had_the_highest_proportion_of_CO2_emissions_from_transport.json"
+)
 
 ############################################################ RUN EVERYTHING ############################################################
 
@@ -83,9 +90,6 @@ for FILE in "${FILES[@]}"; do
 
     COMPLETED=$((COMPLETED + 1))
 
-    echo "  ================== RAM usage after query ${COMPLETED}/${TOTAL}"
-    free -h
-
     ############################################################ EVALUATE ############################################################
 
     if [[ "${TEST}" != "true" ]]; then
@@ -100,4 +104,4 @@ for FILE in "${FILES[@]}"; do
 
 done
 
-# echo "================== All ${TOTAL} queries completed"
+echo "================== All ${TOTAL} queries completed"

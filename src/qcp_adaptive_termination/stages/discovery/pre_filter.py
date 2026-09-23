@@ -151,7 +151,7 @@ async def filter_by_column_relevance(
     agent_data: dict[str, AgentRegistryData],
 ) -> list[tuple[str, tuple[float, str, str]]]:
     """Run one LLM call per agent to confirm relevance based on best-matching column."""
-    semaphore = asyncio.Semaphore(10)
+    semaphore = asyncio.Semaphore(5)
 
     async def _check(entry: tuple[str, tuple[float, str, str]]) -> tuple[str, tuple[float, str, str]] | None:
         name, (dist, table_name, col_name) = entry
