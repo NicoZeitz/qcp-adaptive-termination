@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from qcp_adaptive_termination import hooks
+from qcp_adaptive_termination.estimator import Estimator
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import (
     AlignedResultList,
@@ -91,7 +92,9 @@ async def run_agent_batch(
     remaining_after_batch: list[ScoredDataAgent],
     batch_records: list[_AgentRecord],
     iteration: int,
-) -> tuple[FinalResultOutcome | QueryMoreAgentsOutcome | RaiseNeedOutcome, list[_AgentRecord]]:
+    *,
+    previous_estimator: Estimator | None = None,
+) -> tuple[FinalResultOutcome | QueryMoreAgentsOutcome | RaiseNeedOutcome, list[_AgentRecord], Estimator | None]:
     """Query all agents in batch in parallel, merge results, then run evaluator once."""
     batch_names = [s.agent.name for s in batch]
     agents_total = len(agents_queried) + len(batch_names) + len(remaining_after_batch)
@@ -162,19 +165,25 @@ async def run_agent_batch(
                 estimators=[None] * len(batch_names),
                 decision="need",
             )
-            return combined_need_outcome, [_AgentRecord(agent=name, estimator=None) for name in batch_names]
+            return (
+                combined_need_outcome,
+                [_AgentRecord(agent=name, estimator=None) for name in batch_names],
+                previous_estimator,
+            )
 
         per_agent_stats: list[tuple[str, AlignedResultList, EstimatorStatistics]] = []
         current_result_list = result_list
         agents_queried_so_far = len(agents_queried)
+        current_estimator: Estimator | None = previous_estimator
         for idx, (agent_name, agent_df, _) in enumerate(results):
             assert agent_df is not None
             current_result_list = merge_agent_result(current_result_list, agent_name, agent_df)
-            agent_stats = compute_estimator_statistics(
+            agent_stats, current_estimator = compute_estimator_statistics(
                 current_result_list,
                 agents_queried_so_far + idx + 1,
                 agents_total,
                 [agent_name],
+                previous_estimator=current_estimator,
             )
             per_agent_stats.append((agent_name, current_result_list, agent_stats))
 
@@ -195,7 +204,7 @@ async def run_agent_batch(
                 estimators=[stats for _, _, stats in per_agent_stats],
                 decision="query_more_agents",
             )
-            return QueryMoreAgentsOutcome(result_list=merged_result_list), new_records
+            return QueryMoreAgentsOutcome(result_list=merged_result_list), new_records, current_estimator
 
         outcome = await run_completeness_evaluator(
             merged_result_list,
@@ -220,7 +229,7 @@ async def run_agent_batch(
             estimators=[stats for _, _, stats in per_agent_stats],
             decision=decision,
         )
-        return outcome, new_records
+        return outcome, new_records, current_estimator
 
 
 async def _answer_step_multiple_agents_via_loop(
@@ -265,9 +274,10 @@ async def _answer_step_multiple_agents_via_loop(
     batch_selections = ranked_all[:first_batch_size]
     remaining_selections = ranked_all[first_batch_size:]
     iteration = 0
+    current_estimator: Estimator | None = None
 
     while batch_selections:
-        outcome, new_records = await run_agent_batch(
+        outcome, new_records, current_estimator = await run_agent_batch(
             data_agents=data_agents,
             query_plan_step=query_plan_step,
             batch=batch_selections,
@@ -277,6 +287,7 @@ async def _answer_step_multiple_agents_via_loop(
             remaining_after_batch=remaining_selections,
             batch_records=batch_records,
             iteration=iteration,
+            previous_estimator=current_estimator,
         )
         batch_records.extend(new_records)
         agents_queried.extend(r.agent for r in new_records)

@@ -34,34 +34,37 @@ def compute_estimator_statistics(
     agents_queried: int,
     agents_total: int,
     agents_current: list[str],
-) -> EstimatorStatistics:
+    *,
+    previous_estimator: Estimator | None = None,
+) -> tuple[EstimatorStatistics, Estimator | None]:
     config = context.get_config()
     schema = result_list.schema_metadata
     data = result_list.data
     aggregation_types = set(schema.aggregation_types)
 
-    source_samples: list[list[DataItem]] = []
-    for agent_name in data[schema.source_agent_column].unique():
-        dataframe = pd.DataFrame(data[data[schema.source_agent_column] == agent_name])
-        items = dataframe_to_data_items(dataframe, schema.keys, schema.value_column, agent_name)
-        if items:
-            source_samples.append(items)
-
-    has_data = len(source_samples) >= 1
-    has_overlap = len(source_samples) >= 2
-
-    if not has_data:
-        tracing.indented_logging("Estimator: no data (all agents returned empty results)")
-        return EstimatorStatistics(
-            agents_queried=agents_queried,
-            agents_total=agents_total,
-            aggregation_types=sorted(aggregation_types),
-            new_unique_count=0,
-            observed_count=0,
-        )
-
-    if not has_overlap:
-        tracing.indented_logging("Estimator: no overlap data (fewer than 2 agents with results)")
+    estimator: Estimator | None
+    if previous_estimator is not None:
+        for agent_name in agents_current:
+            agent_data = data[data[schema.source_agent_column] == agent_name]
+            if len(agent_data) > 0:
+                new_items = dataframe_to_data_items(
+                    pd.DataFrame(agent_data), schema.keys, schema.value_column, agent_name
+                )
+                if new_items:
+                    previous_estimator.add_source(new_items)
+        estimator = previous_estimator
+        has_data = len(previous_estimator.source_samples) >= 1
+        has_overlap = len(previous_estimator.source_samples) >= 2
+    else:
+        source_samples: list[list[DataItem]] = []
+        for agent_name in data[schema.source_agent_column].unique():
+            agent_df = pd.DataFrame(data[data[schema.source_agent_column] == agent_name])
+            items = dataframe_to_data_items(agent_df, schema.keys, schema.value_column, agent_name)
+            if items:
+                source_samples.append(items)
+        has_data = len(source_samples) >= 1
+        has_overlap = len(source_samples) >= 2
+        estimator = Estimator(source_samples) if has_data else None
 
     if schema.keys:
         key_series: pd.Series = data[schema.keys[0]].astype(str)  # type: ignore[assignment]
@@ -74,7 +77,20 @@ def compute_estimator_statistics(
     current_keys = set(key_series[is_current])
     new_unique_count = len(current_keys - prev_keys)
 
-    estimator = Estimator(source_samples)
+    if not has_data:
+        tracing.indented_logging("Estimator: no data (all agents returned empty results)")
+        return EstimatorStatistics(
+            agents_queried=agents_queried,
+            agents_total=agents_total,
+            aggregation_types=sorted(aggregation_types),
+            new_unique_count=0,
+            observed_count=0,
+        ), None
+
+    if not has_overlap:
+        tracing.indented_logging("Estimator: no overlap data (fewer than 2 agents with results)")
+
+    assert estimator is not None
 
     result = EstimatorStatistics(
         sample_coverage=estimator.sample_coverage() if has_overlap else None,
@@ -136,4 +152,4 @@ def compute_estimator_statistics(
                 use_monte_carlo=config.use_monte_carlo,
             )
 
-    return result
+    return result, estimator

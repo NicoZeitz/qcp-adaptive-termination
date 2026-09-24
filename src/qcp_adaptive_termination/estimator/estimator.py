@@ -3,7 +3,6 @@ import math
 import random
 import sys
 from collections.abc import Sequence
-from functools import cache
 
 import numpy as np
 import pandas as pd
@@ -86,6 +85,12 @@ class Estimator:
     _φ_f12: float
     """φ_{f₁₂} — SUM of attribute values of singletons and doubletons combined."""
 
+    _cached_buckets: dict[tuple, list[Bucket]]
+    """Bucket lists keyed by (value_estimator, count_estimator, max_buckets)."""
+
+    _bucket_sample_count: dict[tuple, int]
+    """Number of samples in _all_samples when each cached bucket key was last computed."""
+
     def __init__(self, source_samples: list[list[DataItem]]) -> None:
         self.source_samples = source_samples
         self._all_samples = [item for src in source_samples for item in src if item is not None]
@@ -127,7 +132,8 @@ class Estimator:
         self._mc_random_seed: int | None = MC_RANDOM_SEED
         self._mc_max_theta_points: int = MC_DEFAULT_MAX_THETA_POINTS
         self._mc_laplace_alpha: float = MC_LAPLACE_ALPHA
-        self._dynamic_buckets = cache(self._raw_dynamic_buckets)
+        self._cached_buckets: dict[tuple, list[Bucket]] = {}
+        self._bucket_sample_count: dict[tuple, int] = {}
 
     def set_monte_carlo_parameters(
         self,
@@ -145,6 +151,46 @@ class Estimator:
         self._mc_laplace_alpha = laplace_alpha
 
     # ── Public Helpers: core statistics ──────────────────────────────────────────────
+
+    def add_source(self, items: list[DataItem]) -> None:
+        """Add one source's observations, updating all statistics incrementally.
+
+        Avoids a full rebuild of _c, _n, _freq, _φ_K, _φ_f1, _φ_f12 and _entities
+        when adding a single new agent's data on top of previously processed sources.
+        Cached bucket structures are updated via warm-start on next access.
+        """
+        if not items:
+            return
+
+        self.source_samples.append(items)
+        for item in items:
+            self._all_samples.append(item)
+            self._n += 1
+            self._observed_min = min(self._observed_min, item.value)
+            self._observed_max = max(self._observed_max, item.value)
+
+            old_count = int(self._entities[item.name][0]) if item.name in self._entities else 0
+
+            if old_count == 0:
+                self._entities[item.name] = [1.0, float(item.value)]
+                self._c += 1
+                self._freq[0] += 1
+                self._φ_K += item.value
+                self._φ_f1 += item.value
+                self._φ_f12 += item.value
+            else:
+                self._entities[item.name][0] += 1.0
+                if len(self._freq) <= old_count:
+                    self._freq.append(0)
+                self._freq[old_count - 1] -= 1
+                self._freq[old_count] += 1
+                entity_value = self._entities[item.name][1]
+                if old_count == 1:
+                    # singleton → doubleton: leave φ_f12 unchanged (still in f12), remove from φ_f1
+                    self._φ_f1 -= entity_value
+                elif old_count == 2:
+                    # doubleton → tripleton: remove from φ_f12
+                    self._φ_f12 -= entity_value
 
     def sample_mean(self) -> float:
         """Mean of all raw observations (counting duplicates), not the per-entity mean."""
@@ -227,7 +273,7 @@ class Estimator:
                         use_bucket=False,
                         use_monte_carlo=use_monte_carlo,
                     )
-                    for b in self._dynamic_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
+                    for b in self._get_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
                 ),
             )
 
@@ -493,7 +539,7 @@ class Estimator:
                 use_bucket=False,
                 use_monte_carlo=use_monte_carlo,
             )
-            for b in self._dynamic_buckets(value_estimator, count_estimator, max_buckets=max_buckets)
+            for b in self._get_buckets(value_estimator, count_estimator, max_buckets=max_buckets)
         )
 
     def _naive_delta(
@@ -630,7 +676,7 @@ class Estimator:
         if not use_bucket:
             return self.sample_avg()
 
-        buckets = self._dynamic_buckets(bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets)
+        buckets = self._get_buckets(bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets)
 
         total_weight = 0.0
         weighted_sum = 0.0
@@ -701,7 +747,7 @@ class Estimator:
         likely observed the true minimum and return it; otherwise we return None
         to signal that the true minimum is unknown.
         """
-        buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
+        buckets = self._get_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
         sub = Estimator(buckets[0].to_sources())
         if sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo) - sub._c == 0:
             return self._observed_min
@@ -722,7 +768,7 @@ class Estimator:
         likely observed the true maximum and return it; otherwise we return None
         to signal that the true maximum is unknown.
         """
-        buckets = self._dynamic_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
+        buckets = self._get_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
         sub = Estimator(buckets[-1].to_sources())
         if sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo) - sub._c == 0:
             return self._observed_max
@@ -838,25 +884,43 @@ class Estimator:
 
     # ── Private Helpers: Buckets ───────────────────────────────────────────
 
-    def _raw_dynamic_buckets(
+    def _get_buckets(
         self,
         bucket_value_estimator: ValueEstimator,
         bucket_count_estimator: CountEstimator,
         *,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> list[Bucket]:
-        """Split the value range into adaptive buckets that minimize total estimated delta.
+        """Return cached buckets, warm-starting from existing structure when possible."""
+        key = (bucket_value_estimator, bucket_count_estimator, max_buckets)
+        if key not in self._cached_buckets:
+            self._cached_buckets[key] = self._raw_dynamic_buckets(
+                bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets
+            )
+            self._bucket_sample_count[key] = len(self._all_samples)
+        else:
+            prev_count = self._bucket_sample_count[key]
+            new_samples = self._all_samples[prev_count:]
+            if new_samples:
+                self._cached_buckets[key] = self._warm_split(
+                    self._cached_buckets[key],
+                    new_samples,
+                    bucket_value_estimator,
+                    bucket_count_estimator,
+                    max_buckets=max_buckets,
+                )
+                self._bucket_sample_count[key] = len(self._all_samples)
+        return self._cached_buckets[key]
 
-        Starts with one bucket covering the full range, then recursively tries to split
-        each bucket at every observed value. A split is accepted only if it reduces the
-        sum of per-bucket estimated deltas. Stops when no further improvement is possible.
-        Results are cached keyed by (value_estimator, count_estimator).
-        """
-        init_bucket = Bucket(self._observed_min, self._observed_max)
-        for s in sorted(self._all_samples, key=lambda x: x.value):
-            init_bucket.add_sample(s)
-
-        buckets: list[Bucket] = [init_bucket]
+    def _run_split_loop(
+        self,
+        buckets: list[Bucket],
+        bucket_value_estimator: ValueEstimator,
+        bucket_count_estimator: CountEstimator,
+        *,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
+    ) -> list[Bucket]:
+        """Run the greedy split loop until no bucket can be improved."""
         previous_count = 0
 
         while len(buckets) > previous_count:
@@ -902,6 +966,44 @@ class Estimator:
             buckets = next_buckets
 
         return sorted(buckets, key=lambda x: x.lower_bound)
+
+    def _warm_split(
+        self,
+        buckets: list[Bucket],
+        new_samples: list[DataItem],
+        bucket_value_estimator: ValueEstimator,
+        bucket_count_estimator: CountEstimator,
+        *,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
+    ) -> list[Bucket]:
+        """Insert new samples into existing buckets and re-split only the affected ones."""
+        lower_bounds = [b.lower_bound for b in buckets]
+        for item in new_samples:
+            idx = max(0, bisect.bisect_right(lower_bounds, item.value) - 1)
+            buckets[idx].add_sample(item)
+            buckets[idx].split_locked = False
+
+        for bucket in buckets:
+            if not bucket.split_locked:
+                bucket.samples.sort(key=lambda x: x.value)
+                bucket.rebuild_frequency_vector()
+
+        return self._run_split_loop(buckets, bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets)
+
+    def _raw_dynamic_buckets(
+        self,
+        bucket_value_estimator: ValueEstimator,
+        bucket_count_estimator: CountEstimator,
+        *,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
+    ) -> list[Bucket]:
+        """Build adaptive buckets from scratch over all current samples."""
+        init_bucket = Bucket(self._observed_min, self._observed_max)
+        for s in sorted(self._all_samples, key=lambda x: x.value):
+            init_bucket.add_sample(s)
+        return self._run_split_loop(
+            [init_bucket], bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets
+        )
 
     def _bucket_sum_est(
         self,
