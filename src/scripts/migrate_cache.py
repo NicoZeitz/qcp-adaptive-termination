@@ -21,7 +21,7 @@ from typing import Any
 from uuid import uuid4
 
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from qcp_adaptive_termination.observability.cache import Cache
 
@@ -117,6 +117,10 @@ def _migrate_directory(directory: Path, registry: dict[str, type[BaseModel]], de
     for path in sorted(directory.glob("*.json")):
         try:
             outcome = _migrate_file(path, registry, delete)
+        except ValidationError as exc:
+            logger.warning(f"schema mismatch, skipping {path.name}: {exc.error_count()} error(s)")
+            counts["skipped"] += 1
+            continue
         except Exception as exc:
             logger.error(f"failed {path.name}: {exc}")
             counts["failed"] += 1
