@@ -70,8 +70,9 @@ def validate_schema_output(
         if aggregation_type.value not in valid_aggregation_types:
             errors.append(f"aggregation_type '{aggregation_type}' is not valid")
 
-    if source_agent_column in columns:
-        errors.append(f"{source_agent_column} is not an allowed column name")
+    forbidden = [c for c in columns if c == source_agent_column or c.startswith("source_agent_")]
+    if forbidden:
+        errors.append(f"columns {forbidden} are not allowed (reserved source_agent_ prefix)")
 
     if len(errors) > 0:
         raise ValueError("\n".join(errors))

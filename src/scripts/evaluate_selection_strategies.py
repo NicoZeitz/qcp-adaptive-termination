@@ -2,8 +2,10 @@
 
 import asyncio
 import hashlib
+import json
 import logging
 import re
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -21,6 +23,7 @@ from qcp_adaptive_termination.models import (
     AggregationType,
     AlignedResultList,
     AlignedSchemaMetadata,
+    Config,
     DataAgent,
     EstimatorStatistics,
     ScoredDataAgent,
@@ -29,6 +32,7 @@ from qcp_adaptive_termination.models import (
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
     EvaluatorDecision,
+    ExecutionResult,
     FailedExecution,
     FinalResultOutcome,
     PartialQueryAnswer,
@@ -42,14 +46,15 @@ from scripts.utils import ScriptContext, run_script
 from scripts.utils.evaluation import EvaluationCurve, build_curve, compute_greedy_oracle
 from scripts.utils.sql import parse_select_columns, rewrite_sql_identifiers
 
-_OVERRIDE_EVENTS = [
-    HookEvent.ALIGN_SCHEMA_OVERRIDE,
-    HookEvent.DATA_AGENT_QUERY_OVERRIDE,
-    HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE,
-    HookEvent.MULTI_AGENT_STEP_BATCH_END,
-]
-
 _META_MAPPING_CACHE: dict[str, Any] | None = None
+
+# Per-strategy dispatch maps: strategy execution_id -> step-specific handler.
+# Populated/cleaned per _run_one_strategy call; supports parallel step execution.
+_per_strategy_align: dict[str, Callable[..., AlignedResultList]] = {}
+_per_strategy_data: dict[str, Callable[..., PartialQueryAnswer]] = {}
+
+# Execution ids for last-step strategy runs — only these get the JSON output.
+_last_step_execution_ids: set[str] = set()
 
 
 def _load_meta_mapping(data_dir: Path) -> dict[str, Any]:
@@ -112,7 +117,7 @@ def _query_agent_canonical(
         engine.dispose()
 
 
-def _make_align_schema_override(step_meta: dict[str, Any], query: str):
+def _make_align_schema_override(step_meta: dict[str, Any], query: str) -> Callable[..., AlignedResultList]:
     def _handler(
         execution_id: str,
         data_agents: list[DataAgent],
@@ -144,7 +149,7 @@ def _make_data_agent_override(
     meta_mapping: dict[str, Any],
     data_cache: dict[str, pd.DataFrame | None],
     data_dir: Path,
-):
+) -> Callable[..., PartialQueryAnswer]:
     def _handler(
         execution_id: str,
         data_agent: DataAgent,
@@ -189,6 +194,50 @@ def _replan_error(
 ) -> QueryPlan:
     del execution_id, data_agents, relevant_data_agents, query_plan
     raise RuntimeError(f"Unexpected replan triggered in benchmark. Step: {reason.step.id!r}")
+
+
+def _align_schema_dispatch(
+    execution_id: str,
+    data_agents: list[DataAgent],
+    agent_names: list[str],
+    query: str,
+    merge_task: str,
+) -> AlignedResultList:
+    for strategy_id, handler in _per_strategy_align.items():
+        if execution_id == strategy_id or execution_id.startswith(strategy_id + "/"):
+            return handler(
+                execution_id, data_agents=data_agents, agent_names=agent_names, query=query, merge_task=merge_task
+            )
+    raise ValueError(f"No align_schema handler for execution_id={execution_id!r}")
+
+
+def _data_agent_dispatch(
+    execution_id: str,
+    data_agent: DataAgent,
+    query: str,
+    additional_information: list[AdditionalInformation],
+    schema_metadata: AlignedSchemaMetadata | None,
+) -> PartialQueryAnswer:
+    for strategy_id, handler in _per_strategy_data.items():
+        if execution_id == strategy_id or execution_id.startswith(strategy_id + "/"):
+            return handler(
+                execution_id,
+                data_agent=data_agent,
+                query=query,
+                additional_information=additional_information,
+                schema_metadata=schema_metadata,
+            )
+    raise ValueError(f"No data_agent handler for execution_id={execution_id!r}")
+
+
+def _write_last_step_stage_3(execution_id: str, attempt: int, result: ExecutionResult) -> None:
+    for strategy_id in _last_step_execution_ids:
+        if execution_id == strategy_id or execution_id.startswith(strategy_id + "/"):
+            if output_dir := context.get_output_dir():
+                path = output_dir / "stage_3_output_collaborative_query_answering_result.json"
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(result.model_dump(), f, sort_keys=False, ensure_ascii=False, indent=4)
+            return
 
 
 def _register_batch_tracking(target_execution_id: str) -> tuple[list[str], Any]:
@@ -288,6 +337,159 @@ def _save_results(
     logging.info("Saved to %s", output_dir)
 
 
+async def _run_one_strategy(
+    strategy: SelectionStrategyType,
+    step: MultiAgentQueryPlanStep,
+    align_handler: Callable[..., AlignedResultList],
+    data_handler: Callable[..., PartialQueryAnswer],
+    raw_query_plan: Any,
+    relevant_data_agents: list[DataAgent],
+    all_agents: list[DataAgent],
+    data_cache: dict[str, pd.DataFrame | None],
+    total_unique: int,
+    canonical_cols: list[str],
+    config: Config,
+    is_last: bool,
+) -> tuple[str, EvaluationCurve]:
+    logging.info("Running strategy: %s / %s", step.id, strategy)
+    execution_id = uuid4().hex[:12]
+    strategy_config = config.model_copy(update={"selection_type": strategy})
+    ordered_agents, batch_end_handler = _register_batch_tracking(execution_id)
+    fresh_query_plan = QueryPlan.model_validate(raw_query_plan)
+
+    _per_strategy_align[execution_id] = align_handler
+    _per_strategy_data[execution_id] = data_handler
+    if is_last:
+        _last_step_execution_ids.add(execution_id)
+
+    try:
+        with hooks.stage_context(execution_id), context.config_context(strategy_config):
+            await execute_query_plan(
+                query_plan=fresh_query_plan,
+                relevant_data_agents=relevant_data_agents,
+                data_agents=all_agents,
+            )
+            logging.info("Strategy %s/%s completed", step.id, strategy)
+    except Exception as exc:
+        logging.warning("Strategy %s/%s failed: %s", step.id, strategy, exc)
+        logging.exception(exc)
+        if isinstance(exc, requests.exceptions.Timeout):
+            logging.error("Timeout exception: %s", exc)
+            raise SystemExit(1) from exc
+    finally:
+        _per_strategy_align.pop(execution_id, None)
+        _per_strategy_data.pop(execution_id, None)
+        _last_step_execution_ids.discard(execution_id)
+        hooks.unregister(HookEvent.MULTI_AGENT_STEP_BATCH_END, batch_end_handler)
+
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for name in ordered_agents:
+        if name not in seen:
+            seen.add(name)
+            deduped.append(name)
+
+    if not deduped:
+        logging.warning("Strategy %s/%s: no agents queried", step.id, strategy)
+        return str(strategy), EvaluationCurve(x=[0.0, 1.0], y=[0.0, 0.0], auc=0.0)
+
+    curve = build_curve(deduped, data_cache, total_unique, canonical_cols)
+    logging.info("  %s/%s AUC=%.4f agents=%d", step.id, strategy, curve.auc, len(deduped))
+    return str(strategy), curve
+
+
+async def _run_step(
+    step: MultiAgentQueryPlanStep,
+    step_meta: dict[str, Any],
+    relevant_data_agents: list[DataAgent],
+    all_agents: list[DataAgent],
+    raw_query_plan: Any,
+    meta_mapping: dict[str, Any],
+    query: str,
+    query_slug: str,
+    output_dir: Path,
+    data_dir: Path,
+    config: Config,
+    is_last: bool,
+) -> None:
+    canonical_sql: str = step_meta["sql_query"]
+    schema_meta = step_meta["aligned_schema_metadata"]
+    key_cols: list[str] = schema_meta["keys"]
+
+    canonical_table = _parse_canonical_table(canonical_sql)
+    if canonical_table is None:
+        logging.warning(
+            "%s/%s: could not parse table from sql %r — skipping",
+            query_slug,
+            step.id,
+            canonical_sql,
+        )
+        return
+    canonical_cols = parse_select_columns(canonical_sql)
+    if not canonical_cols:
+        logging.warning(
+            "%s/%s: could not parse columns from sql %r — skipping",
+            query_slug,
+            step.id,
+            canonical_sql,
+        )
+        return
+
+    logging.info(
+        "Query: %s | Step: %s | table: %s | cols: %s | key_cols: %s",
+        query,
+        step.id,
+        canonical_table,
+        canonical_cols,
+        key_cols,
+    )
+
+    total_unique = _get_total_unique(
+        relevant_data_agents, canonical_sql, canonical_table, key_cols, meta_mapping, data_dir
+    )
+    logging.info("Total unique rows (ground truth): %d", total_unique)
+
+    data_cache: dict[str, pd.DataFrame | None] = {}
+    with ThreadPoolExecutor() as pool:
+        futures = {
+            agent.name: pool.submit(
+                _query_agent_canonical, agent, canonical_sql, canonical_table, meta_mapping, data_dir
+            )
+            for agent in relevant_data_agents
+        }
+        for name, future in futures.items():
+            data_cache[name] = future.result()
+
+    align_handler = _make_align_schema_override(step_meta, query)
+    data_handler = _make_data_agent_override(canonical_sql, canonical_table, meta_mapping, data_cache, data_dir)
+
+    results = list(
+        await asyncio.gather(
+            *[
+                _run_one_strategy(
+                    strategy=s,
+                    step=step,
+                    align_handler=align_handler,
+                    data_handler=data_handler,
+                    raw_query_plan=raw_query_plan,
+                    relevant_data_agents=relevant_data_agents,
+                    all_agents=all_agents,
+                    data_cache=data_cache,
+                    total_unique=total_unique,
+                    canonical_cols=canonical_cols,
+                    config=config,
+                    is_last=is_last,
+                )
+                for s in SelectionStrategyType
+            ]
+        )
+    )
+
+    oracle_curve = compute_greedy_oracle(step.to_agent, data_cache, total_unique, canonical_cols)
+    logging.info("Oracle AUC=%.4f", oracle_curve.auc)
+    _save_results(results, oracle_curve, query_slug, step.id, output_dir)
+
+
 async def _run(ctx: ScriptContext) -> None:
     extra = ctx.extra or {}
     steps_metadata: dict[str, Any] = extra.get("steps_metadata", {})
@@ -312,127 +514,48 @@ async def _run(ctx: ScriptContext) -> None:
     query_slug = ctx.input_file.stem
     output_dir = ctx.output_dir or ctx.input_file.parent / "evaluation"
 
+    # Replace the auto-registered EXECUTE_QUERY_PLAN_END hook with one that
+    # only writes the JSON output for the last multi-agent step's strategy runs.
+    hooks.clear(HookEvent.EXECUTE_QUERY_PLAN_END)
+    hooks.register(HookEvent.EXECUTE_QUERY_PLAN_END, _write_last_step_stage_3)
+    # Single dispatch handlers for ALIGN_SCHEMA and DATA_AGENT overrides.
+    # These route each call to the correct per-step handler via execution_id.
+    hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, _align_schema_dispatch)
+    hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, _data_agent_dispatch)
+    hooks.register(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
+    hooks.register(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
+
+    step_tasks = []
     for step in multi_steps:
         step_meta = steps_metadata.get(step.id)
         if step_meta is None:
             logging.warning("%s/%s: no steps_metadata — skipping", ctx.input_file.stem, step.id)
             continue
-
-        canonical_sql: str = step_meta["sql_query"]
-        schema_meta = step_meta["aligned_schema_metadata"]
-        key_cols: list[str] = schema_meta["keys"]
-
-        canonical_table = _parse_canonical_table(canonical_sql)
-        if canonical_table is None:
-            logging.warning(
-                "%s/%s: could not parse table from sql %r — skipping",
-                ctx.input_file.stem,
-                step.id,
-                canonical_sql,
+        step_tasks.append(
+            _run_step(
+                step=step,
+                step_meta=step_meta,
+                relevant_data_agents=relevant_data_agents,
+                all_agents=all_agents,
+                raw_query_plan=raw_query_plan,
+                meta_mapping=meta_mapping,
+                query=query,
+                query_slug=query_slug,
+                output_dir=output_dir,
+                data_dir=ctx.data_dir,
+                config=ctx.config,
+                is_last=step is multi_steps[-1],
             )
-            continue
-        canonical_cols = parse_select_columns(canonical_sql)
-        if not canonical_cols:
-            logging.warning(
-                "%s/%s: could not parse columns from sql %r — skipping",
-                ctx.input_file.stem,
-                step.id,
-                canonical_sql,
-            )
-            continue
-
-        logging.info(
-            "Query: %s | Step: %s | table: %s | cols: %s | key_cols: %s",
-            query,
-            step.id,
-            canonical_table,
-            canonical_cols,
-            key_cols,
         )
 
-        total_unique = _get_total_unique(
-            relevant_data_agents, canonical_sql, canonical_table, key_cols, meta_mapping, ctx.data_dir
-        )
-        logging.info("Total unique rows (ground truth): %d", total_unique)
-
-        data_cache: dict[str, pd.DataFrame | None] = {}
-        with ThreadPoolExecutor() as pool:
-            futures = {
-                agent.name: pool.submit(
-                    _query_agent_canonical, agent, canonical_sql, canonical_table, meta_mapping, ctx.data_dir
-                )
-                for agent in relevant_data_agents
-            }
-            for name, future in futures.items():
-                data_cache[name] = future.result()
-
-        align_schema_handler = _make_align_schema_override(step_meta, query)
-        data_agent_handler = _make_data_agent_override(
-            canonical_sql, canonical_table, meta_mapping, data_cache, ctx.data_dir
-        )
-
-        hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
-        hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
-        hooks.register(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
-        hooks.register(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
-
-        async def _run_one_strategy(
-            strategy: SelectionStrategyType,
-            _step: MultiAgentQueryPlanStep = step,
-            _data_cache: dict[str, pd.DataFrame | None] = data_cache,
-            _total_unique: int = total_unique,
-            _canonical_cols: list[str] = canonical_cols,
-        ) -> tuple[str, EvaluationCurve]:
-            logging.info("Running strategy: %s / %s", _step.id, strategy)
-            execution_id = uuid4().hex[:12]
-            strategy_config = ctx.config.model_copy(update={"selection_type": strategy})
-            ordered_agents, batch_end_handler = _register_batch_tracking(execution_id)
-            fresh_query_plan = QueryPlan.model_validate(raw_query_plan)
-
-            try:
-                with hooks.stage_context(execution_id), context.config_context(strategy_config):
-                    await execute_query_plan(
-                        query_plan=fresh_query_plan,
-                        relevant_data_agents=relevant_data_agents,
-                        data_agents=all_agents,
-                    )
-                    logging.info("Strategy %s/%s completed", _step.id, strategy)
-            except Exception as exc:
-                logging.warning("Strategy %s/%s failed: %s", _step.id, strategy, exc)
-                logging.exception(exc)
-                if isinstance(exc, requests.exceptions.Timeout):
-                    logging.error("Timeout exception: %s", exc)
-                    raise SystemExit(1) from exc
-            finally:
-                hooks.unregister(HookEvent.MULTI_AGENT_STEP_BATCH_END, batch_end_handler)
-
-            seen: set[str] = set()
-            deduped: list[str] = []
-            for name in ordered_agents:
-                if name not in seen:
-                    seen.add(name)
-                    deduped.append(name)
-
-            if not deduped:
-                logging.warning("Strategy %s/%s: no agents queried", _step.id, strategy)
-                return str(strategy), EvaluationCurve(x=[0.0, 1.0], y=[0.0, 0.0], auc=0.0)
-
-            curve = build_curve(deduped, _data_cache, _total_unique, _canonical_cols)
-            logging.info("  %s/%s AUC=%.4f agents=%d", _step.id, strategy, curve.auc, len(deduped))
-            return str(strategy), curve
-
-        try:
-            results = list(await asyncio.gather(*[_run_one_strategy(s) for s in SelectionStrategyType]))
-        finally:
-            hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
-            hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
-            hooks.unregister(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
-            hooks.unregister(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
-
-        oracle_curve = compute_greedy_oracle(step.to_agent, data_cache, total_unique, canonical_cols)
-        logging.info("Oracle AUC=%.4f", oracle_curve.auc)
-
-        _save_results(results, oracle_curve, query_slug, step.id, output_dir)
+    try:
+        await asyncio.gather(*step_tasks)
+    finally:
+        hooks.unregister(HookEvent.EXECUTE_QUERY_PLAN_END, _write_last_step_stage_3)
+        hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, _align_schema_dispatch)
+        hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, _data_agent_dispatch)
+        hooks.unregister(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
+        hooks.unregister(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
 
 
 if __name__ == "__main__":
