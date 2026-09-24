@@ -107,6 +107,8 @@ def _migrate_file(path: Path, registry: dict[str, type[BaseModel]], delete: bool
 
     if delete:
         path.unlink()
+
+    print(path.name, flush=True)
     return "migrated"
 
 
