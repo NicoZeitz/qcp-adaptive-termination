@@ -1,3 +1,4 @@
+import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal, cast, overload
@@ -15,6 +16,22 @@ from qcp_adaptive_termination.models.stages import (
     FilteredRelevantAgents,
 )
 from qcp_adaptive_termination.observability import cache, context
+
+_InputType = CollaborativeQueryAnswering | FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult
+_INPUT_TYPES: dict[str, type[_InputType]] = {
+    "CollaborativeQueryAnswering": CollaborativeQueryAnswering,
+    "FilteredRelevantAgents": FilteredRelevantAgents,
+    "DraftedQueryPlan": DraftedQueryPlan,
+    "CollaborativeQueryAnsweringResult": CollaborativeQueryAnsweringResult,
+}
+
+
+def _strip_type_tags(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _strip_type_tags(v) for k, v in value.items() if k != "__type__"}
+    if isinstance(value, list):
+        return [_strip_type_tags(item) for item in value]
+    return value
 
 
 @lru_cache(maxsize=32)
@@ -37,8 +54,19 @@ def load_input(
     CollaborativeQueryAnswering | FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult,
     dict[str, Any] | None,
 ]:
-    data, extra = cache.load_cache_file(Path(path))
-    hooks.emit(HookEvent.LOAD_INPUT, input_file=Path(path), data=data, extra=extra)
+    path = Path(path)
+    if path.suffix == ".json":
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        value_data = raw["value"]
+        type_name = value_data.get("__type__")
+        cls = _INPUT_TYPES.get(type_name)
+        if cls is None:
+            raise ValueError(f"unknown input type: {type_name!r}")
+        data = cls.model_validate(_strip_type_tags(value_data))
+        extra = raw.get("extra")
+    else:
+        data, extra = cache.load_cache_file(path)
+    hooks.emit(HookEvent.LOAD_INPUT, input_file=path, data=data, extra=extra)
     return data, extra
 
 
