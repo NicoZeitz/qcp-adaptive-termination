@@ -11,9 +11,13 @@ __all__ = [
 ]
 
 
+def _normalize_quotes(sql: str) -> str:
+    return sql.replace("‘", "'").replace("’", "'").replace("“", '"').replace("”", '"')
+
+
 def parse_select_columns(sql: str) -> list[str]:
     """Return output column names from SELECT (alias > column name > output_name)."""
-    tree = sqlglot.parse_one(sql, dialect="sqlite")
+    tree = sqlglot.parse_one(_normalize_quotes(sql), dialect="sqlite")
     if not isinstance(tree, exp.Select):
         return []
     cols = []
@@ -36,7 +40,7 @@ def rewrite_sql_identifiers(
     col_map: dict[str, str],
 ) -> str:
     """Rewrite table and column identifiers in sql from canonical to actual names."""
-    tree = sqlglot.parse_one(sql, dialect="sqlite")
+    tree = sqlglot.parse_one(_normalize_quotes(sql), dialect="sqlite")
 
     def _transformer(node: Any) -> Any:
         if isinstance(node, exp.Table) and node.name.lower() == canonical_table.lower():
