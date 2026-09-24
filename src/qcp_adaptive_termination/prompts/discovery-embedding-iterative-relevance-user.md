@@ -1,7 +1,7 @@
 【Original Query】
 {{query}}
 
-【Already Found Context (tables from previously confirmed relevant agents)】
+【Context (schemas of already confirmed relevant agents, empty if none found yet)】
 {{context_tables}}
 
 【Candidate Agent: {{agent_name}}】

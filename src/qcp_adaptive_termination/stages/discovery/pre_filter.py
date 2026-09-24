@@ -184,15 +184,7 @@ def _build_context_tables_str(
 ) -> str:
     if not relevant_agent_names:
         return "(none yet)"
-    parts = []
-    for name in sorted(relevant_agent_names):
-        data = agent_data[name]
-        table_schemas = "\n".join(
-            desc.technical_description
-            for desc in data.individual_descriptions.values()
-        )
-        parts.append(f"-- {name}\n{table_schemas}")
-    return "\n\n".join(parts)
+    return "\n\n".join(agent_data[name].technical_description for name in sorted(relevant_agent_names))
 
 
 async def filter_by_iterative_relevance(
