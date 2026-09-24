@@ -20,6 +20,7 @@ A query plan is a list of steps that need to be executed in order to answer the 
 - Both agents and the coordinator must declare all steps they depend on.
 - Queries must be expressed in natural language, not SQL.
 - Prefer fetching more data early and narrowing later, rather than under-fetching and missing results.
+- **Extract derived numeric fields at the agent level.** When the query requires a numeric value derived from a complex column (e.g. year from a date, latitude from a coordinate pair), instruct agents to return the already-extracted numeric value (e.g. "return the year of the date" so agents can use `EXTRACT(YEAR FROM date_col)`). Do not rely on post-processing transformations if the extraction can be done in SQL.
 - **CRITICAL RULE - Query ALL agents that could have relevant data.** The data is distributed — never assume one agent has complete data.
   - When multiple agents have data that could contain the information you need, you MUST query ALL of them, not just one.
   - This applies even if data have different names or structures - what matters is whether they could contain relevant data.
