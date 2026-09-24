@@ -21,29 +21,29 @@ embedding_model: "openai/text-embedding-3-large"
 
 agent_configs:
   coordinator_relevance:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
   coordinator_planning:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
   coordinator_code:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "high"
   coordinator_replanning:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
   coordinator_align_schema:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "high"
   coordinator_completeness_evaluator:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "high"
   data_agent_schema_description:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
   data_agent_relevance:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
   data_agent_code:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "high"
