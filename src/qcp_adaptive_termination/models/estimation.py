@@ -19,6 +19,9 @@ class AggregationType(StrEnum):
     MAX = "max"
     SUM = "sum"
     AVG = "avg"
+    Q25 = "q25"
+    MEDIAN = "median"
+    Q75 = "q75"
 
 
 class EstimatorMode(StrEnum):
@@ -128,6 +131,9 @@ class EstimatorStatistics(BaseModel):
     observed_value_avg: float | None = None
     observed_value_min: float | None = None
     observed_value_max: float | None = None
+    observed_value_q25: float | None = None
+    observed_value_median: float | None = None
+    observed_value_q75: float | None = None
 
     estimated_value_sum: float | None = None
     estimated_value_sum_lower: float | None = None
@@ -137,3 +143,6 @@ class EstimatorStatistics(BaseModel):
     estimated_value_avg_upper: float | None = None
     estimated_value_min: float | None = None
     estimated_value_max: float | None = None
+    estimated_value_q25: float | None = None
+    estimated_value_median: float | None = None
+    estimated_value_q75: float | None = None

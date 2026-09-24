@@ -1,5 +1,6 @@
-"""Benchmark all 8 selection strategies on a single-step federated query."""
+"""Benchmark all selection strategies across all steps of federated queries."""
 
+import asyncio
 import hashlib
 import logging
 import re
@@ -241,25 +242,26 @@ def _save_results(
     results: list[tuple[str, EvaluationCurve]],
     oracle_curve: EvaluationCurve,
     query_slug: str,
+    step_id: str,
     output_dir: Path,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+    prefix = f"{query_slug}_{step_id}"
 
     rows = [{"strategy": s, "auc": c.auc} for s, c in results]
     rows.append({"strategy": "oracle", "auc": oracle_curve.auc})
-    pd.DataFrame(rows).to_csv(output_dir / f"{query_slug}_auc.csv", index=False)
+    pd.DataFrame(rows).to_csv(output_dir / f"{prefix}_auc.csv", index=False)
 
-    # save a more detailed CSV with the full curves
     curve_rows = []
     for strategy, curve in results:
         for x, y in zip(curve.x, curve.y, strict=True):
             curve_rows.append({"strategy": strategy, "x": x, "y": y})
     for x, y in zip(oracle_curve.x, oracle_curve.y, strict=True):
         curve_rows.append({"strategy": "oracle", "x": x, "y": y})
-    pd.DataFrame(curve_rows).to_csv(output_dir / f"{query_slug}_curves.csv", index=False)
+    pd.DataFrame(curve_rows).to_csv(output_dir / f"{prefix}_curves.csv", index=False)
 
-    fig, axes = plt.subplots(1, 2, figsize=(18, 6))
-    for ax, xscale in zip(axes, ["linear", "log"], strict=True):
+    for xscale in ("linear", "log"):
+        fig, ax = plt.subplots(figsize=(10, 6))
         ax.plot(
             oracle_curve.x,
             oracle_curve.y,
@@ -272,15 +274,17 @@ def _save_results(
             ax.plot(curve.x, curve.y, label=f"{strategy} (AUC={curve.auc:.3f})")
         ax.set_xlabel("Fraction of agents queried")
         ax.set_ylabel("Fraction of unique rows covered")
-        ax.set_title(f"Selection strategy comparison ({xscale} x)\n{query_slug}")
+        ax.set_title(f"Selection strategy comparison ({xscale} scale)\n{query_slug} / {step_id}")
         ax.legend(fontsize=8)
         ax.set_xscale(xscale)
         if xscale == "linear":
             ax.set_xlim(0.0, 1.0)
         ax.set_ylim(0.0, 1.05)
-    fig.tight_layout()
-    fig.savefig(output_dir / f"{query_slug}_curves.png", dpi=150, bbox_inches="tight")
-    plt.close(fig)
+        fig.tight_layout()
+        for ext in ("png", "pdf", "svg"):
+            fig.savefig(output_dir / f"{prefix}_{xscale}.{ext}", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
     logging.info("Saved to %s", output_dir)
 
 
@@ -296,130 +300,139 @@ async def _run(ctx: ScriptContext) -> None:
     query_plan = QueryPlan.model_validate(raw_query_plan)
     multi_steps = [s for s in query_plan.steps if isinstance(s, MultiAgentQueryPlanStep)]
 
-    if len(multi_steps) != 1:
-        logging.warning(
-            "%s: expected exactly 1 multi-agent step, got %d — skipping",
-            ctx.input_file.stem,
-            len(multi_steps),
-        )
-        return
-
-    step = multi_steps[0]
-    step_meta = steps_metadata.get(step.id)
-    if step_meta is None:
-        raise ValueError(
-            f"No steps_metadata entry for step id '{step.id}' in {ctx.input_file}. "
-            f"Available keys: {list(steps_metadata.keys())}"
-        )
-
-    canonical_sql: str = step_meta["sql_query"]
-    schema_meta = step_meta["aligned_schema_metadata"]
-    key_cols: list[str] = schema_meta["keys"]
-    query = query_plan.query
-    query_slug = ctx.input_file.stem
-
-    canonical_table = _parse_canonical_table(canonical_sql)
-    if canonical_table is None:
-        logging.warning("%s: could not parse table from sql %r — skipping", ctx.input_file.stem, canonical_sql)
-        return
-    canonical_cols = parse_select_columns(canonical_sql)
-    if not canonical_cols:
-        logging.warning("%s: could not parse columns from sql %r — skipping", ctx.input_file.stem, canonical_sql)
+    if not multi_steps:
+        logging.warning("%s: no multi-agent steps — skipping", ctx.input_file.stem)
         return
 
     meta_mapping = _load_meta_mapping(ctx.data_dir)
-
     all_agents = cast(CollaborativeQueryAnswering, ctx.data).data_agents
     relevant_agent_names: set[str] = set(extra.get("relevant_data_agents", []))
     relevant_data_agents = [a for a in all_agents if a.name in relevant_agent_names]
+    query = query_plan.query
+    query_slug = ctx.input_file.stem
+    output_dir = ctx.output_dir or ctx.input_file.parent / "evaluation"
 
-    logging.info("Query: %s", query)
-    logging.info("Step: %s, table: %s, cols: %s, key_cols: %s", step.id, canonical_table, canonical_cols, key_cols)
+    for step in multi_steps:
+        step_meta = steps_metadata.get(step.id)
+        if step_meta is None:
+            logging.warning("%s/%s: no steps_metadata — skipping", ctx.input_file.stem, step.id)
+            continue
 
-    total_unique = _get_total_unique(
-        relevant_data_agents, canonical_sql, canonical_table, key_cols, meta_mapping, ctx.data_dir
-    )
-    logging.info("Total unique rows (ground truth): %d", total_unique)
+        canonical_sql: str = step_meta["sql_query"]
+        schema_meta = step_meta["aligned_schema_metadata"]
+        key_cols: list[str] = schema_meta["keys"]
 
-    data_cache: dict[str, pd.DataFrame | None] = {}
-    with ThreadPoolExecutor() as pool:
-        futures = {
-            agent.name: pool.submit(
-                _query_agent_canonical, agent, canonical_sql, canonical_table, meta_mapping, ctx.data_dir
+        canonical_table = _parse_canonical_table(canonical_sql)
+        if canonical_table is None:
+            logging.warning(
+                "%s/%s: could not parse table from sql %r — skipping",
+                ctx.input_file.stem,
+                step.id,
+                canonical_sql,
             )
-            for agent in relevant_data_agents
-        }
-        for name, future in futures.items():
-            data_cache[name] = future.result()
+            continue
+        canonical_cols = parse_select_columns(canonical_sql)
+        if not canonical_cols:
+            logging.warning(
+                "%s/%s: could not parse columns from sql %r — skipping",
+                ctx.input_file.stem,
+                step.id,
+                canonical_sql,
+            )
+            continue
 
-    align_schema_handler = _make_align_schema_override(step_meta, query)
-    data_agent_handler = _make_data_agent_override(
-        canonical_sql, canonical_table, meta_mapping, data_cache, ctx.data_dir
-    )
+        logging.info(
+            "Query: %s | Step: %s | table: %s | cols: %s | key_cols: %s",
+            query,
+            step.id,
+            canonical_table,
+            canonical_cols,
+            key_cols,
+        )
 
-    hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
-    hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
-    hooks.register(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
-    hooks.register(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
+        total_unique = _get_total_unique(
+            relevant_data_agents, canonical_sql, canonical_table, key_cols, meta_mapping, ctx.data_dir
+        )
+        logging.info("Total unique rows (ground truth): %d", total_unique)
 
-    async def _run_one_strategy(strategy: SelectionStrategyType) -> tuple[str, EvaluationCurve]:
-        logging.info("Running strategy: %s", strategy)
-        execution_id = uuid4().hex[:12]
-        strategy_config = ctx.config.model_copy(update={"selection_type": strategy})
-        ordered_agents, batch_end_handler = _register_batch_tracking(execution_id)
-        fresh_query_plan = QueryPlan.model_validate(raw_query_plan)
+        data_cache: dict[str, pd.DataFrame | None] = {}
+        with ThreadPoolExecutor() as pool:
+            futures = {
+                agent.name: pool.submit(
+                    _query_agent_canonical, agent, canonical_sql, canonical_table, meta_mapping, ctx.data_dir
+                )
+                for agent in relevant_data_agents
+            }
+            for name, future in futures.items():
+                data_cache[name] = future.result()
+
+        align_schema_handler = _make_align_schema_override(step_meta, query)
+        data_agent_handler = _make_data_agent_override(
+            canonical_sql, canonical_table, meta_mapping, data_cache, ctx.data_dir
+        )
+
+        hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
+        hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
+        hooks.register(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
+        hooks.register(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
+
+        async def _run_one_strategy(
+            strategy: SelectionStrategyType,
+            _step: MultiAgentQueryPlanStep = step,
+            _data_cache: dict[str, pd.DataFrame | None] = data_cache,
+            _total_unique: int = total_unique,
+            _canonical_cols: list[str] = canonical_cols,
+        ) -> tuple[str, EvaluationCurve]:
+            logging.info("Running strategy: %s / %s", _step.id, strategy)
+            execution_id = uuid4().hex[:12]
+            strategy_config = ctx.config.model_copy(update={"selection_type": strategy})
+            ordered_agents, batch_end_handler = _register_batch_tracking(execution_id)
+            fresh_query_plan = QueryPlan.model_validate(raw_query_plan)
+
+            try:
+                with hooks.stage_context(execution_id), context.config_context(strategy_config):
+                    await execute_query_plan(
+                        query_plan=fresh_query_plan,
+                        relevant_data_agents=relevant_data_agents,
+                        data_agents=all_agents,
+                    )
+                    logging.info("Strategy %s/%s completed", _step.id, strategy)
+            except Exception as exc:
+                logging.warning("Strategy %s/%s failed: %s", _step.id, strategy, exc)
+                logging.exception(exc)
+                if isinstance(exc, requests.exceptions.Timeout):
+                    logging.error("Timeout exception: %s", exc)
+                    raise SystemExit(1) from exc
+            finally:
+                hooks.unregister(HookEvent.MULTI_AGENT_STEP_BATCH_END, batch_end_handler)
+
+            seen: set[str] = set()
+            deduped: list[str] = []
+            for name in ordered_agents:
+                if name not in seen:
+                    seen.add(name)
+                    deduped.append(name)
+
+            if not deduped:
+                logging.warning("Strategy %s/%s: no agents queried", _step.id, strategy)
+                return str(strategy), EvaluationCurve(x=[0.0, 1.0], y=[0.0, 0.0], auc=0.0)
+
+            curve = build_curve(deduped, _data_cache, _total_unique, _canonical_cols)
+            logging.info("  %s/%s AUC=%.4f agents=%d", _step.id, strategy, curve.auc, len(deduped))
+            return str(strategy), curve
 
         try:
-            with hooks.stage_context(execution_id), context.config_context(strategy_config):
-                await execute_query_plan(
-                    query_plan=fresh_query_plan,
-                    relevant_data_agents=relevant_data_agents,
-                    data_agents=all_agents,
-                )
-                logging.info("Strategy %s completed successfully", strategy)
-        except Exception as exc:
-            logging.warning("Strategy %s failed: %s", strategy, exc)
-            # print all information about the exception to the log
-            logging.exception(exc)
-            if isinstance(exc, requests.exceptions.Timeout):
-                # log all information about the timeout exception
-                logging.error("Timeout exception: %s", exc)
-                logging.error("Timeout request: %s", str(exc.request))
-                logging.error("Timeout response: %s", str(exc.response))
-                # exit program with non-zero exit code to indicate failure
-                raise SystemExit(1) from exc
+            results = list(await asyncio.gather(*[_run_one_strategy(s) for s in SelectionStrategyType]))
         finally:
-            hooks.unregister(HookEvent.MULTI_AGENT_STEP_BATCH_END, batch_end_handler)
+            hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
+            hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
+            hooks.unregister(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
+            hooks.unregister(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
 
-        seen: set[str] = set()
-        deduped: list[str] = []
-        for name in ordered_agents:
-            if name not in seen:
-                seen.add(name)
-                deduped.append(name)
-        ordered_agents = deduped
+        oracle_curve = compute_greedy_oracle(step.to_agent, data_cache, total_unique, canonical_cols)
+        logging.info("Oracle AUC=%.4f", oracle_curve.auc)
 
-        if not ordered_agents:
-            logging.warning("Strategy %s: no agents queried", strategy)
-            return str(strategy), EvaluationCurve(x=[0.0, 1.0], y=[0.0, 0.0], auc=0.0)
-
-        curve = build_curve(ordered_agents, data_cache, total_unique, canonical_cols)
-        logging.info("  %s AUC=%.4f, agents queried=%d", strategy, curve.auc, len(ordered_agents))
-        return str(strategy), curve
-
-    try:
-        results = [await _run_one_strategy(s) for s in SelectionStrategyType]
-    finally:
-        hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, align_schema_handler)
-        hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, data_agent_handler)
-        hooks.unregister(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
-        hooks.unregister(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
-
-    oracle_curve = compute_greedy_oracle(step.to_agent, data_cache, total_unique, canonical_cols)
-    logging.info("Oracle AUC=%.4f", oracle_curve.auc)
-
-    output_dir = ctx.output_dir or ctx.input_file.parent / "evaluation"
-    _save_results(results, oracle_curve, query_slug, output_dir)
+        _save_results(results, oracle_curve, query_slug, step.id, output_dir)
 
 
 if __name__ == "__main__":

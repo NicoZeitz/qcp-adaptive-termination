@@ -1,9 +1,13 @@
 import bisect
 import math
+import operator
 import random
 import sys
 from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import assert_never
 
+import numba
 import numpy as np
 import pandas as pd
 from scipy.interpolate import RBFInterpolator
@@ -17,6 +21,474 @@ from qcp_adaptive_termination.estimator.confidence_interval_type import (
 from qcp_adaptive_termination.estimator.count_estimator import CountEstimator
 from qcp_adaptive_termination.estimator.data_item import DataItem
 from qcp_adaptive_termination.estimator.value_estimator import ValueEstimator
+
+_VALUE_KEY = operator.attrgetter("value")
+
+# ── Resplit policy constants ──────────────────────────────────────────────────
+# A bucket is re-swept when it has grown by at least _RESPLIT_FRACTION of its
+# size at the previous sweep AND at least _RESPLIT_MIN_DELTA new samples.
+# split_backoff on Bucket doubles (up to _RESPLIT_BACKOFF_CAP) after each
+# sweep that finds no split, exponentially throttling unsplittable buckets.
+_RESPLIT_MIN_DELTA: int = 100
+_RESPLIT_FRACTION: float = 0.50
+_RESPLIT_BACKOFF_CAP: int = 16
+
+
+# ── Numba-accelerated Chao92 scoring ─────────────────────────────────────────
+
+
+@numba.njit(cache=True)
+def _chao92_naive_score(c, n, phi_k, f1, moment) -> float:  # type: ignore[return]
+    """NAIVE estimated-sum score for a partition using the Chao92 count estimator.
+
+    phi_k  — sum of representative (first-occurrence) values for the c entities.
+    moment — sum of count*(count-1) across all entities in the partition.
+    Returns inf when sample coverage is zero (all entities are singletons).
+    """
+    if c == 0 or n == 0:
+        return 0.0
+    c_hat = 1.0 - f1 / n
+    if c_hat <= 0.0:
+        return np.inf
+    gamma_sq = (c / c_hat) * (moment / (n * (n - 1))) - 1.0 if (n > 1 and moment > 0) else 0.0
+    if gamma_sq < 0.0:
+        gamma_sq = 0.0
+    n_hat = c / c_hat + n * (1.0 - c_hat) / c_hat * gamma_sq
+    if n_hat < c:
+        n_hat = float(c)
+    return phi_k * n_hat / c
+
+
+@numba.njit(cache=True)  # type: ignore[misc]
+def _sweep_chao92(
+    eid: np.ndarray,
+    vals: np.ndarray,
+    ep_data: np.ndarray,
+    ep_start: np.ndarray,
+    entity_counts: np.ndarray,
+    parent_score: float,
+) -> int:
+    """O(n) sweep to find the best split index for CHAO92/NAIVE scoring.
+
+    Arrays are precomputed by _prepare_sweep_arrays and stored in sorted-samples order.
+    eid[k]                      — entity id (int) for samples[k]
+    vals[k]                     — samples[k].value
+    ep_data/ep_start            — CSR: entity j's positions = ep_data[ep_start[j]:ep_start[j+1]]
+    entity_counts[j]            — total occurrences of entity j in the bucket
+
+    Returns the index k of the last sample to assign to the LEFT partition (split after k),
+    or -1 if no split improves parent_score.
+    """
+    n = len(vals)
+    c = len(entity_counts)
+
+    # Right side starts with all n samples
+    c_r = c
+    phi_k_r = 0.0
+    f1_r = 0
+    f2_r = 0
+    moment_r = 0
+    cnt_r = entity_counts.copy()
+    ptr_r = np.zeros(c, dtype=np.int64)
+
+    for j in range(c):
+        phi_k_r += vals[ep_data[ep_start[j]]]
+        k = entity_counts[j]
+        moment_r += k * (k - 1)
+        if k == 1:
+            f1_r += 1
+        elif k == 2:
+            f2_r += 1
+
+    c_l = 0
+    phi_k_l = 0.0
+    f1_l = 0
+    f2_l = 0
+    moment_l = 0
+    cnt_l = np.zeros(c, dtype=np.int64)
+
+    best_score = parent_score
+    best_idx = -1
+
+    for k in range(n - 1):
+        j = eid[k]
+        v = vals[k]
+
+        old_r = cnt_r[j]
+        new_r = old_r - 1
+        cnt_r[j] = new_r
+
+        phi_k_r -= v
+        moment_r -= 2 * (old_r - 1)
+        if old_r == 1:
+            f1_r -= 1
+        elif old_r == 2:
+            f2_r -= 1
+
+        if new_r > 0:
+            if new_r == 1:
+                f1_r += 1
+            elif new_r == 2:
+                f2_r += 1
+            ptr_r[j] += 1
+            phi_k_r += vals[ep_data[ep_start[j] + ptr_r[j]]]
+        else:
+            c_r -= 1
+
+        old_l = cnt_l[j]
+        new_l = old_l + 1
+        cnt_l[j] = new_l
+        moment_l += 2 * old_l
+
+        if old_l == 0:
+            c_l += 1
+            phi_k_l += v
+            f1_l += 1
+        elif old_l == 1:
+            f1_l -= 1
+            f2_l += 1
+        elif old_l == 2:
+            f2_l -= 1
+
+        n_l = k + 1
+        n_r = n - n_l
+        sl = _chao92_naive_score(c_l, n_l, phi_k_l, f1_l, moment_l)  # type: ignore
+        sr = _chao92_naive_score(c_r, n_r, phi_k_r, f1_r, moment_r)  # type: ignore
+        score = sl + sr
+        if score < best_score:
+            best_score = score
+            best_idx = k
+
+    return best_idx
+
+
+if True:
+    # Pre-compile at import time to avoid first-call JIT latency (~1–3 s).
+    _w_eid = np.zeros(2, np.int64)
+    _w_vals = np.array([0.0, 1.0])
+    _w_ep_data = np.array([0, 1], np.int64)
+    _w_ep_start = np.array([0, 1, 2], np.int64)
+    _w_counts = np.array([1, 1], np.int64)
+    _sweep_chao92(_w_eid, _w_vals, _w_ep_data, _w_ep_start, _w_counts, 0.0)  # type: ignore
+
+
+def _prepare_sweep_arrays(
+    samples: list[DataItem],
+    entity_pos: dict[str, list[int]],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Build numba-compatible arrays from sorted samples and per-entity position lists.
+
+    Returns (eid, vals, ep_data, ep_start, entity_counts) where:
+      eid[k]                    — integer entity id for samples[k]
+      vals[k]                   — samples[k].value
+      ep_data / ep_start        — CSR: positions for entity j at ep_data[ep_start[j]:ep_start[j+1]]
+      entity_counts[j]          — total occurrences of entity j
+    """
+    entity_list = list(entity_pos.keys())
+    c = len(entity_list)
+    n = len(samples)
+
+    counts = np.array([len(entity_pos[e]) for e in entity_list], dtype=np.int64)
+    ep_start = np.empty(c + 1, dtype=np.int64)
+    ep_start[0] = 0
+    np.cumsum(counts, out=ep_start[1:])
+
+    ep_data = np.empty(n, dtype=np.int64)
+    for j, e in enumerate(entity_list):
+        ep_data[ep_start[j] : ep_start[j + 1]] = entity_pos[e]
+
+    eid = np.empty(n, dtype=np.int64)
+    for j in range(c):
+        eid[ep_data[ep_start[j] : ep_start[j + 1]]] = j
+
+    vals = np.array([s.value for s in samples], dtype=np.float64)
+    return eid, vals, ep_data, ep_start, counts
+
+
+def _score_split_naive(
+    c: int,
+    n: int,
+    phi_k: float,
+    f1: int,
+    f2: int,
+    moment: int,
+    count_estimator: CountEstimator,
+) -> float:
+    """NAIVE estimated-sum score from precomputed partition statistics.
+
+    moment = sum of count*(count-1) across entities. Only used by Chao92.
+    Returns inf when the estimator is undefined.
+    """
+    if c == 0 or n == 0:
+        return 0.0
+    if count_estimator is CountEstimator.CHAO92:
+        return _chao92_naive_score(c, n, phi_k, f1, moment)  # type: ignore
+    if count_estimator is CountEstimator.CHAO84:
+        n_hat = max(float(c), c + (f1 * f1) / (2.0 * f2)) if f2 else float(c)
+    elif count_estimator is CountEstimator.JACKKNIFE1:
+        n_hat = float(c + f1)
+    elif count_estimator is CountEstimator.JACKKNIFE2:
+        n_hat = float(c + 2 * f1 - f2)
+    else:
+        return math.inf
+    return phi_k * n_hat / c
+
+
+def _bucket_sum_est(
+    bucket: Bucket,
+    bucket_value_estimator: ValueEstimator,
+    bucket_count_estimator: CountEstimator,
+) -> float:
+    """Estimated SUM for a single bucket, used as the splitting score.
+
+    Computed directly from Bucket.histogram and Bucket.f — no Estimator object
+    created — so the split loop avoids thousands of pandas groupby calls.
+    Falls back to full Estimator only for ACE/UNSEEN count estimators.
+    """
+    c = bucket.number_of_unique_samples
+    n = bucket.number_of_samples
+    if c == 0 or n == 0:
+        return 0.0
+
+    f = bucket.f
+    f1 = f[0] if f else 0
+    f2 = f[1] if len(f) > 1 else 0
+    histogram = bucket.histogram
+
+    phi_k = sum(bar.lower_bound for bar in histogram.values())
+
+    if bucket_count_estimator is CountEstimator.CHAO92:
+        C_hat = 1.0 - f1 / n
+        if C_hat == 0:
+            return math.inf
+        if n > 1:
+            moment = sum((idx + 1) * idx * fi for idx, fi in enumerate(f) if fi)
+            gamma_sq = max(0.0, (c / C_hat) * (moment / (n * (n - 1))) - 1.0)
+        else:
+            gamma_sq = 0.0
+        N_hat = max(float(c), (c / C_hat) + (n * (1.0 - C_hat) / C_hat) * gamma_sq)
+    elif bucket_count_estimator is CountEstimator.CHAO84:
+        N_hat = max(float(c), c + (f1 * f1) / (2.0 * f2)) if f2 else float(c)
+    elif bucket_count_estimator is CountEstimator.JACKKNIFE1:
+        N_hat = float(c + f1)
+    elif bucket_count_estimator is CountEstimator.JACKKNIFE2:
+        N_hat = float(c + 2 * f1 - f2)
+    else:
+        return Estimator(bucket.to_sources()).estimated_sum(
+            bucket_value_estimator, bucket_count_estimator, use_bucket=False
+        )
+
+    if not math.isfinite(N_hat):
+        return math.inf
+
+    if bucket_value_estimator is ValueEstimator.NAIVE:
+        delta = (phi_k / c) * (N_hat - c)
+    elif bucket_value_estimator is ValueEstimator.FREQUENCY:
+        phi_f1 = sum(bar.lower_bound for bar in histogram.values() if bar.count == 1)
+        delta = (phi_f1 / f1) * (N_hat - c) if f1 else 0.0
+    elif bucket_value_estimator is ValueEstimator.GOOD_TURING:
+        phi_f1 = sum(bar.lower_bound for bar in histogram.values() if bar.count == 1)
+        denom = n - f1
+        delta = phi_f1 * c / denom if denom > 0 else 0.0
+    elif bucket_value_estimator is ValueEstimator.FREQUENCY_F12:
+        phi_f12 = sum(bar.lower_bound for bar in histogram.values() if bar.count <= 2)
+        denom = f1 + f2
+        delta = (phi_f12 / denom) * (N_hat - c) if denom else 0.0
+    else:
+        assert_never(bucket_value_estimator)
+
+    return phi_k + delta
+
+
+def _split_bucket(bucket: Bucket, split_value: float) -> tuple[Bucket, Bucket]:
+    """Split a bucket at split_value into left (≤ split_value) and right (> split_value).
+
+    Assumes bucket.samples is sorted by value ascending (guaranteed by _dynamic_buckets).
+    Uses bisect to find the partition point in O(log n), then bulk-loads each half and
+    rebuilds the frequency vector once per child instead of once per sample.
+    """
+    samples = bucket.samples
+    keys = [s.value for s in samples]
+    cut = bisect.bisect_right(keys, split_value)
+
+    left = Bucket(bucket.lower_bound, split_value)
+    right = Bucket(split_value, bucket.upper_bound)
+
+    for s in samples[:cut]:
+        left.samples.append(s)
+        left.histogram[s.name].add_sample(s.value)
+    for s in samples[cut:]:
+        right.samples.append(s)
+        right.histogram[s.name].add_sample(s.value)
+
+    left.rebuild_frequency_vector()
+    right.rebuild_frequency_vector()
+    return left, right
+
+
+def _find_best_split(
+    bucket: Bucket,
+    value_estimator: ValueEstimator,
+    count_estimator: CountEstimator,
+    parent_score: float,
+) -> float | None:
+    """Find best split value via O(n) incremental sweep for NAIVE value estimator.
+
+    For CHAO92: delegates to the numba-compiled _sweep_chao92 for maximum throughput.
+    For other count estimators: pure Python loop calling _score_split_naive.
+    Returns the split value that minimises left+right score, or None if no improvement.
+    """
+    if value_estimator is not ValueEstimator.NAIVE:
+        return None
+
+    samples = bucket.samples
+    n = len(samples)
+    if n < 2:
+        return None
+
+    entity_pos: dict[str, list[int]] = bucket.entity_positions or {}
+    if not entity_pos:
+        for i, s in enumerate(samples):
+            entity_pos.setdefault(s.name, []).append(i)
+
+    if count_estimator is CountEstimator.CHAO92:
+        eid, vals, ep_data, ep_start, entity_counts = _prepare_sweep_arrays(samples, entity_pos)
+        best_idx = _sweep_chao92(eid, vals, ep_data, ep_start, entity_counts, parent_score)  # type: ignore
+        return samples[best_idx].value if best_idx >= 0 else None
+
+    # Python loop for non-CHAO92 estimators
+    c_r = 0
+    phi_k_r = 0.0
+    f1_r = 0
+    f2_r = 0
+    moment_r = 0
+    cnt_r: dict[str, int] = {}
+    ptr_r: dict[str, int] = {}
+
+    for e, positions in entity_pos.items():
+        k = len(positions)
+        cnt_r[e] = k
+        ptr_r[e] = 0
+        phi_k_r += samples[positions[0]].value
+        c_r += 1
+        if k == 1:
+            f1_r += 1
+        elif k == 2:
+            f2_r += 1
+        moment_r += k * (k - 1)
+
+    c_l = 0
+    phi_k_l = 0.0
+    f1_l = 0
+    f2_l = 0
+    moment_l = 0
+    cnt_l: dict[str, int] = {}
+
+    best_score = parent_score
+    best_split: float | None = None
+
+    for k in range(n - 1):
+        s = samples[k]
+        e = s.name
+        v = s.value
+
+        old_r = cnt_r[e]
+        new_r = old_r - 1
+        cnt_r[e] = new_r
+
+        phi_k_r -= v
+        moment_r -= 2 * (old_r - 1)
+        if old_r == 1:
+            f1_r -= 1
+        elif old_r == 2:
+            f2_r -= 1
+
+        if new_r > 0:
+            if new_r == 1:
+                f1_r += 1
+            elif new_r == 2:
+                f2_r += 1
+            ptr_r[e] += 1
+            phi_k_r += samples[entity_pos[e][ptr_r[e]]].value
+        else:
+            c_r -= 1
+
+        old_l = cnt_l.get(e, 0)
+        new_l = old_l + 1
+        cnt_l[e] = new_l
+        moment_l += 2 * old_l
+
+        if old_l == 0:
+            c_l += 1
+            phi_k_l += v
+            f1_l += 1
+        elif old_l == 1:
+            f1_l -= 1
+            f2_l += 1
+        elif old_l == 2:
+            f2_l -= 1
+
+        n_l = k + 1
+        n_r = n - n_l
+        if n_l < 1 or n_r < 1:
+            continue
+
+        score = _score_split_naive(c_l, n_l, phi_k_l, f1_l, f2_l, moment_l, count_estimator) + _score_split_naive(
+            c_r, n_r, phi_k_r, f1_r, f2_r, moment_r, count_estimator
+        )
+        if score < best_score:
+            best_score = score
+            best_split = v
+
+    return best_split
+
+
+def _rbf_search_min(
+    points: Sequence[tuple[float, float, float]],
+    n_lb: int,
+    n_ub: int,
+    lambda_grid: Sequence[float],
+) -> tuple[int, float]:
+    """Fit a thin-plate-spline RBF surface over (N, λ, KL) points and return the minimum.
+
+    Falls back to the raw minimum point when there are fewer than 3 points or
+    when all N or λ values are identical (degenerate 2D surface).
+    """
+    if len(points) < 3:
+        n_best, l_best, _ = min(points, key=lambda p: p[2])
+        return int(n_best), float(l_best)
+
+    n_values = {p[0] for p in points}
+    lambda_values = {p[1] for p in points}
+    if len(n_values) < 2 or len(lambda_values) < 2:
+        n_best, l_best, _ = min(points, key=lambda p: p[2])
+        return int(n_best), float(l_best)
+
+    xy = np.array([[p[0], p[1]] for p in points], dtype=float)
+    z = np.array([p[2] for p in points], dtype=float)
+    xy_scale = xy.std(axis=0)
+    xy_scale[xy_scale == 0] = 1.0
+    try:
+        rbf = RBFInterpolator(xy / xy_scale, z, kernel="thin_plate_spline")
+    except np.linalg.LinAlgError:
+        n_best, l_best, _ = min(points, key=lambda p: p[2])
+        return int(n_best), float(l_best)
+
+    candidates = np.array(
+        [[n, lam] for n in range(n_lb, n_ub + 1) for lam in lambda_grid],
+        dtype=float,
+    )
+    scores = rbf(candidates / xy_scale)
+    best_idx = int(np.argmin(scores))
+    return int(candidates[best_idx, 0]), float(candidates[best_idx, 1])
+
+
+@dataclass(slots=True)
+class _BucketCache:
+    sample_count: int
+    buckets: list[Bucket]
+    sub_estimators: list[Estimator]
+
 
 MC_DEFAULT_NB_RUNS = 200
 MC_DEFAULT_LAMBDA_GRID = tuple(round(v * 0.1, 1) for v in range(-4, 5))
@@ -85,11 +557,9 @@ class Estimator:
     _φ_f12: float
     """φ_{f₁₂} — SUM of attribute values of singletons and doubletons combined."""
 
-    _cached_buckets: dict[tuple, list[Bucket]]
-    """Bucket lists keyed by (value_estimator, count_estimator, max_buckets)."""
-
-    _bucket_sample_count: dict[tuple, int]
-    """Number of samples in _all_samples when each cached bucket key was last computed."""
+    _bucket_cache: dict[tuple, _BucketCache]
+    """Bucket partition + sub-Estimators keyed by (value_estimator, count_estimator, max_buckets).
+    sub_estimators always valid; updated incrementally on each warm-split."""
 
     def __init__(self, source_samples: list[list[DataItem]]) -> None:
         self.source_samples = source_samples
@@ -132,8 +602,7 @@ class Estimator:
         self._mc_random_seed: int | None = MC_RANDOM_SEED
         self._mc_max_theta_points: int = MC_DEFAULT_MAX_THETA_POINTS
         self._mc_laplace_alpha: float = MC_LAPLACE_ALPHA
-        self._cached_buckets: dict[tuple, list[Bucket]] = {}
-        self._bucket_sample_count: dict[tuple, int] = {}
+        self._bucket_cache: dict[tuple, _BucketCache] = {}
 
     def set_monte_carlo_parameters(
         self,
@@ -252,6 +721,37 @@ class Estimator:
         """Maximum observed value."""
         return self._observed_max
 
+    def sample_quantile(self, q: float) -> float:
+        """q-th quantile (0 ≤ q ≤ 1) of observed unique entity values.
+
+        Uses Type-7 linear interpolation (same as numpy/R default) on the
+        first-observed values of unique entities, consistent with sample_sum
+        and sample_avg which also count each entity once.
+        """
+        if not 0.0 <= q <= 1.0:
+            raise ValueError(f"q must be in [0, 1], got {q}")
+        values = sorted(v[1] for v in self._entities.values())
+        if self._c == 1:
+            return values[0]
+        idx = q * (self._c - 1)
+        lo = int(idx)
+        hi = min(lo + 1, self._c - 1)
+        return values[lo] + (idx - lo) * (values[hi] - values[lo])
+
+    def sample_median(self) -> float:
+        """Median of observed unique entity values. Delegates to sample_quantile(0.5)."""
+        return self.sample_quantile(0.5)
+
+    def sample_cdf(self, x: float) -> float:
+        """Fraction of observed unique entities with first-observed value ≤ x.
+
+        Returns a value in [0, 1].  Uses bisect so cost is O(c log c) on first
+        call; the sorted array is not cached (call sample_quantile if you need
+        many quantiles at once).
+        """
+        values = sorted(v[1] for v in self._entities.values())
+        return bisect.bisect_right(values, x) / len(values)
+
     # ── Estimated counts ───────────────────────────────────────────
 
     def estimated_count(
@@ -265,17 +765,10 @@ class Estimator:
     ) -> float:
         """Estimated total unique entity count (observed + missing)."""
         if use_bucket:
-            return max(
-                self._c,
-                sum(
-                    Estimator(b.to_sources()).estimated_count(
-                        count_estimator,
-                        use_bucket=False,
-                        use_monte_carlo=use_monte_carlo,
-                    )
-                    for b in self._get_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
-                ),
+            _, weights = self._get_bucket_weights(
+                bucket_value_estimator, count_estimator, use_monte_carlo=use_monte_carlo, max_buckets=max_buckets
             )
+            return max(self._c, sum(weights))
 
         if use_monte_carlo:
             return self._mc_count(count_estimator)
@@ -532,14 +1025,10 @@ class Estimator:
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float:
         """Sum of per-bucket deltas across all dynamically generated buckets."""
+        _, subs = self._get_sub_estimators(value_estimator, count_estimator, max_buckets=max_buckets)
         return sum(
-            Estimator(b.to_sources()).delta(
-                value_estimator,
-                count_estimator,
-                use_bucket=False,
-                use_monte_carlo=use_monte_carlo,
-            )
-            for b in self._get_buckets(value_estimator, count_estimator, max_buckets=max_buckets)
+            sub.delta(value_estimator, count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
+            for sub in subs
         )
 
     def _naive_delta(
@@ -676,22 +1165,20 @@ class Estimator:
         if not use_bucket:
             return self.sample_avg()
 
-        buckets = self._get_buckets(bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets)
+        _, weights = self._get_bucket_weights(
+            bucket_value_estimator,
+            bucket_count_estimator,
+            use_monte_carlo=bucket_use_monte_carlo,
+            max_buckets=max_buckets,
+        )
+        _, subs = self._get_sub_estimators(
+            bucket_value_estimator,
+            bucket_count_estimator,
+            max_buckets=max_buckets,
+        )
 
-        total_weight = 0.0
-        weighted_sum = 0.0
-
-        for b in buckets:
-            sub = Estimator(b.to_sources())
-            n_hat = sub.estimated_count(
-                bucket_count_estimator,
-                use_bucket=False,
-                use_monte_carlo=bucket_use_monte_carlo,
-            )
-            weight = n_hat if math.isfinite(n_hat) else sub._c
-            total_weight += weight
-            weighted_sum += weight * sub.sample_avg()
-
+        total_weight = sum(weights)
+        weighted_sum = sum(w * sub.sample_avg() for sub, w in zip(subs, weights, strict=True))
         return weighted_sum / total_weight
 
     # ── Estimated averages (Bounds) ───────────────────────────────────────────
@@ -747,8 +1234,8 @@ class Estimator:
         likely observed the true minimum and return it; otherwise we return None
         to signal that the true minimum is unknown.
         """
-        buckets = self._get_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
-        sub = Estimator(buckets[0].to_sources())
+        _, subs = self._get_sub_estimators(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
+        sub = subs[0]
         if sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo) - sub._c == 0:
             return self._observed_min
         return None
@@ -768,11 +1255,71 @@ class Estimator:
         likely observed the true maximum and return it; otherwise we return None
         to signal that the true maximum is unknown.
         """
-        buckets = self._get_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
-        sub = Estimator(buckets[-1].to_sources())
+        _, subs = self._get_sub_estimators(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
+        sub = subs[-1]
         if sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo) - sub._c == 0:
             return self._observed_max
         return None
+
+    def estimated_quantile(
+        self,
+        q: float,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
+        *,
+        bucket_value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
+        use_monte_carlo: bool = False,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
+    ) -> float:
+        """Estimated q-th quantile (0 < q < 1) via the bucket-based CDF.
+
+        Builds a weighted histogram where each bucket's weight is its estimated
+        unique count (N_hat, including missing entities), then inverts the CDF.
+        Linear interpolation within each bucket assumes uniform distribution within [lb, ub].
+        """
+        if not 0.0 < q < 1.0:
+            raise ValueError(f"q must be in (0, 1), got {q}")
+
+        buckets, weights = self._get_bucket_weights(
+            bucket_value_estimator, count_estimator, use_monte_carlo=use_monte_carlo, max_buckets=max_buckets
+        )
+
+        total = sum(weights)
+        if total <= 0.0:
+            return self.sample_quantile(q)
+
+        cumulative = 0.0
+        for i, (b, w) in enumerate(zip(buckets, weights, strict=True)):
+            prev_frac = cumulative / total
+            cumulative += w
+            curr_frac = cumulative / total
+
+            if curr_frac >= q or i == len(buckets) - 1:
+                bucket_span = curr_frac - prev_frac
+                t = (q - prev_frac) / bucket_span if bucket_span > 0.0 else 0.5
+                t = max(0.0, min(1.0, t))
+
+                lo = b.lower_bound if math.isfinite(b.lower_bound) else self._observed_min
+                hi = b.upper_bound if math.isfinite(b.upper_bound) else self._observed_max
+                return lo + t * (hi - lo)
+
+        return self._observed_max
+
+    def estimated_median(
+        self,
+        count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
+        *,
+        bucket_value_estimator: ValueEstimator = DEFAULT_VALUE_ESTIMATOR,
+        use_monte_carlo: bool = False,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
+    ) -> float:
+        """Estimated median (50th percentile). Delegates to estimated_quantile(0.5)."""
+        return self.estimated_quantile(
+            0.5,
+            count_estimator,
+            bucket_value_estimator=bucket_value_estimator,
+            use_monte_carlo=use_monte_carlo,
+            max_buckets=max_buckets,
+        )
 
     # ── Private Helpers: Unseen ───────────────────────────────────────────
 
@@ -884,33 +1431,64 @@ class Estimator:
 
     # ── Private Helpers: Buckets ───────────────────────────────────────────
 
-    def _get_buckets(
+    def _get_sub_estimators(
         self,
         bucket_value_estimator: ValueEstimator,
-        bucket_count_estimator: CountEstimator,
+        count_estimator: CountEstimator,
         *,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
-    ) -> list[Bucket]:
-        """Return cached buckets, warm-starting from existing structure when possible."""
-        key = (bucket_value_estimator, bucket_count_estimator, max_buckets)
-        if key not in self._cached_buckets:
-            self._cached_buckets[key] = self._raw_dynamic_buckets(
-                bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets
+    ) -> tuple[list[Bucket], list[Estimator]]:
+        """Return (buckets, per-bucket sub-Estimators), building both lazily and updating incrementally."""
+        key = (bucket_value_estimator, count_estimator, max_buckets)
+        if key not in self._bucket_cache:
+            buckets = self._raw_dynamic_buckets(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
+            subs = [Estimator(b.to_sources()) for b in buckets]
+            self._bucket_cache[key] = _BucketCache(
+                sample_count=len(self._all_samples),
+                buckets=buckets,
+                sub_estimators=subs,
             )
-            self._bucket_sample_count[key] = len(self._all_samples)
         else:
-            prev_count = self._bucket_sample_count[key]
-            new_samples = self._all_samples[prev_count:]
+            cache = self._bucket_cache[key]
+            new_samples = self._all_samples[cache.sample_count :]
             if new_samples:
-                self._cached_buckets[key] = self._warm_split(
-                    self._cached_buckets[key],
-                    new_samples,
-                    bucket_value_estimator,
-                    bucket_count_estimator,
-                    max_buckets=max_buckets,
+                old_id_to_sub = {id(b): sub for b, sub in zip(cache.buckets, cache.sub_estimators, strict=True)}
+                new_buckets, new_items_by_id = self._warm_split(
+                    cache.buckets, new_samples, bucket_value_estimator, count_estimator, max_buckets=max_buckets
                 )
-                self._bucket_sample_count[key] = len(self._all_samples)
-        return self._cached_buckets[key]
+                new_subs: list[Estimator] = []
+                for b in new_buckets:
+                    bid = id(b)
+                    if bid in old_id_to_sub:
+                        sub = old_id_to_sub[bid]
+                        for source_items in new_items_by_id.get(bid, {}).values():
+                            sub.add_source(source_items)
+                        new_subs.append(sub)
+                    else:
+                        new_subs.append(Estimator(b.to_sources()))
+                self._bucket_cache[key] = _BucketCache(
+                    sample_count=len(self._all_samples),
+                    buckets=new_buckets,
+                    sub_estimators=new_subs,
+                )
+        cache = self._bucket_cache[key]
+        return cache.buckets, cache.sub_estimators
+
+    def _get_bucket_weights(
+        self,
+        bucket_value_estimator: ValueEstimator,
+        count_estimator: CountEstimator,
+        *,
+        use_monte_carlo: bool = False,
+        max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
+    ) -> tuple[list[Bucket], list[float]]:
+        """Return (buckets, per-bucket N_hat) computed on-the-fly from cached sub-Estimators."""
+        buckets, subs = self._get_sub_estimators(bucket_value_estimator, count_estimator, max_buckets=max_buckets)
+        weights = []
+        for sub in subs:
+            n_hat = sub.estimated_count(count_estimator, use_bucket=False, use_monte_carlo=use_monte_carlo)
+            weights.append(n_hat if math.isfinite(n_hat) else float(sub._c))
+        return buckets, weights
 
     def _run_split_loop(
         self,
@@ -920,7 +1498,11 @@ class Estimator:
         *,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> list[Bucket]:
-        """Run the greedy split loop until no bucket can be improved."""
+        """Run the greedy split loop until no bucket can be improved.
+
+        For NAIVE value estimator: uses O(n) sweep per bucket — no temporary Bucket copies.
+        For other estimators: falls back to per-candidate _split_bucket + _bucket_sum_est.
+        """
         previous_count = 0
 
         while len(buckets) > previous_count:
@@ -936,32 +1518,48 @@ class Estimator:
                     next_buckets.append(bucket)
                     continue
 
-                lb, ub = bucket.lower_bound, bucket.upper_bound
+                parent_score = _bucket_sum_est(bucket, bucket_value_estimator, bucket_count_estimator)
 
-                bucket_score = self._bucket_sum_est(bucket, bucket_value_estimator, bucket_count_estimator)
-                best_left, best_right, best_score = None, None, math.inf
-                _all_values = [item.value for item in bucket.sorted_samples()]
+                # Fast O(n) sweep path for NAIVE value estimator
+                best_split_val = _find_best_split(bucket, bucket_value_estimator, bucket_count_estimator, parent_score)
+
+                if best_split_val is not None:
+                    # Sweep found an improvement
+                    best_left, best_right = _split_bucket(bucket, best_split_val)
+                    next_buckets.extend([best_left, best_right])
+                    continue
+
+                if bucket_value_estimator is ValueEstimator.NAIVE:
+                    # Sweep returned None → no improvement exists; back off exponentially.
+                    bucket.split_locked = True
+                    bucket.split_backoff = min(bucket.split_backoff * 2, _RESPLIT_BACKOFF_CAP)
+                    next_buckets.append(bucket)
+                    continue
+
+                # Fallback for non-NAIVE: try sampled candidates via _split_bucket
+                lb, ub = bucket.lower_bound, bucket.upper_bound
+                best_left_fb, best_right_fb, best_score_fb = None, None, math.inf
+                _all_values = [item.value for item in bucket.samples]
                 if len(_all_values) > max_buckets:
                     _step = len(_all_values) // max_buckets
                     _all_values = _all_values[::_step]
                 for split_value in [(lb + ub) / 2.0] + _all_values:
-                    left, right = self._split_bucket(bucket, split_value)
+                    left, right = _split_bucket(bucket, split_value)
                     if left.number_of_samples == 0 or right.number_of_samples == 0:
                         continue
-
                     # fmt: off
-                    score = self._bucket_sum_est(left, bucket_value_estimator, bucket_count_estimator) + \
-                            self._bucket_sum_est(right, bucket_value_estimator, bucket_count_estimator)
+                    score = _bucket_sum_est(left, bucket_value_estimator, bucket_count_estimator) + \
+                            _bucket_sum_est(right, bucket_value_estimator, bucket_count_estimator)
                     # fmt: on
+                    if score < best_score_fb:
+                        best_left_fb, best_right_fb, best_score_fb = left, right, score
 
-                    if score < best_score:
-                        best_left, best_right, best_score = left, right, score
-
-                if best_left is None or best_right is None or best_score >= bucket_score:
+                if best_left_fb is None or best_right_fb is None or best_score_fb >= parent_score:
                     bucket.split_locked = True
+                    bucket.split_backoff = min(bucket.split_backoff * 2, _RESPLIT_BACKOFF_CAP)
                     next_buckets.append(bucket)
                 else:
-                    next_buckets.extend([best_left, best_right])
+                    next_buckets.extend([best_left_fb, best_right_fb])
 
             buckets = next_buckets
 
@@ -975,20 +1573,55 @@ class Estimator:
         bucket_count_estimator: CountEstimator,
         *,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
-    ) -> list[Bucket]:
-        """Insert new samples into existing buckets and re-split only the affected ones."""
+    ) -> tuple[list[Bucket], dict[int, dict[str, list[DataItem]]]]:
+        """Insert new samples into existing buckets and re-split only the affected ones.
+
+        Returns (new_buckets, new_items_per_surviving_bucket) where the dict maps
+        id(bucket) → {source_id → [DataItem]} for buckets that survived the split loop.
+        Split children are excluded; they must be built from scratch via to_sources().
+        """
         lower_bounds = [b.lower_bound for b in buckets]
+        new_items_per_bucket: dict[int, dict[str, list[DataItem]]] = {}
+
         for item in new_samples:
             idx = max(0, bisect.bisect_right(lower_bounds, item.value) - 1)
             buckets[idx].add_sample(item)
             buckets[idx].split_locked = False
+            bid = id(buckets[idx])
+            by_src = new_items_per_bucket.setdefault(bid, {})
+            by_src.setdefault(item.source_id, []).append(item)
 
         for bucket in buckets:
             if not bucket.split_locked:
-                bucket.samples.sort(key=lambda x: x.value)
-                bucket.rebuild_frequency_vector()
+                current_n = len(bucket.samples)
+                new_delta = current_n - bucket.samples_at_last_resplit
+                if bucket.samples_at_last_resplit > 0 and new_delta < max(
+                    _RESPLIT_MIN_DELTA,
+                    int(bucket.samples_at_last_resplit * _RESPLIT_FRACTION * bucket.split_backoff),
+                ):
+                    # Too few new samples to justify a full sort+sweep; keep locked.
+                    bucket.split_locked = True
+                else:
+                    bucket.samples.sort(key=_VALUE_KEY)
+                    bucket.rebuild_frequency_vector()
+                    bucket.samples_at_last_resplit = current_n
+                    ep: dict[str, list[int]] = {}
+                    for i, s in enumerate(bucket.samples):
+                        ep.setdefault(s.name, []).append(i)
+                    bucket.entity_positions = ep
 
-        return self._run_split_loop(buckets, bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets)
+        result_buckets = self._run_split_loop(
+            buckets, bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets
+        )
+        # Set samples_at_last_resplit on any child buckets produced by _run_split_loop.
+        # Without this, children (with default=0) would always pass the threshold check
+        # and be re-swept on every subsequent warm_split call.
+        for bucket in result_buckets:
+            if bucket.samples_at_last_resplit == 0:
+                bucket.samples_at_last_resplit = len(bucket.samples)
+        surviving_ids = {id(b) for b in result_buckets}
+        surviving_new_items = {bid: by_src for bid, by_src in new_items_per_bucket.items() if bid in surviving_ids}
+        return result_buckets, surviving_new_items
 
     def _raw_dynamic_buckets(
         self,
@@ -1004,43 +1637,6 @@ class Estimator:
         return self._run_split_loop(
             [init_bucket], bucket_value_estimator, bucket_count_estimator, max_buckets=max_buckets
         )
-
-    def _bucket_sum_est(
-        self,
-        bucket: Bucket,
-        bucket_value_estimator: ValueEstimator,
-        bucket_count_estimator: CountEstimator,
-    ) -> float:
-        """Estimated SUM for a single bucket, used as the splitting score."""
-        return Estimator(bucket.to_sources()).estimated_sum(
-            bucket_value_estimator, bucket_count_estimator, use_bucket=False
-        )
-
-    @staticmethod
-    def _split_bucket(bucket: Bucket, split_value: float) -> tuple[Bucket, Bucket]:
-        """Split a bucket at split_value into left (≤ split_value) and right (> split_value).
-
-        Assumes bucket.samples is sorted by value ascending (guaranteed by _dynamic_buckets).
-        Uses bisect to find the partition point in O(log n), then bulk-loads each half and
-        rebuilds the frequency vector once per child instead of once per sample.
-        """
-        samples = bucket.samples
-        keys = [s.value for s in samples]
-        cut = bisect.bisect_right(keys, split_value)
-
-        left = Bucket(bucket.lower_bound, split_value)
-        right = Bucket(split_value, bucket.upper_bound)
-
-        for s in samples[:cut]:
-            left.samples.append(s)
-            left.histogram[s.name].add_sample(s.value)
-        for s in samples[cut:]:
-            right.samples.append(s)
-            right.histogram[s.name].add_sample(s.value)
-
-        left.rebuild_frequency_vector()
-        right.rebuild_frequency_vector()
-        return left, right
 
     # ── Private Helpers: Monte-Carlo ───────────────────────────────────────────
 
@@ -1078,7 +1674,7 @@ class Estimator:
             for tn in n_grid
             for tl in self._mc_lambda_grid
         ]
-        best_n, _ = self._rbf_search_min(points, self._c, n_ub, self._mc_lambda_grid)
+        best_n, _ = _rbf_search_min(points, self._c, n_ub, self._mc_lambda_grid)
         return int(best_n)
 
     def _mc_distance(
@@ -1135,44 +1731,3 @@ class Estimator:
             total += kl
 
         return total / max(nb_runs, 1)
-
-    @staticmethod
-    def _rbf_search_min(
-        points: Sequence[tuple[float, float, float]],
-        n_lb: int,
-        n_ub: int,
-        lambda_grid: Sequence[float],
-    ) -> tuple[int, float]:
-        """Fit a thin-plate-spline RBF surface over (N, λ, KL) points and return the minimum.
-
-        Falls back to the raw minimum point when there are fewer than 3 points or
-        when all N or λ values are identical (degenerate 2D surface).
-        """
-        if len(points) < 3:
-            n_best, l_best, _ = min(points, key=lambda p: p[2])
-            return int(n_best), float(l_best)
-
-        n_values = {p[0] for p in points}
-        lambda_values = {p[1] for p in points}
-        # RBF interpolation in 2D needs non-degenerate coordinates.
-        if len(n_values) < 2 or len(lambda_values) < 2:
-            n_best, l_best, _ = min(points, key=lambda p: p[2])
-            return int(n_best), float(l_best)
-
-        xy = np.array([[p[0], p[1]] for p in points], dtype=float)
-        z = np.array([p[2] for p in points], dtype=float)
-        xy_scale = xy.std(axis=0)
-        xy_scale[xy_scale == 0] = 1.0
-        try:
-            rbf = RBFInterpolator(xy / xy_scale, z, kernel="thin_plate_spline")
-        except np.linalg.LinAlgError:
-            n_best, l_best, _ = min(points, key=lambda p: p[2])
-            return int(n_best), float(l_best)
-
-        candidates = np.array(
-            [[n, lam] for n in range(n_lb, n_ub + 1) for lam in lambda_grid],
-            dtype=float,
-        )
-        scores = rbf(candidates / xy_scale)
-        best_idx = int(np.argmin(scores))
-        return int(candidates[best_idx, 0]), float(candidates[best_idx, 1])

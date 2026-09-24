@@ -72,6 +72,18 @@ class Bucket:
     _dirty: bool = field(default=True, repr=False, init=False)
     """True when f and derived counts are stale and must be rebuilt before use."""
 
+    entity_positions: dict[str, list[int]] | None = field(default=None, repr=False, init=False)
+    """Cached per-entity sorted position lists for sweep-based split search.
+    None means stale; rebuilt by the estimator after sort + rebuild_frequency_vector."""
+
+    samples_at_last_resplit: int = field(default=0, repr=False, init=False)
+    """len(samples) at the last sort+sweep pass. Used by _warm_split to skip re-sweeping
+    buckets that have received fewer than RESPLIT_DELTA new samples since."""
+
+    split_backoff: int = field(default=1, repr=False, init=False)
+    """Exponential backoff multiplier for the resplit threshold. Doubles after each failed
+    split attempt to avoid repeatedly sweeping buckets that cannot be improved."""
+
     def to_sources(self) -> list[list[DataItem]]:
         """Return samples grouped by source_id, one list per source.
 
@@ -88,6 +100,7 @@ class Bucket:
         self.samples.append(sample)
         self.histogram[sample.name].add_sample(sample.value)
         self._dirty = True
+        self.entity_positions = None
 
     def rebuild_frequency_vector(self) -> None:
         """Recompute f, number_of_samples, and number_of_unique_samples from the histogram."""

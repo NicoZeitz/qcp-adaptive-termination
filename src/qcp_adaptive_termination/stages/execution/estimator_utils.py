@@ -123,7 +123,7 @@ def compute_estimator_statistics(
             lower, upper = estimator.estimated_sum_bounds()
             result.estimated_value_sum_lower = lower
             result.estimated_value_sum_upper = upper
-    elif AggregationType.AVG in aggregation_types:
+    if AggregationType.AVG in aggregation_types:
         result.observed_value_avg = estimator.sample_avg()
         if has_overlap:
             result.estimated_value_avg = estimator.estimated_avg(
@@ -135,7 +135,7 @@ def compute_estimator_statistics(
             lower, upper = estimator.estimated_avg_bounds()
             result.estimated_value_avg_lower = lower
             result.estimated_value_avg_upper = upper
-    elif AggregationType.MIN in aggregation_types:
+    if AggregationType.MIN in aggregation_types:
         result.observed_value_min = estimator.sample_min()
         if has_overlap:
             result.estimated_value_min = estimator.estimated_min(
@@ -143,10 +143,36 @@ def compute_estimator_statistics(
                 bucket_value_estimator=config.value_estimator,
                 use_monte_carlo=config.use_monte_carlo,
             )
-    elif AggregationType.MAX in aggregation_types:
+    if AggregationType.MAX in aggregation_types:
         result.observed_value_max = estimator.sample_max()
         if has_overlap:
             result.estimated_value_max = estimator.estimated_max(
+                config.count_estimator,
+                bucket_value_estimator=config.value_estimator,
+                use_monte_carlo=config.use_monte_carlo,
+            )
+    if AggregationType.Q25 in aggregation_types:
+        result.observed_value_q25 = estimator.sample_quantile(0.25)
+        if has_overlap:
+            result.estimated_value_q25 = estimator.estimated_quantile(
+                0.25,
+                config.count_estimator,
+                bucket_value_estimator=config.value_estimator,
+                use_monte_carlo=config.use_monte_carlo,
+            )
+    if AggregationType.MEDIAN in aggregation_types:
+        result.observed_value_median = estimator.sample_median()
+        if has_overlap:
+            result.estimated_value_median = estimator.estimated_median(
+                config.count_estimator,
+                bucket_value_estimator=config.value_estimator,
+                use_monte_carlo=config.use_monte_carlo,
+            )
+    if AggregationType.Q75 in aggregation_types:
+        result.observed_value_q75 = estimator.sample_quantile(0.75)
+        if has_overlap:
+            result.estimated_value_q75 = estimator.estimated_quantile(
+                0.75,
                 config.count_estimator,
                 bucket_value_estimator=config.value_estimator,
                 use_monte_carlo=config.use_monte_carlo,

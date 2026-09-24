@@ -102,6 +102,15 @@ def build_estimator_summary(estimator_statistics: EstimatorStatistics) -> str | 
         elif agg == AggregationType.MAX:
             observed_value = estimator_statistics.observed_value_max
             estimated_value = estimator_statistics.estimated_value_max
+        elif agg == AggregationType.Q25:
+            observed_value = estimator_statistics.observed_value_q25
+            estimated_value = estimator_statistics.estimated_value_q25
+        elif agg == AggregationType.MEDIAN:
+            observed_value = estimator_statistics.observed_value_median
+            estimated_value = estimator_statistics.estimated_value_median
+        elif agg == AggregationType.Q75:
+            observed_value = estimator_statistics.observed_value_q75
+            estimated_value = estimator_statistics.estimated_value_q75
 
         if include_obs_value and observed_value is not None:
             lines.append(f"Observed {agg}: {observed_value}")

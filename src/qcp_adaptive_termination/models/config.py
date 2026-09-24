@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,7 +9,7 @@ from qcp_adaptive_termination.models.selection_strategy_type import SelectionStr
 
 
 class RoleConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     model: str
     reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = "none"
@@ -17,7 +17,7 @@ class RoleConfig(BaseModel):
 
 
 class Config(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", frozen=True)
 
     continue_after_final_result: bool = False
 
