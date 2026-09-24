@@ -22,6 +22,13 @@ from qcp_adaptive_termination.models.agent import AgentRegistryData
 class ColumnRelevanceResult(BaseModel):
     reasoning: str
     relevant: bool
+
+
+class IterativeRelevanceResult(BaseModel):
+    reasoning: str
+    is_relevant: bool
+    is_complete: bool
+    missing_sub_queries: list[str]
 from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.observability.context import get_output_dir
 from qcp_adaptive_termination.stages.discovery.cluster_index import (
@@ -171,6 +178,118 @@ async def filter_by_column_relevance(
     return kept
 
 
+def _build_context_tables_str(
+    relevant_agent_names: set[str],
+    agent_data: dict[str, AgentRegistryData],
+) -> str:
+    if not relevant_agent_names:
+        return "(none yet)"
+    parts = []
+    for name in sorted(relevant_agent_names):
+        data = agent_data[name]
+        table_schemas = "\n".join(
+            desc.technical_description
+            for desc in data.individual_descriptions.values()
+        )
+        parts.append(f"-- {name}\n{table_schemas}")
+    return "\n\n".join(parts)
+
+
+async def filter_by_iterative_relevance(
+    query: str,
+    vector_index: VectorIndex[tuple[str, str, str]],
+    agent_data: dict[str, AgentRegistryData],
+    agent_map: dict[str, DataAgent],
+    max_iterations: int = 20,
+    top_k_per_query: int = 1,
+) -> list[str]:
+    """Iterative embedding-guided relevance filter.
+
+    Starts with the original query, finds the closest agent, asks an LLM whether
+    it is relevant and whether the query is fully answerable. If not complete, the
+    LLM returns missing sub-queries which are embedded and used to find the next
+    candidate. Only already-confirmed-relevant agents are skipped; rejected agents
+    can be re-evaluated with new context.
+    """
+    relevant_agent_names: list[str] = []  # ordered; relevant_agent_names_set is the fast-lookup companion
+    relevant_agent_names_set: set[str] = set()
+    search_queries: list[str] = [query]
+
+    for iteration in range(max_iterations):
+        # Embed all pending search queries concurrently
+        query_embeddings = await embedding.create(search_queries)
+        if isinstance(query_embeddings[0], float):
+            query_embeddings = [query_embeddings]  # single query → wrap
+
+        # Find best not-yet-relevant agent across all search queries
+        candidate_agent: str | None = None
+        best_dist = float("inf")
+        for q_emb in query_embeddings:
+            for (agent_name, _table, _col), dist in vector_index.search_all(q_emb):
+                if agent_name not in relevant_agent_names_set and dist < best_dist:
+                    best_dist = dist
+                    candidate_agent = agent_name
+
+        if candidate_agent is None:
+            logging.info("Iterative filter: no more candidates after %d iterations", iteration)
+            break
+
+        context_str = _build_context_tables_str(relevant_agent_names_set, agent_data)
+        schema = agent_data[candidate_agent].technical_description
+
+        logging.info(
+            "Iterative filter iteration %d: evaluating %s (L2=%.4f), context has %d relevant agents",
+            iteration,
+            candidate_agent,
+            best_dist,
+            len(relevant_agent_names_set),
+        )
+
+        while True:
+            try:
+                result = await runner.run_llm(
+                    role=AgentRole.EMBEDDING_ITERATIVE_RELEVANCE,
+                    agent_name=candidate_agent,
+                    prompt_parameters={
+                        "query": query,
+                        "context_tables": context_str,
+                        "agent_name": candidate_agent,
+                        "schema": schema,
+                    },
+                    output_type=IterativeRelevanceResult,
+                )
+                break
+            except APITimeoutError:
+                logging.warning("Iterative relevance LLM [%s] timed out — retrying", candidate_agent)
+                await asyncio.sleep(2)
+
+        logging.info(
+            "Iterative filter [%s] is_relevant=%s is_complete=%s missing=%s — %s",
+            candidate_agent,
+            result.is_relevant,
+            result.is_complete,
+            result.missing_sub_queries,
+            result.reasoning,
+        )
+
+        if result.is_relevant:
+            relevant_agent_names.append(candidate_agent)
+            relevant_agent_names_set.add(candidate_agent)
+
+        if result.is_complete:
+            logging.info("Iterative filter: query complete after %d iterations", iteration + 1)
+            break
+
+        search_queries = result.missing_sub_queries if result.missing_sub_queries else [query]
+
+    logging.info(
+        "Iterative filter total: %d relevant agents after %d max iterations",
+        len(relevant_agent_names),
+        max_iterations,
+    )
+    return relevant_agent_names
+
+
 async def _filter_embeddings_internal(
     query: str,
     data_agents: list[DataAgent],
@@ -248,31 +367,43 @@ async def _filter_embeddings_internal(
         }
     )
 
-    sorted_agents_after_llm = await filter_by_column_relevance(query, sorted_agents_after_kneedle, agent_data)
+    # Build a sub-index over only the kneedle candidates for the iterative loop
+    kneedle_agent_set = {name for name, _ in sorted_agents_after_kneedle}
+    kneedle_col_entries = [(e, emb) for e, emb in zip(col_entries, col_embeddings) if e[0] in kneedle_agent_set]
+    if kneedle_col_entries:
+        kneedle_vector_index: VectorIndex[tuple[str, str, str]] = VectorIndex.build(kneedle_col_entries)
+    else:
+        kneedle_vector_index = vector_index
 
-    llm_names = {name for name, _ in sorted_agents_after_llm}
+    relevant_names = await filter_by_iterative_relevance(
+        query=query,
+        vector_index=kneedle_vector_index,
+        agent_data=agent_data,
+        agent_map={a.name: a for a in data_agents},
+    )
+
     logging.info(
-        "After column-relevance LLM: %d / %d agents  rejected=%s",
-        len(sorted_agents_after_llm),
+        "After iterative relevance: %d / %d agents  rejected=%s",
+        len(relevant_names),
         len(sorted_agents_after_kneedle),
-        sorted(name for name, _ in sorted_agents_after_kneedle if name not in llm_names),
+        sorted(name for name, _ in sorted_agents_after_kneedle if name not in set(relevant_names)),
     )
     tracing.append_to_span_output(
         {
-            "after_llm_filter_agents": [name for name, _ in sorted_agents_after_llm],
-            "after_llm_filter_count": len(sorted_agents_after_llm),
+            "after_llm_filter_agents": relevant_names,
+            "after_llm_filter_count": len(relevant_names),
         }
     )
 
     logging.info(
-        "Embedding pre-filter total: %d → kneedle → %d → llm → %d",
+        "Embedding pre-filter total: %d → kneedle → %d → iterative → %d",
         len(data_agents),
         len(sorted_agents_after_kneedle),
-        len(sorted_agents_after_llm),
+        len(relevant_names),
     )
 
     agent_map = {a.name: a for a in data_agents}
-    filtered = [agent_map[name] for name, _ in sorted_agents_after_llm if name in agent_map]
+    filtered = [agent_map[name] for name in relevant_names if name in agent_map]
 
     tracing.append_to_span_output(
         {
@@ -290,7 +421,7 @@ async def _filter_embeddings_internal(
         l2_scores={name: round(float(dist), 4) for name, (dist, _, _) in agent_best_dist.items()},
         best_columns={name: f"{tbl}.{col}" for name, (_, tbl, col) in agent_best_dist.items()},
         after_kneedle_agents=[name for name, _ in sorted_agents_after_kneedle],
-        after_llm_filter_agents=[name for name, _ in sorted_agents_after_llm],
+        after_llm_filter_agents=relevant_names,
     )
 
     return filtered

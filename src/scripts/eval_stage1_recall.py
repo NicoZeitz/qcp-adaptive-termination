@@ -6,8 +6,9 @@ For each query subdirectory, reads:
   - the most recent stage_1_output_filtered_relevant_agents.json (for final selected agents)
   - the most recent stage_1_output_embedding_pre_filter.json (for embedding-filter intermediate results)
 
-Then prints per-query and aggregate precision / recall / F1, both after embedding filtering
-and after the full LLM filtering pipeline.
+Pipeline: embedding filter → kneedle cutoff → column-relevance LLM filter (= final).
+
+Prints per-query and aggregate precision / recall / F1 after each stage.
 
 Macro averaging: average of per-query metrics (each query weighted equally).
 Micro averaging: pool all TP/FP/FN across queries, then compute metrics (larger queries dominate).
@@ -207,14 +208,7 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
                 f"  f1={emb_data['llm_f1']:.3f}"
                 f"  missed={llm_missed}"
             )
-        print(
-            f"       [embedding]  {emb_data['total']} → {len(emb_data['selected'])} agents"
-            f"  precision={emb_data['precision']:.3f}"
-            f"  recall={emb_data['recall']:.3f}"
-            f"  f1={emb_data['f1']:.3f}"
-            f"  missed={emb_data['missed']}"
-        )
-    print(f"       [final]      selected={final_selected}")
+    print(f"       [final]      selected={final_selected}  (= LLM filter output)")
     print(f"       missed={missed}  extra={extra_selected}")
     print(f"       precision={final_prec:.3f}  recall={final_rec:.3f}  f1={final_f1:.3f}")
 
@@ -232,16 +226,11 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             print(f"  F1        : {emb_data['kneedle_f1']:.3f}")
             print()
         if emb_data["llm_selected"]:
-            print("  -- After column-relevance LLM filter --")
+            print("  -- After column-relevance LLM filter (= final) --")
             print(f"  Precision : {emb_data['llm_precision']:.3f}")
             print(f"  Recall    : {emb_data['llm_recall']:.3f}")
             print(f"  F1        : {emb_data['llm_f1']:.3f}")
             print()
-        print("  -- After embedding filter (final) --")
-        print(f"  Precision : {emb_data['precision']:.3f}")
-        print(f"  Recall    : {emb_data['recall']:.3f}")
-        print(f"  F1        : {emb_data['f1']:.3f}")
-        print()
         print("  -- Embedding top-K% breakdown --")
         print(f"  {'%':>4}  {'k':>6}  {'precision':>9}  {'recall':>6}  {'f1':>6}")
         n_total = emb_data["total"]
@@ -252,10 +241,6 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             if threshold_pct and pm["pct"] == threshold_pct:
                 print(f"  {'─' * 48}  {len(relevant)}/{n_total} = {ratio:.1f}% relevant")
         print()
-        print("  -- After full LLM filter --")
-        print(f"  Precision : {final_prec:.3f}")
-        print(f"  Recall    : {final_rec:.3f}")
-        print(f"  F1        : {final_f1:.3f}")
         print("  " + "-" * 56)
 
     result: dict = {
@@ -442,7 +427,7 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
 
         if has_llm:
             print()
-            print("  -- After column-relevance LLM filter --")
+            print("  -- After column-relevance LLM filter (= final) --")
             macro_p = macro_avg(scored, "llm_precision")
             macro_r = macro_avg(scored, "llm_recall")
             macro_f = macro_avg(scored, "llm_f1")
@@ -454,22 +439,6 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
             print(f"  Macro recall    : {macro_r:.3f}  |  Micro recall    : {micro_r:.3f}")
             print(f"  Macro F1        : {macro_f:.3f}  |  Micro F1        : {micro_f:.3f}")
 
-        print()
-        print("  -- After embedding filter --")
-
-        # macro
-        macro_p = macro_avg(scored, "embedding_precision")
-        macro_r = macro_avg(scored, "embedding_recall")
-        macro_f = macro_avg(scored, "embedding_f1")
-        # micro
-        micro_tp = sum(r.get("embedding_tp", 0) for r in scored)
-        micro_fp = sum(r.get("embedding_fp", 0) for r in scored)
-        micro_fn = sum(r.get("embedding_fn", 0) for r in scored)
-        micro_p, micro_r, micro_f = micro_metrics(micro_tp, micro_fp, micro_fn)
-
-        print(f"  Macro precision : {macro_p:.3f}  |  Micro precision : {micro_p:.3f}")
-        print(f"  Macro recall    : {macro_r:.3f}  |  Micro recall    : {micro_r:.3f}")
-        print(f"  Macro F1        : {macro_f:.3f}  |  Micro F1        : {micro_f:.3f}")
         print()
         print("  -- Embedding top-K% breakdown (macro avg) --")
         print(f"  {'%':>4}  {'k':>6}  {'precision':>9}  {'recall':>6}  {'f1':>6}")
@@ -491,7 +460,7 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
                 print(f"  {'─' * 48}  avg {avg_n_relevant:.1f}/{avg_n_total:.0f} = {avg_ratio:.1f}% relevant")
 
     print()
-    print("  -- After full LLM filter --")
+    print("  -- Final (= after column-relevance LLM filter) --")
 
     # macro
     macro_p = macro_avg(scored, "precision")

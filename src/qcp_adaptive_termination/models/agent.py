@@ -66,6 +66,7 @@ class AgentRole(StrEnum):
     QUERY_DECOMPOSER = "query_decomposer"
     EMBEDDING_TEXT_GENERATOR = "embedding_text_generator"
     EMBEDDING_COLUMN_RELEVANCE = "embedding_column_relevance"
+    EMBEDDING_ITERATIVE_RELEVANCE = "embedding_iterative_relevance"
 
     @property
     def prompt_name(self) -> str:
@@ -82,4 +83,5 @@ class AgentRole(StrEnum):
             AgentRole.QUERY_DECOMPOSER: "discovery-query-decomposer",
             AgentRole.EMBEDDING_TEXT_GENERATOR: "discovery-embedding-text-generator",
             AgentRole.EMBEDDING_COLUMN_RELEVANCE: "discovery-embedding-column-relevance",
+            AgentRole.EMBEDDING_ITERATIVE_RELEVANCE: "discovery-embedding-iterative-relevance",
         }[self]

@@ -1,13 +1,8 @@
-import asyncio
-
-import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import AgentRegistryType, CacheMode, DataAgent
 from qcp_adaptive_termination.models.stages import FilteredRelevantAgents
 from qcp_adaptive_termination.observability import cache, tracing
-from qcp_adaptive_termination.stages.discovery.coordinator_filter import filter_coordinator_with_reasoning
-from qcp_adaptive_termination.stages.discovery.data_agent_filter import filter_data_agent_with_reasoning
 from qcp_adaptive_termination.stages.discovery.pre_filter import filter_embeddings
 
 DISCOVERY_STAGE_NAME = "Stage 1: Discovery"
@@ -73,39 +68,4 @@ async def filter_relevant_agents_internal(
     else:
         candidate_data_agents = data_agents
 
-    CHUNK_SIZE = 1000 # temp full 1000 for dummy, back to 100 for real
-
-    with tracing.own_span(
-        "Filtering with Coordinator (DUMMY))",
-        input={
-            "query": query,
-            "candidate_data_agents": candidate_data_agents,
-            "chunk_size": CHUNK_SIZE,
-        },
-    ):
-        # chunks = [candidate_data_agents[i:i + CHUNK_SIZE] for i in range(0, len(candidate_data_agents), CHUNK_SIZE)]
-        # result: list[tuple[DataAgent, str]] = []
-        # for chunk in chunks:
-        #     chunk_registry = await agent_registry.build_registry_string(chunk, registry_type)
-        #     chunk_result = await filter_coordinator_with_reasoning(
-        #         query, chunk, chunk_registry, additional_context
-        #     )
-        #     result.extend(chunk_result)
-        print(f"Filtering with coordinator (DUMMY): returning all {len(candidate_data_agents)} candidate agents as relevant")
-
-    with tracing.own_span(
-        "Filtering with Agents (DUMMY))",
-        input={"query": query},
-    ):
-        # semaphore = asyncio.Semaphore(5)
-
-        # async def _filtered(item):
-        #     async with semaphore:
-        #         return await filter_data_agent_with_reasoning(query, item, additional_context)
-
-        # agents = await asyncio.gather(*[_filtered(item) for item in result])
-        # relevant_data_agents = [agent for agent in agents if agent is not None]
-        relevant_data_agents = candidate_data_agents
-        print(f"Filtering with agents (DUMMY): returning all {len(relevant_data_agents)} candidate agents as relevant")
-
-    return FilteredRelevantAgents(data_agents=data_agents, relevant_data_agents=relevant_data_agents, query=query)
+    return FilteredRelevantAgents(data_agents=data_agents, relevant_data_agents=candidate_data_agents, query=query)
