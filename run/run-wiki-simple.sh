@@ -27,7 +27,7 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/input_simple_10"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="GLM_eval_stage1_recall_wiki_simple"
+RUN_NAME="GLM_full_run_wiki_simple"
 
 # TODO: Set to true to run files in parallel, false for sequential execution
 PARALLEL=true
@@ -132,7 +132,7 @@ for FILE in "${FILES[@]}"; do
     mkdir -p "${LOG_DIR}"
 
     if [[ "${TEST}" == "true" ]]; then
-        echo "      [TEST] Would run: python3 -m scripts.main --name \"${NAME}\" --input \"${INPUT_FILE}\" --output_dir \"${LOG_DIR}\" --cache_dir \"${CACHE_DIR}\" --data_dir \"${DATA_DIR}\" --start-stage 1 --end-stage 1"
+        echo "      [TEST] Would run: python3 -m scripts.main --name \"${NAME}\" --input \"${INPUT_FILE}\" --output_dir \"${LOG_DIR}\" --cache_dir \"${CACHE_DIR}\" --data_dir \"${DATA_DIR}\" --start-stage 1 --end-stage 3"
     else
         python3 -m scripts.main \
           --name "${NAME}" \
@@ -141,24 +141,13 @@ for FILE in "${FILES[@]}"; do
           --cache_dir "${CACHE_DIR}" \
           --data_dir "${DATA_DIR}" \
           --config "${PROJECT_DIR}/config.yaml" \
-          --start-stage 1 --end-stage 1 \
+          --start-stage 1 --end-stage 3 \
           > >(tee "${LOG_DIR}/stdout.log") \
           2> >(tee "${LOG_DIR}/stderr.log" >&2)
     fi
 
     COMPLETED=$((COMPLETED + 1))
-    ############################################################ EVALUATE ############################################################
-
-    if [[ "${TEST}" != "true" ]]; then
-        echo "  ================== Computing precision / recall / F1 (${COMPLETED}/${TOTAL})"
-        python3 -m scripts.eval_stage1_recall \
-          --log_dir "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}" \
-          --input_dir "${INPUT_DIR}" \
-          --chart_output "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/chart_data"
-    fi
-
-    echo "  ================== Query done: ${COMPLETED}/${TOTAL} — ${QUERY_SLUG}"
-
 done
 
 echo "================== All ${TOTAL} queries completed"
+    
