@@ -388,7 +388,10 @@ async def _run_step(
     _per_step_data[execution_id] = data_handler
 
     try:
-        with hooks.stage_context(execution_id), context.config_context(config):
+        with (
+            hooks.stage_context(execution_id),
+            context.config_context(config.model_copy(update={"continue_after_final_result": False})),
+        ):
             await execute_query_plan(
                 query_plan=fresh_query_plan,
                 relevant_data_agents=relevant_data_agents,
