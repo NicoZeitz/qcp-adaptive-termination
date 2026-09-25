@@ -44,7 +44,7 @@ def _normalize_probability(values: list[float]) -> list[float]:
 @dataclass(slots=True)
 class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorState]):
     lg_k: int = DEFAULT_LG_K
-    clustered_prior: bool = True
+    clustered_prior: bool = False
     min_samples: int = DEFAULT_MIN_SAMPLES
     min_cluster_size_ratio: float = DEFAULT_MIN_CLUSTER_SIZE_RATIO
 

@@ -8,9 +8,9 @@ include_confidence_intervals: true
 continue_after_final_result: true
 selection_type: theta_sketch
 selection_kwargs:
-  registry_type: natural_language  # technical | natural_language                  # embedding
-  # lg_k: 12                              # <number>                                      # hll_sketch, theta_sketch, posterior
-  # use_ucb: false                         # true | false                                  # hll_sketch, theta_sketch
+  # registry_type: natural_language  # technical | natural_language                  # embedding
+  lg_k: 12                              # <number>                                      # hll_sketch, theta_sketch, posterior
+  use_ucb: false                         # true | false                                  # hll_sketch, theta_sketch
   # clustered_prior: false                 # true | false                                  # posterior
   # min_samples: 1                         # <number>                                      # posterior
   # min_cluster_size_ratio: 0.05           # <number>                                      # posterior
