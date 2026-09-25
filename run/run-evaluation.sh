@@ -75,7 +75,7 @@ for FILE in "${FILES[@]}"; do
         continue
     fi
 
-    python3 -m cProfile -o "${LOG_DIR}/profile.prof" -m scripts.evaluate_selection_strategies \
+    python3 -m scripts.evaluate_selection_strategies \
       --name "${NAME}" \
       --input "${INPUT_FILE}" \
       --output_dir "${LOG_DIR}" \

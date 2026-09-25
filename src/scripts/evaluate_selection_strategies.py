@@ -240,7 +240,7 @@ def _write_last_step_stage_3(execution_id: str, attempt: int, result: ExecutionR
             return
 
 
-def _register_batch_tracking(target_execution_id: str) -> tuple[list[str], Any]:
+def _register_batch_tracking(target_execution_id: str, target_step_id: str) -> tuple[list[str], Any]:
     ordered: list[str] = []
 
     def _on_batch_end(
@@ -254,8 +254,8 @@ def _register_batch_tracking(target_execution_id: str) -> tuple[list[str], Any]:
         estimators: list[EstimatorStatistics | None],
         decision: EvaluatorDecision | Literal["need"],
     ) -> None:
-        del query_plan_step, additional_information, iteration, remaining, result_list, estimators, decision
-        if execution_id.startswith(target_execution_id + "/"):
+        del additional_information, iteration, remaining, result_list, estimators, decision
+        if execution_id.startswith(target_execution_id + "/") and query_plan_step.id == target_step_id:
             ordered.extend(sda.agent.name for sda in batch)
 
     hooks.register(HookEvent.MULTI_AGENT_STEP_BATCH_END, _on_batch_end)
@@ -354,7 +354,7 @@ async def _run_one_strategy(
     logging.info("Running strategy: %s / %s", step.id, strategy)
     execution_id = uuid4().hex[:12]
     strategy_config = config.model_copy(update={"selection_type": strategy})
-    ordered_agents, batch_end_handler = _register_batch_tracking(execution_id)
+    ordered_agents, batch_end_handler = _register_batch_tracking(execution_id, step.id)
     fresh_query_plan = QueryPlan.model_validate(raw_query_plan)
 
     _per_strategy_align[execution_id] = align_handler
@@ -444,10 +444,11 @@ async def _run_step(
         key_cols,
     )
 
-    total_unique = _get_total_unique(
-        relevant_data_agents, canonical_sql, canonical_table, key_cols, meta_mapping, data_dir
-    )
-    logging.info("Total unique rows (ground truth): %d", total_unique)
+    step_agent_names = set(step.to_agent)
+    step_agents = [a for a in relevant_data_agents if a.name in step_agent_names]
+
+    total_unique = _get_total_unique(step_agents, canonical_sql, canonical_table, key_cols, meta_mapping, data_dir)
+    logging.info("Total unique rows (ground truth, %d agents): %d", len(step_agents), total_unique)
 
     data_cache: dict[str, pd.DataFrame | None] = {}
     with ThreadPoolExecutor() as pool:
@@ -455,7 +456,7 @@ async def _run_step(
             agent.name: pool.submit(
                 _query_agent_canonical, agent, canonical_sql, canonical_table, meta_mapping, data_dir
             )
-            for agent in relevant_data_agents
+            for agent in step_agents
         }
         for name, future in futures.items():
             data_cache[name] = future.result()
