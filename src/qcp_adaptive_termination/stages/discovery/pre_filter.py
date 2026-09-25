@@ -217,12 +217,14 @@ async def filter_by_iterative_relevance(
 
         # Find best not-yet-decided agent across all search queries
         candidate_agent: str | None = None
+        candidate_matched_query: str = query
         best_dist = float("inf")
-        for q_emb in query_embeddings:
+        for q, q_emb in zip(search_queries, query_embeddings):
             for (agent_name, _table, _col), dist in vector_index.search_all(q_emb):
                 if agent_name not in relevant_agent_names_set and agent_name not in excluded_agent_names and dist < best_dist:
                     best_dist = dist
                     candidate_agent = agent_name
+                    candidate_matched_query = q
 
         if candidate_agent is None:
             logging.info("Iterative filter: no more candidates after %d iterations", iteration)
@@ -239,10 +241,11 @@ async def filter_by_iterative_relevance(
             unresolved_str = "(none)"
 
         logging.info(
-            "Iterative filter iteration %d: evaluating %s (L2=%.4f), context has %d relevant agents",
+            "Iterative filter iteration %d: evaluating %s (L2=%.4f, matched query: %r), context has %d relevant agents",
             iteration,
             candidate_agent,
             best_dist,
+            candidate_matched_query,
             len(relevant_agent_names_set),
         )
 
@@ -255,6 +258,7 @@ async def filter_by_iterative_relevance(
                         "query": query,
                         "context_tables": context_str,
                         "unresolved_sub_queries": unresolved_str,
+                        "matched_query": candidate_matched_query,
                         "agent_name": candidate_agent,
                         "schema": schema,
                     },
@@ -339,7 +343,7 @@ async def _filter_embeddings_internal(
         for table_name, table_desc in data.individual_descriptions.items():
             for col_name, col_desc in table_desc.columns.items():
                 col_entries.append((agent.name, table_name, col_name))
-                col_descriptions.append(f"{table_name}: {table_desc.natural_language_description}, {col_name}: {col_desc.natural_language_description}")
+                col_descriptions.append(f"{table_desc.natural_language_description} {col_desc.natural_language_description}") #  E.g. Sovereign countries in world. Capital city of the country.
 
     if not col_entries:
         logging.warning("No column embeddings found, returning all agents unfiltered")

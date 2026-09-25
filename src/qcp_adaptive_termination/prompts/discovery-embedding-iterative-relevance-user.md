@@ -1,14 +1,19 @@
-【Original Query】
-{{query}}
+【Original query】
+{{query}}{{#context_tables}}
 
-【Context (schemas of already confirmed relevant agents, empty if none found yet)】
-{{context_tables}}
+【Context】
+{{context_tables}}{{/context_tables}}{{#unresolved_sub_queries}}
 
-【Sub-queries searched but no relevant database found yet (with fail count)】
-{{unresolved_sub_queries}}
+【Failed sub-queries with count】
+{{unresolved_sub_queries}}{{/unresolved_sub_queries}}{{#matched_query}}
 
-【Candidate Agent: {{agent_name}}】
+【Sub-query that found this candidate agent】
+{{matched_query}}{{/matched_query}}
+
+【Candidate agent】
 {{schema}}
 
-Evaluate this candidate agent and decide: is it relevant, is the query now fully answerable, and what information (if any) is still missing?
-For sub-queries that have failed multiple times, consider whether: (a) the search phrase should be rewritten to find the right database, or (b) that information is not available in any database and can be answered from world knowledge instead — in which case do not include it in missing_sub_queries and mark is_complete accordingly.
+Decide:
+1. Is the candidate agents database actually relevant to the original query{{#matched_query}} or the search query that retrieved it{{/matched_query}}?
+2. If not relevant: What sub-queries derived from the original query should be used to find the missing databases?{{#unresolved_sub_queries}} If a sub-query has failed multiple times, consider rewriting it with different terminology.{{/unresolved_sub_queries}}
+3. Can the original query now be fully answered with the context and this candidate (if relevant)?
