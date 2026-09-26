@@ -18,3 +18,4 @@ Guidelines:
 - missing_sub_queries should target the *gaps*, not repeat what is already found.
 - Each sub-query should be a focused semantic search phrase, not a full sentence.
 - Additional helpful information: The search space for the queries works by calculating the closest distance between query and for each column an embedded table and column description.
+- Do not make assumptions about IDs, all IDs must be joined!

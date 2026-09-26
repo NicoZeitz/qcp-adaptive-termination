@@ -183,7 +183,7 @@ def _build_context_tables_str(
     agent_data: dict[str, AgentRegistryData],
 ) -> str:
     if not relevant_agent_names:
-        return "(none yet)"
+        return ""
     return "\n\n".join(agent_data[name].technical_description for name in sorted(relevant_agent_names))
 
 
@@ -238,7 +238,7 @@ async def filter_by_iterative_relevance(
                 for q, c in unresolved_sub_query_counts.items()
             )
         else:
-            unresolved_str = "(none)"
+            unresolved_str = ""
 
         logging.info(
             "Iterative filter iteration %d: evaluating %s (L2=%.4f, matched query: %r), context has %d relevant agents",
@@ -258,7 +258,7 @@ async def filter_by_iterative_relevance(
                         "query": query,
                         "context_tables": context_str,
                         "unresolved_sub_queries": unresolved_str,
-                        "matched_query": candidate_matched_query,
+                        "matched_query": candidate_matched_query if candidate_matched_query != query else "",
                         "agent_name": candidate_agent,
                         "schema": schema,
                     },

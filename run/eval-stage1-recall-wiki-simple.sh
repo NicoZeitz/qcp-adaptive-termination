@@ -27,7 +27,7 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/input_simple"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="GLM_eval_stage1_recall_wiki_simple"
+RUN_NAME="GLM_eval_stage1_recall_wiki_simple_recursive_llm_filter_embedding_and_prompt_change"
 
 # TODO: Set to true to run files in parallel, false for sequential execution
 PARALLEL=true
@@ -39,16 +39,16 @@ mkdir -p "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"
 exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stderr.log" >&2)
 
 # Load all input files from directory
-shopt -s nullglob
-FILES=("${INPUT_DIR}"/*.json)
-FILES=("${FILES[@]#${INPUT_DIR}/}")
-shopt -u nullglob
+# shopt -s nullglob
+# FILES=("${INPUT_DIR}"/*.json)
+# FILES=("${FILES[@]#${INPUT_DIR}/}")
+# shopt -u nullglob
 
 # Or use a specific list of files
-# FILES=(
-#     "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
+FILES=(
+    # "How_many_airlines_are_headquartered_in_UK.json"
+    "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
 #     "How_many_FIFA_World_Cup_games_did_England_play.json"
-#     "How_many_airlines_are_headquartered_in_UK.json"
 #     "How_many_chinese_woman_have_won_a_nobel_prize.json"
 #     "How_many_countries_have_a_human_development_index_above_08.json"
 #     "How_many_games_was_Kurt_Tschenscher_referee_in_a_FIFA_World_Cup_in_Europe.json"
@@ -107,7 +107,7 @@ shopt -u nullglob
 #     "Which_football_club_has_the_most_social_media_followers_across_the_top_five_euro.json"
 #     "Which_province_is_the_northernmost_province_in_China.json"
 #     "Who_won_the_most_world_cup_matches_in_the_last_50_years_and_how_many.json"
-# )
+)
 
 ############################################################ RUN EVERYTHING ############################################################
 
