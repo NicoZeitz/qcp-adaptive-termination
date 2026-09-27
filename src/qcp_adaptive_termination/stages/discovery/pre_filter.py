@@ -192,8 +192,7 @@ async def filter_by_iterative_relevance(
     vector_index: VectorIndex[tuple[str, str, str]],
     agent_data: dict[str, AgentRegistryData],
     agent_map: dict[str, DataAgent],
-    max_iterations: int = 10,
-    top_k_per_query: int = 3,
+    max_iterations: int = 50,
 ) -> list[str]:
     """Iterative embedding-guided relevance filter.
 
@@ -205,9 +204,10 @@ async def filter_by_iterative_relevance(
     """
     relevant_agent_names: list[str] = []  # ordered; relevant_agent_names_set is the fast-lookup companion
     relevant_agent_names_set: set[str] = set()
-    excluded_agent_names: set[str] = set()  # irrelevant agents, never re-evaluated
     search_queries: list[str] = [query]
     unresolved_sub_query_counts: dict[str, int] = {}  # sub-query → number of failed attempts
+    # track which agents were already evaluated for the current set of search_queries
+    evaluated_for_current_queries: set[str] = set()
 
     for iteration in range(max_iterations):
         # Embed all pending search queries concurrently
@@ -221,7 +221,7 @@ async def filter_by_iterative_relevance(
         best_dist = float("inf")
         for q, q_emb in zip(search_queries, query_embeddings):
             for (agent_name, _table, _col), dist in vector_index.search_all(q_emb):
-                if agent_name not in relevant_agent_names_set and agent_name not in excluded_agent_names and dist < best_dist:
+                if agent_name not in relevant_agent_names_set and agent_name not in evaluated_for_current_queries and dist < best_dist:
                     best_dist = dist
                     candidate_agent = agent_name
                     candidate_matched_query = q
@@ -278,6 +278,8 @@ async def filter_by_iterative_relevance(
             result.reasoning,
         )
 
+        evaluated_for_current_queries.add(candidate_agent)
+
         if result.is_relevant:
             relevant_agent_names.append(candidate_agent)
             relevant_agent_names_set.add(candidate_agent)
@@ -285,7 +287,6 @@ async def filter_by_iterative_relevance(
             for q in search_queries:
                 unresolved_sub_query_counts.pop(q, None)
         else:
-            excluded_agent_names.add(candidate_agent)
             # increment fail count for each current search query
             for q in search_queries:
                 unresolved_sub_query_counts[q] = unresolved_sub_query_counts.get(q, 0) + 1
@@ -299,6 +300,8 @@ async def filter_by_iterative_relevance(
             logging.info("Iterative filter: sub-queries unchanged, stopping to avoid loop")
             break
         search_queries = new_queries
+        # reset so previously-rejected agents can be re-evaluated for the new sub-queries
+        evaluated_for_current_queries = set(relevant_agent_names_set)
 
     logging.info(
         "Iterative filter total: %d relevant agents after %d max iterations",

@@ -147,18 +147,17 @@ for FILE in "${FILES[@]}"; do
     fi
 
     COMPLETED=$((COMPLETED + 1))
-    ############################################################ EVALUATE ############################################################
-
-    if [[ "${TEST}" != "true" ]]; then
-        echo "  ================== Computing precision / recall / F1 (${COMPLETED}/${TOTAL})"
-        python3 -m scripts.eval_stage1_recall \
-          --log_dir "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}" \
-          --input_dir "${INPUT_DIR}" \
-          --chart_output "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/chart_data"
-    fi
 
     echo "  ================== Query done: ${COMPLETED}/${TOTAL} — ${QUERY_SLUG}"
 
 done
+
+if [[ "${TEST}" != "true" ]]; then
+    echo "================== Computing precision / recall / F1"
+    python3 -m scripts.eval_stage1_recall \
+      --log_dir "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}" \
+      --input_dir "${INPUT_DIR}" \
+      --chart_output "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/chart_data"
+fi
 
 echo "================== All ${TOTAL} queries completed"
