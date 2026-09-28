@@ -28,7 +28,8 @@ class IterativeRelevanceResult(BaseModel):
     reasoning: str
     is_relevant: bool
     is_complete: bool
-    missing_sub_queries: list[str]
+    data_not_available: bool
+    missing_sub_query: str
 from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.observability.context import get_output_dir
 from qcp_adaptive_termination.stages.discovery.cluster_index import (
@@ -198,33 +199,27 @@ async def filter_by_iterative_relevance(
 
     Starts with the original query, finds the closest agent, asks an LLM whether
     it is relevant and whether the query is fully answerable. If not complete, the
-    LLM returns missing sub-queries which are embedded and used to find the next
-    candidate. Only already-confirmed-relevant agents are skipped; rejected agents
-    can be re-evaluated with new context.
+    LLM returns the single most important missing sub-query which is used to find
+    the next candidate. Only already-confirmed-relevant agents are skipped; rejected
+    agents can be re-evaluated with a new sub-query.
     """
-    relevant_agent_names: list[str] = []  # ordered; relevant_agent_names_set is the fast-lookup companion
+    relevant_agent_names: list[str] = []
     relevant_agent_names_set: set[str] = set()
-    search_queries: list[str] = [query]
+    current_query: str = query
     unresolved_sub_query_counts: dict[str, int] = {}  # sub-query → number of failed attempts
-    # track which agents were already evaluated for the current set of search_queries
-    evaluated_for_current_queries: set[str] = set()
+    evaluated_for_current_query: set[str] = set()
 
     for iteration in range(max_iterations):
-        # Embed all pending search queries concurrently
-        query_embeddings = await embedding.create(search_queries)
-        if isinstance(query_embeddings[0], float):
-            query_embeddings = [query_embeddings]  # single query → wrap
+        # Embed the current search query
+        (current_query_embedding,) = await embedding.create([current_query])
 
-        # Find best not-yet-decided agent across all search queries
+        # Find the best not-yet-decided agent for the current query
         candidate_agent: str | None = None
-        candidate_matched_query: str = query
         best_dist = float("inf")
-        for q, q_emb in zip(search_queries, query_embeddings):
-            for (agent_name, _table, _col), dist in vector_index.search_all(q_emb):
-                if agent_name not in relevant_agent_names_set and agent_name not in evaluated_for_current_queries and dist < best_dist:
-                    best_dist = dist
-                    candidate_agent = agent_name
-                    candidate_matched_query = q
+        for (agent_name, _table, _col), dist in vector_index.search_all(current_query_embedding):
+            if agent_name not in relevant_agent_names_set and agent_name not in evaluated_for_current_query and dist < best_dist:
+                best_dist = dist
+                candidate_agent = agent_name
 
         if candidate_agent is None:
             logging.info("Iterative filter: no more candidates after %d iterations", iteration)
@@ -245,7 +240,7 @@ async def filter_by_iterative_relevance(
             iteration,
             candidate_agent,
             best_dist,
-            candidate_matched_query,
+            current_query,
             len(relevant_agent_names_set),
         )
 
@@ -258,7 +253,7 @@ async def filter_by_iterative_relevance(
                         "query": query,
                         "context_tables": context_str,
                         "unresolved_sub_queries": unresolved_str,
-                        "matched_query": candidate_matched_query if candidate_matched_query != query else "",
+                        "matched_query": current_query if current_query != query else "",
                         "agent_name": candidate_agent,
                         "schema": schema,
                     },
@@ -270,38 +265,39 @@ async def filter_by_iterative_relevance(
                 await asyncio.sleep(2)
 
         logging.info(
-            "Iterative filter [%s] is_relevant=%s is_complete=%s missing=%s — %s",
+            "Iterative filter [%s] is_relevant=%s is_complete=%s data_not_available=%s missing=%s — %s",
             candidate_agent,
             result.is_relevant,
             result.is_complete,
-            result.missing_sub_queries,
+            result.data_not_available,
+            result.missing_sub_query,
             result.reasoning,
         )
 
-        evaluated_for_current_queries.add(candidate_agent)
+        evaluated_for_current_query.add(candidate_agent)
 
         if result.is_relevant:
             relevant_agent_names.append(candidate_agent)
             relevant_agent_names_set.add(candidate_agent)
-            # remove sub-queries that led to this agent from unresolved
-            for q in search_queries:
-                unresolved_sub_query_counts.pop(q, None)
+            unresolved_sub_query_counts.pop(current_query, None)
         else:
-            # increment fail count for each current search query
-            for q in search_queries:
-                unresolved_sub_query_counts[q] = unresolved_sub_query_counts.get(q, 0) + 1
+            unresolved_sub_query_counts[current_query] = unresolved_sub_query_counts.get(current_query, 0) + 1
 
         if result.is_complete:
             logging.info("Iterative filter: query complete after %d iterations", iteration + 1)
             break
 
-        new_queries = result.missing_sub_queries if result.missing_sub_queries else [query]
-        if set(new_queries) == set(search_queries):
-            logging.info("Iterative filter: sub-queries unchanged, stopping to avoid loop")
+        if result.data_not_available:
+            logging.info("Iterative filter: required data not available, stopping after %d iterations", iteration + 1)
             break
-        search_queries = new_queries
-        # reset so previously-rejected agents can be re-evaluated for the new sub-queries
-        evaluated_for_current_queries = set(relevant_agent_names_set)
+
+        new_query = result.missing_sub_query if result.missing_sub_query else query
+        if new_query == current_query:
+            logging.info("Iterative filter: sub-query unchanged, stopping to avoid loop")
+            break
+        current_query = new_query
+        # reset so previously-rejected agents can be re-evaluated for the new sub-query
+        evaluated_for_current_query = set(relevant_agent_names_set)
 
     logging.info(
         "Iterative filter total: %d relevant agents after %d max iterations",

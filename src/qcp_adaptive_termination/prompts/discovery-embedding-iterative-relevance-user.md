@@ -14,6 +14,6 @@
 {{schema}}
 
 Decide:
-1. Is the candidate agents database actually relevant to the original query{{#matched_query}} or the search query that retrieved it{{/matched_query}}?
-2. If not relevant: What sub-queries derived from the original query should be used to find the missing databases?{{#unresolved_sub_queries}} If a sub-query has failed multiple times, consider rewriting it with different terminology.{{/unresolved_sub_queries}}
+1. Is the candidate agents database actually relevant to the original query{{#matched_query}} and the search query that retrieved it{{/matched_query}}?
+2. If not relevant: What is the single most important missing data type to search for next?{{#unresolved_sub_queries}} If a sub-query has failed multiple times, consider rewriting it with different terminology. If many differently-worded attempts (e.g. 5) for the same goal have all failed, set data_not_available to true instead of continuing.{{/unresolved_sub_queries}}
 3. Can the original query now be fully answered with the context and this candidate (if relevant)?
