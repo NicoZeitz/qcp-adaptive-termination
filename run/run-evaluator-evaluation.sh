@@ -25,7 +25,7 @@ DATASET_NAME="wikidata-federated-overlap-dataset"
 
 DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
-INPUT_DIR="${DATASET_DIR}/input"
+INPUT_DIR="${DATASET_DIR}/dataset/_meta/input"
 ############################################################ RUN SETUP ############################################################
 RUN_NAME="evaluate-estimator-configs"
 
