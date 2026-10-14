@@ -22,7 +22,7 @@ from typing import IO
 
 import agents.tracing.setup as _agents_tracing_setup
 import nest_asyncio2
-from agents import get_current_trace, set_trace_processors, set_tracing_export_api_key, trace
+from agents import get_current_trace, trace
 from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
 from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
@@ -34,7 +34,6 @@ from pydantic import JsonValue
 from qcp_adaptive_termination.models import CacheMode, Config
 from qcp_adaptive_termination.observability.cache import Cache
 from qcp_adaptive_termination.observability.file_span_exporter import FileSpanExporter
-from qcp_adaptive_termination.observability.openai_tracing import TruncatingBackendSpanExporter
 
 # from langfuse import get_client
 # from qcp_adaptive_termination.observability.tracing import serialize_data_for_tracing
@@ -107,19 +106,21 @@ def _is_data_dir_active() -> bool:
 
 
 def _setup_tracing(output_dir: Path) -> BatchTraceProcessor | None:
-    tracing_api_key = os.getenv("OPENAI_API_KEY")
-    openai_processor: BatchTraceProcessor | None = None
-    if tracing_api_key:
-        set_tracing_export_api_key(tracing_api_key)
-        max_field_bytes = int(os.getenv("OPENAI_TRACING_MAX_FIELD_BYTES", "9500"))
-        openai_exporter = TruncatingBackendSpanExporter(
-            api_key=tracing_api_key,
-            max_field_bytes=max_field_bytes,
-        )
-        openai_processor = BatchTraceProcessor(exporter=openai_exporter)
-        set_trace_processors([openai_processor])
-    else:
-        logging.warning("No OpenAI tracing API key found; OpenAI trace export is disabled.")
+    # OpenAI trace export disabled for now (suspected hang on traces/ingest); file tracing only.
+    # tracing_api_key = os.getenv("OPENAI_API_KEY")
+    # openai_processor: BatchTraceProcessor | None = None
+    # if tracing_api_key:
+    #     set_tracing_export_api_key(tracing_api_key)
+    #     max_field_bytes = int(os.getenv("OPENAI_TRACING_MAX_FIELD_BYTES", "9500"))
+    #     openai_exporter = TruncatingBackendSpanExporter(
+    #         api_key=tracing_api_key,
+    #         max_field_bytes=max_field_bytes,
+    #     )
+    #     openai_processor = BatchTraceProcessor(exporter=openai_exporter)
+    #     set_trace_processors([openai_processor])
+    # else:
+    #     logging.warning("No OpenAI tracing API key found; OpenAI trace export is disabled.")
+    openai_processor = None
 
     tracing_log_file = output_dir / "traces.jsonl"
     nest_asyncio2.apply()
