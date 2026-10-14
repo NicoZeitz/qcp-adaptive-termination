@@ -209,7 +209,7 @@ def _align_schema_dispatch(
     merge_task: str,
 ) -> AlignedResultList:
     for strategy_id, handler in _per_strategy_align.items():
-        if execution_id == strategy_id or execution_id.startswith(strategy_id + "/"):
+        if execution_id == strategy_id:
             return handler(
                 execution_id, data_agents=data_agents, agent_names=agent_names, query=query, merge_task=merge_task
             )
@@ -224,7 +224,7 @@ def _data_agent_dispatch(
     schema_metadata: AlignedSchemaMetadata | None,
 ) -> PartialQueryAnswer:
     for strategy_id, handler in _per_strategy_data.items():
-        if execution_id == strategy_id or execution_id.startswith(strategy_id + "/"):
+        if execution_id == strategy_id:
             return handler(
                 execution_id,
                 data_agent=data_agent,
@@ -250,7 +250,7 @@ def _register_batch_tracking(target_execution_id: str, target_step_id: str) -> t
         decision: EvaluatorDecision | Literal["need"],
     ) -> None:
         del additional_information, iteration, remaining, result_list, estimators, decision
-        if execution_id.startswith(target_execution_id + "/") and query_plan_step.id == target_step_id:
+        if execution_id == target_execution_id and query_plan_step.id == target_step_id:
             ordered.extend(sda.agent.name for sda in batch)
 
     hooks.register(HookEvent.MULTI_AGENT_STEP_BATCH_END, _on_batch_end)
