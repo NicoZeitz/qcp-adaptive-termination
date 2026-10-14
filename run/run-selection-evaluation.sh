@@ -2,23 +2,15 @@
 ############################################################ GENERAL SETUP ############################################################
 set -euo pipefail
 
-# set current working directory to the script's parent directory (project dir)
-cd "$(dirname "$0")/.."
+RUN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${RUN_DIR}/paths.sh"
+cd "$PROJECT_DIR"
 
 # sync project dependencies with uv
 uv sync
 
 # activate the virtual environment
 source .venv/bin/activate
-
-USER=$(whoami)
-ASSET_USER="nzeitz"
-
-PROJECT_DIR="/mnt/labstore/${USER}/qcp-adaptive-termination"
-CACHE_DIR="/mnt/labstore/${ASSET_USER}/.cache"
-
-BASE_DATASET_DIR="/mnt/labstore/${ASSET_USER}/dataset"
-BASE_LOG_DIR="/mnt/labstore/${USER}/.logs"
 
 ############################################################ DATASET SPECIFIC SETUP ############################################################
 DATASET_NAME="wikidata-federated-overlap-dataset"
@@ -63,7 +55,7 @@ for FILE in "${FILES[@]}"; do
     QUERY_SLUG=$(basename "${INPUT_FILE}" .json)
 
     # take first 2 letter from $USER and uppercase them
-    USR=$(echo "${USER:0:2}" | tr '[:lower:]' '[:upper:]')
+    USR=$(echo "${RUN_USER:0:2}" | tr '[:lower:]' '[:upper:]')
     LOG_DIR="${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/${QUERY_SLUG}"
     NAME="[$USR] ${RUN_NAME} (${DATASET_NAME}): ${QUERY}"
 

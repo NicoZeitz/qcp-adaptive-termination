@@ -19,6 +19,7 @@ import yaml
 from sqlalchemy import create_engine, text
 
 import qcp_adaptive_termination.hooks as hooks
+from qcp_adaptive_termination.estimator import Estimator
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import (
     AggregationType,
@@ -199,6 +200,27 @@ def _completeness_override(
     if force_result:
         return FinalResultOutcome(result=aligned_result_list.data, result_list=aligned_result_list)
     return QueryMoreAgentsOutcome(result_list=aligned_result_list)
+
+
+def _estimator_statistics_override(
+    execution_id: str,
+    result_list: AlignedResultList,
+    agents_queried: int,
+    agents_total: int,
+    agents_current: list[str],
+    previous_estimator: Estimator | None,
+) -> tuple[EstimatorStatistics, Estimator | None]:
+    return (
+        EstimatorStatistics(
+            sample_coverage=None,
+            new_unique_count=0,
+            agents_queried=agents_queried,
+            agents_total=agents_total,
+            aggregation_types=result_list.schema_metadata.aggregation_types,
+            observed_count=0,
+        ),
+        None,
+    )
 
 
 def _align_schema_dispatch(
@@ -663,6 +685,7 @@ async def _run(ctx: ScriptContext) -> None:
     hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, _align_schema_dispatch)
     hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, _data_agent_dispatch)
     hooks.register(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
+    hooks.register(HookEvent.ESTIMATOR_STATISTICS_OVERRIDE, _estimator_statistics_override)
 
     step_tasks = []
     for step in multi_steps:
@@ -692,6 +715,7 @@ async def _run(ctx: ScriptContext) -> None:
         hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, _align_schema_dispatch)
         hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, _data_agent_dispatch)
         hooks.unregister(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
+        hooks.unregister(HookEvent.ESTIMATOR_STATISTICS_OVERRIDE, _estimator_statistics_override)
 
     # Summary over all steps of this file.
     _write_summary(step_summaries, output_dir, "summary_all", " — all steps")
