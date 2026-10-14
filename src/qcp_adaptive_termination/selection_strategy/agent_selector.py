@@ -21,7 +21,7 @@ from qcp_adaptive_termination.selection_strategy.embedding_strategy import (
 from qcp_adaptive_termination.selection_strategy.posterior_strategy import (
     PosteriorStrategy,
 )
-from qcp_adaptive_termination.selection_strategy.sequential_strategy import SequentialStrategy
+from qcp_adaptive_termination.selection_strategy.random_strategy import RandomStrategy
 from qcp_adaptive_termination.selection_strategy.sketch_strategy import (
     HllSketchStrategy,
     MinHashStrategy,
@@ -32,8 +32,8 @@ from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrate
 
 def _build_strategy(selection_type: SelectionStrategyType, kwargs: dict[str, Any]) -> SelectionStrategy:
     strategy_cls: type[SelectionStrategy]
-    if selection_type == SelectionStrategyType.SEQUENTIAL:
-        strategy_cls = SequentialStrategy
+    if selection_type == SelectionStrategyType.RANDOM:
+        strategy_cls = RandomStrategy
     elif selection_type == SelectionStrategyType.EMBEDDING:
         strategy_cls = EmbeddingStrategy
     elif selection_type == SelectionStrategyType.COUNT:

@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 
 import pandas as pd
-from sklearn.metrics import auc as sklearn_auc
 
 
 @dataclass(slots=True)
@@ -24,10 +23,35 @@ class EvaluationResult:
     curve: EvaluationCurve
 
 
-def compute_auc(x: list[float], y: list[float]) -> float:
-    if len(x) < 2:
+def compute_auc(coverages: list[float]) -> float:
+    """Mean coverage per queried agent until full coverage is reached.
+
+    `coverages` holds the coverage after each queried agent (no leading
+    pre-query zero). A strategy is charged one unit per queried agent; the
+    score is the average coverage achieved per agent. A strategy that reaches
+    full coverage after k agents scores sum(y_i)/k, so querying useless agents
+    lowers the score while stopping early after full coverage is free. The
+    greedy oracle reaches full coverage as fast as possible with monotonically
+    best picks, so it scores 1.0 whenever full coverage is reachable before all
+    agents are exhausted. Strategies that never reach full coverage are charged
+    for all agents.
+    """
+    if not coverages:
         return 0.0
-    return float(sklearn_auc(x, y))
+    for idx, coverage in enumerate(coverages):
+        if coverage >= 1.0:
+            return float(sum(coverages[: idx + 1]) / (idx + 1))
+    return float(sum(coverages) / len(coverages))
+
+
+def compute_relative_auc(auc: float, oracle_auc: float) -> float:
+    """AUC normalized by the oracle AUC, so the oracle scores exactly 1.0.
+
+    Degenerate case (oracle AUC = 0, i.e. nothing to cover) counts as perfect.
+    """
+    if oracle_auc <= 0.0:
+        return 1.0
+    return auc / oracle_auc
 
 
 def build_curve(
@@ -58,7 +82,7 @@ def build_curve(
         x.append((idx + 1) / agents_total)
         y.append(min(len(seen_keys) / total_unique, 1.0))
 
-    area = compute_auc(x, y)
+    area = compute_auc(y[1:])
     return EvaluationCurve(x=x, y=y, auc=area)
 
 

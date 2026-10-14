@@ -30,7 +30,7 @@ INPUT_DIR="${DATASET_DIR}/input"  # TODO: CHANGE
 RUN_NAME="selection-strategy" # TODO: CHANGE
 # TODO: CHANGE
 VARIATIONS=(
-    "sequential"
+    "random"
     "embedding"
     "count"
     "distinct_count"

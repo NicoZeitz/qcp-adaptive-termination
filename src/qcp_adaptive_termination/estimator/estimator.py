@@ -152,8 +152,8 @@ def _sweep_chao92(
 
         n_l = k + 1
         n_r = n - n_l
-        sl = _chao92_naive_score(c_l, n_l, phi_k_l, f1_l, moment_l)  # type: ignore
-        sr = _chao92_naive_score(c_r, n_r, phi_k_r, f1_r, moment_r)  # type: ignore
+        sl = _chao92_naive_score(c_l, n_l, phi_k_l, f1_l, moment_l)
+        sr = _chao92_naive_score(c_r, n_r, phi_k_r, f1_r, moment_r)
         score = sl + sr
         if score < best_score:
             best_score = score
@@ -169,7 +169,7 @@ if True:
     _w_ep_data = np.array([0, 1], np.int64)
     _w_ep_start = np.array([0, 1, 2], np.int64)
     _w_counts = np.array([1, 1], np.int64)
-    _sweep_chao92(_w_eid, _w_vals, _w_ep_data, _w_ep_start, _w_counts, 0.0)  # type: ignore
+    _sweep_chao92(_w_eid, _w_vals, _w_ep_data, _w_ep_start, _w_counts, 0.0)
 
 
 def _prepare_sweep_arrays(
@@ -222,7 +222,7 @@ def _score_split_naive(
     if c == 0 or n == 0:
         return 0.0
     if count_estimator is CountEstimator.CHAO92:
-        return _chao92_naive_score(c, n, phi_k, f1, moment)  # type: ignore
+        return _chao92_naive_score(c, n, phi_k, f1, moment)
     if count_estimator is CountEstimator.CHAO84:
         n_hat = max(float(c), c + (f1 * f1) / (2.0 * f2)) if f2 else float(c)
     elif count_estimator is CountEstimator.JACKKNIFE1:
@@ -353,7 +353,7 @@ def _find_best_split(
 
     if count_estimator is CountEstimator.CHAO92:
         eid, vals, ep_data, ep_start, entity_counts = _prepare_sweep_arrays(samples, entity_pos)
-        best_idx = _sweep_chao92(eid, vals, ep_data, ep_start, entity_counts, parent_score)  # type: ignore
+        best_idx = _sweep_chao92(eid, vals, ep_data, ep_start, entity_counts, parent_score)
         return samples[best_idx].value if best_idx >= 0 else None
 
     # Python loop for non-CHAO92 estimators

@@ -21,7 +21,7 @@ class Config(BaseModel):
 
     continue_after_final_result: bool = False
 
-    selection_type: SelectionStrategyType = SelectionStrategyType.SEQUENTIAL
+    selection_type: SelectionStrategyType = SelectionStrategyType.RANDOM
     align_schema_agent_limit: int = 1000
 
     estimator_mode: EstimatorMode = EstimatorMode.FULL

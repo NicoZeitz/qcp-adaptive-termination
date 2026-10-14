@@ -1,3 +1,4 @@
+import random
 from dataclasses import dataclass
 
 from qcp_adaptive_termination.models import DataAgent
@@ -7,8 +8,11 @@ from qcp_adaptive_termination.selection_strategy.strategy import (
 
 
 @dataclass(slots=True)
-class SequentialStrategy(StaticSelectionStrategy[float]):
+class RandomStrategy(StaticSelectionStrategy[float]):
+    """Ranks agents in a seeded random order (independent of the query)."""
+
     ascending: bool = True
+    seed: int = 42
 
     async def precompute(
         self,
@@ -17,4 +21,6 @@ class SequentialStrategy(StaticSelectionStrategy[float]):
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, float]:
-        return {a.name: float(i) for i, a in enumerate(agents)}
+        names = [a.name for a in agents]
+        random.Random(self.seed).shuffle(names)
+        return {name: float(i) for i, name in enumerate(names)}

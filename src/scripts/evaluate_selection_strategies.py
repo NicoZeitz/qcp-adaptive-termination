@@ -2,16 +2,17 @@
 
 import asyncio
 import hashlib
-import json
 import logging
 import re
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, cast
 from uuid import uuid4
 
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import pandas as pd
 import requests
 import yaml
@@ -32,18 +33,19 @@ from qcp_adaptive_termination.models import (
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
     EvaluatorDecision,
-    ExecutionResult,
-    FailedExecution,
     FinalResultOutcome,
     PartialQueryAnswer,
     QueryMoreAgentsOutcome,
 )
-from qcp_adaptive_termination.models.query_plan import MultiAgentQueryPlanStep, QueryPlan
+from qcp_adaptive_termination.models.query_plan import (
+    MultiAgentQueryPlanStep,
+    QueryPlan,
+)
 from qcp_adaptive_termination.models.stages import CollaborativeQueryAnswering
 from qcp_adaptive_termination.observability import context
-from qcp_adaptive_termination.stages import execute_query_plan
+from qcp_adaptive_termination.stages.execution.multi_agent import answer_step_multiple_agents
 from scripts.utils import ScriptContext, run_script
-from scripts.utils.evaluation import EvaluationCurve, build_curve, compute_greedy_oracle
+from scripts.utils.evaluation import EvaluationCurve, build_curve, compute_greedy_oracle, compute_relative_auc
 from scripts.utils.sql import parse_select_columns, rewrite_sql_identifiers
 
 _META_MAPPING_CACHE: dict[str, Any] | None = None
@@ -53,21 +55,35 @@ _META_MAPPING_CACHE: dict[str, Any] | None = None
 _per_strategy_align: dict[str, Callable[..., AlignedResultList]] = {}
 _per_strategy_data: dict[str, Callable[..., PartialQueryAnswer]] = {}
 
-# Execution ids for last-step strategy runs — only these get the JSON output.
-_last_step_execution_ids: set[str] = set()
+
+@dataclass(slots=True)
+class StepSummary:
+    """Benchmark outcome for one step, used for summary aggregation."""
+
+    query_slug: str
+    step_id: str
+    agents_total: int
+    oracle_auc: float
+    final_row_count: int
+    curves: dict[str, EvaluationCurve] = field(default_factory=dict)
+
+    @property
+    def is_find_step(self) -> bool:
+        """Find step: full result set is a single row (plus oracle AUC = 1)."""
+        return self.final_row_count == 1 and self.oracle_auc >= 1.0
 
 
 def _load_meta_mapping(data_dir: Path) -> dict[str, Any]:
     global _META_MAPPING_CACHE
     if _META_MAPPING_CACHE is None:
-        mapping_path = data_dir / "dataset" / "meta_mapping.yaml"
+        mapping_path = data_dir / "dataset" / "_meta" / "meta_mapping.yaml"
         with open(mapping_path) as f:
             _META_MAPPING_CACHE = cast(dict[str, Any], yaml.safe_load(f) or {})
     return _META_MAPPING_CACHE
 
 
 def _slug_from_agent(agent: DataAgent) -> str:
-    return Path(agent.path).stem
+    return Path(agent.path).parent.name
 
 
 def _agent_db_path(agent: DataAgent, data_dir: Path) -> Path:
@@ -185,17 +201,6 @@ def _completeness_override(
     return QueryMoreAgentsOutcome(result_list=aligned_result_list)
 
 
-def _replan_error(
-    execution_id: str,
-    data_agents: list[DataAgent],
-    relevant_data_agents: list[DataAgent],
-    query_plan: QueryPlan,
-    reason: FailedExecution,
-) -> QueryPlan:
-    del execution_id, data_agents, relevant_data_agents, query_plan
-    raise RuntimeError(f"Unexpected replan triggered in benchmark. Step: {reason.step.id!r}")
-
-
 def _align_schema_dispatch(
     execution_id: str,
     data_agents: list[DataAgent],
@@ -228,16 +233,6 @@ def _data_agent_dispatch(
                 schema_metadata=schema_metadata,
             )
     raise ValueError(f"No data_agent handler for execution_id={execution_id!r}")
-
-
-def _write_last_step_stage_3(execution_id: str, attempt: int, result: ExecutionResult) -> None:
-    for strategy_id in _last_step_execution_ids:
-        if execution_id == strategy_id or execution_id.startswith(strategy_id + "/"):
-            if output_dir := context.get_output_dir():
-                path = output_dir / "stage_3_output_collaborative_query_answering_result.json"
-                with open(path, "w", encoding="utf-8") as f:
-                    json.dump(result.model_dump(), f, sort_keys=False, ensure_ascii=False, indent=4)
-            return
 
 
 def _register_batch_tracking(target_execution_id: str, target_step_id: str) -> tuple[list[str], Any]:
@@ -297,37 +292,59 @@ def _save_results(
     output_dir.mkdir(parents=True, exist_ok=True)
     prefix = f"{query_slug}_{step_id}"
 
-    rows = [{"strategy": s, "auc": c.auc} for s, c in results]
-    rows.append({"strategy": "oracle", "auc": oracle_curve.auc})
+    rows = [
+        {"strategy": s, "auc": c.auc, "relative_auc": compute_relative_auc(c.auc, oracle_curve.auc)} for s, c in results
+    ]
+    rows.append({"strategy": "oracle", "auc": oracle_curve.auc, "relative_auc": 1.0})
     pd.DataFrame(rows).to_csv(output_dir / f"{prefix}_auc.csv", index=False)
 
     curve_rows = []
     for strategy, curve in results:
+        total = len(curve.x) - 1
         for x, y in zip(curve.x, curve.y, strict=True):
-            curve_rows.append({"strategy": strategy, "x": x, "y": y})
+            curve_rows.append({"strategy": strategy, "agents_queried": x * total, "agents_fraction": x, "coverage": y})
     for x, y in zip(oracle_curve.x, oracle_curve.y, strict=True):
-        curve_rows.append({"strategy": "oracle", "x": x, "y": y})
+        curve_rows.append(
+            {
+                "strategy": "oracle",
+                "agents_queried": x * (len(oracle_curve.x) - 1),
+                "agents_fraction": x,
+                "coverage": y,
+            }
+        )
     pd.DataFrame(curve_rows).to_csv(output_dir / f"{prefix}_curves.csv", index=False)
 
     for xscale in ("linear", "log"):
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.plot(
-            oracle_curve.x,
+            range(len(oracle_curve.x)),
             oracle_curve.y,
             "--",
             color="black",
             label=f"oracle (AUC={oracle_curve.auc:.3f})",
             linewidth=2,
+            drawstyle="steps-post",
         )
         for strategy, curve in results:
-            ax.plot(curve.x, curve.y, label=f"{strategy} (AUC={curve.auc:.3f})")
-        ax.set_xlabel("Fraction of agents queried")
+            ax.plot(
+                range(len(curve.x)),
+                curve.y,
+                label=f"{strategy} (AUC={curve.auc:.3f})",
+                drawstyle="steps-post",
+            )
+        ax.set_xlabel("Agents queried")
         ax.set_ylabel("Fraction of unique rows covered")
         ax.set_title(f"Selection strategy comparison ({xscale} scale)\n{query_slug} / {step_id}")
         ax.legend(fontsize=8)
         ax.set_xscale(xscale)
+        x_max = max(len(oracle_curve.x) - 1, max(len(c.x) - 1 for _, c in results))
         if xscale == "linear":
-            ax.set_xlim(0.0, 1.0)
+            ax.set_xlim(0.0, x_max)
+        else:
+            ax.set_xlim(1.0, x_max)
+        ax.xaxis.set_major_locator(mticker.MultipleLocator(1))
+        ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
+        ax.xaxis.set_minor_locator(mticker.NullLocator())
         ax.set_ylim(0.0, 1.05)
         fig.tight_layout()
         for ext in ("png", "pdf", "svg"):
@@ -337,37 +354,158 @@ def _save_results(
     logging.info("Saved to %s", output_dir)
 
 
+def _average_curves(summaries: list[StepSummary]) -> dict[str, list[tuple[float, float]]]:
+    """Average coverage over steps at a common fraction grid, per strategy (incl. oracle)."""
+    if not summaries:
+        return {}
+    grid = [i / 100 for i in range(101)]
+    all_names: list[str] = ["oracle"]
+    for summary in summaries:
+        for name in summary.curves:
+            if name not in all_names:
+                all_names.append(name)
+
+    averaged: dict[str, list[tuple[float, float]]] = {}
+    for name in all_names:
+        values: list[list[float]] = []
+        for summary in summaries:
+            curve = summary.curves.get(name)
+            if curve is None:
+                continue
+            series = pd.Series(curve.y, index=curve.x).reindex(grid, method="ffill").fillna(0.0)
+            values.append(series.tolist())
+        if not values:
+            continue
+        means = [sum(col) / len(values) for col in zip(*values, strict=True)]
+        averaged[name] = list(zip(grid, means, strict=True))
+    return averaged
+
+
+def _write_summary(
+    summaries: list[StepSummary],
+    output_dir: Path,
+    filename_prefix: str,
+    title_suffix: str,
+) -> None:
+    """Write summary CSVs and averaged fraction plots for a set of step summaries."""
+    if not summaries:
+        return
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    auc_rows = []
+    for summary in summaries:
+        for strategy, curve in summary.curves.items():
+            auc_rows.append(
+                {
+                    "query": summary.query_slug,
+                    "step": summary.step_id,
+                    "strategy": strategy,
+                    "auc": curve.auc,
+                    "relative_auc": compute_relative_auc(curve.auc, summary.oracle_auc),
+                    "oracle_auc": summary.oracle_auc,
+                    "agents_total": summary.agents_total,
+                    "final_row_count": summary.final_row_count,
+                }
+            )
+        auc_rows.append(
+            {
+                "query": summary.query_slug,
+                "step": summary.step_id,
+                "strategy": "oracle",
+                "auc": summary.oracle_auc,
+                "relative_auc": 1.0,
+                "oracle_auc": summary.oracle_auc,
+                "agents_total": summary.agents_total,
+                "final_row_count": summary.final_row_count,
+            }
+        )
+    per_step_auc = pd.DataFrame(auc_rows)
+    per_step_auc.to_csv(output_dir / f"{filename_prefix}_per_step_auc.csv", index=False)
+
+    mean_auc = (
+        per_step_auc.groupby("strategy")["auc"]
+        .agg(mean="mean", std="std", count="count")
+        .reset_index()
+        .sort_values("mean", ascending=False)
+    )
+    mean_auc.to_csv(output_dir / f"{filename_prefix}_mean_auc.csv", index=False)
+
+    averaged = _average_curves(summaries)
+    curve_rows = [
+        {"strategy": name, "agents_fraction": x, "coverage": y} for name, points in averaged.items() for x, y in points
+    ]
+    pd.DataFrame(curve_rows).to_csv(output_dir / f"{filename_prefix}_curves.csv", index=False)
+
+    for xscale in ("linear", "log"):
+        fig, ax = plt.subplots(figsize=(10, 6))
+        oracle_points = averaged.get("oracle")
+        if oracle_points is not None:
+            ax.plot(
+                [x for x, _ in oracle_points],
+                [y for _, y in oracle_points],
+                "--",
+                color="black",
+                label="oracle",
+                linewidth=2,
+                drawstyle="steps-post",
+            )
+        for name, points in averaged.items():
+            if name == "oracle":
+                continue
+            mean_auc_value = mean_auc.loc[mean_auc["strategy"] == name, "mean"].iloc[0]
+            ax.plot(
+                [x for x, _ in points],
+                [y for _, y in points],
+                label=f"{name} (mean AUC={mean_auc_value:.3f})",
+                drawstyle="steps-post",
+            )
+        ax.set_xlabel("Fraction of agents queried")
+        ax.set_ylabel("Fraction of unique rows covered")
+        ax.set_title(f"Selection strategy comparison ({xscale} scale){title_suffix}")
+        ax.legend(fontsize=8)
+        ax.set_xscale(xscale)
+        if xscale == "linear":
+            ax.set_xlim(0.0, 1.0)
+        else:
+            ax.set_xlim(0.01, 1.0)
+        ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
+        ax.xaxis.set_minor_locator(mticker.NullLocator())
+        ax.set_ylim(0.0, 1.05)
+        fig.tight_layout()
+        for ext in ("png", "pdf", "svg"):
+            fig.savefig(output_dir / f"{filename_prefix}_{xscale}.{ext}", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+    logging.info("Summary saved to %s (%s)", output_dir, filename_prefix)
+
+
 async def _run_one_strategy(
     strategy: SelectionStrategyType,
     step: MultiAgentQueryPlanStep,
     align_handler: Callable[..., AlignedResultList],
     data_handler: Callable[..., PartialQueryAnswer],
-    raw_query_plan: Any,
-    relevant_data_agents: list[DataAgent],
     all_agents: list[DataAgent],
     data_cache: dict[str, pd.DataFrame | None],
     total_unique: int,
     canonical_cols: list[str],
     config: Config,
-    is_last: bool,
 ) -> tuple[str, EvaluationCurve]:
     logging.info("Running strategy: %s / %s", step.id, strategy)
     execution_id = uuid4().hex[:12]
     strategy_config = config.model_copy(update={"selection_type": strategy})
     ordered_agents, batch_end_handler = _register_batch_tracking(execution_id, step.id)
-    fresh_query_plan = QueryPlan.model_validate(raw_query_plan)
+    # Benchmark the step in isolation: dependencies dropped, canonical SQL self-contained.
+    isolated_step = step.model_copy(update={"dependencies": []})
 
     _per_strategy_align[execution_id] = align_handler
     _per_strategy_data[execution_id] = data_handler
-    if is_last:
-        _last_step_execution_ids.add(execution_id)
 
     try:
         with hooks.stage_context(execution_id), context.config_context(strategy_config):
-            await execute_query_plan(
-                query_plan=fresh_query_plan,
-                relevant_data_agents=relevant_data_agents,
+            await answer_step_multiple_agents(
                 data_agents=all_agents,
+                query_plan_step=isolated_step,
+                additional_information=[],
             )
             logging.info("Strategy %s/%s completed", step.id, strategy)
     except Exception as exc:
@@ -379,7 +517,6 @@ async def _run_one_strategy(
     finally:
         _per_strategy_align.pop(execution_id, None)
         _per_strategy_data.pop(execution_id, None)
-        _last_step_execution_ids.discard(execution_id)
         hooks.unregister(HookEvent.MULTI_AGENT_STEP_BATCH_END, batch_end_handler)
 
     seen: set[str] = set()
@@ -403,15 +540,13 @@ async def _run_step(
     step_meta: dict[str, Any],
     relevant_data_agents: list[DataAgent],
     all_agents: list[DataAgent],
-    raw_query_plan: Any,
     meta_mapping: dict[str, Any],
     query: str,
     query_slug: str,
     output_dir: Path,
     data_dir: Path,
     config: Config,
-    is_last: bool,
-) -> None:
+) -> StepSummary | None:
     canonical_sql: str = step_meta["sql_query"]
     schema_meta = step_meta["aligned_schema_metadata"]
     key_cols: list[str] = schema_meta["keys"]
@@ -424,7 +559,7 @@ async def _run_step(
             step.id,
             canonical_sql,
         )
-        return
+        return None
     canonical_cols = parse_select_columns(canonical_sql)
     if not canonical_cols:
         logging.warning(
@@ -433,7 +568,7 @@ async def _run_step(
             step.id,
             canonical_sql,
         )
-        return
+        return None
 
     logging.info(
         "Query: %s | Step: %s | table: %s | cols: %s | key_cols: %s",
@@ -472,14 +607,11 @@ async def _run_step(
                     step=step,
                     align_handler=align_handler,
                     data_handler=data_handler,
-                    raw_query_plan=raw_query_plan,
-                    relevant_data_agents=relevant_data_agents,
                     all_agents=all_agents,
                     data_cache=data_cache,
                     total_unique=total_unique,
                     canonical_cols=canonical_cols,
                     config=config,
-                    is_last=is_last,
                 )
                 for s in SelectionStrategyType
             ]
@@ -489,6 +621,17 @@ async def _run_step(
     oracle_curve = compute_greedy_oracle(step.to_agent, data_cache, total_unique, canonical_cols)
     logging.info("Oracle AUC=%.4f", oracle_curve.auc)
     _save_results(results, oracle_curve, query_slug, step.id, output_dir)
+
+    curves = {strategy: curve for strategy, curve in results}
+    curves["oracle"] = oracle_curve
+    return StepSummary(
+        query_slug=query_slug,
+        step_id=step.id,
+        agents_total=len(step_agents),
+        oracle_auc=oracle_curve.auc,
+        final_row_count=total_unique,
+        curves=curves,
+    )
 
 
 async def _run(ctx: ScriptContext) -> None:
@@ -515,16 +658,11 @@ async def _run(ctx: ScriptContext) -> None:
     query_slug = ctx.input_file.stem
     output_dir = ctx.output_dir or ctx.input_file.parent / "evaluation"
 
-    # Replace the auto-registered EXECUTE_QUERY_PLAN_END hook with one that
-    # only writes the JSON output for the last multi-agent step's strategy runs.
-    hooks.clear(HookEvent.EXECUTE_QUERY_PLAN_END)
-    hooks.register(HookEvent.EXECUTE_QUERY_PLAN_END, _write_last_step_stage_3)
     # Single dispatch handlers for ALIGN_SCHEMA and DATA_AGENT overrides.
     # These route each call to the correct per-step handler via execution_id.
     hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, _align_schema_dispatch)
     hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, _data_agent_dispatch)
     hooks.register(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
-    hooks.register(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
 
     step_tasks = []
     for step in multi_steps:
@@ -538,25 +676,28 @@ async def _run(ctx: ScriptContext) -> None:
                 step_meta=step_meta,
                 relevant_data_agents=relevant_data_agents,
                 all_agents=all_agents,
-                raw_query_plan=raw_query_plan,
                 meta_mapping=meta_mapping,
                 query=query,
                 query_slug=query_slug,
                 output_dir=output_dir,
                 data_dir=ctx.data_dir,
                 config=ctx.config,
-                is_last=step is multi_steps[-1],
             )
         )
 
     try:
-        await asyncio.gather(*step_tasks)
+        gathered = await asyncio.gather(*step_tasks)
+        step_summaries = [s for s in gathered if s is not None]
     finally:
-        hooks.unregister(HookEvent.EXECUTE_QUERY_PLAN_END, _write_last_step_stage_3)
         hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, _align_schema_dispatch)
         hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, _data_agent_dispatch)
         hooks.unregister(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
-        hooks.unregister(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
+
+    # Summary over all steps of this file.
+    _write_summary(step_summaries, output_dir, "summary_all", " — all steps")
+    # Summary excluding find steps (single-row result sets, ill-posed for overlap).
+    non_find = [s for s in step_summaries if not s.is_find_step]
+    _write_summary(non_find, output_dir, "summary_no_find", " — excluding find steps")
 
 
 if __name__ == "__main__":

@@ -25,7 +25,6 @@ import nest_asyncio2
 from agents import get_current_trace, set_trace_processors, set_tracing_export_api_key, trace
 from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
-from langfuse import get_client
 from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
 from opentelemetry import trace as otel_trace
 from opentelemetry.sdk.trace import TracerProvider
@@ -36,7 +35,9 @@ from qcp_adaptive_termination.models import CacheMode, Config
 from qcp_adaptive_termination.observability.cache import Cache
 from qcp_adaptive_termination.observability.file_span_exporter import FileSpanExporter
 from qcp_adaptive_termination.observability.openai_tracing import TruncatingBackendSpanExporter
-from qcp_adaptive_termination.observability.tracing import serialize_data_for_tracing
+
+# from langfuse import get_client
+# from qcp_adaptive_termination.observability.tracing import serialize_data_for_tracing
 
 _PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 _DEFAULT_OUTPUT_DIR = _PROJECT_ROOT / ".logs"
@@ -128,8 +129,8 @@ def _setup_tracing(output_dir: Path) -> BatchTraceProcessor | None:
         provider = TracerProvider()
         otel_trace.set_tracer_provider(provider)
     provider.add_span_processor(BatchSpanProcessor(FileSpanExporter(tracing_log_file)))
-    if not get_client().auth_check():
-        logging.warning("Langfuse authentication failed; Langfuse tracing is disabled.")
+    # if not get_client().auth_check():
+    #     logging.warning("Langfuse authentication failed; Langfuse tracing is disabled.")
 
     OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
     logging.info(f"Tracing initialized. Trace file: {tracing_log_file}")
@@ -198,13 +199,13 @@ def tracing_context(name: str, output_dir: Path, *, metadata: dict[str, JsonValu
     openai_processor = _setup_tracing(output_dir)
 
     metadata_str = {k: str(v) for k, v in (metadata or {}).items()}
-    langfuse = get_client()
+    # langfuse = get_client()
 
     try:
         with (
-            langfuse.start_as_current_observation(
-                name=name, input=serialize_data_for_tracing(metadata), metadata=metadata_str
-            ),
+            # langfuse.start_as_current_observation(
+            #     name=name, input=serialize_data_for_tracing(metadata), metadata=metadata_str
+            # ),
             trace(name, metadata=metadata_str),
         ):
             yield
@@ -219,8 +220,8 @@ def tracing_context(name: str, output_dir: Path, *, metadata: dict[str, JsonValu
             provider.force_flush(timeout_millis=int(shutdown_timeout * 1000))
             provider.shutdown()
 
-        langfuse.flush()
-        langfuse.shutdown()
+        # langfuse.flush()
+        # langfuse.shutdown()
 
         atexit.unregister(vars(_agents_tracing_setup)["_shutdown_global_trace_provider"])
 

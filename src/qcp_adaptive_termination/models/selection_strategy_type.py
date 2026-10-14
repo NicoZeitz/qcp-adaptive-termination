@@ -8,7 +8,7 @@ from enum import StrEnum
 
 
 class SelectionStrategyType(StrEnum):
-    SEQUENTIAL = "sequential"  # Needs: None
+    RANDOM = "random"  # Needs: None
 
     # Embedding-based
     EMBEDDING = "embedding"  # Needs: None

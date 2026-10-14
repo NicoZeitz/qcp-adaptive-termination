@@ -258,7 +258,7 @@ class COORDINATOR_RELEVANCE_OVERRIDE_HANDLER(Protocol):
         data_agents: list[DataAgent],
         registry_string: str,
         additional_context: str | None,
-    ) -> list[tuple[DataAgent, str]]: ...
+    ) -> list[tuple[DataAgent, str]] | Awaitable[list[tuple[DataAgent, str]]]: ...
 
 
 class DATA_AGENT_RELEVANCE_OVERRIDE_HANDLER(Protocol):
@@ -268,7 +268,7 @@ class DATA_AGENT_RELEVANCE_OVERRIDE_HANDLER(Protocol):
         query: str,
         item: tuple[DataAgent, str],
         additional_context: str | None,
-    ) -> DataAgent | None: ...
+    ) -> DataAgent | None | Awaitable[DataAgent | None]: ...
 
 
 class FILTER_RELEVANT_AGENTS_OVERRIDE_HANDLER(Protocol):
@@ -277,7 +277,7 @@ class FILTER_RELEVANT_AGENTS_OVERRIDE_HANDLER(Protocol):
         execution_id: str,
         query: str,
         data_agents: list[DataAgent],
-    ) -> FilteredRelevantAgents: ...
+    ) -> FilteredRelevantAgents | Awaitable[FilteredRelevantAgents]: ...
 
 
 class DRAFT_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
@@ -287,7 +287,7 @@ class DRAFT_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
         query: str,
         data_agents: list[DataAgent],
         relevant_data_agents: list[DataAgent],
-    ) -> DraftedQueryPlan: ...
+    ) -> DraftedQueryPlan | Awaitable[DraftedQueryPlan]: ...
 
 
 class ALIGN_SCHEMA_OVERRIDE_HANDLER(Protocol):
@@ -298,7 +298,7 @@ class ALIGN_SCHEMA_OVERRIDE_HANDLER(Protocol):
         agent_names: list[str],
         query: str,
         merge_task: str,
-    ) -> AlignedResultList: ...
+    ) -> AlignedResultList | Awaitable[AlignedResultList]: ...
 
 
 class DATA_AGENT_QUERY_OVERRIDE_HANDLER(Protocol):
@@ -309,7 +309,7 @@ class DATA_AGENT_QUERY_OVERRIDE_HANDLER(Protocol):
         query: str,
         additional_information: list[AdditionalInformation],
         schema_metadata: AlignedSchemaMetadata | None,
-    ) -> PartialQueryAnswer: ...
+    ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
 
 
 class COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER(Protocol):
@@ -322,7 +322,7 @@ class COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER(Protocol):
         previous_estimator_statistics: list[EstimatorStatistics],
         merge_task: str,
         force_result: bool,
-    ) -> QueryMoreAgentsOutcome | FinalResultOutcome: ...
+    ) -> QueryMoreAgentsOutcome | FinalResultOutcome | Awaitable[QueryMoreAgentsOutcome | FinalResultOutcome]: ...
 
 
 class REPLAN_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
@@ -333,7 +333,7 @@ class REPLAN_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
         relevant_data_agents: list[DataAgent],
         query_plan: QueryPlan,
         reason: FailedExecution,
-    ) -> QueryPlan: ...
+    ) -> QueryPlan | Awaitable[QueryPlan]: ...
 
 
 class ANSWER_STEP_COORDINATOR_OVERRIDE_HANDLER(Protocol):
@@ -342,7 +342,7 @@ class ANSWER_STEP_COORDINATOR_OVERRIDE_HANDLER(Protocol):
         execution_id: str,
         query_plan_step: QueryPlanStep,
         additional_information: list[AdditionalInformation],
-    ) -> PartialQueryAnswer: ...
+    ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
 
 
 class ANSWER_STEP_DATA_AGENT_OVERRIDE_HANDLER(Protocol):
@@ -354,7 +354,7 @@ class ANSWER_STEP_DATA_AGENT_OVERRIDE_HANDLER(Protocol):
         to_agent: str,
         additional_information: list[AdditionalInformation],
         schema_metadata: AlignedSchemaMetadata | None,
-    ) -> PartialQueryAnswer: ...
+    ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
 
 
 class EXECUTE_QUERY_PLAN_STEP_OVERRIDE_HANDLER(Protocol):
@@ -364,7 +364,7 @@ class EXECUTE_QUERY_PLAN_STEP_OVERRIDE_HANDLER(Protocol):
         data_agents: list[DataAgent],
         query_plan_step: QueryPlanStep,
         additional_information: list[AdditionalInformation],
-    ) -> PartialQueryAnswer: ...
+    ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
 
 
 class ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE_HANDLER(Protocol):
@@ -374,7 +374,7 @@ class ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE_HANDLER(Protocol):
         data_agents: list[DataAgent],
         query_plan_step: MultiAgentQueryPlanStep,
         additional_information: list[AdditionalInformation],
-    ) -> PartialQueryAnswer: ...
+    ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
 
 
 class EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER(Protocol):
@@ -383,7 +383,7 @@ class EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER(Protocol):
         execution_id: str,
         query: str,
         data_agents: list[DataAgent],
-    ) -> list[DataAgent]: ...
+    ) -> list[DataAgent] | Awaitable[list[DataAgent]]: ...
 
 
 @overload

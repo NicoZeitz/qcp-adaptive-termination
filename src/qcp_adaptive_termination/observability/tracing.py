@@ -6,8 +6,9 @@ from types import ModuleType
 from typing import Any, overload
 
 from agents import CustomSpanData, Span, custom_span
-from langfuse import get_client
 from pydantic import BaseModel, JsonValue
+
+# from langfuse import get_client
 
 _span_by_id: dict[str | None, int] = {}
 _span_context_var = ContextVar[Span[CustomSpanData] | None]("current_span", default=None)
@@ -72,16 +73,16 @@ def indented_logging(message: str, log_level: int = logging.INFO):
         logging.log(log_level, message)
 
 
-def _update_langfuse_span_metadata(span: Span[CustomSpanData]):
-    langfuse = get_client()
-    if "input" in span.span_data.data:
-        langfuse.update_current_span(input=span.span_data.data["input"])
-    if "output" in span.span_data.data:
-        langfuse.update_current_span(output=span.span_data.data["output"])
-    metadata = span.span_data.data.copy()
-    metadata.pop("input", None)
-    metadata.pop("output", None)
-    langfuse.update_current_span(metadata=metadata)
+# def _update_langfuse_span_metadata(span: Span[CustomSpanData]):
+#     langfuse = get_client()
+#     if "input" in span.span_data.data:
+#         langfuse.update_current_span(input=span.span_data.data["input"])
+#     if "output" in span.span_data.data:
+#         langfuse.update_current_span(output=span.span_data.data["output"])
+#     metadata = span.span_data.data.copy()
+#     metadata.pop("input", None)
+#     metadata.pop("output", None)
+#     langfuse.update_current_span(metadata=metadata)
 
 
 @contextmanager
@@ -107,6 +108,6 @@ def own_span(
             if output is not None:
                 append_to_span_output(output, span)
 
-            _update_langfuse_span_metadata(span)
+            # _update_langfuse_span_metadata(span)
         finally:
             _span_context_var.reset(token)

@@ -37,8 +37,11 @@ def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseMode
         "SingleAgentQueryPlanStep",
         id=(str, FieldDefinitions.step_id),
         query=(str, FieldDefinitions.step_query),
-        to_agent=(AgentName, FieldDefinitions.step_to_agents),
-        dependencies=(list[QueryDependency], FieldDefinitions.step_dependencies),  # ty: ignore[invalid-type-form]
+        to_agent=(AgentName, FieldDefinitions.step_to_agents),  # pyright: ignore[reportArgumentType]
+        dependencies=(
+            list[QueryDependency],  # ty: ignore[invalid-type-form]  # pyright: ignore[reportInvalidTypeForm]
+            FieldDefinitions.step_dependencies,
+        ),
         __config__=StrictModelConfig,
     )
 
@@ -47,21 +50,26 @@ def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseMode
         id=(str, FieldDefinitions.step_id),
         query=(str, FieldDefinitions.step_query),
         to_agent=(
-            list[DataAgentName],
+            list[DataAgentName],  # pyright: ignore[reportInvalidTypeForm]
             Field(
                 description=FieldDefinitions.step_to_agents.description,
                 min_length=2,
             ),
         ),
         merge_task=(str, FieldDefinitions.step_merge_task),
-        dependencies=(list[QueryDependency], FieldDefinitions.step_dependencies),  # ty: ignore[invalid-type-form]
+        dependencies=(
+            list[QueryDependency],  # ty: ignore[invalid-type-form]  # pyright: ignore[reportInvalidTypeForm]
+            FieldDefinitions.step_dependencies,
+        ),
         __config__=StrictModelConfig,
     )
+
+    PlanSteps = list[SingleAgentQueryPlanStepModel | MultiAgentQueryPlanStepModel]  # ty: ignore[invalid-type-form]
 
     QueryPlan = create_model(
         "QueryPlan",
         steps=(
-            list[SingleAgentQueryPlanStepModel | MultiAgentQueryPlanStepModel],  # ty: ignore[invalid-type-form]
+            PlanSteps,  # pyright: ignore[reportInvalidTypeForm]
             FieldDefinitions.plan_steps,
         ),
         __config__=StrictModelConfig,

@@ -1,7 +1,7 @@
 """
 Agent selection strategies and `AgentSelector`.
 
-Implements multiple ranking strategies (sequential, embedding-based,
+Implements multiple ranking strategies (random, embedding-based,
 count/distinct-count, sketch-based, posterior, null-coverage, value-range)
 and `AgentSelector`, which pre-computes strategy data and ranks agents at
 each iteration of the multi-agent loop.
@@ -20,8 +20,8 @@ from qcp_adaptive_termination.selection_strategy.embedding_strategy import (
 from qcp_adaptive_termination.selection_strategy.posterior_strategy import (
     PosteriorStrategy,
 )
-from qcp_adaptive_termination.selection_strategy.sequential_strategy import (
-    SequentialStrategy,
+from qcp_adaptive_termination.selection_strategy.random_strategy import (
+    RandomStrategy,
 )
 from qcp_adaptive_termination.selection_strategy.sketch_strategy import (
     HllSketchStrategy,
@@ -41,8 +41,8 @@ __all__ = [
     "HllSketchStrategy",
     "MinHashStrategy",
     "PosteriorStrategy",
+    "RandomStrategy",
     "SelectionStrategy",
-    "SequentialStrategy",
     "StaticSelectionStrategy",
     "ThetaSketchStrategy",
 ]
