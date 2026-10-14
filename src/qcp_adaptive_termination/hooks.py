@@ -801,6 +801,7 @@ def emit(
     embedding_filtered_agents: list[DataAgent],
     total_agents: int,
     l2_scores: dict[str, float],
+    after_llm_filter_agents: list[str] | None = None,
 ) -> None: ...
 def emit(event: HookEvent, **kwargs: Any) -> None:
     execution_id = get_execution_id()

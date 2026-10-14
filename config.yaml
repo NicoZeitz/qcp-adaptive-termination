@@ -62,3 +62,6 @@ agent_configs:
   embedding_iterative_relevance:
     model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
+  embedding_boundary_finder:
+    model: "university/zai-org/GLM-5.3-Flash"
+    reasoning_effort: "none"

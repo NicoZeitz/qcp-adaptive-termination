@@ -6,7 +6,7 @@ For each query subdirectory, reads:
   - the most recent stage_1_output_filtered_relevant_agents.json (for final selected agents)
   - the most recent stage_1_output_embedding_pre_filter.json (for embedding-filter intermediate results)
 
-Pipeline: embedding filter → kneedle cutoff → column-relevance LLM filter (= final).
+Pipeline: embedding filter → LLM filter (= final).
 
 Prints per-query and aggregate precision / recall / F1 after each stage.
 
@@ -134,11 +134,7 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         emb_missed = sorted(set(relevant) - set(emb_selected))
         emb_prec, emb_rec, emb_f1, emb_tp, emb_fp, emb_fn = compute_metrics(relevant, emb_selected)
 
-        kneedle_selected: list[str] = embedding_filter.get("after_kneedle_agents", [])
         llm_selected: list[str] = embedding_filter.get("after_llm_filter_agents", [])
-        kneedle_prec, kneedle_rec, kneedle_f1, kneedle_tp, kneedle_fp, kneedle_fn = (
-            compute_metrics(relevant, kneedle_selected) if kneedle_selected else (0.0, 0.0, 0.0, 0, 0, 0)
-        )
         llm_prec, llm_rec, llm_f1, llm_tp, llm_fp, llm_fn = (
             compute_metrics(relevant, llm_selected) if llm_selected else (0.0, 0.0, 0.0, 0, 0, 0)
         )
@@ -163,13 +159,6 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             "fp": emb_fp,
             "fn": emb_fn,
             "percentile_metrics": percentile_metrics,
-            "kneedle_selected": kneedle_selected,
-            "kneedle_precision": kneedle_prec,
-            "kneedle_recall": kneedle_rec,
-            "kneedle_f1": kneedle_f1,
-            "kneedle_tp": kneedle_tp,
-            "kneedle_fp": kneedle_fp,
-            "kneedle_fn": kneedle_fn,
             "llm_selected": llm_selected,
             "llm_precision": llm_prec,
             "llm_recall": llm_rec,
@@ -190,19 +179,10 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     print(f"  {icon} {slug}")
     print(f"       relevant={relevant}  ({len(relevant)} of {emb_data['total'] if emb_data else '?'} agents)")
     if emb_data:
-        if emb_data["kneedle_selected"]:
-            kneedle_missed = sorted(set(relevant) - set(emb_data["kneedle_selected"]))
-            print(
-                f"       [kneedle]    {emb_data['total']} → {len(emb_data['kneedle_selected'])} agents"
-                f"  precision={emb_data['kneedle_precision']:.3f}"
-                f"  recall={emb_data['kneedle_recall']:.3f}"
-                f"  f1={emb_data['kneedle_f1']:.3f}"
-                f"  missed={kneedle_missed}"
-            )
         if emb_data["llm_selected"]:
             llm_missed = sorted(set(relevant) - set(emb_data["llm_selected"]))
             print(
-                f"       [llm]        {len(emb_data['kneedle_selected'] or emb_data['selected'])} → {len(emb_data['llm_selected'])} agents"
+                f"       [llm]        {len(emb_data['selected'])} → {len(emb_data['llm_selected'])} agents"
                 f"  precision={emb_data['llm_precision']:.3f}"
                 f"  recall={emb_data['llm_recall']:.3f}"
                 f"  f1={emb_data['llm_f1']:.3f}"
@@ -219,14 +199,8 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         print("  " + "-" * 56)
         print(f"  Perfect recall (final): {final_ok}/1  (embedding): {emb_ok}/1")
         print()
-        if emb_data["kneedle_selected"]:
-            print("  -- After kneedle cutoff --")
-            print(f"  Precision : {emb_data['kneedle_precision']:.3f}")
-            print(f"  Recall    : {emb_data['kneedle_recall']:.3f}")
-            print(f"  F1        : {emb_data['kneedle_f1']:.3f}")
-            print()
         if emb_data["llm_selected"]:
-            print("  -- After column-relevance LLM filter (= final) --")
+            print("  -- After LLM filter (= final) --")
             print(f"  Precision : {emb_data['llm_precision']:.3f}")
             print(f"  Recall    : {emb_data['llm_recall']:.3f}")
             print(f"  F1        : {emb_data['llm_f1']:.3f}")
@@ -269,15 +243,6 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             "embedding_fp": emb_data["fp"],
             "embedding_fn": emb_data["fn"],
         })
-        if emb_data["kneedle_selected"]:
-            result.update({
-                "kneedle_precision": round(emb_data["kneedle_precision"], 4),
-                "kneedle_recall": round(emb_data["kneedle_recall"], 4),
-                "kneedle_f1": round(emb_data["kneedle_f1"], 4),
-                "kneedle_tp": emb_data["kneedle_tp"],
-                "kneedle_fp": emb_data["kneedle_fp"],
-                "kneedle_fn": emb_data["kneedle_fn"],
-            })
         if emb_data["llm_selected"]:
             result.update({
                 "llm_precision": round(emb_data["llm_precision"], 4),
@@ -343,17 +308,6 @@ def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> No
         sorted_agents = sorted(agent_rows.items(), key=lambda x: x[1][0])
         relevant_names = r.get("relevant", [])
 
-        cutoffs: list[dict] = []
-        after_kneedle: list[str] = emb.get("after_kneedle_agents", [])
-        if after_kneedle:
-            kneedle_set = set(after_kneedle)
-            kneedle_agent = next(
-                (name for name, _ in reversed(sorted_agents) if name in kneedle_set),
-                None,
-            )
-            if kneedle_agent:
-                cutoffs.append({"name": "kneedle", "agent": kneedle_agent})
-
         queries.append({
             "label": r["file"].replace("_", " "),
             "relevant": ",".join(sorted(relevant_names)),
@@ -361,7 +315,7 @@ def write_chart_js(results: list[dict], log_dir: Path, chart_output: Path) -> No
                 f"{name},{l2:.4f},{table},{col}"
                 for name, (l2, table, col) in sorted_agents
             ),
-            "cutoffs": cutoffs,
+            "cutoffs": [],
         })
 
     if not queries:
@@ -407,27 +361,10 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
         emb_ok = sum(1 for r in scored if r.get("embedding_recall", 0.0) == 1.0)
         print(f"  Perfect recall (embedding): {emb_ok}/{evaluated}")
         print()
-        print("  -- After kneedle cutoff --")
-        has_kneedle = any("kneedle_precision" in r for r in scored)
         has_llm = any("llm_precision" in r for r in scored)
 
-        if has_kneedle:
-            macro_p = macro_avg(scored, "kneedle_precision")
-            macro_r = macro_avg(scored, "kneedle_recall")
-            macro_f = macro_avg(scored, "kneedle_f1")
-            micro_tp = sum(r.get("kneedle_tp", 0) for r in scored)
-            micro_fp = sum(r.get("kneedle_fp", 0) for r in scored)
-            micro_fn = sum(r.get("kneedle_fn", 0) for r in scored)
-            micro_p, micro_r, micro_f = micro_metrics(micro_tp, micro_fp, micro_fn)
-            print(f"  Macro precision : {macro_p:.3f}  |  Micro precision : {micro_p:.3f}")
-            print(f"  Macro recall    : {macro_r:.3f}  |  Micro recall    : {micro_r:.3f}")
-            print(f"  Macro F1        : {macro_f:.3f}  |  Micro F1        : {micro_f:.3f}")
-        else:
-            print("  (no kneedle data in logs)")
-
         if has_llm:
-            print()
-            print("  -- After column-relevance LLM filter (= final) --")
+            print("  -- After LLM filter (= final) --")
             macro_p = macro_avg(scored, "llm_precision")
             macro_r = macro_avg(scored, "llm_recall")
             macro_f = macro_avg(scored, "llm_f1")
@@ -460,7 +397,7 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
                 print(f"  {'─' * 48}  avg {avg_n_relevant:.1f}/{avg_n_total:.0f} = {avg_ratio:.1f}% relevant")
 
     print()
-    print("  -- Final (= after column-relevance LLM filter) --")
+    print("  -- Final (= after LLM filter) --")
 
     # macro
     macro_p = macro_avg(scored, "precision")
