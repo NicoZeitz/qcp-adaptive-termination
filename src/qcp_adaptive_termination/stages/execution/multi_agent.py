@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
+from functools import partial
 
 import pandas as pd
 
@@ -178,11 +179,20 @@ async def run_agent_batch(
         for idx, (agent_name, agent_df, _) in enumerate(results):
             assert agent_df is not None
             current_result_list = merge_agent_result(current_result_list, agent_name, agent_df)
-            agent_stats, current_estimator = compute_estimator_statistics(
-                current_result_list,
-                agents_queried_so_far + idx + 1,
-                agents_total,
-                [agent_name],
+            agent_stats, current_estimator = await hooks.call_override(
+                HookEvent.ESTIMATOR_STATISTICS_OVERRIDE,
+                default=partial(
+                    compute_estimator_statistics,
+                    current_result_list,
+                    agents_queried_so_far + idx + 1,
+                    agents_total,
+                    [agent_name],
+                    previous_estimator=current_estimator,
+                ),
+                result_list=current_result_list,
+                agents_queried=agents_queried_so_far + idx + 1,
+                agents_total=agents_total,
+                agents_current=[agent_name],
                 previous_estimator=current_estimator,
             )
             per_agent_stats.append((agent_name, current_result_list, agent_stats))

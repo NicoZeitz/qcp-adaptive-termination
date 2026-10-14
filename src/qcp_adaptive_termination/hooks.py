@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 from uuid import uuid4
 
 if TYPE_CHECKING:
+    from qcp_adaptive_termination.estimator import Estimator
     from qcp_adaptive_termination.models import (
         AlignedSchemaMetadata,
         Config,
@@ -85,6 +86,7 @@ class HookEvent(StrEnum):
     DRAFT_QUERY_PLAN_OVERRIDE = "draft_query_plan_override"
     ALIGN_SCHEMA_OVERRIDE = "align_schema_override"
     DATA_AGENT_QUERY_OVERRIDE = "data_agent_query_override"
+    ESTIMATOR_STATISTICS_OVERRIDE = "estimator_statistics_override"
     COMPLETENESS_EVALUATOR_OVERRIDE = "completeness_evaluator_override"
     REPLAN_QUERY_PLAN_OVERRIDE = "replan_query_plan_override"
     ANSWER_STEP_COORDINATOR_OVERRIDE = "answer_step_coordinator_override"
@@ -325,6 +327,18 @@ class COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER(Protocol):
     ) -> QueryMoreAgentsOutcome | FinalResultOutcome | Awaitable[QueryMoreAgentsOutcome | FinalResultOutcome]: ...
 
 
+class ESTIMATOR_STATISTICS_OVERRIDE_HANDLER(Protocol):
+    def __call__(
+        self,
+        execution_id: str,
+        result_list: AlignedResultList,
+        agents_queried: int,
+        agents_total: int,
+        agents_current: list[str],
+        previous_estimator: Estimator | None,
+    ) -> tuple[EstimatorStatistics, Estimator | None] | Awaitable[tuple[EstimatorStatistics, Estimator | None]]: ...
+
+
 class REPLAN_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
     def __call__(
         self,
@@ -496,6 +510,10 @@ def on(
 ) -> Callable[[COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER], COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER]: ...
 @overload
 def on(
+    event: Literal[HookEvent.ESTIMATOR_STATISTICS_OVERRIDE],
+) -> Callable[[ESTIMATOR_STATISTICS_OVERRIDE_HANDLER], ESTIMATOR_STATISTICS_OVERRIDE_HANDLER]: ...
+@overload
+def on(
     event: Literal[HookEvent.REPLAN_QUERY_PLAN_OVERRIDE],
 ) -> Callable[[REPLAN_QUERY_PLAN_OVERRIDE_HANDLER], REPLAN_QUERY_PLAN_OVERRIDE_HANDLER]: ...
 @overload
@@ -609,6 +627,11 @@ def register(
 def register(
     event: Literal[HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE],
     handler: COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER,
+) -> None: ...
+@overload
+def register(
+    event: Literal[HookEvent.ESTIMATOR_STATISTICS_OVERRIDE],
+    handler: ESTIMATOR_STATISTICS_OVERRIDE_HANDLER,
 ) -> None: ...
 @overload
 def register(
@@ -849,6 +872,19 @@ async def call_override(
 ) -> QueryMoreAgentsOutcome | FinalResultOutcome: ...
 @overload
 async def call_override(
+    event: Literal[HookEvent.ESTIMATOR_STATISTICS_OVERRIDE],
+    *,
+    default: Callable[
+        [], tuple[EstimatorStatistics, Estimator | None] | Awaitable[tuple[EstimatorStatistics, Estimator | None]]
+    ],
+    result_list: AlignedResultList,
+    agents_queried: int,
+    agents_total: int,
+    agents_current: list[str],
+    previous_estimator: Estimator | None,
+) -> tuple[EstimatorStatistics, Estimator | None]: ...
+@overload
+async def call_override(
     event: Literal[HookEvent.REPLAN_QUERY_PLAN_OVERRIDE],
     *,
     default: Callable[[], QueryPlan | Awaitable[QueryPlan]],
@@ -1001,6 +1037,11 @@ def unregister(
 def unregister(
     event: Literal[HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE],
     handler: COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER,
+) -> None: ...
+@overload
+def unregister(
+    event: Literal[HookEvent.ESTIMATOR_STATISTICS_OVERRIDE],
+    handler: ESTIMATOR_STATISTICS_OVERRIDE_HANDLER,
 ) -> None: ...
 @overload
 def unregister(

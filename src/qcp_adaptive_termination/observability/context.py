@@ -108,6 +108,7 @@ def _is_data_dir_active() -> bool:
 def _setup_tracing(output_dir: Path) -> BatchTraceProcessor | None:
     # OpenAI trace export disabled for now (suspected hang on traces/ingest); file tracing only.
     from agents import set_trace_processors
+
     set_trace_processors([])
 
     # tracing_api_key = os.getenv("OPENAI_API_KEY")
