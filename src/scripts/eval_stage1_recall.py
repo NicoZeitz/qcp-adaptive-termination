@@ -181,8 +181,10 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     status = "ok" if not missed else "miss"
     icon = "✓" if not missed else "✗"
 
+    total_agents = emb_data["total"] if emb_data else (len(stage1.get("data_agents", [])) if stage1 else "?")
+
     print(f"  {icon} {slug}")
-    print(f"       relevant={relevant}  ({len(relevant)} of {emb_data['total'] if emb_data else '?'} agents)")
+    print(f"       relevant={relevant}  ({len(relevant)} of {total_agents} agents)")
     if emb_data:
         if emb_data["llm_selected"]:
             llm_missed = sorted(set(relevant) - set(emb_data["llm_selected"]))
@@ -237,6 +239,7 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
         "final_selected": final_selected,
         "missed": missed,
         "extra_selected": extra_selected,
+        "total_agents": total_agents,
         "precision": round(final_prec, 4),
         "recall": round(final_rec, 4),
         "f1": round(final_f1, 4),
@@ -369,7 +372,7 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
     has_embedding = any("embedding_precision" in r for r in scored)
 
     avg_relevant = sum(len(r["relevant"]) for r in scored) / len(scored) if scored else 0.0
-    avg_total = sum(r.get("embedding_total", r.get("total_agents", 0)) for r in scored) / len(scored) if scored else 0.0
+    avg_total = sum(r.get("total_agents", 0) for r in scored) / len(scored) if scored else 0.0
 
     print()
     print("=" * 60)

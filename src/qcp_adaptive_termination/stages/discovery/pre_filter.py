@@ -16,6 +16,7 @@ from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
 from qcp_adaptive_termination.models.agent import AgentRegistryData
 from qcp_adaptive_termination.observability import tracing
+from qcp_adaptive_termination.observability import context as obs_context
 
 
 class ColumnRelevanceResult(BaseModel):
@@ -351,6 +352,10 @@ async def filter_by_llm_baseline(
     data_agents: list[DataAgent],
 ) -> list[DataAgent]:
     """Baseline: one parallel LLM call per agent schema, no embedding guidance."""
+    # Initialise the accumulator *before* spawning child tasks so all children
+    # share a pointer to the same object (asyncio.gather copies the context snapshot).
+    obs_context.get_usage_accumulator()
+
     semaphore = asyncio.Semaphore(5)
 
     async def _check_with_semaphore(agent: DataAgent) -> tuple[DataAgent, bool, str]:
