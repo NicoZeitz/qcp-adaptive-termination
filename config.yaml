@@ -65,3 +65,6 @@ agent_configs:
   embedding_boundary_finder:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
+  baseline_filter:
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    reasoning_effort: "none"

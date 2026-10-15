@@ -21,7 +21,8 @@ from pydantic import BaseModel, JsonValue
 import qcp_adaptive_termination.llm.model_provider as model_provider
 import qcp_adaptive_termination.llm.prompt as prompt
 from qcp_adaptive_termination.models import AgentRole, CacheMode, RoleConfig
-from qcp_adaptive_termination.observability import cache, context, tracing
+from qcp_adaptive_termination.observability import cache, tracing
+from qcp_adaptive_termination.observability import context as obs_context
 
 @functools.cache
 def _cached_json_schema(output_type: type[BaseModel]) -> dict:
@@ -29,7 +30,7 @@ def _cached_json_schema(output_type: type[BaseModel]) -> dict:
 
 
 def _resolve_model_config(role: AgentRole) -> tuple[str, Reasoning]:
-    role_cfg: RoleConfig = context.get_config().agent_configs[role.value]
+    role_cfg: RoleConfig = obs_context.get_config().agent_configs[role.value]
     reasoning = Reasoning(effort=role_cfg.reasoning_effort, summary=role_cfg.reasoning_summary)
     return role_cfg.model, reasoning
 
@@ -145,7 +146,7 @@ async def run_agent[TResult](
             f"llm.{display_name}.duration_ms": duration_ms,
         })
 
-        acc = context.get_usage_accumulator()
+        acc = obs_context.get_usage_accumulator()
         acc.input_tokens += usage.input_tokens
         acc.output_tokens += usage.output_tokens
         acc.llm_calls += 1
