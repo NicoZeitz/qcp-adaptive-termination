@@ -66,6 +66,10 @@ def find_input_file(query_log_dir: Path, input_dir: Path | None) -> Path | None:
     return candidates[-1] if candidates else None
 
 
+def find_llm_stats(query_log_dir: Path) -> dict | None:
+    return find_latest_json(query_log_dir, "stage_1_output_llm_stats.json")
+
+
 # ---------------------------------------------------------------------------
 # Metrics
 # ---------------------------------------------------------------------------
@@ -112,6 +116,7 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
 
     stage1 = find_latest_json(query_log_dir, "stage_1_output_filtered_relevant_agents.json")
     embedding_filter = find_latest_json(query_log_dir, "stage_1_output_embedding_pre_filter.json")
+    llm_stats = find_llm_stats(query_log_dir)
 
     if stage1 is None and embedding_filter is None:
         print(f"  [ERROR] no stage_1 output found for {slug}")
@@ -191,6 +196,14 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     print(f"       [final]      selected={final_selected}  (= LLM filter output)")
     print(f"       missed={missed}  extra={extra_selected}")
     print(f"       precision={final_prec:.3f}  recall={final_rec:.3f}  f1={final_f1:.3f}")
+    if llm_stats:
+        print(
+            f"       [llm stats]  calls={llm_stats['llm_calls']}"
+            f"  input_tokens={llm_stats['input_tokens']}"
+            f"  output_tokens={llm_stats['output_tokens']}"
+            f"  total_tokens={llm_stats['total_tokens']}"
+            f"  llm_duration={llm_stats['llm_duration_ms']}ms"
+        )
 
     if emb_data:
         emb_ok = 1 if emb_data["recall"] == 1.0 else 0
@@ -261,6 +274,14 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             result[pct_key + "_tp"] = pm["tp"]
             result[pct_key + "_fp"] = pm["fp"]
             result[pct_key + "_fn"] = pm["fn"]
+    if llm_stats:
+        result.update({
+            "llm_calls": llm_stats["llm_calls"],
+            "llm_input_tokens": llm_stats["input_tokens"],
+            "llm_output_tokens": llm_stats["output_tokens"],
+            "llm_total_tokens": llm_stats["total_tokens"],
+            "llm_duration_ms": llm_stats["llm_duration_ms"],
+        })
     return result
 
 
@@ -356,6 +377,23 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
     print(f"  Queries : {total}  (skipped={skipped}, errors={errors})")
     print(f"  Avg relevant agents : {avg_relevant:.1f} / {avg_total:.0f} total")
     print(f"  Perfect recall (final): {ok}/{evaluated}")
+
+    has_llm_stats = any("llm_total_tokens" in r for r in scored)
+    if has_llm_stats:
+        total_calls = sum(r.get("llm_calls", 0) for r in scored)
+        total_input = sum(r.get("llm_input_tokens", 0) for r in scored)
+        total_output = sum(r.get("llm_output_tokens", 0) for r in scored)
+        total_tokens = sum(r.get("llm_total_tokens", 0) for r in scored)
+        total_dur_ms = sum(r.get("llm_duration_ms", 0) for r in scored)
+        avg_calls = total_calls / len(scored) if scored else 0
+        avg_tokens = total_tokens / len(scored) if scored else 0
+        print()
+        print("  -- LLM usage (Stage 1) --")
+        print(f"  Total LLM calls      : {total_calls}  (avg {avg_calls:.1f}/query)")
+        print(f"  Total input tokens   : {total_input:,}")
+        print(f"  Total output tokens  : {total_output:,}")
+        print(f"  Total tokens         : {total_tokens:,}  (avg {avg_tokens:,.0f}/query)")
+        print(f"  Total LLM duration   : {total_dur_ms / 1000:.1f}s  (avg {total_dur_ms / len(scored) / 1000:.1f}s/query)")
 
     if has_embedding:
         emb_ok = sum(1 for r in scored if r.get("embedding_recall", 0.0) == 1.0)
@@ -466,6 +504,16 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
                     )[2], 4),
                 }
                 if has_embedding else {}
+            ),
+            **(
+                {
+                    "llm_calls_total": sum(r.get("llm_calls", 0) for r in scored),
+                    "llm_input_tokens_total": sum(r.get("llm_input_tokens", 0) for r in scored),
+                    "llm_output_tokens_total": sum(r.get("llm_output_tokens", 0) for r in scored),
+                    "llm_total_tokens_total": sum(r.get("llm_total_tokens", 0) for r in scored),
+                    "llm_duration_ms_total": sum(r.get("llm_duration_ms", 0) for r in scored),
+                }
+                if has_llm_stats else {}
             ),
             "results": results,
         },

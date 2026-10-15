@@ -2,8 +2,8 @@ import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import AgentRegistryType, CacheMode, DataAgent
 from qcp_adaptive_termination.models.stages import FilteredRelevantAgents
-from qcp_adaptive_termination.observability import cache, tracing
-from qcp_adaptive_termination.stages.discovery.pre_filter import filter_embeddings
+from qcp_adaptive_termination.observability import cache, context, tracing
+from qcp_adaptive_termination.stages.discovery.pre_filter import filter_by_llm_baseline, filter_embeddings
 
 DISCOVERY_STAGE_NAME = "Stage 1: Discovery"
 
@@ -49,7 +49,9 @@ async def filter_relevant_agents_internal(
     additional_context: str | None = None,
     pre_filter: bool = True,
 ) -> FilteredRelevantAgents:
-    if pre_filter:
+    filter_mode = context.get_config().discovery_filter_mode
+
+    if filter_mode == "embedding_iterative" and pre_filter:
         with tracing.own_span(
             "Embedding Pre-Filter",
             input={
@@ -62,6 +64,22 @@ async def filter_relevant_agents_internal(
             tracing.append_to_span_output(
                 {
                     "candidates_after_embedding_filter": [a.name for a in candidate_data_agents],
+                    "filtered_out_count": len(data_agents) - len(candidate_data_agents),
+                }
+            )
+    elif filter_mode == "llm_baseline":
+        with tracing.own_span(
+            "Baseline LLM Filter",
+            input={
+                "query": query,
+                "total_agents": len(data_agents),
+            },
+        ):
+            candidate_data_agents = await filter_by_llm_baseline(query, data_agents)
+            tracing.indented_logging(f"Baseline LLM filter: {len(data_agents)} → {len(candidate_data_agents)} agents")
+            tracing.append_to_span_output(
+                {
+                    "candidates_after_baseline_filter": [a.name for a in candidate_data_agents],
                     "filtered_out_count": len(data_agents) - len(candidate_data_agents),
                 }
             )

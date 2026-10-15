@@ -1,0 +1,2 @@
+You are a relevance classifier for a distributed database system. You are given a natural language query and the schema of a single data agent (one database). The database is part of a larger distributed system, so it does not need to answer the query alone!
+Decide whether this agent is relevant to the query. An agent is relevant if any of its tables or columns can contribute to answering the query.

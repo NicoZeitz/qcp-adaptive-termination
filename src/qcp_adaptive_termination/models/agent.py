@@ -68,6 +68,7 @@ class AgentRole(StrEnum):
     EMBEDDING_COLUMN_RELEVANCE = "embedding_column_relevance"
     EMBEDDING_ITERATIVE_RELEVANCE = "embedding_iterative_relevance"
     EMBEDDING_BOUNDARY_FINDER = "embedding_boundary_finder"
+    BASELINE_FILTER = "baseline_filter"
 
     @property
     def prompt_name(self) -> str:
@@ -86,4 +87,5 @@ class AgentRole(StrEnum):
             AgentRole.EMBEDDING_COLUMN_RELEVANCE: "discovery-embedding-column-relevance",
             AgentRole.EMBEDDING_ITERATIVE_RELEVANCE: "discovery-embedding-iterative-relevance",
             AgentRole.EMBEDDING_BOUNDARY_FINDER: "discovery-embedding-boundary-finder",
+            AgentRole.BASELINE_FILTER: "discovery-baseline-filter",
         }[self]

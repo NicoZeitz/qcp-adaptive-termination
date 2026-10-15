@@ -1,4 +1,5 @@
 import functools
+import time
 from collections.abc import Mapping
 from typing import Literal, cast
 
@@ -21,7 +22,6 @@ import qcp_adaptive_termination.llm.model_provider as model_provider
 import qcp_adaptive_termination.llm.prompt as prompt
 from qcp_adaptive_termination.models import AgentRole, CacheMode, RoleConfig
 from qcp_adaptive_termination.observability import cache, context, tracing
-
 
 @functools.cache
 def _cached_json_schema(output_type: type[BaseModel]) -> dict:
@@ -124,6 +124,7 @@ async def run_agent[TResult](
 
         tracing.indented_logging(f"Running agent: {display_name}")
 
+        t0 = time.perf_counter()
         try:
             result = await Runner.run(
                 agent,
@@ -135,6 +136,21 @@ async def run_agent[TResult](
         except ModelBehaviorError as e:
             tracing.indented_logging(f"Model behavior error: {e}")
             raise e
+        duration_ms = round((time.perf_counter() - t0) * 1000)
+
+        usage = result.context_wrapper.usage
+        tracing.append_to_span_output({
+            f"llm.{display_name}.input_tokens": usage.input_tokens,
+            f"llm.{display_name}.output_tokens": usage.output_tokens,
+            f"llm.{display_name}.duration_ms": duration_ms,
+        })
+
+        acc = context.get_usage_accumulator()
+        acc.input_tokens += usage.input_tokens
+        acc.output_tokens += usage.output_tokens
+        acc.llm_calls += 1
+        acc.duration_ms += duration_ms
+
         return result.final_output
 
     return await compute_value(

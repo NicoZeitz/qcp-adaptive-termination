@@ -37,11 +37,39 @@ _PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 _DEFAULT_OUTPUT_DIR = _PROJECT_ROOT / ".logs"
 _DEFAULT_CACHE_DIR = _PROJECT_ROOT / ".cache"
 
+from dataclasses import dataclass, field
+
 _cache_var: ContextVar[Cache | None] = ContextVar("cache", default=None)
 _config_var: ContextVar[Config | None] = ContextVar("config", default=None)
 _data_dir_var: ContextVar[Path | None] = ContextVar("data_dir", default=None)
 _output_dir_var: ContextVar[Path | None] = ContextVar("output_dir", default=None)
 _logging_active_var: ContextVar[bool] = ContextVar("logging_active", default=False)
+
+
+@dataclass
+class UsageAccumulator:
+    input_tokens: int = 0
+    output_tokens: int = 0
+    llm_calls: int = 0
+    duration_ms: int = 0
+
+
+_usage_accumulator_var: ContextVar[UsageAccumulator | None] = ContextVar("usage_accumulator", default=None)
+
+
+def get_usage_accumulator() -> UsageAccumulator:
+    acc = _usage_accumulator_var.get()
+    if acc is None:
+        acc = UsageAccumulator()
+        _usage_accumulator_var.set(acc)
+    return acc
+
+
+def reset_usage_accumulator() -> UsageAccumulator:
+    """Reset and return a fresh accumulator, returning the old totals."""
+    old = get_usage_accumulator()
+    _usage_accumulator_var.set(UsageAccumulator())
+    return old
 
 
 def get_cache() -> Cache | None:

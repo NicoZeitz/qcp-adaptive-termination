@@ -68,6 +68,20 @@ def register_default_output_hooks() -> None:
             filtered_relevant_agents.model_dump(),
         )
 
+    @hooks.on(HookEvent.FILTER_RELEVANT_AGENTS_END)
+    def _write_stage_1_llm_stats(execution_id: str, filtered_relevant_agents: FilteredRelevantAgents) -> None:  # noqa: ARG001
+        acc = context.reset_usage_accumulator()
+        _write_output_file(
+            "stage_1_output_llm_stats.json",
+            {
+                "llm_calls": acc.llm_calls,
+                "input_tokens": acc.input_tokens,
+                "output_tokens": acc.output_tokens,
+                "total_tokens": acc.input_tokens + acc.output_tokens,
+                "llm_duration_ms": acc.duration_ms,
+            },
+        )
+
     @hooks.on(HookEvent.EMBEDDING_PRE_FILTER_END)
     def _write_embedding_pre_filter(
         execution_id: str,  # noqa: ARG001

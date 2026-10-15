@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import resource
-
 from openai import APITimeoutError
 
 from pydantic import BaseModel
@@ -314,3 +313,56 @@ async def filter_embeddings(
         query=query,
         data_agents=data_agents,
     )
+
+
+class _SingleAgentRelevanceResult(BaseModel):
+    is_relevant: bool
+    reasoning: str
+
+
+async def _check_single_agent(query: str, agent: DataAgent) -> tuple[DataAgent, bool, str]:
+    schema = await agent_registry.build_registry_string(agent, AgentRegistryType.TECHNICAL)
+    result = await runner.run_llm(
+        role=AgentRole.BASELINE_FILTER,
+        agent_name=agent.name,
+        prompt_parameters={
+            "schema": schema,
+            "query": query,
+        },
+        output_type=_SingleAgentRelevanceResult,
+    )
+    logging.info(
+        "Baseline filter [%s] is_relevant=%s — %s",
+        agent.name,
+        result.is_relevant,
+        result.reasoning,
+    )
+    tracing.append_to_span_output(
+        {
+            f"{agent.name}_relevant": result.is_relevant,
+            f"{agent.name}_reasoning": result.reasoning,
+        }
+    )
+    return agent, result.is_relevant, result.reasoning
+
+
+async def filter_by_llm_baseline(
+    query: str,
+    data_agents: list[DataAgent],
+) -> list[DataAgent]:
+    """Baseline: one parallel LLM call per agent schema, no embedding guidance."""
+    semaphore = asyncio.Semaphore(5)
+
+    async def _check_with_semaphore(agent: DataAgent) -> tuple[DataAgent, bool, str]:
+        async with semaphore:
+            while True:
+                try:
+                    return await _check_single_agent(query, agent)
+                except APITimeoutError:
+                    logging.warning("Baseline filter [%s] timed out — retrying", agent.name)
+                    await asyncio.sleep(2)
+
+    results = await asyncio.gather(*[_check_with_semaphore(a) for a in data_agents])
+    relevant = [agent for agent, is_relevant, _ in results if is_relevant]
+    logging.info("Baseline filter: kept %d / %d agents", len(relevant), len(data_agents))
+    return relevant

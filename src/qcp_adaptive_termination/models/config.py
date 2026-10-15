@@ -21,6 +21,8 @@ class Config(BaseModel):
 
     continue_after_final_result: bool = False
 
+    discovery_filter_mode: Literal["embedding_iterative", "llm_baseline", "none"] = "llm_baseline"
+
     selection_type: SelectionStrategyType = SelectionStrategyType.SEQUENTIAL
     align_schema_agent_limit: int = 1000
 
