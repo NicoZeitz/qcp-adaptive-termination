@@ -434,10 +434,10 @@ async def filter_embeddings_boundary_schema(
     query: str,
     data_agents: list[DataAgent],
 ) -> list[DataAgent]:
-    """Boundary finder using one embedding per agent (technical_description).
+    """Boundary finder using one embedding per agent (natural_language_description).
 
     Cheaper than the column-level variant: N vectors instead of N×cols vectors.
-    The ranked list passed to the LLM shows each agent's schema summary.
+    The ranked list passed to the LLM shows each agent's NL database description.
     """
     obs_context.get_usage_accumulator()
 
@@ -446,12 +446,12 @@ async def filter_embeddings_boundary_schema(
         agent_registry.load(data_agents),
     )
 
-    agent_schemas = [(a.name, agent_data[a.name].technical_description) for a in data_agents]
-    schema_embeddings = await embedding.create([schema for _, schema in agent_schemas])
+    agent_descs = [(a.name, agent_data[a.name].natural_language_description) for a in data_agents]
+    desc_embeddings = await embedding.create([desc for _, desc in agent_descs])
 
     t_rank = time.monotonic()
     agent_dists: list[tuple[str, float]] = []
-    for (name, _), vec in zip(agent_schemas, schema_embeddings):
+    for (name, _), vec in zip(agent_descs, desc_embeddings):
         dist = float(np.linalg.norm(np.array(query_embedding, dtype="float32") - np.array(vec, dtype="float32")))
         agent_dists.append((name, dist))
 
@@ -460,20 +460,20 @@ async def filter_embeddings_boundary_schema(
 
     logging.info("Schema boundary filter — agents by L2 distance (ascending):")
     for name, dist in sorted_agents:
-        logging.info("  %s: L2=%.4f", name, dist)
+        logging.info("  %s: L2=%.4f  %s", name, dist, agent_data[name].natural_language_description)
 
     ranked_lines = [
-        f"[{rank}] {name} | L2={dist:.4f}\n{agent_data[name].technical_description}"
+        f"[{rank}] {name} | L2={dist:.4f} | {agent_data[name].natural_language_description}"
         for rank, (name, dist) in enumerate(sorted_agents, start=1)
     ]
 
     while True:
         try:
             result = await runner.run_llm(
-                role=AgentRole.EMBEDDING_BOUNDARY_FINDER,
+                role=AgentRole.EMBEDDING_BOUNDARY_FINDER_SCHEMA,
                 prompt_parameters={
                     "query": query,
-                    "ranked_columns": "\n\n".join(ranked_lines),
+                    "ranked_agents": "\n".join(ranked_lines),
                 },
                 output_type=BoundaryResult,
             )
