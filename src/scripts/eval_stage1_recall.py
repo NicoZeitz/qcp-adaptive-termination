@@ -199,6 +199,9 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
     print(f"       missed={missed}  extra={extra_selected}")
     print(f"       precision={final_prec:.3f}  recall={final_rec:.3f}  f1={final_f1:.3f}")
     if llm_stats:
+        emb_calls = llm_stats.get("embedding_calls", 0)
+        emb_dur = llm_stats.get("embedding_duration_ms", 0)
+        rank_dur = llm_stats.get("ranking_duration_ms", 0)
         print(
             f"       [llm stats]  calls={llm_stats['llm_calls']}"
             f"  input_tokens={llm_stats['input_tokens']}"
@@ -206,6 +209,12 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             f"  total_tokens={llm_stats['total_tokens']}"
             f"  llm_duration={llm_stats['llm_duration_ms']}ms"
         )
+        if emb_calls or emb_dur or rank_dur:
+            print(
+                f"       [emb stats]  embedding_calls={emb_calls}"
+                f"  embedding_duration={emb_dur}ms"
+                f"  ranking_duration={rank_dur}ms"
+            )
 
     if emb_data:
         emb_ok = 1 if emb_data["recall"] == 1.0 else 0
@@ -284,6 +293,9 @@ def process_query(query_log_dir: Path, input_dir: Path | None) -> dict:
             "llm_output_tokens": llm_stats["output_tokens"],
             "llm_total_tokens": llm_stats["total_tokens"],
             "llm_duration_ms": llm_stats["llm_duration_ms"],
+            "embedding_calls": llm_stats.get("embedding_calls", 0),
+            "embedding_duration_ms": llm_stats.get("embedding_duration_ms", 0),
+            "ranking_duration_ms": llm_stats.get("ranking_duration_ms", 0),
         })
     return result
 
@@ -390,6 +402,9 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
         total_dur_ms = sum(r.get("llm_duration_ms", 0) for r in scored)
         avg_calls = total_calls / len(scored) if scored else 0
         avg_tokens = total_tokens / len(scored) if scored else 0
+        total_emb_calls = sum(r.get("embedding_calls", 0) for r in scored)
+        total_emb_dur_ms = sum(r.get("embedding_duration_ms", 0) for r in scored)
+        total_rank_dur_ms = sum(r.get("ranking_duration_ms", 0) for r in scored)
         print()
         print("  -- LLM usage (Stage 1) --")
         print(f"  Total LLM calls      : {total_calls}  (avg {avg_calls:.1f}/query)")
@@ -397,6 +412,10 @@ def print_summary(results: list[dict], log_dir: Path) -> None:
         print(f"  Total output tokens  : {total_output:,}")
         print(f"  Total tokens         : {total_tokens:,}  (avg {avg_tokens:,.0f}/query)")
         print(f"  Total LLM duration   : {total_dur_ms / 1000:.1f}s  (avg {total_dur_ms / len(scored) / 1000:.1f}s/query)")
+        if total_emb_calls or total_emb_dur_ms or total_rank_dur_ms:
+            print(f"  Total emb calls      : {total_emb_calls}  (avg {total_emb_calls / len(scored):.1f}/query)")
+            print(f"  Total emb duration   : {total_emb_dur_ms / 1000:.1f}s  (avg {total_emb_dur_ms / len(scored) / 1000:.1f}s/query)")
+            print(f"  Total rank duration  : {total_rank_dur_ms / 1000:.1f}s  (avg {total_rank_dur_ms / len(scored) / 1000:.1f}s/query)")
 
     if has_embedding:
         emb_ok = sum(1 for r in scored if r.get("embedding_recall", 0.0) == 1.0)

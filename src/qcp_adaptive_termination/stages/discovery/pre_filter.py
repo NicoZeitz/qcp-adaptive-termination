@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import resource
+import time
 from openai import APITimeoutError
 
 from pydantic import BaseModel
@@ -251,11 +252,13 @@ async def _filter_embeddings_internal(
     )
 
     agent_best_dist: dict[str, tuple[float, str, str]] = {}
+    t_rank = time.monotonic()
     for (agent_name, table_name, col_name), dist in vector_index.search_all(query_embedding):
         if agent_name not in agent_best_dist or dist < agent_best_dist[agent_name][0]:
             agent_best_dist[agent_name] = (dist, table_name, col_name)
 
     sorted_agents = sorted(agent_best_dist.items(), key=lambda x: x[1][0])
+    obs_context.get_usage_accumulator().ranking_duration_ms += int((time.monotonic() - t_rank) * 1000)
     logging.info("Embedding similarity per agent (L2 distance, ascending):")
     for agent_name, (dist, table_name, col_name) in sorted_agents:
         logging.info("  %s: L2=%.4f (table: %s, col: %s)", agent_name, dist, table_name, col_name)
@@ -314,6 +317,115 @@ async def filter_embeddings(
         query=query,
         data_agents=data_agents,
     )
+
+
+class BoundaryResult(BaseModel):
+    reasoning: str
+    relevant_agent_names: list[str]
+
+
+async def filter_embeddings_boundary(
+    query: str,
+    data_agents: list[DataAgent],
+) -> list[DataAgent]:
+    """Single-LLM-call boundary finder: ranks agents by embedding similarity, then asks
+    the LLM to find the relevance boundary in the ranked list."""
+    obs_context.get_usage_accumulator()
+
+    (query_embedding,), agent_data = await asyncio.gather(
+        embedding.create([query]),
+        agent_registry.load(data_agents),
+    )
+
+    col_entries: list[tuple[str, str, str]] = []
+    col_descriptions: list[str] = []
+    col_desc_map: dict[tuple[str, str, str], str] = {}
+    for agent in data_agents:
+        data = agent_data[agent.name]
+        for table_name, table_desc in data.individual_descriptions.items():
+            for col_name, col_desc in table_desc.columns.items():
+                entry = (agent.name, table_name, col_name)
+                desc = f"{table_desc.natural_language_description} {col_desc.natural_language_description}"
+                col_entries.append(entry)
+                col_descriptions.append(desc)
+                col_desc_map[entry] = desc
+
+    if not col_entries:
+        logging.warning("Boundary filter: no column embeddings found, returning all agents unfiltered")
+        return data_agents
+
+    col_embeddings = await embedding.create(col_descriptions)
+    vector_index: VectorIndex[tuple[str, str, str]] = VectorIndex.build(
+        list(zip(col_entries, col_embeddings))
+    )
+
+    agent_best: dict[str, tuple[float, str, str]] = {}
+    t_rank = time.monotonic()
+    for (agent_name, table_name, col_name), dist in vector_index.search_all(query_embedding):
+        if agent_name not in agent_best or dist < agent_best[agent_name][0]:
+            agent_best[agent_name] = (dist, table_name, col_name)
+
+    sorted_agents = sorted(agent_best.items(), key=lambda x: x[1][0])
+    obs_context.get_usage_accumulator().ranking_duration_ms += int((time.monotonic() - t_rank) * 1000)
+    logging.info("Boundary filter — embedding similarity per agent (L2 distance, ascending):")
+    for agent_name, (dist, table_name, col_name) in sorted_agents:
+        logging.info("  %s: L2=%.4f (table: %s, col: %s)", agent_name, dist, table_name, col_name)
+
+    ranked_lines = [
+        f"[{rank}] {agent_name} | table: {table_name} · column: {col_name} | L2={dist:.4f}"
+        for rank, (agent_name, (dist, table_name, col_name)) in enumerate(sorted_agents, start=1)
+    ]
+
+    while True:
+        try:
+            result = await runner.run_llm(
+                role=AgentRole.EMBEDDING_BOUNDARY_FINDER,
+                prompt_parameters={
+                    "query": query,
+                    "ranked_columns": "\n".join(ranked_lines),
+                },
+                output_type=BoundaryResult,
+            )
+            break
+        except APITimeoutError:
+            logging.warning("Boundary-finder LLM timed out — retrying")
+            await asyncio.sleep(2)
+
+    logging.info(
+        "Boundary filter: relevant_agent_names=%s — %s",
+        result.relevant_agent_names,
+        result.reasoning,
+    )
+
+    relevant_set = set(result.relevant_agent_names)
+    agent_map = {a.name: a for a in data_agents}
+    filtered = [agent_map[name] for name in result.relevant_agent_names if name in agent_map]
+
+    hooks.emit(
+        HookEvent.EMBEDDING_PRE_FILTER_END,
+        query=query,
+        embedding_filtered_agents=filtered,
+        total_agents=len(data_agents),
+        l2_scores={name: round(float(dist), 4) for name, (dist, _, _) in agent_best.items()},
+        after_llm_filter_agents=result.relevant_agent_names,
+    )
+    tracing.append_to_span_output(
+        {
+            "after_llm_filter_agents": result.relevant_agent_names,
+            "after_llm_filter_count": len(filtered),
+            "filtered_agents": [a.name for a in filtered],
+            "l2_scores": {name: round(float(dist), 4) for name, (dist, _, _) in agent_best.items()},
+            "best_columns": {name: f"{tbl}.{col}" for name, (_, tbl, col) in agent_best.items()},
+        }
+    )
+
+    logging.info(
+        "Boundary filter: kept %d / %d agents  rejected=%s",
+        len(filtered),
+        len(data_agents),
+        sorted(a.name for a in data_agents if a.name not in relevant_set),
+    )
+    return filtered
 
 
 class _SingleAgentRelevanceResult(BaseModel):

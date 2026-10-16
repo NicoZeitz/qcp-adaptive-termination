@@ -6,6 +6,7 @@ Wraps an embedding model to produce dense vectors and provides an in-memory
 """
 
 import asyncio
+import time
 from typing import cast, overload
 
 import tiktoken
@@ -106,12 +107,17 @@ async def create(text):
     with tracing.own_span("Embedding", input={"text": text}):
         is_single = not isinstance(text, list)
         texts = [text] if is_single else text
+        t0 = time.monotonic()
         results = await get_or_compute_batch(
             texts,
             _create_batched,
             argument_name="text",
             name_prefix="Embedding",
         )
+        elapsed_ms = int((time.monotonic() - t0) * 1000)
+        acc = context.get_usage_accumulator()
+        acc.embedding_calls += 1
+        acc.embedding_duration_ms += elapsed_ms
         return results[0] if is_single else results
 
 

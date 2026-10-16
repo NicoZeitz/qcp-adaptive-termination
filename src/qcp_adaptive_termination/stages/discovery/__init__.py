@@ -3,7 +3,7 @@ from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import AgentRegistryType, CacheMode, DataAgent
 from qcp_adaptive_termination.models.stages import FilteredRelevantAgents
 from qcp_adaptive_termination.observability import cache, context, tracing
-from qcp_adaptive_termination.stages.discovery.pre_filter import filter_by_llm_baseline, filter_embeddings
+from qcp_adaptive_termination.stages.discovery.pre_filter import filter_by_llm_baseline, filter_embeddings, filter_embeddings_boundary
 
 DISCOVERY_STAGE_NAME = "Stage 1: Discovery"
 
@@ -64,6 +64,22 @@ async def filter_relevant_agents_internal(
             tracing.append_to_span_output(
                 {
                     "candidates_after_embedding_filter": [a.name for a in candidate_data_agents],
+                    "filtered_out_count": len(data_agents) - len(candidate_data_agents),
+                }
+            )
+    elif filter_mode == "embedding_boundary" and pre_filter:
+        with tracing.own_span(
+            "Embedding Boundary Filter",
+            input={
+                "query": query,
+                "total_agents": len(data_agents),
+            },
+        ):
+            candidate_data_agents = await filter_embeddings_boundary(query, data_agents)
+            tracing.indented_logging(f"Embedding boundary filter: {len(data_agents)} → {len(candidate_data_agents)} agents")
+            tracing.append_to_span_output(
+                {
+                    "candidates_after_boundary_filter": [a.name for a in candidate_data_agents],
                     "filtered_out_count": len(data_agents) - len(candidate_data_agents),
                 }
             )

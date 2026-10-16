@@ -52,6 +52,9 @@ class UsageAccumulator:
     output_tokens: int = 0
     llm_calls: int = 0
     duration_ms: int = 0
+    embedding_calls: int = 0
+    embedding_duration_ms: int = 0
+    ranking_duration_ms: int = 0
 
 
 _usage_accumulator_var: ContextVar[UsageAccumulator | None] = ContextVar("usage_accumulator", default=None)
