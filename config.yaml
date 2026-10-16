@@ -20,6 +20,7 @@ align_schema_agent_limit: 1000
 embedding_model: "openai/text-embedding-3-large"
 llm_timeout: 120.0
 log_llm_requests: false
+cache_mode: WRITE_ONLY # TODO:FW change this after evaluation
 discovery_filter_mode: embedding_boundary
 
 agent_configs:
