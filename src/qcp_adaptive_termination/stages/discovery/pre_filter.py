@@ -519,6 +519,229 @@ async def filter_embeddings_boundary_schema(
     return filtered
 
 
+class RecursiveRelevanceResult(BaseModel):
+    reasoning: str
+    confirmed_relevant: list[str]
+    is_complete: bool
+    data_not_available: bool
+    sub_queries: list[str]
+
+
+async def filter_embeddings_boundary_recursive(
+    query: str,
+    data_agents: list[DataAgent],
+    max_rounds: int = 10,
+) -> list[DataAgent]:
+    """Two-phase filter: boundary pass to get candidates, then iterative relevance
+    with one LLM call per round seeing all remaining candidates at once.
+
+    Phase 1: column-embedding → ranked list → boundary LLM → candidate set
+    Phase 2: per round, embed current queries in batch → ranked sections per query →
+             one LLM call marks multiple agents relevant + returns sub_queries for next round
+    """
+    obs_context.get_usage_accumulator()
+
+    (query_embedding,), agent_data = await asyncio.gather(
+        embedding.create([query]),
+        agent_registry.load(data_agents),
+    )
+
+    # --- Build column vector index (shared across all rounds) ---
+    col_entries: list[tuple[str, str, str]] = []
+    col_descriptions: list[str] = []
+    for agent in data_agents:
+        data = agent_data[agent.name]
+        for table_name, table_desc in data.individual_descriptions.items():
+            for col_name, col_desc in table_desc.columns.items():
+                col_entries.append((agent.name, table_name, col_name))
+                col_descriptions.append(
+                    f"{table_desc.natural_language_description} {col_desc.natural_language_description}"
+                )
+
+    if not col_entries:
+        logging.warning("Boundary-recursive filter: no column embeddings, returning all agents")
+        return data_agents
+
+    col_embeddings = await embedding.create(col_descriptions)
+    vector_index: VectorIndex[tuple[str, str, str]] = VectorIndex.build(
+        list(zip(col_entries, col_embeddings))
+    )
+
+    # --- Phase 1: Boundary pass ---
+    t_rank = time.monotonic()
+    agent_best: dict[str, tuple[float, str, str]] = {}
+    for (agent_name, table_name, col_name), dist in vector_index.search_all(query_embedding):
+        if agent_name not in agent_best or dist < agent_best[agent_name][0]:
+            agent_best[agent_name] = (dist, table_name, col_name)
+    sorted_p1 = sorted(agent_best.items(), key=lambda x: x[1][0])
+    obs_context.get_usage_accumulator().ranking_duration_ms += int((time.monotonic() - t_rank) * 1000)
+
+    ranked_lines_p1 = [
+        f"[{rank}] {name} | table: {tbl} · column: {col} | L2={dist:.4f}"
+        for rank, (name, (dist, tbl, col)) in enumerate(sorted_p1, start=1)
+    ]
+    logging.info("Boundary-recursive Phase 1 — ranked agents:")
+    for line in ranked_lines_p1:
+        logging.info("  %s", line)
+
+    while True:
+        try:
+            p1_result = await runner.run_llm(
+                role=AgentRole.EMBEDDING_BOUNDARY_FINDER,
+                prompt_parameters={
+                    "query": query,
+                    "ranked_columns": "\n".join(ranked_lines_p1),
+                },
+                output_type=BoundaryResult,
+            )
+            break
+        except APITimeoutError:
+            logging.warning("Boundary-recursive Phase 1 LLM timed out — retrying")
+            await asyncio.sleep(2)
+
+    boundary_candidate_names: list[str] = [
+        n for n in p1_result.relevant_agent_names if n in agent_data
+    ]
+    logging.info(
+        "Boundary-recursive Phase 1: %d boundary candidates: %s",
+        len(boundary_candidate_names),
+        boundary_candidate_names,
+    )
+
+    if not boundary_candidate_names:
+        logging.info("Boundary-recursive: no candidates after Phase 1, returning empty")
+        return []
+
+    # --- Phase 2: Iterative relevance on boundary candidates ---
+    agent_map = {a.name: a for a in data_agents}
+    selected_order: list[str] = []
+    selected_set: set[str] = set()
+    current_queries: list[str] = [query]
+    failed_sub_queries: dict[str, int] = {}  # sub_query → number of rounds it found nothing new
+
+    for round_idx in range(max_rounds):
+        remaining_set = set(boundary_candidate_names) - selected_set
+        if not remaining_set:
+            logging.info("Boundary-recursive: all candidates evaluated after round %d", round_idx)
+            break
+
+        # Embed all current queries in one batch call
+        query_embeddings = await embedding.create(current_queries)
+
+        # Build ranked sections: one section per current_query
+        sections: list[str] = []
+        t_rank = time.monotonic()
+        for cq, cq_emb in zip(current_queries, query_embeddings):
+            sub_best: dict[str, tuple[float, str, str]] = {}
+            for (agent_name, table, col), dist in vector_index.search_all(cq_emb):
+                if agent_name in remaining_set:
+                    if agent_name not in sub_best or dist < sub_best[agent_name][0]:
+                        sub_best[agent_name] = (dist, table, col)
+            sorted_sub = sorted(sub_best.items(), key=lambda x: x[1][0])
+            lines = [
+                f"[{r}] {n} | table: {t} · col: {c} | L2={d:.4f}\n"
+                f"{agent_data[n].technical_description}"
+                for r, (n, (d, t, c)) in enumerate(sorted_sub, start=1)
+            ]
+            sections.append(f'Query: "{cq}"\n' + "\n\n".join(lines))
+        obs_context.get_usage_accumulator().ranking_duration_ms += int((time.monotonic() - t_rank) * 1000)
+
+        ranked_sections = "\n---\n".join(sections)
+        context_tables = "\n\n".join(
+            agent_data[name].technical_description for name in selected_order
+        )
+        failed_sub_queries_str = "\n".join(
+            f"- \"{q}\" (failed {c} time{'s' if c > 1 else ''})"
+            for q, c in failed_sub_queries.items()
+        )
+
+        logging.info(
+            "Boundary-recursive round %d: %d remaining candidates, %d current queries, %d failed sub-queries",
+            round_idx,
+            len(remaining_set),
+            len(current_queries),
+            len(failed_sub_queries),
+        )
+
+        while True:
+            try:
+                result = await runner.run_llm(
+                    role=AgentRole.EMBEDDING_BOUNDARY_RECURSIVE,
+                    prompt_parameters={
+                        "query": query,
+                        "context_tables": context_tables,
+                        "failed_sub_queries": failed_sub_queries_str,
+                        "ranked_sections": ranked_sections,
+                    },
+                    output_type=RecursiveRelevanceResult,
+                )
+                break
+            except APITimeoutError:
+                logging.warning("Boundary-recursive round %d LLM timed out — retrying", round_idx)
+                await asyncio.sleep(2)
+
+        logging.info(
+            "Boundary-recursive round %d: confirmed=%s is_complete=%s data_not_available=%s sub_queries=%s — %s",
+            round_idx,
+            result.confirmed_relevant,
+            result.is_complete,
+            result.data_not_available,
+            result.sub_queries,
+            result.reasoning,
+        )
+
+        confirmed_before = len(selected_set)
+        for name in result.confirmed_relevant:
+            if name in agent_map and name not in selected_set:
+                selected_order.append(name)
+                selected_set.add(name)
+
+        if result.is_complete or result.data_not_available:
+            break
+
+        if not result.sub_queries:
+            logging.info("Boundary-recursive: no sub_queries returned, stopping")
+            break
+
+        # Track sub-queries that didn't yield new agents
+        newly_confirmed = len(selected_set) - confirmed_before
+        for sq in current_queries:
+            if sq != query and newly_confirmed == 0:
+                failed_sub_queries[sq] = failed_sub_queries.get(sq, 0) + 1
+
+        current_queries = result.sub_queries
+
+    filtered = [agent_map[name] for name in selected_order if name in agent_map]
+    l2_scores = {name: round(float(dist), 4) for name, (dist, _, _) in agent_best.items()}
+
+    logging.info(
+        "Boundary-recursive total: kept %d / %d agents  rejected=%s",
+        len(filtered),
+        len(data_agents),
+        sorted(a.name for a in data_agents if a.name not in selected_set),
+    )
+
+    hooks.emit(
+        HookEvent.EMBEDDING_PRE_FILTER_END,
+        query=query,
+        embedding_filtered_agents=filtered,
+        total_agents=len(data_agents),
+        l2_scores=l2_scores,
+        after_llm_filter_agents=selected_order,
+    )
+    tracing.append_to_span_output(
+        {
+            "after_llm_filter_agents": selected_order,
+            "after_llm_filter_count": len(filtered),
+            "filtered_agents": [a.name for a in filtered],
+            "l2_scores": l2_scores,
+            "best_columns": {name: f"{tbl}.{col}" for name, (_, tbl, col) in agent_best.items()},
+        }
+    )
+
+    return filtered
+
+
 class _SingleAgentRelevanceResult(BaseModel):
     is_relevant: bool
     reasoning: str

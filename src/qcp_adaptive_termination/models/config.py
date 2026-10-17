@@ -21,10 +21,11 @@ class Config(BaseModel):
 
     continue_after_final_result: bool = False
 
-    discovery_filter_mode: Literal["embedding_iterative", "embedding_boundary", "embedding_boundary_schema", "llm_baseline", "none"] = "embedding_boundary"
+    discovery_filter_mode: Literal["embedding_iterative", "embedding_boundary", "embedding_boundary_schema", "embedding_boundary_recursive", "llm_baseline", "none"] = "embedding_boundary"
 
     selection_type: SelectionStrategyType = SelectionStrategyType.SEQUENTIAL
     align_schema_agent_limit: int = 1000
+    embedding_boundary_recursive_max_rounds: int = 10
 
     estimator_mode: EstimatorMode = EstimatorMode.FULL
     count_estimator: CountEstimator = Estimator.DEFAULT_COUNT_ESTIMATOR
