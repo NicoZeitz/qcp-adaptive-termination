@@ -27,7 +27,7 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/dataset/_meta/input"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="150_DEEP_eval_stage1_recall_llm_baseline_without_reasoning_string_2"
+RUN_NAME="150_DEEP_eval_stage1_recall_embedding_boundary_schema_embed_cache_llm_no_cache"
 
 # TODO: Set to true to run files in parallel, false for sequential execution
 PARALLEL=true
