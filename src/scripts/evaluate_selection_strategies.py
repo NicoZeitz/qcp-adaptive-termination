@@ -668,6 +668,7 @@ async def _run_one_strategy(
                 data_agents=all_agents,
                 query_plan_step=isolated_step,
                 additional_information=[],
+                step_budgets={},
             )
             logging.info("Strategy %s/%s completed", step.id, strategy)
     except Exception as exc:

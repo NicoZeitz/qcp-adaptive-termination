@@ -13,6 +13,7 @@ from qcp_adaptive_termination.models import (
     DataAgent,
     EstimatorStatistics,
     ScoredDataAgent,
+    StepBudget,
 )
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
@@ -246,6 +247,7 @@ async def _answer_step_multiple_agents_via_loop(
     data_agents: list[DataAgent],
     query_plan_step: MultiAgentQueryPlanStep,
     additional_information: list[AdditionalInformation],
+    step_budgets: dict[str, StepBudget],
     batch_size: int = 1,
 ) -> PartialQueryAnswer:
     agents_by_name = {a.name: a for a in data_agents}
@@ -350,14 +352,16 @@ async def answer_step_multiple_agents(
     data_agents: list[DataAgent],
     query_plan_step: MultiAgentQueryPlanStep,
     additional_information: list[AdditionalInformation],
+    step_budgets: dict[str, StepBudget],
     batch_size: int = 1,
 ) -> PartialQueryAnswer:
     return await hooks.call_override(
         HookEvent.ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE,
         default=lambda: _answer_step_multiple_agents_via_loop(
-            data_agents, query_plan_step, additional_information, batch_size
+            data_agents, query_plan_step, additional_information, step_budgets, batch_size
         ),
         data_agents=data_agents,
         query_plan_step=query_plan_step,
         additional_information=additional_information,
+        step_budgets=step_budgets,
     )

@@ -5,6 +5,9 @@ use_bucket: false
 use_monte_carlo: false
 include_confidence_intervals: true
 
+target_confidence: 0.95
+apportionment: weighted
+
 continue_after_final_result: true
 selection_type: theta_sketch
 selection_kwargs:

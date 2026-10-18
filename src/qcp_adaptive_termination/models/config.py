@@ -6,6 +6,7 @@ from qcp_adaptive_termination.estimator import CountEstimator, Estimator, ValueE
 from qcp_adaptive_termination.models.cache_mode import CacheMode
 from qcp_adaptive_termination.models.estimation import EstimatorMode
 from qcp_adaptive_termination.models.selection_strategy_type import SelectionStrategyType
+from qcp_adaptive_termination.models.uncertainty import ApportionmentType
 
 
 class RoleConfig(BaseModel):
@@ -30,6 +31,12 @@ class Config(BaseModel):
     use_bucket: bool = True
     use_monte_carlo: bool = False
     include_confidence_intervals: bool = True
+
+    target_confidence: float = 0.95
+    """Global confidence threshold with which the final result must hold."""
+
+    apportionment: ApportionmentType = ApportionmentType.WEIGHTED
+    """How the global threshold is split across multi-agent steps."""
 
     selection_kwargs: dict[str, Any] = Field(default_factory=dict)
 

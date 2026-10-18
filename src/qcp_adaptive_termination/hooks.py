@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         DataAgent,
         EstimatorStatistics,
         ScoredDataAgent,
+        StepBudget,
     )
     from qcp_adaptive_termination.models.estimation import AlignedResultList
     from qcp_adaptive_termination.models.execution import (
@@ -378,6 +379,7 @@ class EXECUTE_QUERY_PLAN_STEP_OVERRIDE_HANDLER(Protocol):
         data_agents: list[DataAgent],
         query_plan_step: QueryPlanStep,
         additional_information: list[AdditionalInformation],
+        step_budgets: dict[str, StepBudget],
     ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
 
 
@@ -388,6 +390,7 @@ class ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE_HANDLER(Protocol):
         data_agents: list[DataAgent],
         query_plan_step: MultiAgentQueryPlanStep,
         additional_information: list[AdditionalInformation],
+        step_budgets: dict[str, StepBudget],
     ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
 
 
@@ -920,6 +923,7 @@ async def call_override(
     data_agents: list[DataAgent],
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
+    step_budgets: dict[str, StepBudget],
 ) -> PartialQueryAnswer: ...
 @overload
 async def call_override(
@@ -929,6 +933,7 @@ async def call_override(
     data_agents: list[DataAgent],
     query_plan_step: MultiAgentQueryPlanStep,
     additional_information: list[AdditionalInformation],
+    step_budgets: dict[str, StepBudget],
 ) -> PartialQueryAnswer: ...
 @overload
 async def call_override(

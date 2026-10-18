@@ -15,6 +15,7 @@ from qcp_adaptive_termination.models import (
     CacheMode,
     DataAgent,
     ResultType,
+    StepBudget,
     need_type,
     result_type,
 )
@@ -25,12 +26,15 @@ from qcp_adaptive_termination.models.execution import (
 )
 from qcp_adaptive_termination.models.query_plan import QueryPlan
 from qcp_adaptive_termination.models.stages import CollaborativeQueryAnsweringResult
-from qcp_adaptive_termination.observability import cache, tracing
+from qcp_adaptive_termination.observability import cache, context, tracing
 from qcp_adaptive_termination.stages.discovery import (
     filter_relevant_agents_internal,
 )
 from qcp_adaptive_termination.stages.execution.execute_query_plan_next_step import (
     execute_query_plan_next_step,
+)
+from qcp_adaptive_termination.stages.execution.uncertainty_budget import (
+    compute_step_budgets,
 )
 from qcp_adaptive_termination.stages.replanning import replan_query_plan
 
@@ -42,6 +46,7 @@ async def execute_query_plan_attempt(
     attempt: int,
     query_plan: QueryPlan,
     current_data_agents: list[DataAgent],
+    step_budgets: dict[str, StepBudget],
 ) -> ExecutionResult:
     with (
         hooks.stage_context(),
@@ -63,6 +68,7 @@ async def execute_query_plan_attempt(
             execution_result = await execute_query_plan_next_step(
                 current_data_agents,
                 query_plan,
+                step_budgets,
             )
 
             if isinstance(execution_result, SuccessfulExecution) and execution_result.execution_finished:
@@ -162,10 +168,18 @@ async def execute_query_plan(
 
         final_result: CollaborativeQueryAnsweringResult | None = None
         for attempt in range(MAX_REPLAN_ATTEMPTS + 1):
+            config = context.get_config()
+            step_budgets = compute_step_budgets(
+                query_plan,
+                config.target_confidence,
+                config.apportionment,
+            )
+
             execution_result = await execute_query_plan_attempt(
                 attempt=attempt,
                 query_plan=query_plan,
                 current_data_agents=relevant_data_agents,
+                step_budgets=step_budgets,
             )
 
             if execution_result.success:

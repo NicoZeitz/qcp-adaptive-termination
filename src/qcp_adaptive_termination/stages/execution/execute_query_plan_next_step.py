@@ -4,7 +4,7 @@ from agents import AgentsException, MaxTurnsExceeded
 
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.hooks import HookEvent
-from qcp_adaptive_termination.models import DataAgent, ResultType, need_type
+from qcp_adaptive_termination.models import DataAgent, ResultType, StepBudget, need_type
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
     FailedExecution,
@@ -31,6 +31,7 @@ from qcp_adaptive_termination.stages.execution.multi_agent import (
 async def execute_query_plan_next_step(
     data_agents: list[DataAgent],
     query_plan: QueryPlan,
+    step_budgets: dict[str, StepBudget],
 ) -> QueryPlanStepExecutionResult:
     step_to_execute = None
     step_id_to_answer: dict[str, ResultType] = {}
@@ -66,6 +67,7 @@ async def execute_query_plan_next_step(
             data_agents,
             step_to_execute,
             additional_information,
+            step_budgets,
         )
 
         step_to_execute.answer = result.answer
@@ -98,6 +100,7 @@ async def _dispatch_query_plan_step(
     data_agents: list[DataAgent],
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
+    step_budgets: dict[str, StepBudget],
 ) -> PartialQueryAnswer:
     if isinstance(query_plan_step, SingleAgentQueryPlanStep):
         return await execute_query_plan_step_for_single_agent(
@@ -110,6 +113,7 @@ async def _dispatch_query_plan_step(
         data_agents=data_agents,
         query_plan_step=cast(MultiAgentQueryPlanStep, query_plan_step),
         additional_information=additional_information,
+        step_budgets=step_budgets,
     )
 
 
@@ -117,6 +121,7 @@ async def execute_query_plan_step(
     data_agents: list[DataAgent],
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
+    step_budgets: dict[str, StepBudget],
 ) -> PartialQueryAnswer:
     hooks.emit(HookEvent.EXECUTE_STEP_START, query_plan_step=query_plan_step)
     with tracing.own_span(
@@ -128,10 +133,13 @@ async def execute_query_plan_step(
     ):
         result = await hooks.call_override(
             HookEvent.EXECUTE_QUERY_PLAN_STEP_OVERRIDE,
-            default=lambda: _dispatch_query_plan_step(data_agents, query_plan_step, additional_information),
+            default=lambda: _dispatch_query_plan_step(
+                data_agents, query_plan_step, additional_information, step_budgets
+            ),
             data_agents=data_agents,
             query_plan_step=query_plan_step,
             additional_information=additional_information,
+            step_budgets=step_budgets,
         )
 
         tracing.append_to_span_output({"partial_answer": result})

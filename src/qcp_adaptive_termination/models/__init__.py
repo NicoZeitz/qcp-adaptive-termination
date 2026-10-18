@@ -43,6 +43,10 @@ from qcp_adaptive_termination.models.scored_data_agent import (
 from qcp_adaptive_termination.models.selection_strategy_type import (
     SelectionStrategyType,
 )
+from qcp_adaptive_termination.models.uncertainty import (
+    ApportionmentType,
+    StepBudget,
+)
 
 __all__ = [
     # agent
@@ -75,4 +79,7 @@ __all__ = [
     # selection_strategy
     "SelectionStrategyType",
     "ScoredDataAgent",
+    # uncertainty
+    "ApportionmentType",
+    "StepBudget",
 ]
