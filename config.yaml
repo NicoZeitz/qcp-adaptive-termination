@@ -21,7 +21,7 @@ embedding_model: "openai/text-embedding-3-large"
 llm_timeout: 120.0
 log_llm_requests: false
 cache_mode: WRITE_ONLY # TODO:FW change this after evaluation
-discovery_filter_mode: embedding_boundary_recursive
+discovery_filter_mode: embedding_boundary_recursive_v2
 
 agent_configs:
   coordinator_relevance:
@@ -71,6 +71,12 @@ agent_configs:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
   embedding_boundary_recursive:
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    reasoning_effort: "none"
+  embedding_boundary_recursive_agent:
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    reasoning_effort: "none"
+  embedding_boundary_recursive_aggregate:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
   baseline_filter:

@@ -70,6 +70,8 @@ class AgentRole(StrEnum):
     EMBEDDING_BOUNDARY_FINDER = "embedding_boundary_finder"
     EMBEDDING_BOUNDARY_FINDER_SCHEMA = "embedding_boundary_finder_schema"
     EMBEDDING_BOUNDARY_RECURSIVE = "embedding_boundary_recursive"
+    EMBEDDING_BOUNDARY_RECURSIVE_AGENT = "embedding_boundary_recursive_agent"
+    EMBEDDING_BOUNDARY_RECURSIVE_AGGREGATE = "embedding_boundary_recursive_aggregate"
     BASELINE_FILTER = "baseline_filter"
 
     @property
@@ -91,5 +93,7 @@ class AgentRole(StrEnum):
             AgentRole.EMBEDDING_BOUNDARY_FINDER: "discovery-embedding-boundary-finder",
             AgentRole.EMBEDDING_BOUNDARY_FINDER_SCHEMA: "discovery-embedding-boundary-finder-schema",
             AgentRole.EMBEDDING_BOUNDARY_RECURSIVE: "discovery-embedding-boundary-recursive",
+            AgentRole.EMBEDDING_BOUNDARY_RECURSIVE_AGENT: "discovery-embedding-boundary-recursive-agent",
+            AgentRole.EMBEDDING_BOUNDARY_RECURSIVE_AGGREGATE: "discovery-embedding-boundary-recursive-aggregate",
             AgentRole.BASELINE_FILTER: "discovery-baseline-filter",
         }[self]

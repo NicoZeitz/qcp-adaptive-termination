@@ -80,7 +80,10 @@ class MSchema:
         if not field_info:
             return ""
         raw_type = self.get_field_type(field_info["type"], not show_type_detail)
-        line = f"({field_name}:{raw_type.upper()}"
+        if raw_type.upper() == "NULL":
+            line = f"({field_name}"
+        else:
+            line = f"({field_name}:{raw_type.upper()}"
         if field_info.get("comment"):
             line += f", {field_info['comment'].strip()}"
         # 打上主键标识
