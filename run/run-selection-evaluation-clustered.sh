@@ -81,6 +81,12 @@ for FILE in "${FILES[@]}"; do
     if [[ "${PARALLEL}" != "true" ]]; then
         wait
     fi
+
+    if [[ "${TEST}" != "true" && ${#FILES[@]} -gt 0 ]]; then
+        python3 -c 'from pathlib import Path; import sys; from scripts.evaluate_selection_strategies import aggregate_selection_results; aggregate_selection_results(Path(sys.argv[1]), Path(sys.argv[2]))' \
+          "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}" \
+          "${INPUT_DIR}"
+    fi
 done
 
 if [[ "${PARALLEL}" == "true" ]]; then

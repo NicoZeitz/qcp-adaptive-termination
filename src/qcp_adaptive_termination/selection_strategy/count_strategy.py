@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 
 import qcp_adaptive_termination.database as database
@@ -19,9 +20,12 @@ class CountStrategy(StaticSelectionStrategy[int]):
     ) -> dict[str, int]:
         assert table_per_agent
 
-        return {
-            a.name: database.fetch_count(a, table_per_agent[a.name]) if a.name in table_per_agent else 0 for a in agents
-        }
+        mapped_agents = [agent for agent in agents if agent.name in table_per_agent]
+        counts = await asyncio.gather(
+            *(asyncio.to_thread(database.fetch_count, agent, table_per_agent[agent.name]) for agent in mapped_agents)
+        )
+        count_by_agent = dict(zip((agent.name for agent in mapped_agents), counts, strict=True))
+        return {agent.name: count_by_agent.get(agent.name, 0) for agent in agents}
 
 
 @dataclass(slots=True)
@@ -41,9 +45,17 @@ class DistinctCountStrategy(StaticSelectionStrategy[int]):
     ) -> dict[str, int]:
         assert table_per_agent and column_per_agent
 
-        return {
-            a.name: database.fetch_distinct_count(a, table_per_agent[a.name], column_per_agent[a.name])
-            if a.name in table_per_agent and a.name in column_per_agent
-            else 0
-            for a in agents
-        }
+        mapped_agents = [agent for agent in agents if agent.name in table_per_agent and agent.name in column_per_agent]
+        counts = await asyncio.gather(
+            *(
+                asyncio.to_thread(
+                    database.fetch_distinct_count,
+                    agent,
+                    table_per_agent[agent.name],
+                    column_per_agent[agent.name],
+                )
+                for agent in mapped_agents
+            )
+        )
+        count_by_agent = dict(zip((agent.name for agent in mapped_agents), counts, strict=True))
+        return {agent.name: count_by_agent.get(agent.name, 0) for agent in agents}

@@ -24,23 +24,13 @@ class EvaluationResult:
 
 
 def compute_auc(coverages: list[float]) -> float:
-    """Mean coverage per queried agent until full coverage is reached.
+    """Mean coverage over the full sequence of queried agents.
 
-    `coverages` holds the coverage after each queried agent (no leading
-    pre-query zero). A strategy is charged one unit per queried agent; the
-    score is the average coverage achieved per agent. A strategy that reaches
-    full coverage after k agents scores sum(y_i)/k, so querying useless agents
-    lowers the score while stopping early after full coverage is free. The
-    greedy oracle reaches full coverage as fast as possible with monotonically
-    best picks, so it scores 1.0 whenever full coverage is reachable before all
-    agents are exhausted. Strategies that never reach full coverage are charged
-    for all agents.
+    `coverages` holds coverage after each queried agent, including agents queried
+    after full coverage. Fixed horizon keeps scores comparable across strategies.
     """
     if not coverages:
         return 0.0
-    for idx, coverage in enumerate(coverages):
-        if coverage >= 1.0:
-            return float(sum(coverages[: idx + 1]) / (idx + 1))
     return float(sum(coverages) / len(coverages))
 
 

@@ -882,7 +882,7 @@ class Estimator:
     def estimated_count_lower_bound(
         self,
         confidence_interval_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
-        confidence_epsilon: float = 0.01,
+        confidence_epsilon: float = 0.05,
     ) -> float:
         """Lower bound for the estimated total unique entity count at the given confidence level."""
         lower, _ = self.estimated_count_bounds(confidence_interval_type, confidence_epsilon)
@@ -891,7 +891,7 @@ class Estimator:
     def estimated_count_upper_bound(
         self,
         confidence_interval_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
-        confidence_epsilon: float = 0.01,
+        confidence_epsilon: float = 0.05,
     ) -> float:
         """Upper bound for the estimated total unique entity count at the given confidence level."""
         _, upper = self.estimated_count_bounds(confidence_interval_type, confidence_epsilon)
@@ -900,11 +900,11 @@ class Estimator:
     def estimated_count_bounds(
         self,
         confidence_interval_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
-        confidence_epsilon: float = 0.01,
+        confidence_epsilon: float = 0.05,
     ) -> tuple[float, float]:
         """Lower and upper bounds for the estimated total unique entity count.
 
-        confidence_epsilon is the total error probability; e.g. 0.01 gives 99% confidence.
+        confidence_epsilon is the total error probability; e.g. 0.05 gives 95% confidence.
         """
         if confidence_epsilon <= 0.0 or confidence_epsilon > 1.0:
             raise ValueError("confidence_epsilon must be in (0, 1]")
@@ -1112,7 +1112,7 @@ class Estimator:
     def estimated_sum_lower_bound(
         self,
         bound_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
-        confidence_epsilon: float = 0.01,
+        confidence_epsilon: float = 0.05,
     ) -> float:
         """Lower bound for the corrected SUM at the given confidence level."""
         lower, _ = self.estimated_sum_bounds(bound_type, confidence_epsilon)
@@ -1121,7 +1121,7 @@ class Estimator:
     def estimated_sum_upper_bound(
         self,
         bound_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
-        confidence_epsilon: float = 0.01,
+        confidence_epsilon: float = 0.05,
     ) -> float:
         """Upper bound for the corrected SUM at the given confidence level."""
         _, upper = self.estimated_sum_bounds(bound_type, confidence_epsilon)
@@ -1130,7 +1130,7 @@ class Estimator:
     def estimated_sum_bounds(
         self,
         bound_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
-        confidence_epsilon: float = 0.01,
+        confidence_epsilon: float = 0.05,
     ) -> tuple[float, float]:
         """Lower and upper bounds for the corrected SUM.
 
@@ -1185,7 +1185,7 @@ class Estimator:
 
     def estimated_avg_lower_bound(
         self,
-        confidence_epsilon: float = 0.01,
+        confidence_epsilon: float = 0.05,
     ) -> float:
         """Lower bound for the estimated average at the given confidence level."""
         lower, _ = self.estimated_avg_bounds(confidence_epsilon)
@@ -1193,7 +1193,7 @@ class Estimator:
 
     def estimated_avg_upper_bound(
         self,
-        confidence_epsilon: float = 0.01,
+        confidence_epsilon: float = 0.05,
     ) -> float:
         """Upper bound for the estimated average at the given confidence level."""
         _, upper = self.estimated_avg_bounds(confidence_epsilon)
@@ -1201,7 +1201,7 @@ class Estimator:
 
     def estimated_avg_bounds(
         self,
-        confidence_epsilon: float = 0.01,
+        confidence_epsilon: float = 0.05,
     ) -> tuple[float, float]:
         """Lower and upper bounds for the estimated average.
 

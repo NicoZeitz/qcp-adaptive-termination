@@ -43,7 +43,7 @@ class Cache:
         try:
             with cache_file.open("rb") as f:
                 value = pickle.load(f)
-            tracing.indented_logging(f"Cache: HIT ({cache_file})")
+            # tracing.indented_logging(f"Cache: HIT ({cache_file})")
             return value, True
         except FileNotFoundError, Exception:
             self._throw_on_miss(key)
@@ -63,7 +63,7 @@ class Cache:
             cache_file.parent.mkdir(parents=True, exist_ok=True)
             with temporary_file.open("wb") as f:
                 pickle.dump(value, f, protocol=pickle.HIGHEST_PROTOCOL)
-            tracing.indented_logging(f"Cache: STORE ({cache_file})")
+            # tracing.indented_logging(f"Cache: STORE ({cache_file})")
             temporary_file.replace(cache_file)
         except Exception as exc:
             tracing.indented_logging(
