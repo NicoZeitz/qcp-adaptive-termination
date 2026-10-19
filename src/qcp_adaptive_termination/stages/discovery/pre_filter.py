@@ -1193,8 +1193,8 @@ async def filter_embeddings_boundary_recursive_v3(
 
         # --- Aggregate call with compact coverage summary ---
         coverage_lines = [
-            f"Agent {name}: covers {agent_coverage[name][0]}"
-            + (f" — missing: {agent_coverage[name][1]}" if agent_coverage[name][1] else "")
+            f"Agent {name}: {agent_coverage[name][0]}"
+            + (f"- Missing: {agent_coverage[name][1]}" if agent_coverage[name][1] else "")
             for name in selected_order
         ]
         agent_coverage_summary = "\n".join(coverage_lines)

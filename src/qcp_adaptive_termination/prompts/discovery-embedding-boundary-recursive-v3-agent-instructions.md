@@ -10,6 +10,6 @@ After deciding relevance, carefully check: using only the data available in this
 
 Return:
 - **is_relevant**: true if this agent's database can contribute to answering the query
-- **covered_aspects**: if relevant, a short phrase describing what part of the query this agent can help answer. Empty string if not relevant.
-- **missing_aspects**: a short phrase describing any data this agent would need from another source to fully contribute: lookups, mappings, or reference data not present in this schema and not given in the query. Empty string if this agent is self-sufficient or not relevant.
+- **covered_aspects**: if relevant, a short and concise phrase describing what part of the query this agent can help answer. Empty string if not relevant.
+- **missing_aspects**: a short and concise phrase describing any data this agent would need from another source to fully contribute: lookups, mappings, or reference data not present in this schema and not given in the query. Empty string if this agent is self-sufficient or not relevant.
 - **reasoning**: a short explanation of your decision
