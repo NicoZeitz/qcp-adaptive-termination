@@ -6,8 +6,10 @@ You receive a single candidate agent with its full database schema. Decide wheth
 
 Be generous — prefer false positives over false negatives. If there is any reasonable chance this agent holds relevant data, mark it as relevant.
 
+After deciding relevance, carefully check: using only the data available in this agent's schema combined with any literal values given in the query itself, can this agent fully satisfy its part of the query? If it would need additional lookup data that is not in this schema and not provided in the query, state that explicitly in missing_aspects.
+
 Return:
 - **is_relevant**: true if this agent's database can contribute to answering the query
 - **covered_aspects**: if relevant, a short phrase describing what part of the query this agent can help answer. Empty string if not relevant.
-- **missing_aspects**: if relevant, a short phrase describing what the query still needs that this agent cannot provide. Empty string if not relevant or if this agent fully covers the query.
+- **missing_aspects**: a short phrase describing any data this agent would need from another source to fully contribute: lookups, mappings, or reference data not present in this schema and not given in the query. Empty string if this agent is self-sufficient or not relevant.
 - **reasoning**: a short explanation of your decision
