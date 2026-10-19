@@ -1,9 +1,9 @@
 """
 Execution result and outcome models.
 
-Defines the outcome types (`EvaluatorDecision`, `FinalResultOutcome`,
-`QueryMoreAgentsOutcome`, `RaiseNeedOutcome`), per-step execution results
-(`SuccessfulExecution`, `FailedExecution`), and the final `ExecutionResult`.
+Defines the outcome types (`StopDecision`, `RaiseNeedOutcome`), per-step
+execution results (`SuccessfulExecution`, `FailedExecution`), and the final
+`ExecutionResult`.
 """
 
 from qcp_adaptive_termination.models.execution.additional_information import (
@@ -11,11 +11,8 @@ from qcp_adaptive_termination.models.execution.additional_information import (
 )
 from qcp_adaptive_termination.models.execution.execution_result import ExecutionResult
 from qcp_adaptive_termination.models.execution.outcome import (
-    EstimatorDecision,
-    EvaluatorDecision,
-    FinalResultOutcome,
-    QueryMoreAgentsOutcome,
     RaiseNeedOutcome,
+    StopDecision,
 )
 from qcp_adaptive_termination.models.execution.partial_query_answer import (
     PartialQueryAnswer,
@@ -28,14 +25,11 @@ from qcp_adaptive_termination.models.execution.query_plan_step_execution_result 
 
 __all__ = [
     "AdditionalInformation",
-    "EstimatorDecision",
-    "EvaluatorDecision",
     "ExecutionResult",
     "FailedExecution",
-    "FinalResultOutcome",
     "PartialQueryAnswer",
-    "QueryMoreAgentsOutcome",
     "QueryPlanStepExecutionResult",
     "RaiseNeedOutcome",
+    "StopDecision",
     "SuccessfulExecution",
 ]

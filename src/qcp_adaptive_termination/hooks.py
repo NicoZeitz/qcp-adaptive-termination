@@ -79,6 +79,9 @@ class HookEvent(StrEnum):
     EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_LLM = (
         "execution_execute_query_plan_execute_step_answer_step_multiple_agents_completeness_llm"
     )
+    EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_RESULT_PRODUCER = (
+        "execution_execute_query_plan_execute_step_answer_step_multiple_agents_result_producer"
+    )
     EXECUTION_REPLAN = "execution_replan"
     EXECUTION_REPLAN_DRAFT_QUERY_PLAN = "execution_replan_draft_query_plan"
 

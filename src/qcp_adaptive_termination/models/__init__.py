@@ -25,8 +25,9 @@ from qcp_adaptive_termination.models.estimation import (
     AggregationType,
     AlignedResultList,
     AlignedSchemaMetadata,
-    EstimatorMode,
-    EstimatorStatistics,
+    ConfidenceIntervalType,
+    CountEstimator,
+    ValueEstimator,
 )
 from qcp_adaptive_termination.models.need_type import (
     NeedType,
@@ -67,8 +68,9 @@ __all__ = [
     "AggregationType",
     "AlignedResultList",
     "AlignedSchemaMetadata",
-    "EstimatorMode",
-    "EstimatorStatistics",
+    "ConfidenceIntervalType",
+    "CountEstimator",
+    "ValueEstimator",
     # need
     "need_type",
     "NeedType",

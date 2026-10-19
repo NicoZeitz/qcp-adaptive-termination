@@ -79,7 +79,7 @@ def run_script(
 
     config = load_config(args.config)
     input_file = Path(args.input)
-    output_dir = Path(args.output_dir) / datetime_str if args.output_dir else None
+    output_dir = Path(args.output_dir) if args.output_dir else None
     cache_dir = Path(args.cache_dir) if args.cache_dir else None
     data_dir = Path(args.data_dir) if args.data_dir else input_file.parent
 

@@ -1,9 +1,5 @@
 """
-Estimation data models.
-
-Defines `EstimatorMode` (enum controlling what statistics are reported),
-`EstimatorStatistics` (per-iteration stats snapshot), `AlignedResultList`
-and `AlignedSchemaMetadata` (schema-aligned result accumulation).
+Estimation data models
 """
 
 from enum import StrEnum
@@ -11,6 +7,69 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field
 
 from qcp_adaptive_termination.models.result_type import ResultType, SerializedResultType
+
+
+class CountEstimator(StrEnum):
+    """Strategy for estimating the total number of unique entities in the population."""
+
+    CHAO92 = "chao92"
+    """Coverage-based estimator corrected for skew in the publicity distribution via CV²."""
+
+    CHAO84 = "chao84"
+    """Estimator based on the ratio of singletons to doubletons (f1² / 2·f2)."""
+
+    JACKKNIFE1 = "jackknife1"
+    """First-order jackknife: adds the singleton count f1 as a bias correction."""
+
+    JACKKNIFE2 = "jackknife2"
+    """Second-order jackknife: adds 2·f1 and subtracts f2 for a lower-bias estimate."""
+
+    UNSEEN = "unseen"
+    """
+    Linear-programming estimator that fits a non-parametric frequency distribution
+    and extrapolates the number of unseen species.
+    """
+
+
+class ValueEstimator(StrEnum):
+    """Strategy for estimating the attribute values of missing entities."""
+
+    NAIVE = "naive"
+    """
+    Mean substitution: assumes missing entities have the same average value
+    as all observed entities (φ_K / c).
+    """
+
+    FREQUENCY = "frequency"
+    """
+    Singleton-mean substitution: uses the average value of singletons (φ_f1 / f1)
+    as a proxy for missing entities, which are most similar to rarely seen ones.
+    """
+
+    FREQUENCY_F12 = "frequency_f12"
+    """
+    Singleton+doubleton-mean substitution: averages over singletons and doubletons
+    (φ_f12 / (f1 + f2)) to reduce variance compared to singletons alone.
+    """
+
+    GOOD_TURING = "good_turing"
+    """
+    Good-Turing frequency smoothing: derives Δ directly from φ_f1 and the ratio
+    f1 / (n - f1) without a separate count estimator.
+    """
+
+
+class ConfidenceIntervalType(StrEnum):
+    """Method used to compute confidence intervals for the count estimate."""
+
+    GOOD_TURING = "good_turing"
+    """Bounds the missing mass M0 with an additive error term and converts to N via N = c / (1 - M0)."""
+
+    CHAO84 = "chao84"
+    """
+    Asymmetric log-normal confidence interval for N - c; tighter than the Good-Turing bound.
+    Falls back to Good-Turing when there are no doubletons.
+    """
 
 
 class AggregationType(StrEnum):
@@ -22,80 +81,6 @@ class AggregationType(StrEnum):
     Q25 = "q25"
     MEDIAN = "median"
     Q75 = "q75"
-
-
-class EstimatorMode(StrEnum):
-    FULL = "full"
-    """
-    Coverage, observed count + value, estimated count + value with intervals.
-
-    Example:
-        Aggregation type: sum
-        Agents queried: 2 /  5 (40.00%)
-        New unique entries added by this agent: 4
-        Sample Coverage: 0.500
-        Observed count: 6
-        Estimated count: 13.000
-        Estimated count confidence interval: [6.300, 59.358]
-        Observed sum: 880.0
-        Estimated sum: 1700.000
-        Estimated sum confidence interval: [-555.879, 28043.966]
-    """
-
-    COUNT_ONLY = "count_only"
-    """
-    Coverage, observed count, estimated count with intervals. No value estimates.
-
-    Example:
-        Aggregation type: sum
-        Agents queried: 2 /  5 (40.00%)
-        New unique entries added by this agent: 4
-        Sample Coverage: 0.500
-        Observed count: 6
-        Estimated count: 13.000
-        Estimated count confidence interval: [6.300, 59.358]
-    """
-
-    VALUE_ONLY = "value_only"
-    """
-    Coverage, observed value, estimated value with intervals. No count estimates.
-
-    Example:
-        Aggregation type: sum
-        Agents queried: 2 /  5 (40.00%)
-        New unique entries added by this agent: 4
-        Sample Coverage: 0.500
-        Observed sum: 880.0
-        Estimated sum: 1700.000
-        Estimated sum confidence interval: [-555.879, 28043.966]
-    """
-
-    OBSERVED_ONLY = "observed_only"
-    """
-    Coverage, observed count and value. No estimates.
-
-    Example:
-        Aggregation type: sum
-        Agents queried: 2 /  5 (40.00%)
-        New unique entries added by this agent: 4
-        Sample Coverage: 0.500
-        Observed count: 6
-        Observed sum: 880.0
-    """
-
-    COVERAGE_ONLY = "coverage_only"
-    """
-    Coverage and agent progress only. No counts or values.
-
-    Example:
-        Aggregation type: sum
-        Agents queried: 2 /  5 (40.00%)
-        New unique entries added by this agent: 4
-        Sample Coverage: 0.500
-    """
-
-    NONE = "none"
-    """No statistics injected — evaluator decides from the result list alone."""
 
 
 class AlignedSchemaMetadata(BaseModel):
@@ -113,41 +98,3 @@ class AlignedResultList(BaseModel):
 
     data: SerializedResultType = ResultType()
     schema_metadata: AlignedSchemaMetadata
-
-
-class EstimatorStatistics(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    sample_coverage: float | None = None
-
-    new_unique_count: int
-
-    agents_queried: int
-    agents_total: int
-
-    aggregation_types: list[AggregationType]
-
-    observed_count: int
-    estimated_count: float | None = None
-    estimated_count_lower: float | None = None
-    estimated_count_upper: float | None = None
-
-    observed_value_sum: float | None = None
-    observed_value_avg: float | None = None
-    observed_value_min: float | None = None
-    observed_value_max: float | None = None
-    observed_value_q25: float | None = None
-    observed_value_median: float | None = None
-    observed_value_q75: float | None = None
-
-    estimated_value_sum: float | None = None
-    estimated_value_sum_lower: float | None = None
-    estimated_value_sum_upper: float | None = None
-    estimated_value_avg: float | None = None
-    estimated_value_avg_lower: float | None = None
-    estimated_value_avg_upper: float | None = None
-    estimated_value_min: float | None = None
-    estimated_value_max: float | None = None
-    estimated_value_q25: float | None = None
-    estimated_value_median: float | None = None
-    estimated_value_q75: float | None = None

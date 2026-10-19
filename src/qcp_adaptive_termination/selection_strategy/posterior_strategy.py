@@ -2,7 +2,6 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import cast
 
-import evoc
 import numpy as np
 from datasketches import (
     compact_theta_sketch,
@@ -152,6 +151,8 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         # EVoC's knn graph requires n_samples > n_neighbors (default 15); fall back for small sets
         if len(remaining) <= 15:
             return self._calculate_non_clustered_prior(remaining, state, precomputed)
+
+        import evoc  # lazy: numba JIT on import is expensive; only needed for clustered prior
 
         reference_embeddings = np.array(state.queried_embeddings, dtype=float)
 

@@ -7,6 +7,7 @@ and get no budget.
 """
 
 import math
+from typing import assert_never
 
 from qcp_adaptive_termination.models import ApportionmentType, StepBudget
 from qcp_adaptive_termination.models.query_plan import (
@@ -44,4 +45,4 @@ def compute_step_budgets(
 
         return budgets
 
-    raise ValueError(f"Unsupported apportionment: {apportionment}")
+    assert_never(apportionment)

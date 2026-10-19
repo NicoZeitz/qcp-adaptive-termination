@@ -1,4 +1,4 @@
-"""Evaluation utilities for selection strategy benchmarking."""
+"""Coverage-curve metrics for selection strategy evaluation."""
 
 from dataclasses import dataclass
 
@@ -12,15 +12,6 @@ class EvaluationCurve:
     x: list[float]
     y: list[float]
     auc: float
-
-
-@dataclass(slots=True)
-class EvaluationResult:
-    """Full evaluation result for one strategy run."""
-
-    query: str
-    strategy: str
-    curve: EvaluationCurve
 
 
 def compute_auc(coverages: list[float]) -> float:

@@ -24,7 +24,7 @@ from qcp_adaptive_termination.models.execution import (
 from qcp_adaptive_termination.models.query_plan import QueryPlan
 from qcp_adaptive_termination.models.stages import CollaborativeQueryAnsweringResult, Stage
 from qcp_adaptive_termination.observability import cache, context, tracing
-from qcp_adaptive_termination.stages.execution.execute_query_plan_next_step import (
+from qcp_adaptive_termination.stages.execution.execute_query_plan_next_nodes import (
     execute_query_plan_next_nodes,
 )
 from qcp_adaptive_termination.stages.execution.replanning import replan

@@ -136,8 +136,7 @@ class Bucket:
         self._ensure_fresh()
         return self.number_of_unique_samples
 
-    @property
-    def f1_count(self) -> int:
+    def singleton_count(self) -> int:
         """Number of entities observed exactly once (singletons) in this bucket."""
         self._ensure_fresh()
         return self.f[0] if self.f else 0

@@ -53,18 +53,13 @@ def _compute_all_stats(estimator: Estimator) -> None:
     estimator.sample_max()
     for q in (0.25, 0.5, 0.75):
         estimator.sample_quantile(q)
-    estimator.estimated_count(COUNT_EST, use_bucket=True, use_monte_carlo=USE_MC)
-    estimator.estimated_sum(VALUE_EST, COUNT_EST, use_bucket=True, use_monte_carlo=USE_MC)
-    estimator.estimated_avg(
-        use_bucket=True,
-        bucket_count_estimator=COUNT_EST,
-        bucket_value_estimator=VALUE_EST,
-        bucket_use_monte_carlo=USE_MC,
-    )
-    estimator.estimated_min(COUNT_EST, bucket_value_estimator=VALUE_EST, use_monte_carlo=USE_MC)
-    estimator.estimated_max(COUNT_EST, bucket_value_estimator=VALUE_EST, use_monte_carlo=USE_MC)
+    estimator.estimated_count()
+    estimator.estimated_sum()
+    estimator.estimated_avg()
+    estimator.estimated_min()
+    estimator.estimated_max()
     for q in (0.25, 0.5, 0.75):
-        estimator.estimated_quantile(q, COUNT_EST, bucket_value_estimator=VALUE_EST, use_monte_carlo=USE_MC)
+        estimator.estimated_quantile(q)
 
 
 def _generate_data(rng: random.Random) -> list[list[DataItem]]:
@@ -92,15 +87,11 @@ def _run_forced_split(sources: list[list[DataItem]]) -> None:
     build_t = time.perf_counter() - t0
 
     t1 = time.perf_counter()
-    buckets, weights = est._get_bucket_weights(  # type: ignore[reportPrivateUsage]
-        bucket_value_estimator=VALUE_EST,
-        count_estimator=COUNT_EST,
-        use_monte_carlo=False,
-        max_buckets=100,
-    )
+    buckets, subs = est._get_sub_estimators()  # type: ignore[reportPrivateUsage]
+    weights = est._bucket_weights(subs)  # type: ignore[reportPrivateUsage]
     split_t = time.perf_counter() - t1
 
-    n_hat_global = est.estimated_count(COUNT_EST, use_bucket=False)
+    n_hat_global = est.estimated_count()
     logging.info("Build %.2fs | Split %.2fs | Buckets: %d", build_t, split_t, len(buckets))
     logging.info(
         "Global: c=%d  N_hat=%.0f  ratio=%.2f×",
@@ -135,12 +126,7 @@ def _run_benchmark(sources: list[list[DataItem]]) -> list[float]:
         elapsed = time.perf_counter() - t0
         step_times.append(elapsed)
 
-        buckets, _ = estimator._get_bucket_weights(  # type: ignore[reportPrivateUsage]
-            bucket_value_estimator=VALUE_EST,
-            count_estimator=COUNT_EST,
-            use_monte_carlo=USE_MC,
-            max_buckets=100,
-        )
+        buckets, _ = estimator._get_sub_estimators()  # type: ignore[reportPrivateUsage]
         logging.info("step %4d/%d | %.3fs | buckets=%d", i + 1, AGENTS, elapsed, len(buckets))
 
     return step_times

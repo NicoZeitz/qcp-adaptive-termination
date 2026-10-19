@@ -1,9 +1,11 @@
-estimator_mode: full
-count_estimator: chao92
-value_estimator: naive
-use_bucket: false
-use_monte_carlo: false
-include_confidence_intervals: true
+estimator:
+  count_estimator: chao92
+  value_estimator: naive
+  use_bucket: true
+  use_monte_carlo: false
+  max_buckets: 100
+  confidence_interval_type: chao84
+  confidence_epsilon: 0.05
 
 target_confidence: 0.95
 apportionment: weighted
@@ -25,32 +27,32 @@ embedding_model: "openai/text-embedding-3-large"
 
 agent_configs:
   discovery-coordinator-relevance:
-    model: "university/zai-org/GLM-5.3-Flash"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
   planning-draft-query-plan:
-    model: "university/zai-org/GLM-5.3-Flash"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
   execution-answer-step-coordinator:
-    model: "university/zai-org/GLM-5.3-Flash"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
   execution-replan-draft-query-plan:
-    model: "university/zai-org/GLM-5.3-Flash"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
   execution-align-schema:
-    model: "university/zai-org/GLM-5.3-Flash"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
   execution-completeness-llm:
-    model: "university/zai-org/GLM-5.3-Flash"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
   execution-result-producer:
-    model: "university/zai-org/GLM-5.3-Flash"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
   discovery-data-agent-schema-description:
-    model: "university/zai-org/GLM-5.3-Flash"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
   discovery-data-agent-relevance:
-    model: "university/zai-org/GLM-5.3-Flash"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
   execution-query-data-agent:
-    model: "university/zai-org/GLM-5.3-Flash"
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"

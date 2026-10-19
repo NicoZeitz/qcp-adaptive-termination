@@ -2,9 +2,12 @@ from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from qcp_adaptive_termination.estimator import CountEstimator, Estimator, ValueEstimator
 from qcp_adaptive_termination.models.cache_mode import CacheMode
-from qcp_adaptive_termination.models.estimation import EstimatorMode
+from qcp_adaptive_termination.models.estimation import (
+    ConfidenceIntervalType,
+    CountEstimator,
+    ValueEstimator,
+)
 from qcp_adaptive_termination.models.selection_strategy_type import SelectionStrategyType
 from qcp_adaptive_termination.models.uncertainty import ApportionmentType
 
@@ -17,6 +20,20 @@ class RoleConfig(BaseModel):
     reasoning_summary: Literal["auto", "concise", "detailed"] | None = None
 
 
+class EstimatorConfig(BaseModel):
+    """Configuration for the unknown-unknowns estimator."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    count_estimator: CountEstimator = CountEstimator.CHAO92
+    value_estimator: ValueEstimator = ValueEstimator.NAIVE
+    use_bucket: bool = True
+    use_monte_carlo: bool = False
+    max_buckets: int = 100
+    confidence_interval_type: ConfidenceIntervalType = ConfidenceIntervalType.CHAO84
+    confidence_epsilon: float = 0.05
+
+
 class Config(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", frozen=True)
 
@@ -25,12 +42,7 @@ class Config(BaseModel):
     selection_type: SelectionStrategyType = SelectionStrategyType.RANDOM
     align_schema_agent_limit: int = 1000
 
-    estimator_mode: EstimatorMode = EstimatorMode.FULL
-    count_estimator: CountEstimator = Estimator.DEFAULT_COUNT_ESTIMATOR
-    value_estimator: ValueEstimator = Estimator.DEFAULT_VALUE_ESTIMATOR
-    use_bucket: bool = True
-    use_monte_carlo: bool = False
-    include_confidence_intervals: bool = True
+    estimator: EstimatorConfig = Field(default_factory=EstimatorConfig)
 
     target_confidence: float = 0.95
     """Global confidence threshold with which the final result must hold."""

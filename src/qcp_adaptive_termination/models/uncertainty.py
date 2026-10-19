@@ -36,7 +36,6 @@ class StopReason(StrEnum):
     ESTIMATOR = "estimator"
     LLM = "llm"
     ALL_AGENTS = "all_agents"
-    NEED = "need"
 
 
 class StepUncertainty(BaseModel):
@@ -75,4 +74,4 @@ class StepUncertainty(BaseModel):
     """True if the observed max is confirmed (no missing entity above it)."""
 
     stop_reason: StopReason | None = None
-    """How this step stopped: estimator, llm, all_agents, or need."""
+    """How this step stopped: estimator, llm, or all_agents."""
