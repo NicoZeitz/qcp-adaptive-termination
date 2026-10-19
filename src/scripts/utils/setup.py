@@ -81,7 +81,8 @@ def run_script(
     input_file = Path(args.input)
     output_dir = Path(args.output_dir) if args.output_dir else None
     cache_dir = Path(args.cache_dir) if args.cache_dir else None
-    data_dir = Path(args.data_dir) if args.data_dir else input_file.parent
+    dataset_dir = Path(args.dataset_dir) if args.dataset_dir else input_file.parent.parent.parent
+    data_dir = dataset_dir.parent
 
     start_stage = cast(Stage, args.start_stage)
     end_stage = cast(Stage, args.end_stage)

@@ -1,8 +1,8 @@
 """CLI entrypoint for evaluation scripts.
 
 Usage:
-    python -m scripts.evaluation selection-strategies --input_dir ... --output_dir ... --data_dir ...
-    python -m scripts.evaluation estimator --input_dir ... --output_dir ... --data_dir ...
+    python -m scripts.evaluation selection-strategies --dataset_dir ... --output_dir ...
+    python -m scripts.evaluation estimator --dataset_dir ... --output_dir ...
 """
 
 import argparse
@@ -37,31 +37,31 @@ async def _run_subcommand(args: argparse.Namespace) -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     parallel = not args.sequential
+    dataset_dir = Path(args.dataset_dir)
+    input_dir = dataset_dir / "_meta" / "input"
 
     if args.subcommand == "selection-strategies":
         await run_parallel(
             selection_strategy_evaluation.run_query,
-            input_dir=args.input_dir,
+            dataset_dir=dataset_dir,
             config=config,
-            data_dir=args.data_dir,
             output_dir=output_dir,
             cache_dir=args.cache_dir,
             parallel=parallel,
             max_workers=args.max_workers,
         )
-        selection_strategy_evaluation.aggregate(output_dir, args.input_dir)
+        selection_strategy_evaluation.aggregate(output_dir, input_dir)
     elif args.subcommand == "estimator":
         await run_parallel(
             estimator_evaluation.run_query,
-            input_dir=args.input_dir,
+            dataset_dir=dataset_dir,
             config=config,
-            data_dir=args.data_dir,
             output_dir=output_dir,
             cache_dir=args.cache_dir,
             parallel=parallel,
             max_workers=args.max_workers,
         )
-        estimator_evaluation.aggregate(output_dir, args.input_dir)
+        estimator_evaluation.aggregate(output_dir, input_dir)
     else:
         raise ValueError(f"Unknown subcommand: {args.subcommand}")
 

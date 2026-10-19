@@ -152,10 +152,10 @@ def argument_parser(
         help="Directory for cache files (default: .cache/ at project root)",
     )
     parser.add_argument(
-        "--data_dir",
+        "--dataset_dir",
         type=str,
         default=None,
-        help="Root directory for agent data files (default: parent of input file)",
+        help="Dataset folder containing _meta/input (default: derived from input file)",
     )
     return parser
 
@@ -169,7 +169,8 @@ def main() -> None:
     input_file = Path(args.input)
     output_dir = Path(args.output_dir) if args.output_dir else None
     cache_dir = Path(args.cache_dir) if args.cache_dir else None
-    data_dir = Path(args.data_dir) if args.data_dir else input_file.parent
+    dataset_dir = Path(args.dataset_dir) if args.dataset_dir else input_file.parent.parent.parent
+    data_dir = dataset_dir.parent
 
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)

@@ -24,7 +24,7 @@ async def _run_worker(
     worker: Callable[..., Awaitable[Any]],
     input_file: Path,
     config: Config,
-    data_dir: Path,
+    dataset_dir: Path,
     output_dir: Path,
     cache_dir: Path | None,
     extra: dict[str, Any] | None,
@@ -42,14 +42,14 @@ async def _run_worker(
     with (
         context.logging_context(run_output_dir),
         context.tracing_context(f"[QCP-EVAL] {query_slug}", run_output_dir),
-        context.data_context(data_dir),
+        context.data_context(dataset_dir.parent),
         context.config_context(config),
         context.cache_context(cache_dir) if cache_dir is not None else contextlib.nullcontext(),
     ):
         return await worker(
             input_file=input_file,
             config=config,
-            data_dir=data_dir,
+            dataset_dir=dataset_dir,
             output_dir=output_dir,
             cache_dir=cache_dir,
             data=data,
@@ -59,9 +59,8 @@ async def _run_worker(
 
 async def run_parallel(
     worker: Callable[..., Awaitable[Any]],
-    input_dir: Path,
+    dataset_dir: Path,
     config: Config,
-    data_dir: Path,
     output_dir: Path,
     cache_dir: Path | None = None,
     *,
@@ -69,10 +68,11 @@ async def run_parallel(
     max_workers: int | None = None,
     extra: dict[str, Any] | None = None,
 ) -> list[Any]:
-    """Run `worker` for every input file, in parallel or sequentially.
+    """Run `worker` for every input file in ``dataset_dir/_meta/input``.
 
     Returns the list of worker results in input-file order.
     """
+    input_dir = dataset_dir / "_meta" / "input"
     input_files = sorted(input_dir.glob("*.json"))
     if not input_files:
         logging.warning("No input files found in %s", input_dir)
@@ -94,7 +94,7 @@ async def run_parallel(
                 worker,
                 input_file,
                 config,
-                data_dir,
+                dataset_dir,
                 output_dir,
                 cache_dir,
                 extra,
@@ -112,22 +112,26 @@ def _run_worker_sync(
     worker: Callable[..., Awaitable[Any]],
     input_file: Path,
     config: Config,
-    data_dir: Path,
+    dataset_dir: Path,
     output_dir: Path,
     cache_dir: Path | None,
     extra: dict[str, Any] | None,
 ) -> Any:
     """Process-pool entry point: run the async worker in a fresh event loop."""
-    return asyncio.run(_run_worker(worker, input_file, config, data_dir, output_dir, cache_dir, extra))
+    return asyncio.run(_run_worker(worker, input_file, config, dataset_dir, output_dir, cache_dir, extra))
 
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:
     """Add the shared CLI args used by all evaluation subcommands."""
-    parser.add_argument("--input_dir", type=Path, required=True, help="Directory containing input query JSON files")
+    parser.add_argument(
+        "--dataset_dir",
+        type=Path,
+        required=True,
+        help="Dataset folder containing _meta/input (query JSONs) and _meta/meta_mapping.yaml",
+    )
     parser.add_argument(
         "--output_dir", type=Path, required=True, help="Directory to write per-query + aggregate results"
     )
-    parser.add_argument("--data_dir", type=Path, required=True, help="Root directory for agent data files")
     parser.add_argument("--cache_dir", type=Path, default=None, help="Directory for cache files")
     parser.add_argument("--config", type=str, default=None, help="Config as a YAML file path or inline YAML string")
     parser.add_argument("--parallel", action="store_true", default=True, help="Run queries in parallel (default)")

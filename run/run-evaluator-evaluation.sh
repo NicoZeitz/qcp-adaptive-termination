@@ -6,14 +6,14 @@ source "${RUN_DIR}/setup.sh"
 
 RUN_NAME="evaluate-estimator"
 DATASET_NAME="wikidata-federated-overlap-dataset"
+DATASET_DIR="dataset"
 
-echo "================== Running '${RUN_NAME}' with dataset '${DATASET_NAME}'"
+echo "================== Running '${RUN_NAME}' with dataset '${DATASET_NAME}/${DATASET_DIR}'"
 LOG_DIR="${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}-$(date +%Y-%m-%d-%H-%M)"
 mkdir -p "${LOG_DIR}"
 
 python3 -m scripts.evaluation estimator \
-  --data_dir "${BASE_DATASET_DIR}/${DATASET_NAME}" \
-  --input_dir "${BASE_DATASET_DIR}/${DATASET_NAME}/dataset/_meta/input" \
+  --dataset_dir "${BASE_DATASET_DIR}/${DATASET_NAME}/${DATASET_DIR}" \
   --output_dir "${LOG_DIR}" \
   --cache_dir "${CACHE_DIR}" \
   --config "${PROJECT_DIR}/config.yaml" \

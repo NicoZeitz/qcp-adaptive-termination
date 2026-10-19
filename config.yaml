@@ -31,19 +31,19 @@ agent_configs:
     reasoning_effort: "none"
   planning-draft-query-plan:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   execution-answer-step-coordinator:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
   execution-replan-draft-query-plan:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   execution-align-schema:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
   execution-completeness-llm:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   execution-result-producer:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"

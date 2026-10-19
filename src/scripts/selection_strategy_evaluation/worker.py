@@ -301,7 +301,7 @@ async def run_query(
     *,
     input_file: Path,
     config: Config,
-    data_dir: Path,
+    dataset_dir: Path,
     output_dir: Path,
     cache_dir: Path | None,
     data: CollaborativeQueryAnswering,
@@ -323,7 +323,8 @@ async def run_query(
         logging.warning("%s: no multi-agent steps — skipping", input_file.stem)
         return
 
-    meta_mapping = load_meta_mapping(data_dir)
+    data_dir = dataset_dir.parent
+    meta_mapping = load_meta_mapping(dataset_dir)
     all_agents = data.data_agents
     relevant_agent_names: set[str] = set(extra.get("relevant_data_agents", []))
     relevant_data_agents = [a for a in all_agents if a.name in relevant_agent_names]

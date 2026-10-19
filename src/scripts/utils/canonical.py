@@ -32,11 +32,11 @@ from scripts.utils.sql import rewrite_sql_identifiers
 _META_MAPPING_CACHE: dict[str, Any] | None = None
 
 
-def load_meta_mapping(data_dir: Path) -> dict[str, Any]:
+def load_meta_mapping(dataset_dir: Path) -> dict[str, Any]:
     """Load and cache the canonical-to-actual schema mapping."""
     global _META_MAPPING_CACHE
     if _META_MAPPING_CACHE is None:
-        mapping_path = data_dir / "dataset" / "_meta" / "meta_mapping.yaml"
+        mapping_path = dataset_dir / "_meta" / "meta_mapping.yaml"
         with open(mapping_path) as f:
             _META_MAPPING_CACHE = cast(dict[str, Any], yaml.safe_load(f) or {})
     return _META_MAPPING_CACHE
