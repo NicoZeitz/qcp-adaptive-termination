@@ -539,6 +539,20 @@ class _AggregateResult(BaseModel):
     reasoning: str
 
 
+class _AgentRelevanceResultV3(BaseModel):
+    is_relevant: bool
+    covered_aspects: str
+    missing_aspects: str
+    reasoning: str
+
+
+class _AggregateResultV3(BaseModel):
+    is_complete: bool
+    data_not_available: bool
+    sub_queries: list[str]
+    reasoning: str
+
+
 async def filter_embeddings_boundary_recursive(
     query: str,
     data_agents: list[DataAgent],
@@ -835,12 +849,13 @@ async def filter_embeddings_boundary_recursive_v2(
     query_idx = 0
     while query_idx < len(query_queue) and query_idx < max_queries:
         current_query = query_queue[query_idx]
-        query_idx += 1
 
         if current_query in processed_queries:
             logging.info("Boundary-recursive-v2: skipping already-processed query %r", current_query)
             continue
         processed_queries.add(current_query)
+
+        query_idx += 1
 
         # --- Boundary Finder for current_query ---
         (cq_embedding,) = await embedding.create([current_query])
@@ -974,6 +989,272 @@ async def filter_embeddings_boundary_recursive_v2(
 
     logging.info(
         "Boundary-recursive-v2 total: kept %d / %d agents after %d queries  queue=%s  rejected=%s",
+        len(filtered),
+        len(data_agents),
+        len(processed_queries),
+        query_queue,
+        sorted(a.name for a in data_agents if a.name not in selected_set),
+    )
+
+    hooks.emit(
+        HookEvent.EMBEDDING_PRE_FILTER_END,
+        query=query,
+        embedding_filtered_agents=filtered,
+        total_agents=len(data_agents),
+        l2_scores=l2_scores,
+        after_llm_filter_agents=selected_order,
+    )
+    tracing.append_to_span_output(
+        {
+            "after_llm_filter_agents": selected_order,
+            "after_llm_filter_count": len(filtered),
+            "filtered_agents": [a.name for a in filtered],
+            "l2_scores": l2_scores,
+            "best_columns": {name: f"{tbl}.{col}" for name, (_, tbl, col) in agent_best.items()},
+        }
+    )
+
+    return filtered
+
+
+async def filter_embeddings_boundary_recursive_v3(
+    query: str,
+    data_agents: list[DataAgent],
+    max_queries: int = 20,
+) -> list[DataAgent]:
+    """Queue-based two-phase filter with per-agent coverage summaries.
+
+    Like v2, but each per-agent call also returns covered_aspects and missing_aspects.
+    The aggregate call receives a compact coverage summary instead of full schemas,
+    drastically reducing context size.
+    """
+    obs_context.get_usage_accumulator()
+
+    agent_data = await agent_registry.load(data_agents)
+
+    # --- Build column vector index (shared across all queries) ---
+    col_entries: list[tuple[str, str, str]] = []
+    col_descriptions: list[str] = []
+    for agent in data_agents:
+        data = agent_data[agent.name]
+        for table_name, table_desc in data.individual_descriptions.items():
+            for col_name, col_desc in table_desc.columns.items():
+                col_entries.append((agent.name, table_name, col_name))
+                col_descriptions.append(
+                    f"{table_desc.natural_language_description} {col_desc.natural_language_description}"
+                )
+
+    if not col_entries:
+        logging.warning("Boundary-recursive-v3 filter: no column embeddings, returning all agents")
+        return data_agents
+
+    col_embeddings = await embedding.create(col_descriptions)
+    vector_index: VectorIndex[tuple[str, str, str]] = VectorIndex.build(
+        list(zip(col_entries, col_embeddings))
+    )
+
+    agent_map = {a.name: a for a in data_agents}
+    selected_order: list[str] = []
+    selected_set: set[str] = set()
+    rejected_set: set[str] = set()
+    agent_coverage: dict[str, tuple[str, str]] = {}  # name -> (covered_aspects, missing_aspects)
+    processed_queries: set[str] = set()
+    failed_queries: set[str] = set()
+    original_query_found_nothing: bool = False
+    query_queue: list[str] = [query]
+    agent_best: dict[str, tuple[float, str, str]] = {}
+    semaphore = asyncio.Semaphore(5)
+
+    async def _check_agent(agent_name: str, matched_sub_query: str, q_label: str) -> tuple[str, bool, str, str]:
+        schema = agent_data[agent_name].technical_description
+        async with semaphore:
+            while True:
+                try:
+                    result = await runner.run_llm(
+                        role=AgentRole.EMBEDDING_BOUNDARY_RECURSIVE_V3_AGENT,
+                        agent_name=f"{q_label} - {agent_name}",
+                        prompt_parameters={
+                            "query": query,
+                            "matched_sub_query": matched_sub_query if matched_sub_query != query else "",
+                            "agent_name": agent_name,
+                            "schema": schema,
+                        },
+                        output_type=_AgentRelevanceResultV3,
+                    )
+                    break
+                except APITimeoutError:
+                    logging.warning("Boundary-recursive-v3 agent LLM [%s] timed out — retrying", agent_name)
+                    await asyncio.sleep(2)
+        logging.info(
+            "Boundary-recursive-v3 agent [%s] is_relevant=%s matched_sub_query=%r covered=%r missing=%r — %s",
+            agent_name,
+            result.is_relevant,
+            matched_sub_query,
+            result.covered_aspects,
+            result.missing_aspects,
+            result.reasoning,
+        )
+        return agent_name, result.is_relevant, result.covered_aspects, result.missing_aspects
+
+    query_idx = 0
+    query_num = 0
+    while query_idx < len(query_queue) and len(processed_queries) < max_queries:
+        current_query = query_queue[query_idx]
+        query_idx += 1
+
+        if current_query in processed_queries:
+            logging.info("Boundary-recursive-v3: skipping already-processed query %r", current_query)
+            continue
+        processed_queries.add(current_query)
+        query_num += 1
+        query_label = f"query {query_num}"
+
+        # --- Boundary Finder for current_query ---
+        (cq_embedding,) = await embedding.create([current_query])
+
+        t_rank = time.monotonic()
+        cq_agent_best: dict[str, tuple[float, str, str]] = {}
+        for (agent_name, table_name, col_name), dist in vector_index.search_all(cq_embedding):
+            if agent_name not in cq_agent_best or dist < cq_agent_best[agent_name][0]:
+                cq_agent_best[agent_name] = (dist, table_name, col_name)
+            if agent_name not in agent_best or dist < agent_best[agent_name][0]:
+                agent_best[agent_name] = (dist, table_name, col_name)
+        obs_context.get_usage_accumulator().ranking_duration_ms += int((time.monotonic() - t_rank) * 1000)
+
+        sorted_cq = sorted(cq_agent_best.items(), key=lambda x: x[1][0])
+        ranked_lines = [
+            f"[{rank}] {name} | table: {tbl} · column: {col} | L2={dist:.4f}"
+            for rank, (name, (dist, tbl, col)) in enumerate(sorted_cq, start=1)
+        ]
+        logging.info("Boundary-recursive-v3 query %r — boundary ranked agents:", current_query)
+        for line in ranked_lines:
+            logging.info("  %s", line)
+
+        while True:
+            try:
+                boundary_result = await runner.run_llm(
+                    role=AgentRole.EMBEDDING_BOUNDARY_FINDER,
+                    agent_name=query_label,
+                    prompt_parameters={
+                        "query": current_query,
+                        "ranked_columns": "\n".join(ranked_lines),
+                    },
+                    output_type=BoundaryResult,
+                )
+                break
+            except APITimeoutError:
+                logging.warning("Boundary-recursive-v3 boundary LLM timed out for %r — retrying", current_query)
+                await asyncio.sleep(2)
+
+        new_candidates = [
+            n for n in boundary_result.relevant_agent_names
+            if n in agent_data and n not in selected_set and n not in rejected_set
+        ]
+        logging.info(
+            "Boundary-recursive-v3 query %r: %d new candidates: %s",
+            current_query,
+            len(new_candidates),
+            new_candidates,
+        )
+
+        if not new_candidates:
+            logging.info("Boundary-recursive-v3: no new candidates for query %r, skipping aggregate", current_query)
+            failed_queries.add(current_query)
+            continue
+
+        # --- Parallel per-agent relevance calls for new candidates ---
+        agent_results = await asyncio.gather(*[
+            _check_agent(n, current_query, query_label)
+            for n in new_candidates
+        ])
+
+        newly_confirmed = []
+        any_confirmed = False
+        for name, is_relevant, covered, missing in agent_results:
+            if is_relevant and name not in selected_set:
+                selected_order.append(name)
+                selected_set.add(name)
+                agent_coverage[name] = (covered, missing)
+                newly_confirmed.append(name)
+                any_confirmed = True
+            elif not is_relevant:
+                rejected_set.add(name)
+
+        if not any_confirmed:
+            failed_queries.add(current_query)
+            if current_query == query:
+                original_query_found_nothing = True
+
+        logging.info(
+            "Boundary-recursive-v3 query %r: newly confirmed=%s",
+            current_query,
+            newly_confirmed,
+        )
+
+        # --- Aggregate call with compact coverage summary ---
+        coverage_lines = [
+            f"Agent {name}: covers {agent_coverage[name][0]}"
+            + (f" — missing: {agent_coverage[name][1]}" if agent_coverage[name][1] else "")
+            for name in selected_order
+        ]
+        agent_coverage_summary = "\n".join(coverage_lines)
+        failed_queries_str = "\n".join(
+            f"- {q}" for q in failed_queries
+        )
+        pending_sub_queries_str = "\n".join(
+            f"- {q}" for q in query_queue[query_idx:] if q not in processed_queries
+        )
+
+        while True:
+            try:
+                agg_result = await runner.run_llm(
+                    role=AgentRole.EMBEDDING_BOUNDARY_RECURSIVE_V3_AGGREGATE,
+                    agent_name=query_label,
+                    prompt_parameters={
+                        "query": query,
+                        "agent_coverage_summary": agent_coverage_summary,
+                        "pending_sub_queries": pending_sub_queries_str,
+                        "failed_sub_queries": failed_queries_str,
+                        "original_query_found_nothing": "true" if original_query_found_nothing else "",
+                    },
+                    output_type=_AggregateResultV3,
+                )
+                break
+            except APITimeoutError:
+                logging.warning("Boundary-recursive-v3 aggregate LLM timed out — retrying")
+                await asyncio.sleep(2)
+
+        logging.info(
+            "Boundary-recursive-v3 query %r aggregate: is_complete=%s data_not_available=%s sub_queries=%s — %s",
+            current_query,
+            agg_result.is_complete,
+            agg_result.data_not_available,
+            agg_result.sub_queries,
+            agg_result.reasoning,
+        )
+
+        if agg_result.is_complete or agg_result.data_not_available:
+            logging.info(
+                "Boundary-recursive-v3: stopping — is_complete=%s data_not_available=%s after %d queries processed",
+                agg_result.is_complete,
+                agg_result.data_not_available,
+                len(processed_queries),
+            )
+            break
+
+        for sq in agg_result.sub_queries:
+            if sq not in processed_queries and sq not in query_queue:
+                query_queue.append(sq)
+                logging.info("Boundary-recursive-v3: enqueued sub_query %r", sq)
+
+    if len(processed_queries) >= max_queries:
+        logging.warning("Boundary-recursive-v3: max_queries=%d reached, stopping", max_queries)
+
+    filtered = [agent_map[name] for name in selected_order if name in agent_map]
+    l2_scores = {name: round(float(dist), 4) for name, (dist, _, _) in agent_best.items()}
+
+    logging.info(
+        "Boundary-recursive-v3 total: kept %d / %d agents after %d queries  queue=%s  rejected=%s",
         len(filtered),
         len(data_agents),
         len(processed_queries),
