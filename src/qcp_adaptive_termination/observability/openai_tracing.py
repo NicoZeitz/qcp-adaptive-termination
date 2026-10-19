@@ -6,7 +6,8 @@ _OPENAI_METADATA_MAX_CHARS = 512
 
 
 class TruncatingBackendSpanExporter(BackendSpanExporter):
-    """OpenAI exporter that also truncates span_data.data payloads and metadata strings.
+    """
+    OpenAI exporter that also truncates span_data.data payloads and metadata strings.
 
     The upstream exporter sanitizes input/output/usage but may still emit large
     custom span payloads under span_data.data, which the OpenAI traces ingest API

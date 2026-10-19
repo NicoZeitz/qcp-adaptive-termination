@@ -1,4 +1,5 @@
 import json
+import logging
 
 from pydantic import BaseModel
 
@@ -12,8 +13,11 @@ from qcp_adaptive_termination.models.query_plan import (
     MultiAgentQueryPlanStep,
     QueryPlan,
 )
+from qcp_adaptive_termination.models.stages import Stage
+from qcp_adaptive_termination.observability import tracing
+from qcp_adaptive_termination.stages.discovery import filter_relevant_agents
 from qcp_adaptive_termination.stages.planning import (
-    create_draft_query_plan_model,
+    create_query_plan_model,
     map_query_plan_model_to_query_plan,
 )
 
@@ -72,10 +76,6 @@ def create_reason_prompt_context(reason: FailedExecution) -> str:
     return json.dumps(reason_data, indent=2)
 
 
-def create_query_replan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
-    return create_draft_query_plan_model(data_agents)
-
-
 def map_query_replan_model_to_query_plan(
     query_replan_model: BaseModel, query: str, answer_map: dict[str, ResultType]
 ) -> QueryPlan:
@@ -88,23 +88,8 @@ def map_query_replan_model_to_query_plan(
     return query_plan
 
 
+@hooks.hook(HookEvent.EXECUTION_REPLAN_DRAFT_QUERY_PLAN)
 async def replan_query_plan(
-    data_agents: list[DataAgent],
-    relevant_data_agents: list[DataAgent],
-    query_plan: QueryPlan,
-    reason: FailedExecution,
-) -> QueryPlan:
-    return await hooks.call_override(
-        HookEvent.REPLAN_QUERY_PLAN_OVERRIDE,
-        default=lambda: _replan_via_llm(data_agents, relevant_data_agents, query_plan, reason),
-        data_agents=data_agents,
-        relevant_data_agents=relevant_data_agents,
-        query_plan=query_plan,
-        reason=reason,
-    )
-
-
-async def _replan_via_llm(
     data_agents: list[DataAgent],
     relevant_data_agents: list[DataAgent],
     query_plan: QueryPlan,
@@ -112,7 +97,7 @@ async def _replan_via_llm(
 ) -> QueryPlan:
     registry_string = await agent_registry.build_registry_string(relevant_data_agents, AgentRegistryType.TECHNICAL)
     answer_map = create_answer_map_from_query_plan(query_plan)
-    QueryReplanModel = create_query_replan_model(relevant_data_agents)
+    QueryReplanModel = create_query_plan_model(relevant_data_agents)
 
     result = await runner.run_llm(
         role=AgentRole.COORDINATOR_REPLANNING,
@@ -127,3 +112,52 @@ async def _replan_via_llm(
 
     query_plan = map_query_replan_model_to_query_plan(result, query_plan.query, answer_map)
     return query_plan
+
+
+@hooks.hook(HookEvent.EXECUTION_REPLAN, stage_context=True)
+async def replan(
+    attempt: int,
+    current_data_agents: list[DataAgent],
+    data_agents: list[DataAgent],
+    query_plan: QueryPlan,
+    failed_execution: FailedExecution,
+) -> tuple[list[DataAgent], QueryPlan]:
+    with tracing.own_span(
+        f"{attempt} - {Stage.EXECUTION.label} (Replan)",
+        input={
+            "attempt": attempt,
+            "current_data_agents": current_data_agents,
+            "data_agents": data_agents,
+            "query_plan": query_plan,
+            "failed_execution": failed_execution,
+        },
+    ):
+        updated_data_agents = current_data_agents
+
+        if failed_execution.needs:
+            current_agent_names = {agent.name for agent in current_data_agents}
+            remaining_agents = [agent for agent in data_agents if agent.name not in current_agent_names]
+            if remaining_agents:
+                result = await filter_relevant_agents(
+                    query=query_plan.query,
+                    data_agents=remaining_agents,
+                )
+                updated_data_agents = current_data_agents + result.relevant_data_agents
+            else:
+                logging.warning("Replan triggered with needs but no remaining agents to expand into")
+
+        new_query_plan = await replan_query_plan(
+            data_agents=data_agents,
+            relevant_data_agents=updated_data_agents,
+            query_plan=query_plan,
+            reason=failed_execution,
+        )
+
+        tracing.append_to_span_output(
+            {
+                "updated_data_agents": updated_data_agents,
+                "new_query_plan": new_query_plan,
+            }
+        )
+
+        return updated_data_agents, new_query_plan

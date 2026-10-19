@@ -15,13 +15,11 @@ from qcp_adaptive_termination.models.query_plan import (
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
-from qcp_adaptive_termination.models.stages import DraftedQueryPlan
+from qcp_adaptive_termination.models.stages import DraftedQueryPlan, Stage
 from qcp_adaptive_termination.observability import cache, tracing
 
-STAGE_NAME = "Stage 2: Planning"
 
-
-def create_draft_query_plan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
+def create_query_plan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
     data_agent_names = [agent.name for agent in data_agents]
     AgentName = Literal["Coordinator", *data_agent_names]  # ty: ignore[invalid-type-form]
     DataAgentName = Literal[*data_agent_names]  # ty: ignore[invalid-type-form]
@@ -123,31 +121,30 @@ def map_query_plan_model_to_query_plan(query_plan_model: BaseModel, query: str) 
     return query_plan
 
 
+@hooks.hook(HookEvent.PLANNING_STAGE, stage_context=True)
 @cache.cached(mode=CacheMode.WRITE_ONLY)
+async def planning_stage(
+    query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
+) -> DraftedQueryPlan:
+    return await draft_query_plan(query, data_agents, relevant_data_agents)
+
+
+@hooks.hook(HookEvent.PLANNING_DRAFT_QUERY_PLAN)
 async def draft_query_plan(
     query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
 ) -> DraftedQueryPlan:
-    with (
-        hooks.stage_context(),
-        tracing.own_span(
-            STAGE_NAME,
-            input={
-                "query": query,
-                "data_agents": data_agents,
-                "relevant_data_agents": relevant_data_agents,
-            },
-        ),
+    with tracing.own_span(
+        Stage.PLANNING.label,
+        input={
+            "query": query,
+            "data_agents": data_agents,
+            "relevant_data_agents": relevant_data_agents,
+        },
     ):
-        hooks.emit(
-            HookEvent.DRAFT_QUERY_PLAN_START,
-            query=query,
-            data_agents=data_agents,
-            relevant_data_agents=relevant_data_agents,
-        )
         registry_string = await agent_registry.build_registry_string(
             relevant_data_agents, registry_type=AgentRegistryType.TECHNICAL
         )
-        QueryPlanModel = create_draft_query_plan_model(relevant_data_agents)
+        QueryPlanModel = create_query_plan_model(relevant_data_agents)
 
         result = await runner.run_llm(
             role=AgentRole.COORDINATOR_PLANNING,
@@ -166,5 +163,4 @@ async def draft_query_plan(
             data_agents=data_agents,
             query_plan=query_plan,
         )
-        hooks.emit(HookEvent.DRAFT_QUERY_PLAN_END, drafted_query_plan=drafted_query_plan)
         return drafted_query_plan

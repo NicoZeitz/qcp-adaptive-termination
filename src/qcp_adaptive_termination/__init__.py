@@ -17,7 +17,7 @@ from qcp_adaptive_termination.observability.context import (
     tracing_context,
 )
 from qcp_adaptive_termination.pipeline import load_config, load_input, run_pipeline, run_query, run_stages
-from qcp_adaptive_termination.stages.discovery import filter_relevant_agents
+from qcp_adaptive_termination.stages.discovery import discovery_stage
 from qcp_adaptive_termination.stages.execution import execute_query_plan
 from qcp_adaptive_termination.stages.planning import draft_query_plan
 
@@ -28,7 +28,7 @@ __all__ = [
     "data_context",
     "draft_query_plan",
     "execute_query_plan",
-    "filter_relevant_agents",
+    "discovery_stage",
     "hooks",
     "load_config",
     "load_input",

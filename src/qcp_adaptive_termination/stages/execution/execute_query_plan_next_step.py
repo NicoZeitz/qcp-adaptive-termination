@@ -1,10 +1,11 @@
+import asyncio
 from typing import cast
 
 from agents import AgentsException, MaxTurnsExceeded
 
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.hooks import HookEvent
-from qcp_adaptive_termination.models import DataAgent, ResultType, StepBudget, need_type
+from qcp_adaptive_termination.models import DataAgent, ResultType, StepBudget, StepUncertainty, need_type
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
     FailedExecution,
@@ -28,22 +29,40 @@ from qcp_adaptive_termination.stages.execution.multi_agent import (
 )
 
 
-async def execute_query_plan_next_step(
+def _build_additional_information(
+    query_plan_step: QueryPlanStep,
+    step_id_to_answer: dict[str, ResultType],
+) -> list[AdditionalInformation]:
+    return [
+        AdditionalInformation(
+            step_id=dependency.step_id,
+            dependency=dependency.dependency,
+            data=step_id_to_answer[dependency.step_id],
+        )
+        for dependency in query_plan_step.dependencies
+        if dependency.step_id in step_id_to_answer
+    ]
+
+
+async def execute_query_plan_next_nodes(
     data_agents: list[DataAgent],
     query_plan: QueryPlan,
     step_budgets: dict[str, StepBudget],
 ) -> QueryPlanStepExecutionResult:
-    step_to_execute = None
+    """
+    Execute all ready steps in parallel (dependency-based DAG scheduling).
+
+    Steps whose dependencies are all satisfied run concurrently; answers are
+    kept in a separate map, not mutated on the plan object.
+    """
     step_id_to_answer: dict[str, ResultType] = {}
+    step_uncertainties: list[StepUncertainty] = []
     for step in query_plan.steps:
         if step.answer is not None:
             step_id_to_answer[step.id] = step.answer
-            continue
 
-        step_to_execute = step
-        break
-
-    if step_to_execute is None:
+    pending = [s for s in query_plan.steps if s.id not in step_id_to_answer]
+    if not pending:
         if not query_plan.steps:
             raise ValueError("Query plan has no steps")
         return SuccessfulExecution(
@@ -53,77 +72,79 @@ async def execute_query_plan_next_step(
         )
 
     try:
-        additional_information = [
-            AdditionalInformation(
-                step_id=dependency.step_id,
-                dependency=dependency.dependency,
-                data=step_id_to_answer[dependency.step_id],
-            )
-            for dependency in step_to_execute.dependencies
-            if dependency.step_id in step_id_to_answer
-        ]
+        while pending:
+            ready = [s for s in pending if all(d.step_id in step_id_to_answer for d in s.dependencies)]
+            if not ready:
+                step = pending[0]
+                return FailedExecution(
+                    step=step,
+                    needs=[need_type.from_exception(ValueError("Unresolvable step dependency"))],
+                    partial_answer=None,
+                    has_partial_answer=False,
+                )
 
-        result = await execute_query_plan_step(
-            data_agents,
-            step_to_execute,
-            additional_information,
-            step_budgets,
-        )
-
-        step_to_execute.answer = result.answer
-
-        if result.has_answer and not result.has_needs:
-            return SuccessfulExecution(
-                step=step_to_execute,
-                result=cast(ResultType, result.answer),
-                execution_finished=all(step.answer is not None for step in query_plan.steps),
+            results = await asyncio.gather(
+                *[
+                    execute_query_plan_step(
+                        data_agents, step, _build_additional_information(step, step_id_to_answer), step_budgets
+                    )
+                    for step in ready
+                ],
+                return_exceptions=True,
             )
 
-        return FailedExecution(
-            step=step_to_execute,
-            needs=result.needs,
-            partial_answer=result.answer,
-            has_partial_answer=result.has_answer,
+            for step, result in zip(ready, results, strict=True):
+                if isinstance(result, BaseException):
+                    if isinstance(result, (MaxTurnsExceeded, AgentsException)):
+                        partial = PartialQueryAnswer()
+                        partial.add_needs({need_type.from_exception(result)})
+                        return FailedExecution(
+                            step=step,
+                            needs=partial.needs,
+                            partial_answer=partial.answer,
+                            has_partial_answer=partial.has_answer,
+                        )
+                    raise result
+
+                if result.has_answer and not result.has_needs:
+                    step_id_to_answer[step.id] = cast(ResultType, result.answer)
+                    if result.uncertainty is not None:
+                        step_uncertainties.append(result.uncertainty)
+                else:
+                    return FailedExecution(
+                        step=step,
+                        needs=result.needs,
+                        partial_answer=result.answer,
+                        has_partial_answer=result.has_answer,
+                    )
+
+            pending = [s for s in pending if s.id not in step_id_to_answer]
+
+        last_step = query_plan.steps[-1]
+        return SuccessfulExecution(
+            step=last_step,
+            result=step_id_to_answer[last_step.id],
+            execution_finished=True,
+            step_uncertainties=step_uncertainties,
         )
     except (MaxTurnsExceeded, AgentsException) as e:
         result = PartialQueryAnswer()
         result.add_needs({need_type.from_exception(e)})
         return FailedExecution(
-            step=step_to_execute,
+            step=pending[0] if pending else query_plan.steps[-1],
             needs=result.needs,
             partial_answer=result.answer,
             has_partial_answer=result.has_answer,
         )
 
 
-async def _dispatch_query_plan_step(
-    data_agents: list[DataAgent],
-    query_plan_step: QueryPlanStep,
-    additional_information: list[AdditionalInformation],
-    step_budgets: dict[str, StepBudget],
-) -> PartialQueryAnswer:
-    if isinstance(query_plan_step, SingleAgentQueryPlanStep):
-        return await execute_query_plan_step_for_single_agent(
-            data_agents,
-            query_plan_step,
-            query_plan_step.to_agent,
-            additional_information,
-        )
-    return await answer_step_multiple_agents(
-        data_agents=data_agents,
-        query_plan_step=cast(MultiAgentQueryPlanStep, query_plan_step),
-        additional_information=additional_information,
-        step_budgets=step_budgets,
-    )
-
-
+@hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP)
 async def execute_query_plan_step(
     data_agents: list[DataAgent],
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
     step_budgets: dict[str, StepBudget],
 ) -> PartialQueryAnswer:
-    hooks.emit(HookEvent.EXECUTE_STEP_START, query_plan_step=query_plan_step)
     with tracing.own_span(
         f"Execute Step: {query_plan_step.id}",
         input={
@@ -131,34 +152,24 @@ async def execute_query_plan_step(
             "additional_information": additional_information,
         },
     ):
-        result = await hooks.call_override(
-            HookEvent.EXECUTE_QUERY_PLAN_STEP_OVERRIDE,
-            default=lambda: _dispatch_query_plan_step(
-                data_agents, query_plan_step, additional_information, step_budgets
-            ),
-            data_agents=data_agents,
-            query_plan_step=query_plan_step,
-            additional_information=additional_information,
-            step_budgets=step_budgets,
-        )
+        if isinstance(query_plan_step, SingleAgentQueryPlanStep) and query_plan_step.to_agent == "Coordinator":
+            result = await answer_step_coordinator(query_plan_step, additional_information)
+        elif isinstance(query_plan_step, SingleAgentQueryPlanStep) and query_plan_step.to_agent != "Coordinator":
+            result = await answer_step_data_agent(
+                data_agents,
+                query_plan_step.query,
+                query_plan_step.to_agent,
+                additional_information,
+            )
+        elif isinstance(query_plan_step, MultiAgentQueryPlanStep):
+            result = await answer_step_multiple_agents(
+                data_agents=data_agents,
+                query_plan_step=query_plan_step,
+                additional_information=additional_information,
+                step_budgets=step_budgets,
+            )
+        else:
+            raise ValueError(f"Unsupported query plan step type: {type(query_plan_step)}")
 
         tracing.append_to_span_output({"partial_answer": result})
-        hooks.emit(HookEvent.EXECUTE_STEP_END, query_plan_step=query_plan_step, partial_answer=result)
         return result
-
-
-async def execute_query_plan_step_for_single_agent(
-    data_agents: list[DataAgent],
-    query_plan_step: QueryPlanStep,
-    to_agent: str,
-    additional_information: list[AdditionalInformation],
-) -> PartialQueryAnswer:
-    if to_agent == "Coordinator":
-        return await answer_step_coordinator(query_plan_step, additional_information)
-
-    return await answer_step_data_agent(
-        data_agents,
-        query_plan_step.query,
-        to_agent,
-        additional_information,
-    )

@@ -26,7 +26,8 @@ from qcp_adaptive_termination.models.query_plan import QueryPlanStep
 from qcp_adaptive_termination.observability import tracing
 
 
-async def _answer_step_coordinator_via_llm(
+@hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_COORDINATOR)
+async def answer_step_coordinator(
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
 ) -> PartialQueryAnswer:
@@ -88,15 +89,3 @@ async def _answer_step_coordinator_via_llm(
             }
         )
         return result
-
-
-async def answer_step_coordinator(
-    query_plan_step: QueryPlanStep,
-    additional_information: list[AdditionalInformation],
-) -> PartialQueryAnswer:
-    return await hooks.call_override(
-        HookEvent.ANSWER_STEP_COORDINATOR_OVERRIDE,
-        default=lambda: _answer_step_coordinator_via_llm(query_plan_step, additional_information),
-        query_plan_step=query_plan_step,
-        additional_information=additional_information,
-    )

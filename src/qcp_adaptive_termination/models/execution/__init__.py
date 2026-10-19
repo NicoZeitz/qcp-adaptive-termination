@@ -11,6 +11,7 @@ from qcp_adaptive_termination.models.execution.additional_information import (
 )
 from qcp_adaptive_termination.models.execution.execution_result import ExecutionResult
 from qcp_adaptive_termination.models.execution.outcome import (
+    EstimatorDecision,
     EvaluatorDecision,
     FinalResultOutcome,
     QueryMoreAgentsOutcome,
@@ -27,6 +28,7 @@ from qcp_adaptive_termination.models.execution.query_plan_step_execution_result 
 
 __all__ = [
     "AdditionalInformation",
+    "EstimatorDecision",
     "EvaluatorDecision",
     "ExecutionResult",
     "FailedExecution",

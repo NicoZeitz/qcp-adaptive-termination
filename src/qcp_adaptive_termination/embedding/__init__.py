@@ -13,10 +13,10 @@ import tiktoken
 from agents import OpenAIProvider
 from openai import AsyncOpenAI
 
+import qcp_adaptive_termination.observability.cache as cache
 from qcp_adaptive_termination.embedding.vector_index import VectorIndex
 from qcp_adaptive_termination.llm import model_provider
 from qcp_adaptive_termination.observability import context, tracing
-from qcp_adaptive_termination.observability.cache import get_or_compute_batch
 
 _MAX_TOKENS_PER_REQUEST = 200000
 _MAX_CHUNKS = 2048
@@ -142,7 +142,7 @@ async def create(text):
     with tracing.own_span("Embedding", input={"text": text}):
         is_single = not isinstance(text, list)
         texts = [text] if is_single else text
-        results = await get_or_compute_batch(
+        results = await cache.get_or_compute_batch(
             texts,
             _create_with_inflight,
         )

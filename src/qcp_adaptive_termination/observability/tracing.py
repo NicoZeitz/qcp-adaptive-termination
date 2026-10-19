@@ -8,8 +8,6 @@ from typing import Any, overload
 from agents import CustomSpanData, Span, custom_span
 from pydantic import BaseModel, JsonValue
 
-# from langfuse import get_client
-
 _span_by_id: dict[str | None, int] = {}
 _span_context_var = ContextVar[Span[CustomSpanData] | None]("current_span", default=None)
 
@@ -73,18 +71,6 @@ def indented_logging(message: str, log_level: int = logging.INFO):
         logging.log(log_level, message)
 
 
-# def _update_langfuse_span_metadata(span: Span[CustomSpanData]):
-#     langfuse = get_client()
-#     if "input" in span.span_data.data:
-#         langfuse.update_current_span(input=span.span_data.data["input"])
-#     if "output" in span.span_data.data:
-#         langfuse.update_current_span(output=span.span_data.data["output"])
-#     metadata = span.span_data.data.copy()
-#     metadata.pop("input", None)
-#     metadata.pop("output", None)
-#     langfuse.update_current_span(metadata=metadata)
-
-
 @contextmanager
 def own_span(
     span_name: str,
@@ -108,6 +94,19 @@ def own_span(
             if output is not None:
                 append_to_span_output(output, span)
 
-            # _update_langfuse_span_metadata(span)
+            from qcp_adaptive_termination.observability.context import get_tracing_providers
+
+            if "langfuse" in get_tracing_providers():
+                from langfuse import get_client
+
+                client = get_client()
+                if "input" in span.span_data.data:
+                    client.update_current_span(input=span.span_data.data["input"])
+                if "output" in span.span_data.data:
+                    client.update_current_span(output=span.span_data.data["output"])
+                metadata = span.span_data.data.copy()
+                metadata.pop("input", None)
+                metadata.pop("output", None)
+                client.update_current_span(metadata=metadata)
         finally:
             _span_context_var.reset(token)

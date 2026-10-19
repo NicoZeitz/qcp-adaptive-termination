@@ -25,23 +25,8 @@ from qcp_adaptive_termination.observability import tracing
 from qcp_adaptive_termination.stages.execution.validation import validate_schema_output
 
 
+@hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA)
 async def align_schema(
-    data_agents: list[DataAgent],
-    agent_names: list[str],
-    query: str,
-    merge_task: str,
-) -> AlignedResultList:
-    return await hooks.call_override(
-        HookEvent.ALIGN_SCHEMA_OVERRIDE,
-        default=lambda: _align_via_llm(data_agents, agent_names, query, merge_task),
-        data_agents=data_agents,
-        agent_names=agent_names,
-        query=query,
-        merge_task=merge_task,
-    )
-
-
-async def _align_via_llm(
     data_agents: list[DataAgent],
     agent_names: list[str],
     query: str,

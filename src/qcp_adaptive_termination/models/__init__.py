@@ -46,6 +46,8 @@ from qcp_adaptive_termination.models.selection_strategy_type import (
 from qcp_adaptive_termination.models.uncertainty import (
     ApportionmentType,
     StepBudget,
+    StepUncertainty,
+    StopReason,
 )
 
 __all__ = [
@@ -82,4 +84,6 @@ __all__ = [
     # uncertainty
     "ApportionmentType",
     "StepBudget",
+    "StepUncertainty",
+    "StopReason",
 ]

@@ -31,7 +31,8 @@ def _build_relevance_model(data_agents: list[DataAgent]) -> type[BaseModel]:
     return create_model("RelevanceModel", **agent_fields)
 
 
-async def _coordinator_relevance_llm(
+@hooks.hook(HookEvent.DISCOVERY_COORDINATOR_RELEVANCE)
+async def filter_coordinator(
     query: str,
     data_agents: list[DataAgent],
     registry_string: str,
@@ -65,19 +66,3 @@ async def _coordinator_relevance_llm(
             relevant_agents_with_reasoning.append((agent, reasoning))
 
     return relevant_agents_with_reasoning
-
-
-async def filter_coordinator_with_reasoning(
-    query: str,
-    data_agents: list[DataAgent],
-    registry_string: str,
-    additional_context: str | None = None,
-) -> list[tuple[DataAgent, str]]:
-    return await hooks.call_override(
-        HookEvent.COORDINATOR_RELEVANCE_OVERRIDE,
-        default=lambda: _coordinator_relevance_llm(query, data_agents, registry_string, additional_context),
-        query=query,
-        data_agents=data_agents,
-        registry_string=registry_string,
-        additional_context=additional_context,
-    )

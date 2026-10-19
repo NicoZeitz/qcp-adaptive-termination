@@ -8,7 +8,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, cast
 from uuid import uuid4
 
 import matplotlib.pyplot as plt
@@ -26,11 +26,9 @@ from qcp_adaptive_termination.models import (
     Config,
     DataAgent,
     EstimatorStatistics,
-    ScoredDataAgent,
 )
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
-    EvaluatorDecision,
     FailedExecution,
     PartialQueryAnswer,
 )
@@ -276,53 +274,42 @@ def _register_tracking(
     estimator_snapshots: list[EstimatorStatistics] = []
     seen_keys: set[tuple] = set()
 
-    def _on_batch_end(
+    def _on_agent_query(
         execution_id: str,
-        query_plan_step: MultiAgentQueryPlanStep,
-        additional_information: list[AdditionalInformation],
-        iteration: int,
-        batch: list[ScoredDataAgent],
-        remaining: list[ScoredDataAgent],
-        result_list: AlignedResultList,
-        estimators: list[EstimatorStatistics | None],
-        decision: EvaluatorDecision | Literal["need"],
+        data_agent: DataAgent,
+        query: str,
+        result: PartialQueryAnswer,
     ) -> None:
-        del additional_information, iteration, remaining, result_list
-        if not (execution_id.startswith(target_execution_id + "/") and query_plan_step.id == target_step_id):
+        if not execution_id.startswith(target_execution_id + "/"):
             return
 
-        for sda in batch:
-            name = sda.agent.name
-            ordered.append(name)
-            df = data_cache.get(name)
-            if df is not None and not df.empty:
-                cols = [c for c in key_cols if c in df.columns]
-                if cols:
-                    seen_keys.update(map(tuple, df[cols].drop_duplicates().values.tolist()))
-
-        latest = next((e for e in reversed(estimators) if e is not None), None)
-        if latest is not None:
-            estimator_snapshots.append(latest)
+        name = data_agent.name
+        ordered.append(name)
+        df = data_cache.get(name)
+        if df is not None and not df.empty:
+            cols = [c for c in key_cols if c in df.columns]
+            if cols:
+                seen_keys.update(map(tuple, df[cols].drop_duplicates().values.tolist()))
 
         coverage = min(len(seen_keys) / total_unique, 1.0) if total_unique > 0 else 0.0
         batches.append(
             BatchRecord(
                 batch_num=len(batches) + 1,
                 cumulative_agents=len(ordered),
-                decision=str(decision),
-                sample_coverage=latest.sample_coverage if latest else None,
-                observed_count=latest.observed_count if latest else None,
-                estimated_count=latest.estimated_count if latest else None,
-                observed_value_sum=latest.observed_value_sum if latest else None,
-                estimated_value_sum=latest.estimated_value_sum if latest else None,
-                observed_value_avg=latest.observed_value_avg if latest else None,
-                estimated_value_avg=latest.estimated_value_avg if latest else None,
+                decision="query_more_agents",
+                sample_coverage=None,
+                observed_count=len(seen_keys),
+                estimated_count=None,
+                observed_value_sum=None,
+                estimated_value_sum=None,
+                observed_value_avg=None,
+                estimated_value_avg=None,
                 coverage_achieved=coverage,
             )
         )
 
-    hooks.register(HookEvent.MULTI_AGENT_STEP_BATCH_END, _on_batch_end)
-    return ordered, batches, estimator_snapshots, _on_batch_end
+    hooks.register_post(HookEvent.EXECUTION_QUERY_DATA_AGENT, _on_agent_query)
+    return ordered, batches, estimator_snapshots, _on_agent_query
 
 
 async def _run_step(
@@ -389,7 +376,7 @@ async def _run_step(
 
     try:
         with (
-            hooks.stage_context(execution_id),
+            hooks.execution_context(execution_id),
             context.config_context(config.model_copy(update={"continue_after_final_result": False})),
         ):
             await execute_query_plan(
@@ -405,22 +392,17 @@ async def _run_step(
     finally:
         _per_step_align.pop(execution_id, None)
         _per_step_data.pop(execution_id, None)
-        hooks.unregister(HookEvent.MULTI_AGENT_STEP_BATCH_END, batch_end_handler)
+        hooks.unregister_post(HookEvent.EXECUTION_QUERY_DATA_AGENT, batch_end_handler)
 
     agents_total = len(step.to_agent)
 
-    # First final_result is the real stop point (continue_after_final_result may fire more batches).
-    stop_batch = next((b for b in batches if b.decision == "final_result"), None)
-    if stop_batch is None:
-        stop_batch = batches[-1] if batches else None
+    stop_batch = batches[-1] if batches else None
 
     if stop_batch is None:
         logging.warning("Step %s/%s: no batch records", query_slug, step.id)
         return None
 
-    stop_stats = next((s for s in estimator_snapshots if s.agents_queried == stop_batch.cumulative_agents), None) or (
-        estimator_snapshots[-1] if estimator_snapshots else None
-    )
+    stop_stats = estimator_snapshots[-1] if estimator_snapshots else None
 
     agents_queried_at_stop = stop_batch.cumulative_agents
     stop_fraction = agents_queried_at_stop / agents_total if agents_total > 0 else 0.0
@@ -579,10 +561,13 @@ async def _run(ctx: ScriptContext) -> None:
     query_slug = ctx.input_file.stem
     output_dir = ctx.output_dir or ctx.input_file.parent / "evaluation"
 
-    hooks.clear(HookEvent.EXECUTE_QUERY_PLAN_END)
-    hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, _align_schema_dispatch)
-    hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, _data_agent_dispatch)
-    hooks.register(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
+    hooks.clear(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN)
+    hooks.register_overwrite(
+        HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
+        _align_schema_dispatch,
+    )
+    hooks.register_overwrite(HookEvent.EXECUTION_QUERY_DATA_AGENT, _data_agent_dispatch)
+    hooks.register_overwrite(HookEvent.EXECUTION_REPLAN_DRAFT_QUERY_PLAN, _replan_error)
 
     step_tasks = []
     for step in multi_steps:
@@ -609,9 +594,12 @@ async def _run(ctx: ScriptContext) -> None:
     try:
         await asyncio.gather(*step_tasks)
     finally:
-        hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, _align_schema_dispatch)
-        hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, _data_agent_dispatch)
-        hooks.unregister(HookEvent.REPLAN_QUERY_PLAN_OVERRIDE, _replan_error)
+        hooks.unregister_overwrite(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
+            _align_schema_dispatch,
+        )
+        hooks.unregister_overwrite(HookEvent.EXECUTION_QUERY_DATA_AGENT, _data_agent_dispatch)
+        hooks.unregister_overwrite(HookEvent.EXECUTION_REPLAN_DRAFT_QUERY_PLAN, _replan_error)
 
 
 if __name__ == "__main__":

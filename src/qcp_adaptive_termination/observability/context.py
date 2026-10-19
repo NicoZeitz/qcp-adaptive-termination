@@ -18,11 +18,11 @@ from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
-from typing import IO
+from typing import IO, Literal
 
 import agents.tracing.setup as _agents_tracing_setup
 import nest_asyncio2
-from agents import get_current_trace, trace
+from agents import get_current_trace, set_trace_processors, set_tracing_export_api_key, trace
 from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
 from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
@@ -34,9 +34,8 @@ from pydantic import JsonValue
 from qcp_adaptive_termination.models import CacheMode, Config
 from qcp_adaptive_termination.observability.cache import Cache
 from qcp_adaptive_termination.observability.file_span_exporter import FileSpanExporter
-
-# from langfuse import get_client
-# from qcp_adaptive_termination.observability.tracing import serialize_data_for_tracing
+from qcp_adaptive_termination.observability.openai_tracing import TruncatingBackendSpanExporter
+from qcp_adaptive_termination.observability.tracing import serialize_data_for_tracing
 
 _PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 _DEFAULT_OUTPUT_DIR = _PROJECT_ROOT / ".logs"
@@ -47,6 +46,9 @@ _config_var: ContextVar[Config | None] = ContextVar("config", default=None)
 _data_dir_var: ContextVar[Path | None] = ContextVar("data_dir", default=None)
 _output_dir_var: ContextVar[Path | None] = ContextVar("output_dir", default=None)
 _logging_active_var: ContextVar[bool] = ContextVar("logging_active", default=False)
+_tracing_providers_var: ContextVar[list[Literal["openai", "file", "langfuse"]] | None] = ContextVar(
+    "tracing_providers", default=None
+)
 
 
 class _Tee(io.TextIOBase):
@@ -85,6 +87,11 @@ def get_output_dir() -> Path | None:
     return _output_dir_var.get()
 
 
+def get_tracing_providers() -> list[Literal["openai", "file", "langfuse"]]:
+    providers = _tracing_providers_var.get()
+    return providers or []
+
+
 def _is_cache_active() -> bool:
     return _cache_var.get() is not None
 
@@ -103,43 +110,6 @@ def _is_tracing_active() -> bool:
 
 def _is_data_dir_active() -> bool:
     return _data_dir_var.get() is not None
-
-
-def _setup_tracing(output_dir: Path) -> BatchTraceProcessor | None:
-    # OpenAI trace export disabled for now (suspected hang on traces/ingest); file tracing only.
-    from agents import set_trace_processors
-
-    set_trace_processors([])
-
-    # tracing_api_key = os.getenv("OPENAI_API_KEY")
-    # openai_processor: BatchTraceProcessor | None = None
-    # if tracing_api_key:
-    #     set_tracing_export_api_key(tracing_api_key)
-    #     max_field_bytes = int(os.getenv("OPENAI_TRACING_MAX_FIELD_BYTES", "9500"))
-    #     openai_exporter = TruncatingBackendSpanExporter(
-    #         api_key=tracing_api_key,
-    #         max_field_bytes=max_field_bytes,
-    #     )
-    #     openai_processor = BatchTraceProcessor(exporter=openai_exporter)
-    #     set_trace_processors([openai_processor])
-    # else:
-    #     logging.warning("No OpenAI tracing API key found; OpenAI trace export is disabled.")
-    openai_processor = None
-
-    tracing_log_file = output_dir / "traces.jsonl"
-    nest_asyncio2.apply()
-
-    provider = otel_trace.get_tracer_provider()
-    if not isinstance(provider, TracerProvider):
-        provider = TracerProvider()
-        otel_trace.set_tracer_provider(provider)
-    provider.add_span_processor(BatchSpanProcessor(FileSpanExporter(tracing_log_file)))
-    # if not get_client().auth_check():
-    #     logging.warning("Langfuse authentication failed; Langfuse tracing is disabled.")
-
-    OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
-    logging.info(f"Tracing initialized. Trace file: {tracing_log_file}")
-    return openai_processor
 
 
 @contextmanager
@@ -198,37 +168,93 @@ def logging_context(output_dir: Path) -> Generator[None]:
 
 
 @contextmanager
-def tracing_context(name: str, output_dir: Path, *, metadata: dict[str, JsonValue] | None = None) -> Generator[None]:
-    """Set up OTel file exporter + agents trace. Stacks with existing tracing context."""
+def tracing_context(
+    name: str,
+    output_dir: Path,
+    *,
+    metadata: dict[str, JsonValue] | None = None,
+    tracing_providers: list[Literal["openai", "file", "langfuse"]] | None = None,
+) -> Generator[None]:
+    """Set up tracing providers + agents trace. Stacks with existing tracing context."""
     load_dotenv(override=True)
-    openai_processor = _setup_tracing(output_dir)
 
+    if tracing_providers is None:
+        tracing_providers = ["file"]
+    token = _tracing_providers_var.set(tracing_providers)
     metadata_str = {k: str(v) for k, v in (metadata or {}).items()}
-    # langfuse = get_client()
+    langfuse_observation = None
+
+    if "openai" in tracing_providers:
+        tracing_api_key = os.getenv("OPENAI_API_KEY")
+        if not tracing_api_key:
+            _tracing_providers_var.reset(token)
+            raise ValueError("OPENAI_API_KEY is required for OpenAI tracing.")
+
+        set_tracing_export_api_key(tracing_api_key)
+        max_field_bytes = int(os.getenv("OPENAI_TRACING_MAX_FIELD_BYTES", "9500"))
+        openai_exporter = TruncatingBackendSpanExporter(
+            api_key=tracing_api_key,
+            max_field_bytes=max_field_bytes,
+        )
+        openai_processor = BatchTraceProcessor(exporter=openai_exporter)
+        set_trace_processors([openai_processor])
+    else:
+        # reset default openai processor
+        set_trace_processors([])
+
+    if "file" in tracing_providers or "langfuse" in tracing_providers:
+        nest_asyncio2.apply()
+        OpenAIAgentsInstrumentor().instrument(exclusive_processor=False)
+
+        provider = otel_trace.get_tracer_provider()
+        if not isinstance(provider, TracerProvider):
+            provider = TracerProvider()
+            otel_trace.set_tracer_provider(provider)
+
+        if "file" in tracing_providers:
+            tracing_log_file = output_dir / "traces.jsonl"
+            provider.add_span_processor(BatchSpanProcessor(FileSpanExporter(tracing_log_file)))
+            logging.info(f"Tracing initialized. Trace file: {tracing_log_file}")
+
+        if "langfuse" in tracing_providers:
+            from langfuse import get_client
+
+            client = get_client()
+
+            if not client.auth_check():
+                _tracing_providers_var.reset(token)
+                raise ValueError("Langfuse client authentication failed.")
+
+            langfuse_observation = client.start_as_current_observation(
+                name=name,
+                input=serialize_data_for_tracing(metadata),
+                metadata=metadata_str,
+            )
+            langfuse_observation.__enter__()
 
     try:
-        with (
-            # langfuse.start_as_current_observation(
-            #     name=name, input=serialize_data_for_tracing(metadata), metadata=metadata_str
-            # ),
-            trace(name, metadata=metadata_str),
-        ):
+        with trace(name, metadata=metadata_str):
             yield
     finally:
-        shutdown_timeout = float(os.getenv("TRACING_SHUTDOWN_TIMEOUT", "10.0"))
+        if "openai" in tracing_providers:
+            atexit.unregister(vars(_agents_tracing_setup)["_shutdown_global_trace_provider"])
 
-        if openai_processor is not None:
-            openai_processor.shutdown(timeout=shutdown_timeout)
+        if "langfuse" in tracing_providers:
+            assert langfuse_observation is not None
+            langfuse_observation.__exit__(None, None, None)
+
+            from langfuse import get_client
+
+            client = get_client()
+            client.flush()
+            client.shutdown()
 
         provider = otel_trace.get_tracer_provider()
         if isinstance(provider, TracerProvider):
-            provider.force_flush(timeout_millis=int(shutdown_timeout * 1000))
+            provider.force_flush(timeout_millis=5000)
             provider.shutdown()
 
-        # langfuse.flush()
-        # langfuse.shutdown()
-
-        atexit.unregister(vars(_agents_tracing_setup)["_shutdown_global_trace_provider"])
+        _tracing_providers_var.reset(token)
 
 
 @contextmanager
@@ -262,6 +288,7 @@ def pipeline_context(
     config: Config | None = None,
     *,
     trace_metadata: dict[str, JsonValue] | None = None,
+    tracing_providers: list[Literal["openai", "file", "langfuse"]] | None = None,
 ) -> Generator[None]:
     """Activate logging, tracing, cache, data dir, and config in one block. Skips already-active ones."""
     load_dotenv(override=True)
@@ -296,7 +323,14 @@ def pipeline_context(
         if not _is_logging_active():
             stack.enter_context(logging_context(output_dir))
         if not _is_tracing_active():
-            stack.enter_context(tracing_context(trace_name, output_dir, metadata=trace_metadata))
+            stack.enter_context(
+                tracing_context(
+                    trace_name,
+                    output_dir,
+                    metadata=trace_metadata,
+                    tracing_providers=tracing_providers,
+                )
+            )
         if not _is_cache_active():
             stack.enter_context(cache_context(cache_dir, cache_mode))
         if not _config_is_active():

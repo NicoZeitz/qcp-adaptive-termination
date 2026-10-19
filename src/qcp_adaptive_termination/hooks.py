@@ -1,57 +1,32 @@
+"""
+Hook system. Every event can have pre, overwrite, and post handlers.
+- **pre**: observers that run before the operation (all run, receive the call args)
+- **overwrite**: a single replacement implementation (last registration wins)
+- **post**: observers that run after the operation (all run, receive call args + result)
+"""
+
+import functools
 import inspect
 from collections import defaultdict
-from collections.abc import Awaitable, Callable, Generator
+from collections.abc import Callable
 from contextlib import contextmanager
 from contextvars import ContextVar
 from enum import StrEnum
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from typing import Any
 from uuid import uuid4
 
-if TYPE_CHECKING:
-    from qcp_adaptive_termination.estimator import Estimator
-    from qcp_adaptive_termination.models import (
-        AlignedSchemaMetadata,
-        Config,
-        DataAgent,
-        EstimatorStatistics,
-        ScoredDataAgent,
-        StepBudget,
-    )
-    from qcp_adaptive_termination.models.estimation import AlignedResultList
-    from qcp_adaptive_termination.models.execution import (
-        AdditionalInformation,
-        EvaluatorDecision,
-        ExecutionResult,
-        FailedExecution,
-        FinalResultOutcome,
-        PartialQueryAnswer,
-        QueryMoreAgentsOutcome,
-    )
-    from qcp_adaptive_termination.models.query_plan import (
-        MultiAgentQueryPlanStep,
-        QueryPlan,
-        QueryPlanStep,
-    )
-    from qcp_adaptive_termination.models.stages import (
-        CollaborativeQueryAnswering,
-        CollaborativeQueryAnsweringResult,
-        DraftedQueryPlan,
-        FilteredRelevantAgents,
-    )
-
-_handlers: defaultdict[str, list[Callable[..., Any]]] = defaultdict(list)
+_pre_hooks: defaultdict[str, list[Callable[..., Any]]] = defaultdict(list)
+_overwrite_hooks: dict[str, Callable[..., Any]] = {}
+_post_hooks: defaultdict[str, list[Callable[..., Any]]] = defaultdict(list)
 _execution_id: ContextVar[str] = ContextVar("execution_id", default="")
 
 
 @contextmanager
-def stage_context(execution_id: str | None = None) -> Generator[str]:
-    parent = _execution_id.get()
-    new_id = execution_id or uuid4().hex[:12]
-    id_ = f"{parent}/{new_id}" if parent else new_id
-    token = _execution_id.set(id_)
+def execution_context(execution_id: str):
+    """Set a known execution id for the duration of the block (used by scripts)."""
+    token = _execution_id.set(execution_id)
     try:
-        yield id_
+        yield execution_id
     finally:
         _execution_id.reset(token)
 
@@ -61,1029 +36,237 @@ def get_execution_id() -> str:
 
 
 class HookEvent(StrEnum):
-    LOAD_INPUT = "load_input"
-    LOAD_CONFIG = "load_config"
-    FILTER_RELEVANT_AGENTS_START = "filter_relevant_agents_start"
-    FILTER_RELEVANT_AGENTS_END = "filter_relevant_agents_end"
-    DRAFT_QUERY_PLAN_START = "draft_query_plan_start"
-    DRAFT_QUERY_PLAN_END = "draft_query_plan_end"
-    EXECUTE_QUERY_PLAN_LOOP_START = "execute_query_plan_loop_start"
-    EXECUTE_QUERY_PLAN_LOOP_END = "execute_query_plan_loop_end"
-    EXECUTE_QUERY_PLAN_START = "execute_query_plan_start"
-    EXECUTE_QUERY_PLAN_END = "execute_query_plan_end"
-    REPLAN_START = "replan_start"
-    REPLAN_END = "replan_end"
-    EXECUTE_STEP_START = "execute_step_start"
-    EXECUTE_STEP_END = "execute_step_end"
-    DATA_AGENT_QUERY_START = "data_agent_query_start"
-    DATA_AGENT_QUERY_END = "data_agent_query_end"
-    MULTI_AGENT_STEP_START = "multi_agent_step_start"
-    MULTI_AGENT_STEP_BATCH_START = "multi_agent_step_batch_start"
-    MULTI_AGENT_STEP_BATCH_END = "multi_agent_step_batch_end"
-    MULTI_AGENT_STEP_END = "multi_agent_step_end"
-    COORDINATOR_RELEVANCE_OVERRIDE = "coordinator_relevance_override"
-    DATA_AGENT_RELEVANCE_OVERRIDE = "data_agent_relevance_override"
-    FILTER_RELEVANT_AGENTS_OVERRIDE = "filter_relevant_agents_override"
-    DRAFT_QUERY_PLAN_OVERRIDE = "draft_query_plan_override"
-    ALIGN_SCHEMA_OVERRIDE = "align_schema_override"
-    DATA_AGENT_QUERY_OVERRIDE = "data_agent_query_override"
-    ESTIMATOR_STATISTICS_OVERRIDE = "estimator_statistics_override"
-    COMPLETENESS_EVALUATOR_OVERRIDE = "completeness_evaluator_override"
-    REPLAN_QUERY_PLAN_OVERRIDE = "replan_query_plan_override"
-    ANSWER_STEP_COORDINATOR_OVERRIDE = "answer_step_coordinator_override"
-    ANSWER_STEP_DATA_AGENT_OVERRIDE = "answer_step_data_agent_override"
-    EXECUTE_QUERY_PLAN_STEP_OVERRIDE = "execute_query_plan_step_override"
-    ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE = "answer_step_multiple_agents_override"
-    EMBEDDING_PRE_FILTER_OVERRIDE = "embedding_pre_filter_override"
-
-
-class LOAD_INPUT_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        input_file: Path,
-        data: CollaborativeQueryAnswering
-        | FilteredRelevantAgents
-        | DraftedQueryPlan
-        | CollaborativeQueryAnsweringResult,
-        extra: dict[str, Any] | None,
-    ) -> None: ...
-
-
-class LOAD_CONFIG_HANDLER(Protocol):
-    def __call__(self, execution_id: str, config: Config) -> None: ...
-
-
-class FILTER_RELEVANT_AGENTS_START_HANDLER(Protocol):
-    def __call__(self, execution_id: str, query: str, data_agents: list[DataAgent]) -> None: ...
-
-
-class FILTER_RELEVANT_AGENTS_END_HANDLER(Protocol):
-    def __call__(self, execution_id: str, filtered_relevant_agents: FilteredRelevantAgents) -> None: ...
-
-
-class DRAFT_QUERY_PLAN_START_HANDLER(Protocol):
-    def __call__(
-        self, execution_id: str, query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
-    ) -> None: ...
-
-
-class DRAFT_QUERY_PLAN_END_HANDLER(Protocol):
-    def __call__(self, execution_id: str, drafted_query_plan: DraftedQueryPlan) -> None: ...
-
-
-class EXECUTE_QUERY_PLAN_LOOP_START_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query_plan: QueryPlan,
-        current_data_agents: list[DataAgent],
-    ) -> None: ...
-
-
-class EXECUTE_QUERY_PLAN_LOOP_END_HANDLER(Protocol):
-    def __call__(self, execution_id: str, result: CollaborativeQueryAnsweringResult) -> None: ...
-
-
-class EXECUTE_QUERY_PLAN_START_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        attempt: int,
-        query_plan: QueryPlan,
-        current_data_agents: list[DataAgent],
-    ) -> None: ...
-
-
-class EXECUTE_QUERY_PLAN_END_HANDLER(Protocol):
-    def __call__(self, execution_id: str, attempt: int, result: ExecutionResult) -> None: ...
-
-
-class REPLAN_START_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        attempt: int,
-        current_data_agents: list[DataAgent],
-        data_agents: list[DataAgent],
-        query_plan: QueryPlan,
-        failed_execution: FailedExecution,
-    ) -> None: ...
-
-
-class REPLAN_END_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        attempt: int,
-        updated_data_agents: list[DataAgent],
-        new_query_plan: QueryPlan,
-    ) -> None: ...
-
-
-class EXECUTE_STEP_START_HANDLER(Protocol):
-    def __call__(self, execution_id: str, query_plan_step: QueryPlanStep) -> None: ...
-
-
-class EXECUTE_STEP_END_HANDLER(Protocol):
-    def __call__(
-        self, execution_id: str, query_plan_step: QueryPlanStep, partial_answer: PartialQueryAnswer
-    ) -> None: ...
-
-
-class DATA_AGENT_QUERY_START_HANDLER(Protocol):
-    def __call__(self, execution_id: str, data_agent: DataAgent, query: str) -> None: ...
-
-
-class DATA_AGENT_QUERY_END_HANDLER(Protocol):
-    def __call__(
-        self, execution_id: str, data_agent: DataAgent, query: str, partial_answer: PartialQueryAnswer
-    ) -> None: ...
-
-
-class MULTI_AGENT_STEP_START_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query_plan_step: MultiAgentQueryPlanStep,
-        additional_information: list[AdditionalInformation],
-        initial_ranking: list[ScoredDataAgent],
-    ) -> None: ...
-
-
-class MULTI_AGENT_STEP_BATCH_START_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query_plan_step: MultiAgentQueryPlanStep,
-        additional_information: list[AdditionalInformation],
-        iteration: int,
-        batch: list[ScoredDataAgent],
-        queried: list[str],
-        remaining: list[ScoredDataAgent],
-        result_list: AlignedResultList,
-    ) -> None: ...
-
-
-class MULTI_AGENT_STEP_BATCH_END_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query_plan_step: MultiAgentQueryPlanStep,
-        additional_information: list[AdditionalInformation],
-        iteration: int,
-        batch: list[ScoredDataAgent],
-        remaining: list[ScoredDataAgent],
-        result_list: AlignedResultList,
-        estimators: list[EstimatorStatistics | None],
-        decision: EvaluatorDecision | Literal["need"],
-    ) -> None: ...
-
-
-class MULTI_AGENT_STEP_END_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query_plan_step: MultiAgentQueryPlanStep,
-        additional_information: list[AdditionalInformation],
-        result_list: AlignedResultList,
-        queried: list[str],
-        remaining: list[str],
-        estimators: list[EstimatorStatistics | None],
-    ) -> None: ...
-
-
-class COORDINATOR_RELEVANCE_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query: str,
-        data_agents: list[DataAgent],
-        registry_string: str,
-        additional_context: str | None,
-    ) -> list[tuple[DataAgent, str]] | Awaitable[list[tuple[DataAgent, str]]]: ...
-
-
-class DATA_AGENT_RELEVANCE_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query: str,
-        item: tuple[DataAgent, str],
-        additional_context: str | None,
-    ) -> DataAgent | None | Awaitable[DataAgent | None]: ...
-
-
-class FILTER_RELEVANT_AGENTS_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query: str,
-        data_agents: list[DataAgent],
-    ) -> FilteredRelevantAgents | Awaitable[FilteredRelevantAgents]: ...
-
-
-class DRAFT_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query: str,
-        data_agents: list[DataAgent],
-        relevant_data_agents: list[DataAgent],
-    ) -> DraftedQueryPlan | Awaitable[DraftedQueryPlan]: ...
-
-
-class ALIGN_SCHEMA_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        data_agents: list[DataAgent],
-        agent_names: list[str],
-        query: str,
-        merge_task: str,
-    ) -> AlignedResultList | Awaitable[AlignedResultList]: ...
-
-
-class DATA_AGENT_QUERY_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        data_agent: DataAgent,
-        query: str,
-        additional_information: list[AdditionalInformation],
-        schema_metadata: AlignedSchemaMetadata | None,
-    ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
-
-
-class COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        aligned_result_list: AlignedResultList,
-        estimator_statistics: EstimatorStatistics,
-        query: str,
-        previous_estimator_statistics: list[EstimatorStatistics],
-        merge_task: str,
-        force_result: bool,
-    ) -> QueryMoreAgentsOutcome | FinalResultOutcome | Awaitable[QueryMoreAgentsOutcome | FinalResultOutcome]: ...
-
-
-class ESTIMATOR_STATISTICS_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        result_list: AlignedResultList,
-        agents_queried: int,
-        agents_total: int,
-        agents_current: list[str],
-        previous_estimator: Estimator | None,
-    ) -> tuple[EstimatorStatistics, Estimator | None] | Awaitable[tuple[EstimatorStatistics, Estimator | None]]: ...
-
-
-class REPLAN_QUERY_PLAN_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        data_agents: list[DataAgent],
-        relevant_data_agents: list[DataAgent],
-        query_plan: QueryPlan,
-        reason: FailedExecution,
-    ) -> QueryPlan | Awaitable[QueryPlan]: ...
-
-
-class ANSWER_STEP_COORDINATOR_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query_plan_step: QueryPlanStep,
-        additional_information: list[AdditionalInformation],
-    ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
-
-
-class ANSWER_STEP_DATA_AGENT_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        data_agents: list[DataAgent],
-        query: str,
-        to_agent: str,
-        additional_information: list[AdditionalInformation],
-        schema_metadata: AlignedSchemaMetadata | None,
-    ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
-
-
-class EXECUTE_QUERY_PLAN_STEP_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        data_agents: list[DataAgent],
-        query_plan_step: QueryPlanStep,
-        additional_information: list[AdditionalInformation],
-        step_budgets: dict[str, StepBudget],
-    ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
-
-
-class ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        data_agents: list[DataAgent],
-        query_plan_step: MultiAgentQueryPlanStep,
-        additional_information: list[AdditionalInformation],
-        step_budgets: dict[str, StepBudget],
-    ) -> PartialQueryAnswer | Awaitable[PartialQueryAnswer]: ...
-
-
-class EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER(Protocol):
-    def __call__(
-        self,
-        execution_id: str,
-        query: str,
-        data_agents: list[DataAgent],
-    ) -> list[DataAgent] | Awaitable[list[DataAgent]]: ...
-
-
-@overload
-def on(
-    event: Literal[HookEvent.LOAD_INPUT],
-) -> Callable[[LOAD_INPUT_HANDLER], LOAD_INPUT_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.LOAD_CONFIG],
-) -> Callable[[LOAD_CONFIG_HANDLER], LOAD_CONFIG_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_START],
-) -> Callable[[FILTER_RELEVANT_AGENTS_START_HANDLER], FILTER_RELEVANT_AGENTS_START_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_END],
-) -> Callable[[FILTER_RELEVANT_AGENTS_END_HANDLER], FILTER_RELEVANT_AGENTS_END_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.DRAFT_QUERY_PLAN_START],
-) -> Callable[[DRAFT_QUERY_PLAN_START_HANDLER], DRAFT_QUERY_PLAN_START_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.DRAFT_QUERY_PLAN_END],
-) -> Callable[[DRAFT_QUERY_PLAN_END_HANDLER], DRAFT_QUERY_PLAN_END_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_LOOP_START],
-) -> Callable[[EXECUTE_QUERY_PLAN_LOOP_START_HANDLER], EXECUTE_QUERY_PLAN_LOOP_START_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_LOOP_END],
-) -> Callable[[EXECUTE_QUERY_PLAN_LOOP_END_HANDLER], EXECUTE_QUERY_PLAN_LOOP_END_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_START],
-) -> Callable[[EXECUTE_QUERY_PLAN_START_HANDLER], EXECUTE_QUERY_PLAN_START_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_END],
-) -> Callable[[EXECUTE_QUERY_PLAN_END_HANDLER], EXECUTE_QUERY_PLAN_END_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.REPLAN_START],
-) -> Callable[[REPLAN_START_HANDLER], REPLAN_START_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.REPLAN_END],
-) -> Callable[[REPLAN_END_HANDLER], REPLAN_END_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.EXECUTE_STEP_START],
-) -> Callable[[EXECUTE_STEP_START_HANDLER], EXECUTE_STEP_START_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.EXECUTE_STEP_END],
-) -> Callable[[EXECUTE_STEP_END_HANDLER], EXECUTE_STEP_END_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.DATA_AGENT_QUERY_START],
-) -> Callable[[DATA_AGENT_QUERY_START_HANDLER], DATA_AGENT_QUERY_START_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.DATA_AGENT_QUERY_END],
-) -> Callable[[DATA_AGENT_QUERY_END_HANDLER], DATA_AGENT_QUERY_END_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_START],
-) -> Callable[[MULTI_AGENT_STEP_START_HANDLER], MULTI_AGENT_STEP_START_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_BATCH_START],
-) -> Callable[[MULTI_AGENT_STEP_BATCH_START_HANDLER], MULTI_AGENT_STEP_BATCH_START_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_BATCH_END],
-) -> Callable[[MULTI_AGENT_STEP_BATCH_END_HANDLER], MULTI_AGENT_STEP_BATCH_END_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_END],
-) -> Callable[[MULTI_AGENT_STEP_END_HANDLER], MULTI_AGENT_STEP_END_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.COORDINATOR_RELEVANCE_OVERRIDE],
-) -> Callable[[COORDINATOR_RELEVANCE_OVERRIDE_HANDLER], COORDINATOR_RELEVANCE_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.DATA_AGENT_RELEVANCE_OVERRIDE],
-) -> Callable[[DATA_AGENT_RELEVANCE_OVERRIDE_HANDLER], DATA_AGENT_RELEVANCE_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_OVERRIDE],
-) -> Callable[[FILTER_RELEVANT_AGENTS_OVERRIDE_HANDLER], FILTER_RELEVANT_AGENTS_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.DRAFT_QUERY_PLAN_OVERRIDE],
-) -> Callable[[DRAFT_QUERY_PLAN_OVERRIDE_HANDLER], DRAFT_QUERY_PLAN_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.ALIGN_SCHEMA_OVERRIDE],
-) -> Callable[[ALIGN_SCHEMA_OVERRIDE_HANDLER], ALIGN_SCHEMA_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.DATA_AGENT_QUERY_OVERRIDE],
-) -> Callable[[DATA_AGENT_QUERY_OVERRIDE_HANDLER], DATA_AGENT_QUERY_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE],
-) -> Callable[[COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER], COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.ESTIMATOR_STATISTICS_OVERRIDE],
-) -> Callable[[ESTIMATOR_STATISTICS_OVERRIDE_HANDLER], ESTIMATOR_STATISTICS_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.REPLAN_QUERY_PLAN_OVERRIDE],
-) -> Callable[[REPLAN_QUERY_PLAN_OVERRIDE_HANDLER], REPLAN_QUERY_PLAN_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.ANSWER_STEP_COORDINATOR_OVERRIDE],
-) -> Callable[[ANSWER_STEP_COORDINATOR_OVERRIDE_HANDLER], ANSWER_STEP_COORDINATOR_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.ANSWER_STEP_DATA_AGENT_OVERRIDE],
-) -> Callable[[ANSWER_STEP_DATA_AGENT_OVERRIDE_HANDLER], ANSWER_STEP_DATA_AGENT_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_STEP_OVERRIDE],
-) -> Callable[[EXECUTE_QUERY_PLAN_STEP_OVERRIDE_HANDLER], EXECUTE_QUERY_PLAN_STEP_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE],
-) -> Callable[[ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE_HANDLER], ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE_HANDLER]: ...
-@overload
-def on(
-    event: Literal[HookEvent.EMBEDDING_PRE_FILTER_OVERRIDE],
-) -> Callable[[EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER], EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER]: ...
-def on(event: HookEvent) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
-        _handlers[event].append(fn)
+    # ── Setup ────────────────────────────────────────────────────────────────
+    SETUP_LOAD_INPUT = "setup_load_input"
+    SETUP_LOAD_CONFIG = "setup_load_config"
+
+    # ── Stage 1: Discovery ───────────────────────────────────────────────────
+    DISCOVERY_STAGE = "discovery_stage"
+    DISCOVERY_FILTER_RELEVANT_AGENTS = "discovery_filter_relevant_agents"
+    DISCOVERY_LOAD_REGISTRY_DATA = "discovery_load_registry_data"
+    DISCOVERY_DATA_AGENT_SCHEMA_DESCRIPTION = "discovery_data_agent_schema_description"
+    DISCOVERY_EMBEDDING_PRE_FILTER = "discovery_embedding_pre_filter"
+    DISCOVERY_COORDINATOR_RELEVANCE = "discovery_coordinator_relevance"
+    DISCOVERY_DATA_AGENT_RELEVANCE = "discovery_data_agent_relevance"
+
+    # ── Stage 2: Planning ────────────────────────────────────────────────────
+    PLANNING_STAGE = "planning_stage"
+    PLANNING_DRAFT_QUERY_PLAN = "planning_draft_query_plan"
+
+    # ── Stage 3: Execution ───────────────────────────────────────────────────
+    EXECUTION_STAGE = "execution_stage"
+    EXECUTION_EXECUTE_QUERY_PLAN = "execution_execute_query_plan"
+    EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP = "execution_execute_query_plan_execute_step"
+    EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_DATA_AGENT = (
+        "execution_execute_query_plan_execute_step_answer_step_data_agent"
+    )
+    EXECUTION_QUERY_DATA_AGENT = "execution_query_data_agent"
+    EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_COORDINATOR = (
+        "execution_execute_query_plan_execute_step_answer_step_coordinator"
+    )
+    EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS = (
+        "execution_execute_query_plan_execute_step_answer_step_multiple_agents"
+    )
+    EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA = (
+        "execution_execute_query_plan_execute_step_answer_step_multiple_agents_align_schema"
+    )
+    EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS = (
+        "execution_execute_query_plan_execute_step_answer_step_multiple_agents_completeness"
+    )
+    EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_ESTIMATOR = (
+        "execution_execute_query_plan_execute_step_answer_step_multiple_agents_completeness_estimator"
+    )
+    EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_LLM = (
+        "execution_execute_query_plan_execute_step_answer_step_multiple_agents_completeness_llm"
+    )
+    EXECUTION_REPLAN = "execution_replan"
+    EXECUTION_REPLAN_DRAFT_QUERY_PLAN = "execution_replan_draft_query_plan"
+
+    # ── Stage 4: Synthesis ───────────────────────────────────────────────────
+    SYNTHESIS_STAGE = "synthesis_stage"
+
+
+# ── Registration ─────────────────────────────────────────────────────────────
+
+
+def pre(event: HookEvent):
+    """Register an observer that runs before the operation."""
+
+    def decorator(fn):
+        register_pre(event, fn)
         return fn
 
     return decorator
 
 
-@overload
-def register(event: Literal[HookEvent.LOAD_INPUT], handler: LOAD_INPUT_HANDLER) -> None: ...
-@overload
-def register(event: Literal[HookEvent.LOAD_CONFIG], handler: LOAD_CONFIG_HANDLER) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_START], handler: FILTER_RELEVANT_AGENTS_START_HANDLER
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_END], handler: FILTER_RELEVANT_AGENTS_END_HANDLER
-) -> None: ...
-@overload
-def register(event: Literal[HookEvent.DRAFT_QUERY_PLAN_START], handler: DRAFT_QUERY_PLAN_START_HANDLER) -> None: ...
-@overload
-def register(event: Literal[HookEvent.DRAFT_QUERY_PLAN_END], handler: DRAFT_QUERY_PLAN_END_HANDLER) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_LOOP_START], handler: EXECUTE_QUERY_PLAN_LOOP_START_HANDLER
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_LOOP_END], handler: EXECUTE_QUERY_PLAN_LOOP_END_HANDLER
-) -> None: ...
-@overload
-def register(event: Literal[HookEvent.EXECUTE_QUERY_PLAN_START], handler: EXECUTE_QUERY_PLAN_START_HANDLER) -> None: ...
-@overload
-def register(event: Literal[HookEvent.EXECUTE_QUERY_PLAN_END], handler: EXECUTE_QUERY_PLAN_END_HANDLER) -> None: ...
-@overload
-def register(event: Literal[HookEvent.REPLAN_START], handler: REPLAN_START_HANDLER) -> None: ...
-@overload
-def register(event: Literal[HookEvent.REPLAN_END], handler: REPLAN_END_HANDLER) -> None: ...
-@overload
-def register(event: Literal[HookEvent.EXECUTE_STEP_START], handler: EXECUTE_STEP_START_HANDLER) -> None: ...
-@overload
-def register(event: Literal[HookEvent.EXECUTE_STEP_END], handler: EXECUTE_STEP_END_HANDLER) -> None: ...
-@overload
-def register(event: Literal[HookEvent.DATA_AGENT_QUERY_START], handler: DATA_AGENT_QUERY_START_HANDLER) -> None: ...
-@overload
-def register(event: Literal[HookEvent.DATA_AGENT_QUERY_END], handler: DATA_AGENT_QUERY_END_HANDLER) -> None: ...
-@overload
-def register(event: Literal[HookEvent.MULTI_AGENT_STEP_START], handler: MULTI_AGENT_STEP_START_HANDLER) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_BATCH_START], handler: MULTI_AGENT_STEP_BATCH_START_HANDLER
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_BATCH_END], handler: MULTI_AGENT_STEP_BATCH_END_HANDLER
-) -> None: ...
-@overload
-def register(event: Literal[HookEvent.MULTI_AGENT_STEP_END], handler: MULTI_AGENT_STEP_END_HANDLER) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.COORDINATOR_RELEVANCE_OVERRIDE],
-    handler: COORDINATOR_RELEVANCE_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.DATA_AGENT_RELEVANCE_OVERRIDE],
-    handler: DATA_AGENT_RELEVANCE_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_OVERRIDE],
-    handler: FILTER_RELEVANT_AGENTS_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.DRAFT_QUERY_PLAN_OVERRIDE],
-    handler: DRAFT_QUERY_PLAN_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(event: Literal[HookEvent.ALIGN_SCHEMA_OVERRIDE], handler: ALIGN_SCHEMA_OVERRIDE_HANDLER) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.DATA_AGENT_QUERY_OVERRIDE],
-    handler: DATA_AGENT_QUERY_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE],
-    handler: COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.ESTIMATOR_STATISTICS_OVERRIDE],
-    handler: ESTIMATOR_STATISTICS_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.REPLAN_QUERY_PLAN_OVERRIDE],
-    handler: REPLAN_QUERY_PLAN_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.ANSWER_STEP_COORDINATOR_OVERRIDE],
-    handler: ANSWER_STEP_COORDINATOR_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.ANSWER_STEP_DATA_AGENT_OVERRIDE],
-    handler: ANSWER_STEP_DATA_AGENT_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_STEP_OVERRIDE],
-    handler: EXECUTE_QUERY_PLAN_STEP_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE],
-    handler: ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def register(
-    event: Literal[HookEvent.EMBEDDING_PRE_FILTER_OVERRIDE],
-    handler: EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER,
-) -> None: ...
-def register(event: HookEvent, handler: Callable[..., Any]) -> None:
-    _handlers[event].append(handler)
+def overwrite(event: HookEvent):
+    """Register a replacement implementation (last registration wins)."""
+
+    def decorator(fn):
+        register_overwrite(event, fn)
+        return fn
+
+    return decorator
 
 
-@overload
-def emit(
-    event: Literal[HookEvent.LOAD_INPUT],
-    *,
-    input_file: Path,
-    data: CollaborativeQueryAnswering | FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult,
-    extra: dict[str, Any] | None,
-) -> None: ...
-@overload
-def emit(event: Literal[HookEvent.LOAD_CONFIG], *, config: Config) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_START], *, query: str, data_agents: list[DataAgent]
-) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_END], *, filtered_relevant_agents: FilteredRelevantAgents
-) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.DRAFT_QUERY_PLAN_START],
-    *,
-    query: str,
-    data_agents: list[DataAgent],
-    relevant_data_agents: list[DataAgent],
-) -> None: ...
-@overload
-def emit(event: Literal[HookEvent.DRAFT_QUERY_PLAN_END], *, drafted_query_plan: DraftedQueryPlan) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_LOOP_START],
-    *,
-    query_plan: QueryPlan,
-    current_data_agents: list[DataAgent],
-) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_LOOP_END], *, result: CollaborativeQueryAnsweringResult
-) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_START],
-    *,
-    attempt: int,
-    query_plan: QueryPlan,
-    current_data_agents: list[DataAgent],
-) -> None: ...
-@overload
-def emit(event: Literal[HookEvent.EXECUTE_QUERY_PLAN_END], *, attempt: int, result: ExecutionResult) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.REPLAN_START],
-    *,
-    attempt: int,
-    current_data_agents: list[DataAgent],
-    data_agents: list[DataAgent],
-    query_plan: QueryPlan,
-    failed_execution: FailedExecution,
-) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.REPLAN_END],
-    *,
-    attempt: int,
-    updated_data_agents: list[DataAgent],
-    new_query_plan: QueryPlan,
-) -> None: ...
-@overload
-def emit(event: Literal[HookEvent.EXECUTE_STEP_START], *, query_plan_step: QueryPlanStep) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.EXECUTE_STEP_END], *, query_plan_step: QueryPlanStep, partial_answer: PartialQueryAnswer
-) -> None: ...
-@overload
-def emit(event: Literal[HookEvent.DATA_AGENT_QUERY_START], *, data_agent: DataAgent, query: str) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.DATA_AGENT_QUERY_END],
-    *,
-    data_agent: DataAgent,
-    query: str,
-    partial_answer: PartialQueryAnswer,
-) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_START],
-    *,
-    query_plan_step: MultiAgentQueryPlanStep,
-    additional_information: list[AdditionalInformation],
-    initial_ranking: list[ScoredDataAgent],
-) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_BATCH_START],
-    *,
-    query_plan_step: MultiAgentQueryPlanStep,
-    additional_information: list[AdditionalInformation],
-    iteration: int,
-    batch: list[ScoredDataAgent],
-    queried: list[str],
-    remaining: list[ScoredDataAgent],
-    result_list: AlignedResultList,
-) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_BATCH_END],
-    *,
-    query_plan_step: MultiAgentQueryPlanStep,
-    additional_information: list[AdditionalInformation],
-    iteration: int,
-    batch: list[ScoredDataAgent],
-    remaining: list[ScoredDataAgent],
-    result_list: AlignedResultList,
-    estimators: list[EstimatorStatistics | None],
-    decision: EvaluatorDecision | Literal["need"],
-) -> None: ...
-@overload
-def emit(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_END],
-    *,
-    query_plan_step: MultiAgentQueryPlanStep,
-    additional_information: list[AdditionalInformation],
-    result_list: AlignedResultList,
-    queried: list[str],
-    remaining: list[str],
-    estimators: list[EstimatorStatistics | None],
-) -> None: ...
-def emit(event: HookEvent, **kwargs: Any) -> None:
-    execution_id = get_execution_id()
-    for handler in _handlers[event]:
-        handler(execution_id, **kwargs)
+def post(event: HookEvent):
+    """Register an observer that runs after the operation."""
+
+    def decorator(fn):
+        register_post(event, fn)
+        return fn
+
+    return decorator
 
 
-@overload
-async def call_override(
-    event: Literal[HookEvent.COORDINATOR_RELEVANCE_OVERRIDE],
-    *,
-    default: Callable[[], list[tuple[DataAgent, str]] | Awaitable[list[tuple[DataAgent, str]]]],
-    query: str,
-    data_agents: list[DataAgent],
-    registry_string: str,
-    additional_context: str | None,
-) -> list[tuple[DataAgent, str]]: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.DATA_AGENT_RELEVANCE_OVERRIDE],
-    *,
-    default: Callable[[], DataAgent | None | Awaitable[DataAgent | None]],
-    query: str,
-    item: tuple[DataAgent, str],
-    additional_context: str | None,
-) -> DataAgent | None: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_OVERRIDE],
-    *,
-    default: Callable[[], FilteredRelevantAgents | Awaitable[FilteredRelevantAgents]],
-    query: str,
-    data_agents: list[DataAgent],
-) -> FilteredRelevantAgents: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.DRAFT_QUERY_PLAN_OVERRIDE],
-    *,
-    default: Callable[[], DraftedQueryPlan | Awaitable[DraftedQueryPlan]],
-    query: str,
-    data_agents: list[DataAgent],
-    relevant_data_agents: list[DataAgent],
-) -> DraftedQueryPlan: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.ALIGN_SCHEMA_OVERRIDE],
-    *,
-    default: Callable[[], AlignedResultList | Awaitable[AlignedResultList]],
-    data_agents: list[DataAgent],
-    agent_names: list[str],
-    query: str,
-    merge_task: str,
-) -> AlignedResultList: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.DATA_AGENT_QUERY_OVERRIDE],
-    *,
-    default: Callable[[], PartialQueryAnswer | Awaitable[PartialQueryAnswer]],
-    data_agent: DataAgent,
-    query: str,
-    additional_information: list[AdditionalInformation],
-    schema_metadata: AlignedSchemaMetadata | None,
-) -> PartialQueryAnswer: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE],
-    *,
-    default: Callable[
-        [], QueryMoreAgentsOutcome | FinalResultOutcome | Awaitable[QueryMoreAgentsOutcome | FinalResultOutcome]
-    ],
-    aligned_result_list: AlignedResultList,
-    estimator_statistics: EstimatorStatistics,
-    query: str,
-    previous_estimator_statistics: list[EstimatorStatistics],
-    merge_task: str,
-    force_result: bool,
-) -> QueryMoreAgentsOutcome | FinalResultOutcome: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.ESTIMATOR_STATISTICS_OVERRIDE],
-    *,
-    default: Callable[
-        [], tuple[EstimatorStatistics, Estimator | None] | Awaitable[tuple[EstimatorStatistics, Estimator | None]]
-    ],
-    result_list: AlignedResultList,
-    agents_queried: int,
-    agents_total: int,
-    agents_current: list[str],
-    previous_estimator: Estimator | None,
-) -> tuple[EstimatorStatistics, Estimator | None]: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.REPLAN_QUERY_PLAN_OVERRIDE],
-    *,
-    default: Callable[[], QueryPlan | Awaitable[QueryPlan]],
-    data_agents: list[DataAgent],
-    relevant_data_agents: list[DataAgent],
-    query_plan: QueryPlan,
-    reason: FailedExecution,
-) -> QueryPlan: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.ANSWER_STEP_COORDINATOR_OVERRIDE],
-    *,
-    default: Callable[[], PartialQueryAnswer | Awaitable[PartialQueryAnswer]],
-    query_plan_step: QueryPlanStep,
-    additional_information: list[AdditionalInformation],
-) -> PartialQueryAnswer: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.ANSWER_STEP_DATA_AGENT_OVERRIDE],
-    *,
-    default: Callable[[], PartialQueryAnswer | Awaitable[PartialQueryAnswer]],
-    data_agents: list[DataAgent],
-    query: str,
-    to_agent: str,
-    additional_information: list[AdditionalInformation],
-    schema_metadata: AlignedSchemaMetadata | None,
-) -> PartialQueryAnswer: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_STEP_OVERRIDE],
-    *,
-    default: Callable[[], PartialQueryAnswer | Awaitable[PartialQueryAnswer]],
-    data_agents: list[DataAgent],
-    query_plan_step: QueryPlanStep,
-    additional_information: list[AdditionalInformation],
-    step_budgets: dict[str, StepBudget],
-) -> PartialQueryAnswer: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE],
-    *,
-    default: Callable[[], PartialQueryAnswer | Awaitable[PartialQueryAnswer]],
-    data_agents: list[DataAgent],
-    query_plan_step: MultiAgentQueryPlanStep,
-    additional_information: list[AdditionalInformation],
-    step_budgets: dict[str, StepBudget],
-) -> PartialQueryAnswer: ...
-@overload
-async def call_override(
-    event: Literal[HookEvent.EMBEDDING_PRE_FILTER_OVERRIDE],
-    *,
-    default: Callable[[], list[DataAgent] | Awaitable[list[DataAgent]]],
-    query: str,
-    data_agents: list[DataAgent],
-) -> list[DataAgent]: ...
-async def call_override(event: HookEvent, *, default: Callable[[], Any], **kwargs: Any) -> Any:
-    execution_id = get_execution_id()
-    handlers = _handlers.get(str(event), [])
-    if handlers:
-        result = handlers[0](execution_id, **kwargs)
-        if inspect.isawaitable(result):
-            return await result
-        return result
-    result = default()
-    if inspect.isawaitable(result):
-        return await result
-    return result
+def register_pre(event: HookEvent, handler: Callable[..., Any]) -> None:
+    _pre_hooks[event].append(handler)
 
 
-@overload
-def unregister(event: Literal[HookEvent.LOAD_INPUT], handler: LOAD_INPUT_HANDLER) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.LOAD_CONFIG], handler: LOAD_CONFIG_HANDLER) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_START], handler: FILTER_RELEVANT_AGENTS_START_HANDLER
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_END], handler: FILTER_RELEVANT_AGENTS_END_HANDLER
-) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.DRAFT_QUERY_PLAN_START], handler: DRAFT_QUERY_PLAN_START_HANDLER) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.DRAFT_QUERY_PLAN_END], handler: DRAFT_QUERY_PLAN_END_HANDLER) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_LOOP_START], handler: EXECUTE_QUERY_PLAN_LOOP_START_HANDLER
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_LOOP_END], handler: EXECUTE_QUERY_PLAN_LOOP_END_HANDLER
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_START], handler: EXECUTE_QUERY_PLAN_START_HANDLER
-) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.EXECUTE_QUERY_PLAN_END], handler: EXECUTE_QUERY_PLAN_END_HANDLER) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.REPLAN_START], handler: REPLAN_START_HANDLER) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.REPLAN_END], handler: REPLAN_END_HANDLER) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.EXECUTE_STEP_START], handler: EXECUTE_STEP_START_HANDLER) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.EXECUTE_STEP_END], handler: EXECUTE_STEP_END_HANDLER) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.DATA_AGENT_QUERY_START], handler: DATA_AGENT_QUERY_START_HANDLER) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.DATA_AGENT_QUERY_END], handler: DATA_AGENT_QUERY_END_HANDLER) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.MULTI_AGENT_STEP_START], handler: MULTI_AGENT_STEP_START_HANDLER) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_BATCH_START], handler: MULTI_AGENT_STEP_BATCH_START_HANDLER
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.MULTI_AGENT_STEP_BATCH_END], handler: MULTI_AGENT_STEP_BATCH_END_HANDLER
-) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.MULTI_AGENT_STEP_END], handler: MULTI_AGENT_STEP_END_HANDLER) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.COORDINATOR_RELEVANCE_OVERRIDE],
-    handler: COORDINATOR_RELEVANCE_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.DATA_AGENT_RELEVANCE_OVERRIDE],
-    handler: DATA_AGENT_RELEVANCE_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.FILTER_RELEVANT_AGENTS_OVERRIDE],
-    handler: FILTER_RELEVANT_AGENTS_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.DRAFT_QUERY_PLAN_OVERRIDE],
-    handler: DRAFT_QUERY_PLAN_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(event: Literal[HookEvent.ALIGN_SCHEMA_OVERRIDE], handler: ALIGN_SCHEMA_OVERRIDE_HANDLER) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.DATA_AGENT_QUERY_OVERRIDE],
-    handler: DATA_AGENT_QUERY_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE],
-    handler: COMPLETENESS_EVALUATOR_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.ESTIMATOR_STATISTICS_OVERRIDE],
-    handler: ESTIMATOR_STATISTICS_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.REPLAN_QUERY_PLAN_OVERRIDE],
-    handler: REPLAN_QUERY_PLAN_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.ANSWER_STEP_COORDINATOR_OVERRIDE],
-    handler: ANSWER_STEP_COORDINATOR_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.ANSWER_STEP_DATA_AGENT_OVERRIDE],
-    handler: ANSWER_STEP_DATA_AGENT_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.EXECUTE_QUERY_PLAN_STEP_OVERRIDE],
-    handler: EXECUTE_QUERY_PLAN_STEP_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE],
-    handler: ANSWER_STEP_MULTIPLE_AGENTS_OVERRIDE_HANDLER,
-) -> None: ...
-@overload
-def unregister(
-    event: Literal[HookEvent.EMBEDDING_PRE_FILTER_OVERRIDE],
-    handler: EMBEDDING_PRE_FILTER_OVERRIDE_HANDLER,
-) -> None: ...
-def unregister(event: HookEvent, handler: Callable[..., Any]) -> None:
-    _handlers[event].remove(handler)
+def register_overwrite(event: HookEvent, handler: Callable[..., Any]) -> None:
+    _overwrite_hooks[event] = handler
+
+
+def register_post(event: HookEvent, handler: Callable[..., Any]) -> None:
+    _post_hooks[event].append(handler)
+
+
+def unregister_pre(event: HookEvent, handler: Callable[..., Any]) -> None:
+    _pre_hooks[event].remove(handler)
+
+
+def unregister_overwrite(event: HookEvent, handler: Callable[..., Any]) -> None:
+    _overwrite_hooks.pop(event, None)
+
+
+def unregister_post(event: HookEvent, handler: Callable[..., Any]) -> None:
+    _post_hooks[event].remove(handler)
 
 
 def clear(event: HookEvent | None = None) -> None:
     if event is None:
-        _handlers.clear()
+        _pre_hooks.clear()
+        _overwrite_hooks.clear()
+        _post_hooks.clear()
     else:
-        _handlers.pop(event, None)
+        _pre_hooks.pop(event, None)
+        _overwrite_hooks.pop(event, None)
+        _post_hooks.pop(event, None)
+
+
+# ── Dispatch ─────────────────────────────────────────────────────────────────
+
+
+@contextmanager
+def _stage_context(stage_context: bool = False):
+    """Enter a fresh nested execution-id scope for the duration of the block."""
+    if not stage_context:
+        yield
+        return
+
+    parent = _execution_id.get()
+    new_id = uuid4().hex[:12]
+    id_ = f"{parent}/{new_id}" if parent else new_id
+    token = _execution_id.set(id_)
+    try:
+        yield
+    finally:
+        _execution_id.reset(token)
+
+
+def _call(handler: Callable[..., Any], execution_id: str, kwargs: dict[str, Any]) -> Any:
+    """
+    Call a handler with the kwargs it declares (plus execution_id).
+
+    Returns the handler's result, which may be a coroutine if the handler is async.
+    """
+    params = inspect.signature(handler).parameters
+    has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+    call_kwargs = {"execution_id": execution_id}
+    for name, value in kwargs.items():
+        if name in params or has_var_kw:
+            call_kwargs[name] = value
+    return handler(**call_kwargs)
+
+
+async def _run_async(
+    event: HookEvent, default: Callable[..., Any], kwargs: dict[str, Any], stage_context: bool = False
+) -> Any:
+    """Run pre → overwrite-or-default → post, awaiting any async handlers"""
+    with _stage_context(stage_context):
+        execution_id = get_execution_id()
+        for handler in _pre_hooks[event]:
+            result = _call(handler, execution_id, kwargs)
+            if inspect.isawaitable(result):
+                await result
+
+        result = (
+            _call(_overwrite_hooks[event], execution_id, kwargs) if event in _overwrite_hooks else default(**kwargs)
+        )
+        if inspect.isawaitable(result):
+            result = await result
+
+        for handler in _post_hooks[event]:
+            post_result = _call(handler, execution_id, {**kwargs, "result": result})
+            if inspect.isawaitable(post_result):
+                await post_result
+
+        return result
+
+
+def _run_sync(
+    event: HookEvent, default: Callable[..., Any], kwargs: dict[str, Any], stage_context: bool = False
+) -> Any:
+    """Run pre → overwrite-or-default → post for a sync default"""
+    with _stage_context(stage_context):
+        execution_id = get_execution_id()
+        for handler in _pre_hooks[event]:
+            _call(handler, execution_id, kwargs)
+
+        result = (
+            _call(_overwrite_hooks[event], execution_id, kwargs) if event in _overwrite_hooks else default(**kwargs)
+        )
+
+        for handler in _post_hooks[event]:
+            _call(handler, execution_id, {**kwargs, "result": result})
+
+        return result
+
+
+def hook(event: HookEvent, *, stage_context: bool = False):
+    """
+    Wrap a default implementation so calls route through pre/overwrite/post.
+
+    Handlers may be sync or async; async results are awaited. The wrapped
+    function may be sync or async — sync defaults are called directly and their
+    result returned as-is (callers awaiting it get the value).
+
+    When `stage_context=True`, the wrapper enters a fresh execution-id scope
+    before dispatch, so pre/overwrite/post handlers and the default all share
+    the same nested execution id.
+    """
+
+    def decorator(fn):
+        sig = inspect.signature(fn)
+
+        if inspect.iscoroutinefunction(fn):
+
+            @functools.wraps(fn)
+            async def async_wrapper(*args, **kwargs):
+                bound = sig.bind(*args, **kwargs)
+                bound.apply_defaults()
+                return await _run_async(event, fn, dict(bound.arguments), stage_context)
+
+            return async_wrapper
+
+        else:
+
+            @functools.wraps(fn)
+            def sync_wrapper(*args, **kwargs):
+                bound = sig.bind(*args, **kwargs)
+                bound.apply_defaults()
+                return _run_sync(event, fn, dict(bound.arguments), stage_context)
+
+            return sync_wrapper
+
+    return decorator

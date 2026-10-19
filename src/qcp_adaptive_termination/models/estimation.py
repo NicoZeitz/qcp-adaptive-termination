@@ -26,7 +26,8 @@ class AggregationType(StrEnum):
 
 class EstimatorMode(StrEnum):
     FULL = "full"
-    """Coverage, observed count + value, estimated count + value with intervals.
+    """
+    Coverage, observed count + value, estimated count + value with intervals.
 
     Example:
         Aggregation type: sum
@@ -42,7 +43,8 @@ class EstimatorMode(StrEnum):
     """
 
     COUNT_ONLY = "count_only"
-    """Coverage, observed count, estimated count with intervals. No value estimates.
+    """
+    Coverage, observed count, estimated count with intervals. No value estimates.
 
     Example:
         Aggregation type: sum
@@ -55,7 +57,8 @@ class EstimatorMode(StrEnum):
     """
 
     VALUE_ONLY = "value_only"
-    """Coverage, observed value, estimated value with intervals. No count estimates.
+    """
+    Coverage, observed value, estimated value with intervals. No count estimates.
 
     Example:
         Aggregation type: sum
@@ -68,7 +71,8 @@ class EstimatorMode(StrEnum):
     """
 
     OBSERVED_ONLY = "observed_only"
-    """Coverage, observed count and value. No estimates.
+    """
+    Coverage, observed count and value. No estimates.
 
     Example:
         Aggregation type: sum
@@ -80,7 +84,8 @@ class EstimatorMode(StrEnum):
     """
 
     COVERAGE_ONLY = "coverage_only"
-    """Coverage and agent progress only. No counts or values.
+    """
+    Coverage and agent progress only. No counts or values.
 
     Example:
         Aggregation type: sum

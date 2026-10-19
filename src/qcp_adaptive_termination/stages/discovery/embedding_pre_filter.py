@@ -43,7 +43,8 @@ def find_similarity_clusters(scores: list[float], min_cluster_size: int = 1) -> 
     return cutoff_idx
 
 
-async def _filter_embeddings_internal(
+@hooks.hook(HookEvent.DISCOVERY_EMBEDDING_PRE_FILTER)
+async def filter_embedding_pre_filter(
     query: str,
     data_agents: list[DataAgent],
     registry_type: AgentRegistryType,
@@ -95,16 +96,3 @@ async def _filter_embeddings_internal(
     )
 
     return filtered
-
-
-async def filter_embeddings(
-    query: str,
-    data_agents: list[DataAgent],
-    registry_type: AgentRegistryType = AgentRegistryType.NATURAL_LANGUAGE,
-) -> list[DataAgent]:
-    return await hooks.call_override(
-        HookEvent.EMBEDDING_PRE_FILTER_OVERRIDE,
-        default=lambda: _filter_embeddings_internal(query, data_agents, registry_type),
-        query=query,
-        data_agents=data_agents,
-    )

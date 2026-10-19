@@ -29,7 +29,7 @@ def dataframe_to_data_items(
     return [DataItem(name=n, value=float(v), source_id=source_id) for n, v in zip(names, values, strict=False)]
 
 
-def compute_estimator_statistics(
+async def compute_estimator_statistics(
     result_list: AlignedResultList,
     agents_queried: int,
     agents_total: int,

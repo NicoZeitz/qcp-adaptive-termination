@@ -3,7 +3,8 @@ from dataclasses import dataclass
 
 @dataclass(slots=True)
 class DataItem:
-    """A single observed entity from one data source.
+    """
+    A single observed entity from one data source.
 
     Represents one row in an integrated database: the entity's canonical name
     (after entity resolution), its attribute value, and which source it came from.

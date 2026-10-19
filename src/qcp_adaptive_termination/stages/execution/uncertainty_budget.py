@@ -20,7 +20,8 @@ def compute_step_budgets(
     target_confidence: float,
     apportionment: ApportionmentType,
 ) -> dict[str, StepBudget]:
-    """Compute per-step completeness thresholds for a query plan.
+    """
+    Compute per-step completeness thresholds for a query plan.
 
     Only multi-agent steps are budgeted. Returns a dict keyed by step id.
     """

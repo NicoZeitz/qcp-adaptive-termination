@@ -6,7 +6,8 @@ from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAg
 from qcp_adaptive_termination.observability import tracing
 
 
-async def _data_agent_relevance_llm(
+@hooks.hook(HookEvent.DISCOVERY_DATA_AGENT_RELEVANCE)
+async def filter_data_agent(
     query: str,
     item: tuple[DataAgent, str],
     additional_context: str | None = None,
@@ -30,17 +31,3 @@ async def _data_agent_relevance_llm(
 
     tracing.append_to_span_output({f"{data_agent.name}_relevant": is_relevant})
     return data_agent if is_relevant else None
-
-
-async def filter_data_agent_with_reasoning(
-    query: str,
-    item: tuple[DataAgent, str],
-    additional_context: str | None = None,
-) -> DataAgent | None:
-    return await hooks.call_override(
-        HookEvent.DATA_AGENT_RELEVANCE_OVERRIDE,
-        default=lambda: _data_agent_relevance_llm(query, item, additional_context),
-        query=query,
-        item=item,
-        additional_context=additional_context,
-    )

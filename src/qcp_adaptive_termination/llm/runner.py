@@ -71,7 +71,7 @@ async def run_agent[TResult](
     if max_turns is None:
         max_turns = DEFAULT_MAX_TURNS * 2
 
-    prompts = prompt.load_prompt(role.prompt_name, prompt_parameters)
+    prompts = prompt.load_prompt(role.value, prompt_parameters)
     # use 1st message as instructions, rest as part of prompt
     instructions, prompts = prompts[0], prompts[1:]
 
@@ -84,9 +84,7 @@ async def run_agent[TResult](
 
     output = _get_output_schema(output_type)
 
-    @cache.cached(
-        mode=cache_mode,
-    )
+    @cache.cached(mode=cache_mode)
     async def compute_value(
         instructions: str,
         prompts: list[dict[str, str]],

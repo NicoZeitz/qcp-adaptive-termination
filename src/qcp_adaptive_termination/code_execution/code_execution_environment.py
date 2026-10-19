@@ -19,10 +19,7 @@ from qcp_adaptive_termination.code_execution.builtins import (
     SAFE_BUILTINS,
     UNSAFE_BUILTINS,
 )
-from qcp_adaptive_termination.observability import tracing
-
-LLM_PREVIEW_CHAR_LIMIT = 2000
-LLM_CODE_EXECUTION_TIMEOUT = 60
+from qcp_adaptive_termination.observability import context, tracing
 
 
 @dataclass(slots=True)
@@ -48,7 +45,9 @@ class CodeExecutionResult:
     """A short formatted string that can be given to the LLM as information"""
 
 
-def preview_text(text: str, char_limit=LLM_PREVIEW_CHAR_LIMIT):
+def preview_text(text: str, char_limit: int | None = None):
+    if char_limit is None:
+        char_limit = context.get_config().llm_code_execution_preview_char_limit
     if len(text) <= char_limit:
         return text
 
@@ -110,7 +109,8 @@ class CodeExecutionEnvironment:
         self.locals = self.initial_locals.copy()
 
     def execute_code(self, code: str) -> CodeExecutionResult:
-        """Execute `code` in an isolated working directory and return captured output.
+        """
+        Execute `code` in an isolated working directory and return captured output.
 
         Any new non-private names defined by the code are merged into `self.locals` so they
         survive into the next call. Exceptions are caught and returned rather than raised.
@@ -149,7 +149,7 @@ class CodeExecutionEnvironment:
     def as_function_tool[TContext](self) -> FunctionTool:
         @function_tool(
             name_override="execute_code",
-            timeout=LLM_CODE_EXECUTION_TIMEOUT,
+            timeout=context.get_config().llm_code_execution_timeout,
             timeout_behavior="error_as_result",
         )
         async def execute_python_code(ctx: RunContextWrapper[TContext], code: str) -> str:
@@ -180,7 +180,8 @@ class CodeExecutionEnvironment:
 
     @contextmanager
     def _exec_variables(self):
-        """Yield a merged globals+locals dict for exec, then restore initial globals afterward.
+        """
+        Yield a merged globals+locals dict for exec, then restore initial globals afterward.
 
         Globals are reset to their initial state after each execution so that user code cannot
         permanently overwrite injected tools or safe-builtin entries.

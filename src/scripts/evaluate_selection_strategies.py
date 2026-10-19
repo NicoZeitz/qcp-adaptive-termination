@@ -9,7 +9,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, cast
 from uuid import uuid4
 
 import matplotlib.pyplot as plt
@@ -19,7 +19,6 @@ import yaml
 from sqlalchemy import create_engine, text
 
 import qcp_adaptive_termination.hooks as hooks
-from qcp_adaptive_termination.estimator import Estimator
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import (
     AggregationType,
@@ -28,12 +27,10 @@ from qcp_adaptive_termination.models import (
     Config,
     DataAgent,
     EstimatorStatistics,
-    ScoredDataAgent,
     SelectionStrategyType,
 )
 from qcp_adaptive_termination.models.execution import (
     AdditionalInformation,
-    EvaluatorDecision,
     FinalResultOutcome,
     PartialQueryAnswer,
     QueryMoreAgentsOutcome,
@@ -44,7 +41,9 @@ from qcp_adaptive_termination.models.query_plan import (
 )
 from qcp_adaptive_termination.models.stages import CollaborativeQueryAnswering
 from qcp_adaptive_termination.observability import context
-from qcp_adaptive_termination.stages.execution.multi_agent import answer_step_multiple_agents
+from qcp_adaptive_termination.stages.execution.multi_agent import (
+    answer_step_multiple_agents,
+)
 from scripts.utils import ScriptContext, run_script
 from scripts.utils.evaluation import EvaluationCurve, build_curve, compute_greedy_oracle, compute_relative_auc
 from scripts.utils.sql import parse_select_columns, rewrite_sql_identifiers
@@ -193,35 +192,15 @@ def _completeness_override(
     aligned_result_list: AlignedResultList,
     estimator_statistics: EstimatorStatistics,
     query: str,
-    previous_estimator_statistics: list[EstimatorStatistics],
     merge_task: str,
+    step_budget: Any,
+    agents_queried: int,
     force_result: bool,
     **kwargs: Any,
 ) -> QueryMoreAgentsOutcome | FinalResultOutcome:
     if force_result:
         return FinalResultOutcome(result=aligned_result_list.data, result_list=aligned_result_list)
     return QueryMoreAgentsOutcome(result_list=aligned_result_list)
-
-
-def _estimator_statistics_override(
-    execution_id: str,
-    result_list: AlignedResultList,
-    agents_queried: int,
-    agents_total: int,
-    agents_current: list[str],
-    previous_estimator: Estimator | None,
-) -> tuple[EstimatorStatistics, Estimator | None]:
-    return (
-        EstimatorStatistics(
-            sample_coverage=None,
-            new_unique_count=0,
-            agents_queried=agents_queried,
-            agents_total=agents_total,
-            aggregation_types=result_list.schema_metadata.aggregation_types,
-            observed_count=0,
-        ),
-        None,
-    )
 
 
 def _align_schema_dispatch(
@@ -258,26 +237,20 @@ def _data_agent_dispatch(
     raise ValueError(f"No data_agent handler for execution_id={execution_id!r}")
 
 
-def _register_batch_tracking(target_execution_id: str, target_step_id: str) -> tuple[list[str], Any]:
+def _register_agent_tracking(target_execution_id: str, target_step_id: str) -> tuple[list[str], Any]:
     ordered: list[str] = []
 
-    def _on_batch_end(
+    def _on_agent_query(
         execution_id: str,
-        query_plan_step: MultiAgentQueryPlanStep,
-        additional_information: list[AdditionalInformation],
-        iteration: int,
-        batch: list[ScoredDataAgent],
-        remaining: list[ScoredDataAgent],
-        result_list: AlignedResultList,
-        estimators: list[EstimatorStatistics | None],
-        decision: EvaluatorDecision | Literal["need"],
+        data_agent: DataAgent,
+        query: str,
+        result: PartialQueryAnswer,
     ) -> None:
-        del additional_information, iteration, remaining, result_list, estimators, decision
-        if execution_id == target_execution_id and query_plan_step.id == target_step_id:
-            ordered.extend(sda.agent.name for sda in batch)
+        if execution_id == target_execution_id:
+            ordered.append(data_agent.name)
 
-    hooks.register(HookEvent.MULTI_AGENT_STEP_BATCH_END, _on_batch_end)
-    return ordered, _on_batch_end
+    hooks.register_post(HookEvent.EXECUTION_QUERY_DATA_AGENT, _on_agent_query)
+    return ordered, _on_agent_query
 
 
 def _get_total_unique(
@@ -655,7 +628,7 @@ async def _run_one_strategy(
     logging.info("Running strategy: %s / %s", step.id, strategy)
     execution_id = uuid4().hex[:12]
     strategy_config = config.model_copy(update={"selection_type": strategy})
-    ordered_agents, batch_end_handler = _register_batch_tracking(execution_id, step.id)
+    ordered_agents, agent_query_handler = _register_agent_tracking(execution_id, step.id)
     # Benchmark the step in isolation: dependencies dropped, canonical SQL self-contained.
     isolated_step = step.model_copy(update={"dependencies": []})
 
@@ -663,7 +636,7 @@ async def _run_one_strategy(
     _per_strategy_data[execution_id] = data_handler
 
     try:
-        with hooks.stage_context(execution_id), context.config_context(strategy_config):
+        with hooks.execution_context(execution_id), context.config_context(strategy_config):
             await answer_step_multiple_agents(
                 data_agents=all_agents,
                 query_plan_step=isolated_step,
@@ -678,7 +651,7 @@ async def _run_one_strategy(
     finally:
         _per_strategy_align.pop(execution_id, None)
         _per_strategy_data.pop(execution_id, None)
-        hooks.unregister(HookEvent.MULTI_AGENT_STEP_BATCH_END, batch_end_handler)
+        hooks.unregister_post(HookEvent.EXECUTION_QUERY_DATA_AGENT, agent_query_handler)
 
     seen: set[str] = set()
     deduped: list[str] = []
@@ -824,10 +797,15 @@ async def _run(ctx: ScriptContext) -> None:
 
     # Single dispatch handlers for ALIGN_SCHEMA and DATA_AGENT overrides.
     # These route each call to the correct per-step handler via execution_id.
-    hooks.register(HookEvent.ALIGN_SCHEMA_OVERRIDE, _align_schema_dispatch)
-    hooks.register(HookEvent.DATA_AGENT_QUERY_OVERRIDE, _data_agent_dispatch)
-    hooks.register(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
-    hooks.register(HookEvent.ESTIMATOR_STATISTICS_OVERRIDE, _estimator_statistics_override)
+    hooks.register_overwrite(
+        HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
+        _align_schema_dispatch,
+    )
+    hooks.register_overwrite(HookEvent.EXECUTION_QUERY_DATA_AGENT, _data_agent_dispatch)
+    hooks.register_overwrite(
+        HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS,
+        _completeness_override,
+    )
 
     step_tasks = []
     for step in multi_steps:
@@ -854,10 +832,15 @@ async def _run(ctx: ScriptContext) -> None:
         gathered = await asyncio.gather(*step_tasks)
         step_summaries = [s for s in gathered if s is not None]
     finally:
-        hooks.unregister(HookEvent.ALIGN_SCHEMA_OVERRIDE, _align_schema_dispatch)
-        hooks.unregister(HookEvent.DATA_AGENT_QUERY_OVERRIDE, _data_agent_dispatch)
-        hooks.unregister(HookEvent.COMPLETENESS_EVALUATOR_OVERRIDE, _completeness_override)
-        hooks.unregister(HookEvent.ESTIMATOR_STATISTICS_OVERRIDE, _estimator_statistics_override)
+        hooks.unregister_overwrite(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
+            _align_schema_dispatch,
+        )
+        hooks.unregister_overwrite(HookEvent.EXECUTION_QUERY_DATA_AGENT, _data_agent_dispatch)
+        hooks.unregister_overwrite(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS,
+            _completeness_override,
+        )
 
     # Summary over all steps of this file.
     _write_summary(step_summaries, output_dir, "summary_all", " — all steps")

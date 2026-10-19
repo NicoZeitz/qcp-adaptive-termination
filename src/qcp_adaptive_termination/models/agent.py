@@ -53,26 +53,13 @@ class AgentRegistryType(StrEnum):
 
 
 class AgentRole(StrEnum):
-    COORDINATOR_RELEVANCE = "coordinator_relevance"
-    COORDINATOR_PLANNING = "coordinator_planning"
-    COORDINATOR_CODE = "coordinator_code"
-    COORDINATOR_REPLANNING = "coordinator_replanning"
-    COORDINATOR_ALIGN_SCHEMA = "coordinator_align_schema"
-    COORDINATOR_COMPLETENESS_EVALUATOR = "coordinator_completeness_evaluator"
-    DATA_AGENT_SCHEMA_DESCRIPTION = "data_agent_schema_description"
-    DATA_AGENT_RELEVANCE = "data_agent_relevance"
-    DATA_AGENT_CODE = "data_agent_code"
-
-    @property
-    def prompt_name(self) -> str:
-        return {
-            AgentRole.COORDINATOR_RELEVANCE: "discovery-coordinator-relevance",
-            AgentRole.COORDINATOR_PLANNING: "planning-coordinator-planning",
-            AgentRole.COORDINATOR_CODE: "execution-coordinator-aggregate",
-            AgentRole.COORDINATOR_REPLANNING: "execution-coordinator-replanning",
-            AgentRole.COORDINATOR_ALIGN_SCHEMA: "execution-coordinator-align-schema",
-            AgentRole.COORDINATOR_COMPLETENESS_EVALUATOR: "execution-coordinator-completeness-evaluator",
-            AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION: "discovery-data-agent-sql-schema-description",
-            AgentRole.DATA_AGENT_RELEVANCE: "discovery-data-agent-sql-relevance",
-            AgentRole.DATA_AGENT_CODE: "execution-data-agent-sql-code",
-        }[self]
+    COORDINATOR_RELEVANCE = "discovery-coordinator-relevance"
+    COORDINATOR_PLANNING = "planning-draft-query-plan"
+    COORDINATOR_CODE = "execution-answer-step-coordinator"
+    COORDINATOR_REPLANNING = "execution-replan-draft-query-plan"
+    COORDINATOR_ALIGN_SCHEMA = "execution-align-schema"
+    COORDINATOR_WORLD_KNOWLEDGE_STOP = "execution-completeness-llm"
+    COORDINATOR_RESULT_PRODUCER = "execution-result-producer"
+    DATA_AGENT_SCHEMA_DESCRIPTION = "discovery-data-agent-schema-description"
+    DATA_AGENT_RELEVANCE = "discovery-data-agent-relevance"
+    DATA_AGENT_CODE = "execution-query-data-agent"

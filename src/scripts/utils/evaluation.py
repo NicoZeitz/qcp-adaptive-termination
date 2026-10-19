@@ -24,7 +24,8 @@ class EvaluationResult:
 
 
 def compute_auc(coverages: list[float]) -> float:
-    """Mean coverage over the full sequence of queried agents.
+    """
+    Mean coverage over the full sequence of queried agents.
 
     `coverages` holds coverage after each queried agent, including agents queried
     after full coverage. Fixed horizon keeps scores comparable across strategies.
@@ -35,7 +36,8 @@ def compute_auc(coverages: list[float]) -> float:
 
 
 def compute_relative_auc(auc: float, oracle_auc: float) -> float:
-    """AUC normalized by the oracle AUC, so the oracle scores exactly 1.0.
+    """
+    AUC normalized by the oracle AUC, so the oracle scores exactly 1.0.
 
     Degenerate case (oracle AUC = 0, i.e. nothing to cover) counts as perfect.
     """
@@ -50,7 +52,8 @@ def build_curve(
     total_unique: int,
     key_cols: list[str],
 ) -> EvaluationCurve:
-    """Build coverage curve from ordered agent query sequence.
+    """
+    Build coverage curve from ordered agent query sequence.
 
     X = fraction of agents queried, Y = fraction of total unique rows covered.
     """

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from qcp_adaptive_termination.models.need_type import SerializedNeedList
 from qcp_adaptive_termination.models.query_plan import QueryPlanStep
@@ -6,6 +6,7 @@ from qcp_adaptive_termination.models.result_type import (
     SerializedOptionalResultType,
     SerializedResultType,
 )
+from qcp_adaptive_termination.models.uncertainty import StepUncertainty
 
 
 class SuccessfulExecution(BaseModel):
@@ -15,6 +16,7 @@ class SuccessfulExecution(BaseModel):
     step: QueryPlanStep
     result: SerializedResultType
     execution_finished: bool = False
+    step_uncertainties: list[StepUncertainty] = Field(default_factory=list)
 
 
 class FailedExecution(BaseModel):

@@ -115,7 +115,7 @@ PYEOF
         mkdir -p "${LOG_DIR}"
 
         if [[ "${TEST}" == "true" ]]; then
-            # echo "      [TEST] Would run: python3 -m scripts.main --name \"${NAME}\" --input \"${INPUT_FILE}\" --output_dir \"${LOG_DIR}\" --cache_dir \"${CACHE_DIR}\" --data_dir \"${DATA_DIR}\" --config \"${CONFIG}\" --start-stage 1 --end-stage 3 > >(tee \"${LOG_DIR}/stdout.log\") 2> >(tee \"${LOG_DIR}/stderr.log\" >&2) &"
+            # echo "      [TEST] Would run: python3 -m scripts.main --name \"${NAME}\" --input \"${INPUT_FILE}\" --output_dir \"${LOG_DIR}\" --cache_dir \"${CACHE_DIR}\" --data_dir \"${DATA_DIR}\" --config \"${CONFIG}\" --start-stage discovery --end-stage execution > >(tee \"${LOG_DIR}/stdout.log\") 2> >(tee \"${LOG_DIR}/stderr.log\" >&2) &"
             continue
         fi
 
@@ -127,7 +127,7 @@ PYEOF
           --cache_dir "${CACHE_DIR}" \
           --data_dir "${DATA_DIR}" \
           --config "${CONFIG}" \
-          --start-stage 1 --end-stage 3 &
+          --start-stage discovery --end-stage execution &
         #   > >(tee "${LOG_DIR}/stdout.log") \
         #   2> >(tee "${LOG_DIR}/stderr.log" >&2) &
 

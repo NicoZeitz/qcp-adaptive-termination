@@ -22,7 +22,7 @@ from qcp_adaptive_termination.models import (
 async def load(agent: DataAgent) -> AgentRegistryData: ...
 @overload
 async def load(agent: list[DataAgent]) -> dict[str, AgentRegistryData]: ...
-async def load(agent):
+async def load(agent: DataAgent | list[DataAgent]) -> AgentRegistryData | dict[str, AgentRegistryData]:
     if isinstance(agent, list):
         results = await asyncio.gather(*[utils.load_registry_data(a) for a in agent])
         return {a.name: r for a, r in zip(agent, results, strict=True)}

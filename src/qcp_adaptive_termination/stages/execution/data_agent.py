@@ -46,7 +46,8 @@ class SqlQuery:
         return span_data
 
 
-async def _query_via_llm(
+@hooks.hook(HookEvent.EXECUTION_QUERY_DATA_AGENT)
+async def answer_query_data_agent(
     data_agent: DataAgent,
     query: str,
     additional_information: list[AdditionalInformation],
@@ -140,26 +141,8 @@ async def _query_via_llm(
         return result
 
 
-async def answer_query_data_agent(
-    data_agent: DataAgent,
-    query: str,
-    additional_information: list[AdditionalInformation],
-    schema_metadata: AlignedSchemaMetadata | None = None,
-) -> PartialQueryAnswer:
-    hooks.emit(HookEvent.DATA_AGENT_QUERY_START, data_agent=data_agent, query=query)
-    result = await hooks.call_override(
-        HookEvent.DATA_AGENT_QUERY_OVERRIDE,
-        default=lambda: _query_via_llm(data_agent, query, additional_information, schema_metadata),
-        data_agent=data_agent,
-        query=query,
-        additional_information=additional_information,
-        schema_metadata=schema_metadata,
-    )
-    hooks.emit(HookEvent.DATA_AGENT_QUERY_END, data_agent=data_agent, query=query, partial_answer=result)
-    return result
-
-
-async def _answer_step_data_agent_internal(
+@hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_DATA_AGENT)
+async def answer_step_data_agent(
     data_agents: list[DataAgent],
     query: str,
     to_agent: str,
@@ -168,23 +151,3 @@ async def _answer_step_data_agent_internal(
 ) -> PartialQueryAnswer:
     responsible_data_agent = next(agent for agent in data_agents if agent.name == to_agent)
     return await answer_query_data_agent(responsible_data_agent, query, additional_information, schema_metadata)
-
-
-async def answer_step_data_agent(
-    data_agents: list[DataAgent],
-    query: str,
-    to_agent: str,
-    additional_information: list[AdditionalInformation],
-    schema_metadata: AlignedSchemaMetadata | None = None,
-) -> PartialQueryAnswer:
-    return await hooks.call_override(
-        HookEvent.ANSWER_STEP_DATA_AGENT_OVERRIDE,
-        default=lambda: _answer_step_data_agent_internal(
-            data_agents, query, to_agent, additional_information, schema_metadata
-        ),
-        data_agents=data_agents,
-        query=query,
-        to_agent=to_agent,
-        additional_information=additional_information,
-        schema_metadata=schema_metadata,
-    )

@@ -2,8 +2,9 @@
 Stage-level result models.
 
 Holds the output types for each pipeline stage: `FilteredRelevantAgents`
-(discovery), `DraftedQueryPlan` (planning), and
-`CollaborativeQueryAnsweringResult` (execution).
+(discovery), `DraftedQueryPlan` (planning),
+`CollaborativeQueryAnsweringResult` (execution), `SynthesizedResult`
+(synthesis), plus the `Stage` enum.
 """
 
 from qcp_adaptive_termination.models.stages.collaborative_query_answering import (
@@ -16,10 +17,14 @@ from qcp_adaptive_termination.models.stages.drafted_query_plan import DraftedQue
 from qcp_adaptive_termination.models.stages.filtered_relevant_agents import (
     FilteredRelevantAgents,
 )
+from qcp_adaptive_termination.models.stages.stage import Stage
+from qcp_adaptive_termination.models.stages.synthesized_result import SynthesizedResult
 
 __all__ = [
     "CollaborativeQueryAnswering",
     "CollaborativeQueryAnsweringResult",
     "DraftedQueryPlan",
     "FilteredRelevantAgents",
+    "Stage",
+    "SynthesizedResult",
 ]

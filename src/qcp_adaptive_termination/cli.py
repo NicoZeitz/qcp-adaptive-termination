@@ -5,18 +5,19 @@ import shutil
 from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import yaml
 
 from qcp_adaptive_termination import hooks
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import result_type
+from qcp_adaptive_termination.models.stages import Stage, SynthesizedResult
 from qcp_adaptive_termination.observability import context
 from qcp_adaptive_termination.pipeline import load_config, run_pipeline
 
 if TYPE_CHECKING:
-    from qcp_adaptive_termination.models import Config, DataAgent
+    from qcp_adaptive_termination.models import Config, DataAgent, ResultType
     from qcp_adaptive_termination.models.execution import ExecutionResult
     from qcp_adaptive_termination.models.query_plan import QueryPlan
     from qcp_adaptive_termination.models.stages import (
@@ -34,7 +35,7 @@ def register_default_output_hooks() -> None:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, sort_keys=False, ensure_ascii=False, indent=4)
 
-    @hooks.on(HookEvent.LOAD_INPUT)
+    @hooks.pre(HookEvent.SETUP_LOAD_INPUT)
     def _write_input_file(
         execution_id: str,
         input_file: Path,
@@ -47,28 +48,28 @@ def register_default_output_hooks() -> None:
         if output_dir := context.get_output_dir():
             shutil.copy(input_file, output_dir / input_file.name)
 
-    @hooks.on(HookEvent.LOAD_CONFIG)
+    @hooks.pre(HookEvent.SETUP_LOAD_CONFIG)
     def _write_config_file(execution_id: str, config: Config) -> None:
         if output_dir := context.get_output_dir():
             with open(output_dir / "config.yaml", "w", encoding="utf-8") as f:
                 yaml.dump(config.model_dump(), f, sort_keys=False, allow_unicode=True, default_flow_style=False)
             logging.info(f"Config: {config.model_dump_json(ensure_ascii=False)}")
 
-    @hooks.on(HookEvent.FILTER_RELEVANT_AGENTS_START)
+    @hooks.pre(HookEvent.DISCOVERY_FILTER_RELEVANT_AGENTS)
     def _write_stage_1_input(execution_id: str, query: str, data_agents: list[DataAgent]) -> None:  # noqa: ARG001
         _write_output_file(
             "stage_1_input.json",
             {"query": query, "data_agents": [a.model_dump() for a in data_agents]},
         )
 
-    @hooks.on(HookEvent.FILTER_RELEVANT_AGENTS_END)
-    def _write_stage_1(execution_id: str, filtered_relevant_agents: FilteredRelevantAgents) -> None:
+    @hooks.post(HookEvent.DISCOVERY_FILTER_RELEVANT_AGENTS)
+    def _write_stage_1(execution_id: str, result: FilteredRelevantAgents) -> None:
         _write_output_file(
             "stage_1_output_filtered_relevant_agents.json",
-            filtered_relevant_agents.model_dump(),
+            result.model_dump(),
         )
 
-    @hooks.on(HookEvent.DRAFT_QUERY_PLAN_START)
+    @hooks.pre(HookEvent.PLANNING_STAGE)
     def _write_stage_2_input(
         execution_id: str, query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
     ) -> None:
@@ -81,14 +82,14 @@ def register_default_output_hooks() -> None:
             },
         )
 
-    @hooks.on(HookEvent.DRAFT_QUERY_PLAN_END)
-    def _write_stage_2(execution_id: str, drafted_query_plan: DraftedQueryPlan) -> None:
+    @hooks.post(HookEvent.PLANNING_STAGE)
+    def _write_stage_2(execution_id: str, result: DraftedQueryPlan) -> None:
         _write_output_file(
             "stage_2_output_drafted_query_plan.json",
-            drafted_query_plan.model_dump(),
+            result.model_dump(),
         )
 
-    @hooks.on(HookEvent.EXECUTE_QUERY_PLAN_START)
+    @hooks.pre(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN)
     def _write_stage_3_input(
         execution_id: str, attempt: int, query_plan: QueryPlan, current_data_agents: list[DataAgent]
     ) -> None:
@@ -101,8 +102,8 @@ def register_default_output_hooks() -> None:
             },
         )
 
-    @hooks.on(HookEvent.EXECUTE_QUERY_PLAN_END)
-    def _write_stage_3(execution_id: str, attempt: int, result: ExecutionResult) -> None:
+    @hooks.post(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN)
+    def _write_stage_3(execution_id: str, result: ExecutionResult) -> None:
         _write_output_file(
             "stage_3_output_collaborative_query_answering_result.json",
             result.model_dump(),
@@ -120,17 +121,17 @@ def argument_parser(
     parser.add_argument("--input", type=str, help="Input file path")
     parser.add_argument(
         "--start-stage",
-        type=int,
-        choices=[1, 2, 3],
-        default=1,
-        help="Stage to start the pipeline from (1, 2, or 3)",
+        type=Stage,
+        choices=list(Stage),
+        default=Stage.DISCOVERY,
+        help="Stage to start the pipeline from",
     )
     parser.add_argument(
         "--end-stage",
-        type=int,
-        choices=[1, 2, 3],
-        default=3,
-        help="Stage after which to end the pipeline at (1, 2, or 3)",
+        type=Stage,
+        choices=list(Stage),
+        default=Stage.EXECUTION,
+        help="Stage after which to end the pipeline at",
     )
     parser.add_argument(
         "--config",
@@ -191,7 +192,24 @@ def main() -> None:
 
     if result_type.is_result_type(result):
         print("Pipeline completed. Result preview:")
-        print(json.dumps(result_type.serialize(result, context="preview"), indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                result_type.serialize(cast(ResultType, result), context="preview"),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+    elif isinstance(result, SynthesizedResult):
+        print("Pipeline completed. Result summary:")
+        print(result.summary)
+        print("Result preview:")
+        print(
+            json.dumps(
+                result_type.serialize(result.result, context="preview"),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
 
 
 if __name__ == "__main__":

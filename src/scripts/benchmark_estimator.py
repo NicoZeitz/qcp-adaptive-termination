@@ -1,4 +1,5 @@
-"""Performance benchmark: 1000 agents × 1000 rows, full incremental stat loop.
+"""
+Performance benchmark: 1000 agents × 1000 rows, full incremental stat loop.
 
 Data distribution is intentionally realistic:
 - Large entity pool (100K) so many entities remain unseen → N_hat >> c in sparse tiers.
@@ -79,7 +80,8 @@ def _generate_data(rng: random.Random) -> list[list[DataItem]]:
 
 
 def _run_forced_split(sources: list[list[DataItem]]) -> None:
-    """Build estimator from ALL sources at once and report bucket structure.
+    """
+    Build estimator from ALL sources at once and report bucket structure.
 
     Bypasses warm-split throttling: shows the maximum bucket granularity
     the split algorithm would produce given the complete dataset.

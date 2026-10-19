@@ -6,7 +6,8 @@ from qcp_adaptive_termination.estimator.data_item import DataItem
 
 @dataclass(slots=True)
 class HistogramBar:
-    """Per-entity observation summary within a bucket.
+    """
+    Per-entity observation summary within a bucket.
 
     Tracks how many times a single entity was observed and the value range
     across those observations. Used to build the frequency vector for a bucket.
@@ -30,7 +31,8 @@ class HistogramBar:
 
 @dataclass(slots=True)
 class Bucket:
-    """A contiguous value-range partition of the sample used by the bucket estimator.
+    """
+    A contiguous value-range partition of the sample used by the bucket estimator.
 
     Holds all DataItems whose attribute value falls within [lower_bound, upper_bound]
     and maintains the frequency vector and histogram needed to run an Estimator on
@@ -53,8 +55,10 @@ class Bucket:
     """Per-entity observation summary; one HistogramBar per unique entity name."""
 
     f: list[int] = field(default_factory=list)
-    """Frequency vector: f[i] = number of entities seen exactly i+1 times within this bucket.
-    Rebuilt lazily on first access after add_sample calls."""
+    """
+    Frequency vector: f[i] = number of entities seen exactly i+1 times within this bucket.
+    Rebuilt lazily on first access after add_sample calls.
+    """
 
     number_of_samples: int = 0
     """Total number of observations in this bucket (counting duplicates). >= 0."""
@@ -63,8 +67,10 @@ class Bucket:
     """Number of distinct entities observed in this bucket. >= 0, <= number_of_samples."""
 
     split_locked: bool = False
-    """True when _dynamic_buckets has determined that splitting this bucket further
-    does not reduce the estimated delta. No further split attempts will be made."""
+    """
+    True when _dynamic_buckets has determined that splitting this bucket further
+    does not reduce the estimated delta. No further split attempts will be made.
+    """
 
     idx: int = 0
     """Optional index used for ordering or identification by the caller."""
@@ -73,19 +79,26 @@ class Bucket:
     """True when f and derived counts are stale and must be rebuilt before use."""
 
     entity_positions: dict[str, list[int]] | None = field(default=None, repr=False, init=False)
-    """Cached per-entity sorted position lists for sweep-based split search.
-    None means stale; rebuilt by the estimator after sort + rebuild_frequency_vector."""
+    """
+    Cached per-entity sorted position lists for sweep-based split search.
+    None means stale; rebuilt by the estimator after sort + rebuild_frequency_vector.
+    """
 
     samples_at_last_resplit: int = field(default=0, repr=False, init=False)
-    """len(samples) at the last sort+sweep pass. Used by _warm_split to skip re-sweeping
-    buckets that have received fewer than RESPLIT_DELTA new samples since."""
+    """
+    len(samples) at the last sort+sweep pass. Used by _warm_split to skip re-sweeping
+    buckets that have received fewer than RESPLIT_DELTA new samples since.
+    """
 
     split_backoff: int = field(default=1, repr=False, init=False)
-    """Exponential backoff multiplier for the resplit threshold. Doubles after each failed
-    split attempt to avoid repeatedly sweeping buckets that cannot be improved."""
+    """
+    Exponential backoff multiplier for the resplit threshold. Doubles after each failed
+    split attempt to avoid repeatedly sweeping buckets that cannot be improved.
+    """
 
     def to_sources(self) -> list[list[DataItem]]:
-        """Return samples grouped by source_id, one list per source.
+        """
+        Return samples grouped by source_id, one list per source.
 
         Used to construct an Estimator for this bucket slice, preserving the
         per-source structure required to detect cross-source duplicates.

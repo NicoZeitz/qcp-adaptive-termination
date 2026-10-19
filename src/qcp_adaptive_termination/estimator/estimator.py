@@ -39,7 +39,8 @@ _RESPLIT_BACKOFF_CAP: int = 16
 
 @numba.njit(cache=True)
 def _chao92_naive_score(c, n, phi_k, f1, moment) -> float:  # type: ignore[return]
-    """NAIVE estimated-sum score for a partition using the Chao92 count estimator.
+    """
+    NAIVE estimated-sum score for a partition using the Chao92 count estimator.
 
     phi_k  — sum of representative (first-occurrence) values for the c entities.
     moment — sum of count*(count-1) across all entities in the partition.
@@ -68,7 +69,8 @@ def _sweep_chao92(
     entity_counts: np.ndarray,
     parent_score: float,
 ) -> int:
-    """O(n) sweep to find the best split index for CHAO92/NAIVE scoring.
+    """
+    O(n) sweep to find the best split index for CHAO92/NAIVE scoring.
 
     Arrays are precomputed by _prepare_sweep_arrays and stored in sorted-samples order.
     eid[k]                      — entity id (int) for samples[k]
@@ -162,21 +164,21 @@ def _sweep_chao92(
     return best_idx
 
 
-if True:
-    # Pre-compile at import time to avoid first-call JIT latency (~1–3 s).
-    _w_eid = np.zeros(2, np.int64)
-    _w_vals = np.array([0.0, 1.0])
-    _w_ep_data = np.array([0, 1], np.int64)
-    _w_ep_start = np.array([0, 1, 2], np.int64)
-    _w_counts = np.array([1, 1], np.int64)
-    _sweep_chao92(_w_eid, _w_vals, _w_ep_data, _w_ep_start, _w_counts, 0.0)
+# Pre-compile at import time to avoid first-call JIT latency (~1–3 s).
+_w_eid = np.zeros(2, np.int64)
+_w_vals = np.array([0.0, 1.0])
+_w_ep_data = np.array([0, 1], np.int64)
+_w_ep_start = np.array([0, 1, 2], np.int64)
+_w_counts = np.array([1, 1], np.int64)
+_sweep_chao92(_w_eid, _w_vals, _w_ep_data, _w_ep_start, _w_counts, 0.0)
 
 
 def _prepare_sweep_arrays(
     samples: list[DataItem],
     entity_pos: dict[str, list[int]],
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Build numba-compatible arrays from sorted samples and per-entity position lists.
+    """
+    Build numba-compatible arrays from sorted samples and per-entity position lists.
 
     Returns (eid, vals, ep_data, ep_start, entity_counts) where:
       eid[k]                    — integer entity id for samples[k]
@@ -214,7 +216,8 @@ def _score_split_naive(
     moment: int,
     count_estimator: CountEstimator,
 ) -> float:
-    """NAIVE estimated-sum score from precomputed partition statistics.
+    """
+    NAIVE estimated-sum score from precomputed partition statistics.
 
     moment = sum of count*(count-1) across entities. Only used by Chao92.
     Returns inf when the estimator is undefined.
@@ -239,7 +242,8 @@ def _bucket_sum_est(
     bucket_value_estimator: ValueEstimator,
     bucket_count_estimator: CountEstimator,
 ) -> float:
-    """Estimated SUM for a single bucket, used as the splitting score.
+    """
+    Estimated SUM for a single bucket, used as the splitting score.
 
     Computed directly from Bucket.histogram and Bucket.f — no Estimator object
     created — so the split loop avoids thousands of pandas groupby calls.
@@ -301,7 +305,8 @@ def _bucket_sum_est(
 
 
 def _split_bucket(bucket: Bucket, split_value: float) -> tuple[Bucket, Bucket]:
-    """Split a bucket at split_value into left (≤ split_value) and right (> split_value).
+    """
+    Split a bucket at split_value into left (≤ split_value) and right (> split_value).
 
     Assumes bucket.samples is sorted by value ascending (guaranteed by _dynamic_buckets).
     Uses bisect to find the partition point in O(log n), then bulk-loads each half and
@@ -332,7 +337,8 @@ def _find_best_split(
     count_estimator: CountEstimator,
     parent_score: float,
 ) -> float | None:
-    """Find best split value via O(n) incremental sweep for NAIVE value estimator.
+    """
+    Find best split value via O(n) incremental sweep for NAIVE value estimator.
 
     For CHAO92: delegates to the numba-compiled _sweep_chao92 for maximum throughput.
     For other count estimators: pure Python loop calling _score_split_naive.
@@ -449,7 +455,8 @@ def _rbf_search_min(
     n_ub: int,
     lambda_grid: Sequence[float],
 ) -> tuple[int, float]:
-    """Fit a thin-plate-spline RBF surface over (N, λ, KL) points and return the minimum.
+    """
+    Fit a thin-plate-spline RBF surface over (N, λ, KL) points and return the minimum.
 
     Falls back to the raw minimum point when there are fewer than 3 points or
     when all N or λ values are identical (degenerate 2D surface).
@@ -498,7 +505,8 @@ MC_LAPLACE_ALPHA = 0.1
 
 
 class Estimator:
-    """Unknown-unknowns estimators for correcting aggregate query results.
+    """
+    Unknown-unknowns estimators for correcting aggregate query results.
 
     Accepts samples grouped by source. Each source contributes a list of DataItems;
     the estimator uses the overlap pattern across sources to infer how many entities
@@ -548,8 +556,10 @@ class Estimator:
     """Maximum observed attribute value."""
 
     _freq: list[int]
-    """f — frequency vector; _freq[i] = number of entities seen exactly i+1 times.
-    len == _n. Each entry >= 0. sum(_freq) == _c."""
+    """
+    f — frequency vector; _freq[i] = number of entities seen exactly i+1 times.
+    len == _n. Each entry >= 0. sum(_freq) == _c.
+    """
 
     _φ_f1: float
     """φ_{f₁} — SUM of attribute values of entities seen exactly once (singletons)."""
@@ -558,8 +568,10 @@ class Estimator:
     """φ_{f₁₂} — SUM of attribute values of singletons and doubletons combined."""
 
     _bucket_cache: dict[tuple, _BucketCache]
-    """Bucket partition + sub-Estimators keyed by (value_estimator, count_estimator, max_buckets).
-    sub_estimators always valid; updated incrementally on each warm-split."""
+    """
+    Bucket partition + sub-Estimators keyed by (value_estimator, count_estimator, max_buckets).
+    sub_estimators always valid; updated incrementally on each warm-split.
+    """
 
     def __init__(self, source_samples: list[list[DataItem]]) -> None:
         self.source_samples = source_samples
@@ -622,7 +634,8 @@ class Estimator:
     # ── Public Helpers: core statistics ──────────────────────────────────────────────
 
     def add_source(self, items: list[DataItem]) -> None:
-        """Add one source's observations, updating all statistics incrementally.
+        """
+        Add one source's observations, updating all statistics incrementally.
 
         Avoids a full rebuild of _c, _n, _freq, _φ_K, _φ_f1, _φ_f12 and _entities
         when adding a single new agent's data on top of previously processed sources.
@@ -676,7 +689,8 @@ class Estimator:
         return self._freq[0]
 
     def γ_sq(self) -> float:
-        """Squared coefficient of variation of the publicity distribution, estimated from f-statistics.
+        """
+        Squared coefficient of variation of the publicity distribution, estimated from f-statistics.
 
         Returns 0 when there is only one observation (no variance possible).
         Returns inf when sample coverage is zero (all entities are singletons).
@@ -691,7 +705,8 @@ class Estimator:
         return max(γ_sq, 0.0)
 
     def sample_coverage(self) -> float:
-        """Good-Turing sample coverage C = 1 - f1/n.
+        """
+        Good-Turing sample coverage C = 1 - f1/n.
 
         Measures the fraction of total probability mass covered by observed entities.
         0 when every entity is a singleton (maximum uncertainty), 1 when there are
@@ -722,7 +737,8 @@ class Estimator:
         return self._observed_max
 
     def sample_quantile(self, q: float) -> float:
-        """q-th quantile (0 ≤ q ≤ 1) of observed unique entity values.
+        """
+        q-th quantile (0 ≤ q ≤ 1) of observed unique entity values.
 
         Uses Type-7 linear interpolation (same as numpy/R default) on the
         first-observed values of unique entities, consistent with sample_sum
@@ -743,7 +759,8 @@ class Estimator:
         return self.sample_quantile(0.5)
 
     def sample_cdf(self, x: float) -> float:
-        """Fraction of observed unique entities with first-observed value ≤ x.
+        """
+        Fraction of observed unique entities with first-observed value ≤ x.
 
         Returns a value in [0, 1].  Uses bisect so cost is O(c log c) on first
         call; the sorted array is not cached (call sample_quantile if you need
@@ -788,7 +805,8 @@ class Estimator:
         raise ValueError(f"Unsupported count count_estimator: {count_estimator}")
 
     def chao92(self) -> float:
-        """Estimate total unique entity count using sample coverage and coefficient of variation.
+        """
+        Estimate total unique entity count using sample coverage and coefficient of variation.
 
         Uses the Good-Turing estimate of sample coverage C = 1 - f1/n, then corrects
         for skew in the publicity distribution via the squared CV γ².
@@ -804,7 +822,8 @@ class Estimator:
         return max(self._c, N_hat)
 
     def chao84(self) -> float:
-        """Estimate total unique entity count using the ratio of singletons to doubletons.
+        """
+        Estimate total unique entity count using the ratio of singletons to doubletons.
 
         Falls back to the observed count when there are no doubletons (f2 == 0),
         since the estimator is undefined in that case.
@@ -817,7 +836,8 @@ class Estimator:
         )
 
     def jackknife1(self) -> float:
-        """Estimate total unique entity count using the first-order jackknife correction.
+        """
+        Estimate total unique entity count using the first-order jackknife correction.
 
         Adds the singleton count f1 to the observed count c as a bias correction
         for the number of unseen entities.
@@ -825,7 +845,8 @@ class Estimator:
         return self._c + self._freq[0]
 
     def jackknife2(self) -> float:
-        """Estimate total unique entity count using the second-order jackknife correction.
+        """
+        Estimate total unique entity count using the second-order jackknife correction.
 
         Extends jackknife1 by subtracting the doubleton count f2, reducing the
         bias when many entities appear exactly twice.
@@ -834,7 +855,8 @@ class Estimator:
         return self._c + 2 * self._freq[0] - f2
 
     def ace(self) -> float:
-        """Abundance-based coverage estimator (ACE) count estimate.
+        """
+        Abundance-based coverage estimator (ACE) count estimate.
 
         Splits entities into rare (abundance <= 10) and abundant (abundance > 10).
         Uses sample coverage of the rare group to estimate the number of unseen
@@ -865,7 +887,8 @@ class Estimator:
         return max(self._c, est)
 
     def unseen(self) -> float:
-        """Estimate total unique entity count using a linear-programming based approach.
+        """
+        Estimate total unique entity count using a linear-programming based approach.
 
         Fits a non-parametric probability distribution over entity frequencies via LP,
         then estimates the total species count from that distribution.
@@ -902,7 +925,8 @@ class Estimator:
         confidence_interval_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
         confidence_epsilon: float = 0.05,
     ) -> tuple[float, float]:
-        """Lower and upper bounds for the estimated total unique entity count.
+        """
+        Lower and upper bounds for the estimated total unique entity count.
 
         confidence_epsilon is the total error probability; e.g. 0.05 gives 95% confidence.
         """
@@ -916,7 +940,8 @@ class Estimator:
         raise ValueError(f"Unsupported confidence interval type: {confidence_interval_type}")
 
     def good_turing_confidence_interval(self, confidence_epsilon: float) -> tuple[float, float]:
-        """Confidence interval for total unique entity count using a Good-Turing error bound.
+        """
+        Confidence interval for total unique entity count using a Good-Turing error bound.
 
         Bounds the missing mass M0 = f1/n with an additive error term derived from
         the sample size, then converts the M0 interval to an N interval via N = c / (1 - M0).
@@ -937,7 +962,8 @@ class Estimator:
         return (max(self._c, N_hat_lower), max(self._c, N_hat_upper))
 
     def chao84_confidence_interval(self, confidence_epsilon: float) -> tuple[float, float]:
-        """Confidence interval for total unique entity count using the asymmetric Chao84 interval.
+        """
+        Confidence interval for total unique entity count using the asymmetric Chao84 interval.
 
         Uses the log-normal approximation for N - c, which gives a tighter interval
         than the symmetric normal approximation. Falls back to the Good-Turing interval
@@ -977,7 +1003,8 @@ class Estimator:
         use_monte_carlo: bool = False,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float:
-        """Corrected SUM including the estimated contribution from missing entities.
+        """
+        Corrected SUM including the estimated contribution from missing entities.
 
         Returns inf if the delta is not finite.
         """
@@ -1038,7 +1065,8 @@ class Estimator:
         use_monte_carlo: bool = False,
         use_bucket: bool = True,
     ) -> float:
-        """Estimated SUM of missing entities using mean substitution.
+        """
+        Estimated SUM of missing entities using mean substitution.
 
         Assumes missing entities have the same average value as the observed ones:
         Δ = (φ_K / c) * (N_hat - c).
@@ -1055,7 +1083,8 @@ class Estimator:
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
     ) -> float:
-        """Estimated SUM of missing entities using the average singleton value.
+        """
+        Estimated SUM of missing entities using the average singleton value.
 
         Uses φ_f1 / f1 as the value estimate instead of the overall mean,
         since singletons are the best proxy for unseen entities.
@@ -1071,7 +1100,8 @@ class Estimator:
         return (self._φ_f1 / f1) * (N_hat - self._c)
 
     def _good_turing_delta(self) -> float:
-        """Estimated SUM of missing entities using Good-Turing frequency smoothing.
+        """
+        Estimated SUM of missing entities using Good-Turing frequency smoothing.
 
         Does not require a separate count estimator: derives Δ directly from
         the singleton sum and the ratio f1 / (n - f1), which is the Good-Turing
@@ -1092,7 +1122,8 @@ class Estimator:
         use_bucket: bool = True,
         use_monte_carlo: bool = False,
     ) -> float:
-        """Estimated SUM of missing entities using the average singleton+doubleton value.
+        """
+        Estimated SUM of missing entities using the average singleton+doubleton value.
 
         Uses φ_f12 / (f1 + f2) as the value estimate, blending singletons and
         doubletons to reduce variance compared to singletons alone.
@@ -1132,7 +1163,8 @@ class Estimator:
         bound_type: ConfidenceIntervalType = DEFAULT_CONFIDENCE_INTERVAL_TYPE,
         confidence_epsilon: float = 0.05,
     ) -> tuple[float, float]:
-        """Lower and upper bounds for the corrected SUM.
+        """
+        Lower and upper bounds for the corrected SUM.
 
         Computed as avg_bound * N_hat_bound. The two sides are statistically
         independent, so by Bonferroni's inequality the joint failure probability
@@ -1156,7 +1188,8 @@ class Estimator:
         bucket_use_monte_carlo: bool = False,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float:
-        """Estimated average across all entities (observed + missing).
+        """
+        Estimated average across all entities (observed + missing).
 
         Without buckets, returns the observed sample average (law of large numbers).
         With buckets, returns a weighted mean of per-bucket sample averages where
@@ -1203,7 +1236,8 @@ class Estimator:
         self,
         confidence_epsilon: float = 0.05,
     ) -> tuple[float, float]:
-        """Lower and upper bounds for the estimated average.
+        """
+        Lower and upper bounds for the estimated average.
 
         Since AVG = SUM / N and both SUM bounds and N bounds scale by N, the N
         cancels and the interval reduces to φ_K/c ± z·σ_K — a confidence interval
@@ -1227,7 +1261,8 @@ class Estimator:
         use_monte_carlo: bool = False,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float | None:
-        """Confirmed minimum value, or None if unknown unknowns may lie below it.
+        """
+        Confirmed minimum value, or None if unknown unknowns may lie below it.
 
         Divides the value range into buckets and estimates the number of missing
         entities in the lowest-value bucket.  If that estimate is zero we have
@@ -1248,7 +1283,8 @@ class Estimator:
         use_monte_carlo: bool = False,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float | None:
-        """Confirmed maximum value, or None if unknown unknowns may lie above it.
+        """
+        Confirmed maximum value, or None if unknown unknowns may lie above it.
 
         Divides the value range into buckets and estimates the number of missing
         entities in the highest-value bucket.  If that estimate is zero we have
@@ -1270,7 +1306,8 @@ class Estimator:
         use_monte_carlo: bool = False,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> float:
-        """Estimated q-th quantile (0 < q < 1) via the bucket-based CDF.
+        """
+        Estimated q-th quantile (0 < q < 1) via the bucket-based CDF.
 
         Builds a weighted histogram where each bucket's weight is its estimated
         unique count (N_hat, including missing entities), then inverts the CDF.
@@ -1498,7 +1535,8 @@ class Estimator:
         *,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> list[Bucket]:
-        """Run the greedy split loop until no bucket can be improved.
+        """
+        Run the greedy split loop until no bucket can be improved.
 
         For NAIVE value estimator: uses O(n) sweep per bucket — no temporary Bucket copies.
         For other estimators: falls back to per-candidate _split_bucket + _bucket_sum_est.
@@ -1574,7 +1612,8 @@ class Estimator:
         *,
         max_buckets: int = DEFAULT_MAX_BUCKET_SPLITS,
     ) -> tuple[list[Bucket], dict[int, dict[str, list[DataItem]]]]:
-        """Insert new samples into existing buckets and re-split only the affected ones.
+        """
+        Insert new samples into existing buckets and re-split only the affected ones.
 
         Returns (new_buckets, new_items_per_surviving_bucket) where the dict maps
         id(bucket) → {source_id → [DataItem]} for buckets that survived the split loop.
@@ -1644,7 +1683,8 @@ class Estimator:
         self,
         count_estimator: CountEstimator = DEFAULT_COUNT_ESTIMATOR,
     ) -> int:
-        """Estimate total unique entity count via Monte Carlo simulation.
+        """
+        Estimate total unique entity count via Monte Carlo simulation.
 
         Searches over a grid of (N, λ) parameters where N is the candidate population
         size and λ governs the skew of an exponential publicity distribution.

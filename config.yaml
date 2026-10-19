@@ -7,6 +7,7 @@ include_confidence_intervals: true
 
 target_confidence: 0.95
 apportionment: weighted
+warmup_agents: 2
 
 continue_after_final_result: true
 selection_type: theta_sketch
@@ -23,30 +24,33 @@ align_schema_agent_limit: 1000
 embedding_model: "openai/text-embedding-3-large"
 
 agent_configs:
-  coordinator_relevance:
+  discovery-coordinator-relevance:
     model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
-  coordinator_planning:
+  planning-draft-query-plan:
     model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
-  coordinator_code:
+  execution-answer-step-coordinator:
     model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "high"
-  coordinator_replanning:
+  execution-replan-draft-query-plan:
     model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
-  coordinator_align_schema:
+  execution-align-schema:
     model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "high"
-  coordinator_completeness_evaluator:
+  execution-completeness-llm:
+    model: "university/zai-org/GLM-5.3-Flash"
+    reasoning_effort: "none"
+  execution-result-producer:
     model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "high"
-  data_agent_schema_description:
+  discovery-data-agent-schema-description:
     model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
-  data_agent_relevance:
+  discovery-data-agent-relevance:
     model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "none"
-  data_agent_code:
+  execution-query-data-agent:
     model: "university/zai-org/GLM-5.3-Flash"
     reasoning_effort: "high"

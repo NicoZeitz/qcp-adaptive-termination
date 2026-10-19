@@ -6,7 +6,9 @@ from async_lru import alru_cache
 from pydantic import BaseModel, Field, create_model
 
 import qcp_adaptive_termination.database as database
+import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.database import MSchema, SchemaEngine
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
     AgentRegistryData,
@@ -89,7 +91,48 @@ def _load_schema_engine(data_agent: DataAgent) -> SchemaEngine:
     return SchemaEngine(database.get_database_engine(data_agent), db_name=data_agent.name)
 
 
+@hooks.hook(HookEvent.DISCOVERY_DATA_AGENT_SCHEMA_DESCRIPTION)
+async def describe_schema_via_llm(
+    data_agent: DataAgent,
+    schema_engine: SchemaEngine,
+    missing_tables: list[str],
+    missing_fields: list[tuple[str, str]],
+    db_missing: bool,
+) -> None:
+    """Fill missing schema comments via the LLM (overridable)."""
+    m_schema_without_comments = schema_engine.mschema.to_mschema(include_db_id=False)
+    DatabaseDescriptionModel = _create_database_description_model(
+        schema_engine, missing_tables, missing_fields, db_missing
+    )
+    result: Any = await runner.run_llm(
+        role=AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION,
+        agent_name=data_agent.name,
+        prompt_parameters={
+            "m_schema_without_comments": m_schema_without_comments,
+        },
+        output_type=DatabaseDescriptionModel,
+    )
+
+    missing_fields_set = set(missing_fields)
+    for table_name, table_info in schema_engine.mschema.tables.items():
+        col_model = getattr(result, table_name, None)
+        if col_model is not None:
+            for col_name, field_info in table_info["fields"].items():
+                if (table_name, col_name) in missing_fields_set:
+                    field_info["comment"] = getattr(col_model, col_name)
+
+    if missing_tables:
+        table_desc_result = getattr(result, "table_descriptions", None)
+        if table_desc_result is not None:
+            for table_name in missing_tables:
+                schema_engine.mschema.tables[table_name]["comment"] = getattr(table_desc_result, table_name)
+
+    if db_missing:
+        schema_engine.mschema.database_comment = result.database_description
+
+
 @alru_cache(maxsize=None)
+@hooks.hook(HookEvent.DISCOVERY_LOAD_REGISTRY_DATA)
 async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
     schema_engine = await asyncio.to_thread(_load_schema_engine, data_agent)
 
@@ -97,36 +140,7 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
     needs_llm = missing_tables or missing_fields or db_missing
 
     if needs_llm:
-        m_schema_without_comments = schema_engine.mschema.to_mschema(include_db_id=False)
-        DatabaseDescriptionModel = _create_database_description_model(
-            schema_engine, missing_tables, missing_fields, db_missing
-        )
-        result: Any = await runner.run_llm(
-            role=AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION,
-            agent_name=data_agent.name,
-            prompt_parameters={
-                "m_schema_without_comments": m_schema_without_comments,
-            },
-            output_type=DatabaseDescriptionModel,
-        )
-
-        missing_fields_set = set(missing_fields)
-        for table_name, table_info in schema_engine.mschema.tables.items():
-            col_model = getattr(result, table_name, None)
-            if col_model is not None:
-                for col_name, field_info in table_info["fields"].items():
-                    if (table_name, col_name) in missing_fields_set:
-                        field_info["comment"] = getattr(col_model, col_name)
-
-        if missing_tables:
-            table_desc_result = getattr(result, "table_descriptions", None)
-            if table_desc_result is not None:
-                for table_name in missing_tables:
-                    schema_engine.mschema.tables[table_name]["comment"] = getattr(table_desc_result, table_name)
-
-        if db_missing:
-            natural_language_description = result.database_description
-            schema_engine.mschema.database_comment = natural_language_description
+        await describe_schema_via_llm(data_agent, schema_engine, missing_tables, missing_fields, db_missing)
     else:
         tracing.indented_logging(f"{data_agent.name} Skipping LLM call for database description, all comments present")
 

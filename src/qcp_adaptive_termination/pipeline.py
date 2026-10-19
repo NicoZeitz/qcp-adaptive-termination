@@ -1,7 +1,7 @@
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Literal, cast, overload
+from typing import Any, cast
 
 import yaml
 
@@ -9,15 +9,19 @@ import qcp_adaptive_termination.hooks as hooks
 import qcp_adaptive_termination.stages as stages
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import CacheMode, Config
+from qcp_adaptive_termination.models.query_plan import QueryPlan
 from qcp_adaptive_termination.models.stages import (
     CollaborativeQueryAnswering,
     CollaborativeQueryAnsweringResult,
     DraftedQueryPlan,
     FilteredRelevantAgents,
+    Stage,
+    SynthesizedResult,
 )
 from qcp_adaptive_termination.observability import cache, context
 
 _InputType = CollaborativeQueryAnswering | FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult
+_OutputType = FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult | SynthesizedResult
 _INPUT_TYPES: dict[str, type[_InputType]] = {
     "CollaborativeQueryAnswering": CollaborativeQueryAnswering,
     "FilteredRelevantAgents": FilteredRelevantAgents,
@@ -34,6 +38,7 @@ def _strip_type_tags(value: Any) -> Any:
     return value
 
 
+@hooks.hook(HookEvent.SETUP_LOAD_CONFIG)
 @lru_cache(maxsize=32)
 def load_config(source: str | Path | None) -> Config:
     if source is None:
@@ -42,11 +47,10 @@ def load_config(source: str | Path | None) -> Config:
     config_path = Path(source)
     is_file = len(str(source)) <= 255 and config_path.exists()
     raw_config = yaml.safe_load(config_path.read_text() if is_file else str(source))
-    config = Config.model_validate(raw_config)
-    hooks.emit(HookEvent.LOAD_CONFIG, config=config)
-    return config
+    return Config.model_validate(raw_config)
 
 
+@hooks.hook(HookEvent.SETUP_LOAD_INPUT)
 @lru_cache(maxsize=32)
 def load_input(
     path: str | Path,
@@ -66,58 +70,21 @@ def load_input(
         extra = raw.get("extra")
     else:
         data, extra = cache.load_cache_file(path)
-    hooks.emit(HookEvent.LOAD_INPUT, input_file=path, data=data, extra=extra)
     return data, extra
 
 
-@overload
 async def run_pipeline(
     name: str,
     input_file: Path,
-    start_stage: Literal[1, 2, 3],
-    end_stage: Literal[1],
+    start_stage: Stage = Stage.DISCOVERY,
+    end_stage: Stage = Stage.EXECUTION,
     output_dir: Path | None = None,
     cache_dir: Path | None = None,
     data_dir: Path | None = None,
     cache_mode: CacheMode = CacheMode.READ_AND_WRITE,
     config: Config | None = None,
-) -> FilteredRelevantAgents: ...
-@overload
-async def run_pipeline(
-    name: str,
-    input_file: Path,
-    start_stage: Literal[1, 2, 3],
-    end_stage: Literal[2],
-    output_dir: Path | None = None,
-    cache_dir: Path | None = None,
-    data_dir: Path | None = None,
-    cache_mode: CacheMode = CacheMode.READ_AND_WRITE,
-    config: Config | None = None,
-) -> DraftedQueryPlan: ...
-@overload
-async def run_pipeline(
-    name: str,
-    input_file: Path,
-    start_stage: Literal[1, 2, 3],
-    end_stage: Literal[3],
-    output_dir: Path | None = None,
-    cache_dir: Path | None = None,
-    data_dir: Path | None = None,
-    cache_mode: CacheMode = CacheMode.READ_AND_WRITE,
-    config: Config | None = None,
-) -> CollaborativeQueryAnsweringResult: ...
-async def run_pipeline(
-    name: str,
-    input_file: Path,
-    start_stage: Literal[1, 2, 3] = 1,
-    end_stage: Literal[1, 2, 3] = 3,
-    output_dir: Path | None = None,
-    cache_dir: Path | None = None,
-    data_dir: Path | None = None,
-    cache_mode: CacheMode = CacheMode.READ_AND_WRITE,
-    config: Config | None = None,
-) -> FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult:
-    if start_stage > end_stage:
+) -> _OutputType:
+    if start_stage.order > end_stage.order:
         raise ValueError("start_stage must be <= end_stage")
 
     max_trace_label_len = 50
@@ -133,8 +100,8 @@ async def run_pipeline(
         cache_mode=cache_mode,
         config=config,
         trace_metadata={
-            "start_stage": start_stage,
-            "end_stage": end_stage,
+            "start_stage": start_stage.value,
+            "end_stage": end_stage.value,
             "input_file": str(input_file),
         },
     ):
@@ -148,62 +115,60 @@ async def run_pipeline(
 async def run_query(
     name: str,
     input_file: Path,
-) -> CollaborativeQueryAnsweringResult:
-    return await run_pipeline(
+) -> SynthesizedResult:
+    result = await run_pipeline(
         name=name,
         input_file=input_file,
-        start_stage=1,
-        end_stage=3,
+        start_stage=Stage.DISCOVERY,
+        end_stage=Stage.SYNTHESIS,
     )
+    return cast(SynthesizedResult, result)
 
 
-@overload
 async def run_stages(
     input_file: Path,
-    start_stage: Literal[1, 2, 3],
-    end_stage: Literal[1],
-) -> FilteredRelevantAgents: ...
-@overload
-async def run_stages(
-    input_file: Path,
-    start_stage: Literal[1, 2, 3],
-    end_stage: Literal[2],
-) -> DraftedQueryPlan: ...
-@overload
-async def run_stages(
-    input_file: Path,
-    start_stage: Literal[1, 2, 3],
-    end_stage: Literal[3],
-) -> CollaborativeQueryAnsweringResult: ...
-async def run_stages(
-    input_file: Path,
-    start_stage: Literal[1, 2, 3],
-    end_stage: Literal[1, 2, 3],
-) -> FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult:
-    if start_stage > end_stage:
+    start_stage: Stage = Stage.DISCOVERY,
+    end_stage: Stage = Stage.EXECUTION,
+) -> _OutputType:
+    if start_stage.order > end_stage.order:
         raise ValueError("start_stage must be <= end_stage")
 
     data, _extra = load_input(input_file)
 
-    if start_stage == 1:
+    query: str = ""
+    query_plan: QueryPlan | None = None
+
+    if start_stage.order <= Stage.DISCOVERY.order <= end_stage.order:
         data = cast(CollaborativeQueryAnswering, data)
-        data = await stages.filter_relevant_agents(data.query, data.data_agents)
-        start_stage += 1
-        if end_stage < start_stage:
-            return data
+        query = data.query
+        data = await stages.discovery_stage(data.query, data.data_agents)
 
-    if start_stage == 2:
+    if start_stage.order <= Stage.PLANNING.order <= end_stage.order:
         data = cast(FilteredRelevantAgents, data)
-        data = await stages.draft_query_plan(data.query, data.data_agents, data.relevant_data_agents)
-        start_stage += 1
-        if end_stage < start_stage:
-            return data
+        query = data.query
+        data = await stages.planning_stage(data.query, data.data_agents, data.relevant_data_agents)
 
-    if start_stage == 3:
-        data = cast(DraftedQueryPlan, data)
+    if start_stage.order <= Stage.EXECUTION.order <= end_stage.order:
+        drafted = cast(DraftedQueryPlan, data)
+        query = drafted.query_plan.query
+        query_plan = drafted.query_plan
         data = await stages.execute_query_plan(
-            data.query_plan,
-            data.relevant_data_agents,
-            data.data_agents,
+            query_plan,
+            drafted.relevant_data_agents,
+            drafted.data_agents,
         )
-        return data
+
+    if start_stage.order <= Stage.SYNTHESIS.order <= end_stage.order:
+        # When starting at EXECUTION or SYNTHESIS, derive query/query_plan from the input.
+        if query_plan is None and isinstance(data, DraftedQueryPlan):
+            query = data.query_plan.query
+            query_plan = data.query_plan
+        data = cast(CollaborativeQueryAnsweringResult, data)
+        data = await stages.synthesize_result(
+            query=query,
+            query_plan=query_plan,
+            result=data.result,
+            step_uncertainties=data.step_uncertainties,
+        )
+
+    return cast(_OutputType, data)

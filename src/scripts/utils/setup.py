@@ -4,7 +4,7 @@ from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal, cast, overload
+from typing import Any, cast, overload
 
 import src.qcp_adaptive_termination.cli as cli
 from qcp_adaptive_termination import run_stages
@@ -14,6 +14,7 @@ from qcp_adaptive_termination.models.stages import (
     CollaborativeQueryAnsweringResult,
     DraftedQueryPlan,
     FilteredRelevantAgents,
+    Stage,
 )
 from qcp_adaptive_termination.observability import context
 from qcp_adaptive_termination.pipeline import load_config, load_input
@@ -28,8 +29,8 @@ class ScriptContext:
     output_dir: Path | None
     cache_dir: Path | None
     data_dir: Path
-    start_stage: Literal[1, 2, 3]
-    end_stage: Literal[1, 2, 3]
+    start_stage: Stage
+    end_stage: Stage
     name: str
     trace_name: str
     data: CollaborativeQueryAnswering | FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult
@@ -82,8 +83,8 @@ def run_script(
     cache_dir = Path(args.cache_dir) if args.cache_dir else None
     data_dir = Path(args.data_dir) if args.data_dir else input_file.parent
 
-    start_stage = cast(Literal[1, 2, 3], args.start_stage)
-    end_stage = cast(Literal[1, 2, 3], args.end_stage)
+    start_stage = cast(Stage, args.start_stage)
+    end_stage = cast(Stage, args.end_stage)
     name = f"{args.name} - {datetime_str}" if args.name else datetime_str
     cache_mode = config.cache_mode
 
@@ -92,7 +93,7 @@ def run_script(
 
     cli.register_default_output_hooks()
 
-    if start_stage > end_stage:
+    if start_stage.order > end_stage.order:
         raise ValueError("start_stage must be <= end_stage")
 
     max_trace_label_len = 50
@@ -111,8 +112,8 @@ def run_script(
             cache_mode=cache_mode,
             config=config,
             trace_metadata={
-                "start_stage": start_stage,
-                "end_stage": end_stage,
+                "start_stage": start_stage.value,
+                "end_stage": end_stage.value,
                 "input_file": str(input_file),
             },
         ):

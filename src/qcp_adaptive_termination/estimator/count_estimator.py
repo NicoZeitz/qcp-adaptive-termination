@@ -17,9 +17,13 @@ class CountEstimator(StrEnum):
     """Second-order jackknife: adds 2·f1 and subtracts f2 for a lower-bias estimate."""
 
     ACE = "ace"
-    """Abundance-based coverage estimator: splits entities into rare/abundant groups
-    and applies coverage correction only to the rare group."""
+    """
+    Abundance-based coverage estimator: splits entities into rare/abundant groups
+    and applies coverage correction only to the rare group.
+    """
 
     UNSEEN = "unseen"
-    """Linear-programming estimator that fits a non-parametric frequency distribution
-    and extrapolates the number of unseen species."""
+    """
+    Linear-programming estimator that fits a non-parametric frequency distribution
+    and extrapolates the number of unseen species.
+    """

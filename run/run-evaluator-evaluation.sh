@@ -63,7 +63,7 @@ for FILE in "${FILES[@]}"; do
     mkdir -p "${LOG_DIR}"
 
     if [[ "${TEST}" == "true" ]]; then
-        # echo "      [TEST] Would run: python3 -m scripts.evaluate_estimator_configs --name \"${NAME}\" --input \"${INPUT_FILE}\" --output_dir \"${LOG_DIR}\" --data_dir \"${DATA_DIR}\" --start-stage 3 --end-stage 3"
+        # echo "      [TEST] Would run: python3 -m scripts.evaluate_estimator_configs --name \"${NAME}\" --input \"${INPUT_FILE}\" --output_dir \"${LOG_DIR}\" --data_dir \"${DATA_DIR}\" --start-stage execution --end-stage execution"
         continue
     fi
 
@@ -74,7 +74,7 @@ for FILE in "${FILES[@]}"; do
       --data_dir "${DATA_DIR}" \
       --cache_dir "${CACHE_DIR}" \
       --config "${CONFIG}" \
-      --start-stage 3 --end-stage 3 &
+      --start-stage execution --end-stage execution &
     #   > >(tee "${LOG_DIR}/stdout.log") \
     #   2> >(tee "${LOG_DIR}/stderr.log" >&2) &
 

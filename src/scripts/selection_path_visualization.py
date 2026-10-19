@@ -34,10 +34,9 @@ from qcp_adaptive_termination.models import (
     AgentRegistryType,
     AlignedResultList,
     DataAgent,
-    EstimatorStatistics,
     ScoredDataAgent,
 )
-from qcp_adaptive_termination.models.execution import AdditionalInformation, EvaluatorDecision
+from qcp_adaptive_termination.models.execution import EvaluatorDecision, PartialQueryAnswer
 from qcp_adaptive_termination.models.query_plan import (
     MultiAgentQueryPlanStep,
     QueryPlan,
@@ -72,7 +71,7 @@ class _BatchRecord:
     batch: list[ScoredDataAgent]
     remaining: list[ScoredDataAgent]
     queried_before: list[str]
-    result_list_before: AlignedResultList
+    result_list_before: AlignedResultList | None
     result_list_after: AlignedResultList | None
     decision: EvaluatorDecision | Literal["need"] | None
 
@@ -80,51 +79,29 @@ class _BatchRecord:
 # ── hook registration ─────────────────────────────────────────────────────────
 
 
-def _register_batch_hooks() -> list[_BatchRecord]:
+def _register_agent_hooks() -> list[_BatchRecord]:
     records: list[_BatchRecord] = []
 
-    def _on_batch_start(
+    def _on_agent_query(
         execution_id: str,
-        query_plan_step: MultiAgentQueryPlanStep,
-        additional_information: list[AdditionalInformation],
-        iteration: int,
-        batch: list[ScoredDataAgent],
-        queried: list[str],
-        remaining: list[ScoredDataAgent],
-        result_list: AlignedResultList,
+        data_agent: DataAgent,
+        query: str,
+        result: PartialQueryAnswer,
     ) -> None:
         records.append(
             _BatchRecord(
-                step_id=query_plan_step.id,
-                iteration=iteration,
-                batch=list(batch),
-                remaining=list(remaining),
-                queried_before=list(queried),
-                result_list_before=result_list,
+                step_id="",
+                iteration=len(records),
+                batch=[ScoredDataAgent(agent=data_agent, score=None)],
+                remaining=[],
+                queried_before=[r.batch[0].agent.name for r in records],
+                result_list_before=None,
                 result_list_after=None,
                 decision=None,
             )
         )
 
-    def _on_batch_end(
-        execution_id: str,
-        query_plan_step: MultiAgentQueryPlanStep,
-        additional_information: list[AdditionalInformation],
-        iteration: int,
-        batch: list[ScoredDataAgent],
-        remaining: list[ScoredDataAgent],
-        result_list: AlignedResultList,
-        estimators: list[EstimatorStatistics | None],
-        decision: EvaluatorDecision | Literal["need"],
-    ) -> None:
-        for rec in reversed(records):
-            if rec.step_id == query_plan_step.id and rec.iteration == iteration:
-                rec.result_list_after = result_list
-                rec.decision = decision
-                break
-
-    hooks.register(HookEvent.MULTI_AGENT_STEP_BATCH_START, _on_batch_start)
-    hooks.register(HookEvent.MULTI_AGENT_STEP_BATCH_END, _on_batch_end)
+    hooks.register_post(HookEvent.EXECUTION_QUERY_DATA_AGENT, _on_agent_query)
     return records
 
 
@@ -181,7 +158,7 @@ def _compute_ground_truth(
         counts: dict[str, int] = {}
         for name in step_agent_names:
             agent = agents_by_name.get(name)
-            if agent is None:
+            if agent is None or rec.result_list_before is None:
                 continue
             counts[name] = _new_row_count(agent, select_all_sql, rec.result_list_before)
         result[key] = counts
@@ -683,7 +660,7 @@ async def _run(ctx: ScriptContext) -> None:
         f"Running stage 3 for {len(multi_steps)} multi-agent step(s) with {len(relevant_data_agents)} relevant agents …"
     )
 
-    batch_records = _register_batch_hooks()
+    batch_records = _register_agent_hooks()
 
     try:
         await execute_query_plan(
@@ -692,8 +669,7 @@ async def _run(ctx: ScriptContext) -> None:
             data_agents=ctx.data_agents,
         )
     finally:
-        hooks.clear(HookEvent.MULTI_AGENT_STEP_BATCH_START)
-        hooks.clear(HookEvent.MULTI_AGENT_STEP_BATCH_END)
+        hooks.clear(HookEvent.EXECUTION_QUERY_DATA_AGENT)
 
     _log_batch_records(batch_records)
 

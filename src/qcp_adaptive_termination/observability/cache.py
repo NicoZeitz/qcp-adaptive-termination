@@ -45,7 +45,7 @@ class Cache:
                 value = pickle.load(f)
             # tracing.indented_logging(f"Cache: HIT ({cache_file})")
             return value, True
-        except FileNotFoundError, Exception:
+        except Exception:
             self._throw_on_miss(key)
             return None, False
 
@@ -102,13 +102,12 @@ def cached[**Param, RetType](
     def decorator(
         func: Callable[Param, Awaitable[RetType]],
     ) -> Callable[Param, Awaitable[RetType]]:
+        from qcp_adaptive_termination.observability.context import get_cache
+
         sig = inspect.signature(func)
 
         @wraps(func)
         async def wrapper(*args: Param.args, **kwargs: Param.kwargs) -> RetType:
-            # deferred: context imports Cache, so top-level would be circular
-            from qcp_adaptive_termination.observability.context import get_cache
-
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
 
@@ -140,7 +139,6 @@ async def get_or_compute_batch[T, R](
     items: list[T],
     batch_fn: Callable[[list[T]], Awaitable[list[R]]],
 ) -> list[R]:
-    # deferred: context imports Cache, so top-level would be circular
     from qcp_adaptive_termination.observability.context import get_cache
 
     cache_instance = get_cache()

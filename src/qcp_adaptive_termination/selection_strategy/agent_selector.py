@@ -29,29 +29,24 @@ from qcp_adaptive_termination.selection_strategy.sketch_strategy import (
 )
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
 
+_STRATEGY_CLASSES: dict[SelectionStrategyType, type[SelectionStrategy]] = {
+    SelectionStrategyType.RANDOM: RandomStrategy,
+    SelectionStrategyType.EMBEDDING: EmbeddingStrategy,
+    SelectionStrategyType.COUNT: CountStrategy,
+    SelectionStrategyType.DISTINCT_COUNT: DistinctCountStrategy,
+    SelectionStrategyType.HLL_SKETCH: HllSketchStrategy,
+    SelectionStrategyType.THETA_SKETCH: ThetaSketchStrategy,
+    SelectionStrategyType.MIN_HASH: MinHashStrategy,
+    SelectionStrategyType.POSTERIOR: PosteriorStrategy,
+}
+
 
 def _build_strategy(selection_type: SelectionStrategyType, kwargs: dict[str, Any]) -> SelectionStrategy:
-    strategy_cls: type[SelectionStrategy]
-    if selection_type == SelectionStrategyType.RANDOM:
-        strategy_cls = RandomStrategy
-    elif selection_type == SelectionStrategyType.EMBEDDING:
-        strategy_cls = EmbeddingStrategy
-    elif selection_type == SelectionStrategyType.COUNT:
-        strategy_cls = CountStrategy
-    elif selection_type == SelectionStrategyType.DISTINCT_COUNT:
-        strategy_cls = DistinctCountStrategy
-    elif selection_type == SelectionStrategyType.HLL_SKETCH:
-        strategy_cls = HllSketchStrategy
-    elif selection_type == SelectionStrategyType.THETA_SKETCH:
-        strategy_cls = ThetaSketchStrategy
-    elif selection_type == SelectionStrategyType.MIN_HASH:
-        strategy_cls = MinHashStrategy
-    elif selection_type == SelectionStrategyType.POSTERIOR:
-        strategy_cls = PosteriorStrategy
-    else:
+    strategy_cls = _STRATEGY_CLASSES.get(selection_type)
+    if strategy_cls is None:
         raise ValueError(f"Unsupported SelectionType: {selection_type}")
 
-    valid = {f.name for f in dataclasses.fields(strategy_cls)}
+    valid = {field.name for field in dataclasses.fields(strategy_cls)}
     kwargs = {k: v for k, v in kwargs.items() if k in valid}
     return strategy_cls(**kwargs)
 
@@ -88,7 +83,8 @@ async def _resolve_column(
 
 
 class AgentSelector:
-    """Owns the precomputed data and running state for one multi-agent step.
+    """
+    Owns the precomputed data and running state for one multi-agent step.
 
     Usage:
         selector = await AgentSelector.create(agents, selection_type, query, ...)

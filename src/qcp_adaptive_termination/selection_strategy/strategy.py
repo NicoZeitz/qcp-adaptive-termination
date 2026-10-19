@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import cast
 
 from qcp_adaptive_termination.models import DataAgent, ScoredDataAgent
 
 
+@dataclass(slots=True)
 class SelectionStrategy[PrecomputedState, RunningState](ABC):
     """
     Stateful ranking strategy for dynamic agent selection.
