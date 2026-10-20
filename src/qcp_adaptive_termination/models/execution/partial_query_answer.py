@@ -7,16 +7,16 @@ from qcp_adaptive_termination.models.result_type import (
     ResultType,
     SerializedOptionalResultType,
 )
-from qcp_adaptive_termination.models.uncertainty import StepUncertainty
 
 
 class PartialQueryAnswer(BaseModel):
+    """Result of a single step's answer logic"""
+
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     answer: SerializedOptionalResultType = None
     has_answer: bool = False
     needs: SerializedNeedList = []
-    uncertainty: StepUncertainty | None = None
 
     def set_answer(self, answer: ResultType) -> Self:
         self.answer = answer
@@ -25,10 +25,6 @@ class PartialQueryAnswer(BaseModel):
 
     def add_needs(self, needs: set[NeedType] | list[NeedType]) -> Self:
         self.needs = list(set(self.needs).union(needs))
-        return self
-
-    def set_uncertainty(self, uncertainty: StepUncertainty) -> Self:
-        self.uncertainty = uncertainty
         return self
 
     @property

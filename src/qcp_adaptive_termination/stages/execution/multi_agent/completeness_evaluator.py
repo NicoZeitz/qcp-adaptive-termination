@@ -23,10 +23,11 @@ from qcp_adaptive_termination.code_execution.code_execution_environment import (
 )
 from qcp_adaptive_termination.estimator import Estimator
 from qcp_adaptive_termination.hooks import HookEvent
-from qcp_adaptive_termination.llm import runner
+from qcp_adaptive_termination.llm import model_provider, runner
 from qcp_adaptive_termination.models import (
     AgentRole,
     AlignedResultList,
+    CacheMode,
     StepBudget,
     StopReason,
     result_type,
@@ -80,6 +81,11 @@ def run_deterministic_estimator(
         f"Estimator: C_worst={c_worst:.4f} (observed={observed}, N_hat_upper={upper:.2f}) "
         f"threshold={step_budget.t_step:.4f} → {'STOP' if stop else 'continue'}"
     )
+    print(
+        f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
+        f"observed={observed} upper={upper} c_worst={c_worst:.4f} stop={'STOP' if stop else 'continue'}",
+        flush=True,
+    )
     return stop
 
 
@@ -87,8 +93,14 @@ def run_deterministic_estimator(
 async def run_world_knowledge_stop(
     aligned_result_list: AlignedResultList,
     query: str,
+    label: str | None = None,
 ) -> bool:
-    """LLM world-knowledge stop: sees only query + result list, no estimator stats."""
+    """LLM world-knowledge stop: sees only query + result list, no estimator stats.
+
+    ``label`` (e.g. ``COMPLETENESS step=s1 agents=3``) is attached to any
+    reasoning printed by the provider hook for this call, so the model's
+    rationale can be associated back to the exact completeness evaluation.
+    """
     result = WorldKnowledgeStopResult()
 
     def stop():
@@ -127,19 +139,28 @@ async def run_world_knowledge_stop(
             "result_list_preview": result_list_preview,
         },
     ):
-        result = await runner.run_agent(
-            role=AgentRole.COORDINATOR_WORLD_KNOWLEDGE_STOP,
-            prompt_parameters={
-                "query": query,
-                "result_list_preview": result_list_preview,
-            },
-            tools=[code_environment.as_function_tool()],
-            tool_use_behavior=custom_tool_handler,
-            reset_tool_choice=False,
-            parallel_tool_calls=False,
-            tool_choice="required",
-            output_type=WorldKnowledgeStopResult,
-        )
+        # Always run the completeness LLM fresh (write-only cache): we want to
+        # observe every stop/continue decision, not reuse a cached answer.
+        # Tag any provider-emitted reasoning with the completeness context so it
+        # can be associated back to query/step/agents.
+        token = model_provider.llm_reasoning_context.set(label)
+        try:
+            result = await runner.run_agent(
+                role=AgentRole.COORDINATOR_WORLD_KNOWLEDGE_STOP,
+                prompt_parameters={
+                    "query": query,
+                    "result_list_preview": result_list_preview,
+                },
+                tools=[code_environment.as_function_tool()],
+                tool_use_behavior=custom_tool_handler,
+                reset_tool_choice=False,
+                parallel_tool_calls=False,
+                tool_choice="required",
+                output_type=WorldKnowledgeStopResult,
+                cache_mode=CacheMode.WRITE_ONLY,
+            )
+        finally:
+            model_provider.llm_reasoning_context.reset(token)
         tracing.append_to_span_output({"stop": result.stop})
 
     return result.stop
@@ -161,13 +182,42 @@ async def run_completeness_evaluator(
     Returns a `StopDecision` when the result is complete (the caller produces the
     final answer), or ``None`` to keep querying.
     """
+    observed = estimator.sample_count() if estimator is not None else None
+
     if force_result:
+        print(
+            f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
+            f"observed={observed} decision=all_agents",
+            flush=True,
+        )
         return StopDecision(stop_reason=StopReason.ALL_AGENTS)
 
+    if aligned_result_list.data.empty:
+        # No samples yet: neither the deterministic estimator nor the LLM
+        # world-knowledge stop can judge completeness on an empty result list.
+        # Keep querying more agents.
+        print(
+            f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
+            f"observed={observed} decision=continue (no samples)",
+            flush=True,
+        )
+        return None
+
     if estimator is not None and run_deterministic_estimator(estimator, step_budget, agents_queried):
+        print(
+            f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
+            f"observed={observed} decision=estimator",
+            flush=True,
+        )
         return StopDecision(stop_reason=StopReason.ESTIMATOR)
 
-    llm_stop = await run_world_knowledge_stop(aligned_result_list, query)
+    label = f"COMPLETENESS step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried}"
+    llm_stop = await run_world_knowledge_stop(aligned_result_list, query, label=label)
+    print(
+        f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
+        f"observed={observed} decision={'llm' if llm_stop else 'continue'}",
+        flush=True,
+    )
     if llm_stop:
         return StopDecision(stop_reason=StopReason.LLM)
 

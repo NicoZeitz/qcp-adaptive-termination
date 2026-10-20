@@ -29,6 +29,14 @@ def _build_parser() -> argparse.ArgumentParser:
         sub = subparsers.add_parser(name, help=help_text)
         add_common_args(sub)
 
+    selection_sub = subparsers.choices["selection-strategies"]
+    selection_sub.add_argument(
+        "--strategy_workers",
+        type=int,
+        default=None,
+        help="Parallel strategy worker processes per query step (default: min(cpu, 4)).",
+    )
+
     return parser
 
 
@@ -41,6 +49,7 @@ async def _run_subcommand(args: argparse.Namespace) -> None:
     input_dir = dataset_dir / "_meta" / "input"
 
     if args.subcommand == "selection-strategies":
+        extra = {"strategy_workers": args.strategy_workers} if args.strategy_workers is not None else {}
         await run_parallel(
             selection_strategy_evaluation.run_query,
             dataset_dir=dataset_dir,
@@ -49,6 +58,7 @@ async def _run_subcommand(args: argparse.Namespace) -> None:
             cache_dir=args.cache_dir,
             parallel=parallel,
             max_workers=args.max_workers,
+            extra=extra,
         )
         selection_strategy_evaluation.aggregate(output_dir, input_dir)
     elif args.subcommand == "estimator":

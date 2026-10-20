@@ -16,6 +16,7 @@ from qcp_adaptive_termination.models.execution import (
     StopDecision,
 )
 from qcp_adaptive_termination.models.query_plan import MultiAgentQueryPlanStep
+from qcp_adaptive_termination.models.uncertainty import StepUncertainty
 from qcp_adaptive_termination.observability import context, tracing
 from qcp_adaptive_termination.selection_strategy.agent_selector import AgentSelector
 from qcp_adaptive_termination.stages.execution.data_agent import answer_step_data_agent
@@ -53,7 +54,7 @@ async def answer_step_multiple_agents(
     query_plan_step: MultiAgentQueryPlanStep,
     additional_information: list[AdditionalInformation],
     step_budgets: dict[str, StepBudget],
-) -> PartialQueryAnswer:
+) -> tuple[PartialQueryAnswer, StepUncertainty | None]:
     agents_by_name = {a.name: a for a in data_agents}
     agents_in_step = [agents_by_name[name] for name in query_plan_step.to_agent]
 
@@ -69,6 +70,7 @@ async def answer_step_multiple_agents(
 
     step_budget = step_budgets.get(query_plan_step.id)
     answer = PartialQueryAnswer()
+    uncertainty: StepUncertainty | None = None
     estimator: Estimator | None = None
 
     while remaining_selections:
@@ -116,7 +118,7 @@ async def answer_step_multiple_agents(
             )
             if final_result is not None:
                 answer.set_answer(final_result)
-            answer.set_uncertainty(build_step_uncertainty(query_plan_step.id, estimator, decision.stop_reason))
+            uncertainty = build_step_uncertainty(query_plan_step.id, estimator, decision.stop_reason)
             if not context.get_config().continue_after_final_result or not remaining_selections:
                 break
 
@@ -130,4 +132,4 @@ async def answer_step_multiple_agents(
         }
     )
 
-    return answer
+    return answer, uncertainty

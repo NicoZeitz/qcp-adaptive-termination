@@ -6,9 +6,11 @@ are stubbed; only the selection-strategy ranking machinery runs for real.
 """
 
 import asyncio
+import contextlib
 import logging
+import os
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -156,6 +158,178 @@ async def _run_one_strategy(
     return str(strategy), curve, None
 
 
+def _run_strategy_worker(
+    strategy: SelectionStrategyType,
+    step: MultiAgentQueryPlanStep,
+    step_meta: dict[str, Any],
+    canonical_sql: str,
+    canonical_table: str,
+    canonical_cols: list[str],
+    all_agents: list[DataAgent],
+    data_cache: dict[str, pd.DataFrame | None],
+    total_unique: int,
+    meta_mapping: dict[str, Any],
+    data_dir: str,
+    query: str,
+    config: Config,
+    cache_dir: str | None,
+    output_dir: str,
+) -> tuple[str, EvaluationCurve | None, str | None]:
+    """Run one strategy in a fresh worker process (its own hooks + context).
+
+    The strategy machinery is process-local: each worker registers its own
+    ALIGN_SCHEMA / DATA_AGENT / COMPLETENESS overwrites and its own agent
+    query-tracking post hook, so strategies can run concurrently across cores.
+    """
+    _per_strategy_align.clear()
+    _per_strategy_data.clear()
+    align_dispatch = make_align_schema_dispatch(_per_strategy_align)
+    data_dispatch = make_data_agent_dispatch(_per_strategy_data)
+    completeness_override = make_completeness_override()
+    hooks.register_overwrite(
+        HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
+        align_dispatch,
+    )
+    hooks.register_overwrite(HookEvent.EXECUTION_QUERY_DATA_AGENT, data_dispatch)
+    hooks.register_overwrite(
+        HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS,
+        completeness_override,
+    )
+
+    data_dir_path = Path(data_dir)
+    align_handler = make_align_schema_override(step_meta, query)
+    data_handler = make_data_agent_override(canonical_sql, canonical_table, meta_mapping, data_cache, data_dir_path)
+
+    # Route this worker's logs to the same stderr log as the parent without the
+    # redirect/tee-based `logging_context` (which corrupts shared handlers when a
+    # pool worker is reused). Use a plain append FileHandler instead. In a fresh
+    # worker process the root logger defaults to WARNING, so raise it to INFO.
+    log_file = Path(output_dir) / "stderr.log"
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    file_handler = logging.FileHandler(log_file, mode="a")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+    root_logger.addHandler(file_handler)
+
+    with (
+        context.config_context(config),
+        context.data_context(data_dir_path),
+        context.cache_context(Path(cache_dir)) if cache_dir is not None else contextlib.nullcontext(),
+    ):
+        try:
+            return asyncio.run(
+                _run_one_strategy(
+                    strategy=strategy,
+                    step=step,
+                    align_handler=align_handler,
+                    data_handler=data_handler,
+                    all_agents=all_agents,
+                    data_cache=data_cache,
+                    total_unique=total_unique,
+                    canonical_cols=canonical_cols,
+                    config=config,
+                )
+            )
+        except Exception as exc:
+            logging.exception("Strategy %s/%s crashed in worker", step.id, strategy)
+            return str(strategy), None, f"{type(exc).__name__}: {exc}"
+        finally:
+            logging.getLogger().removeHandler(file_handler)
+            file_handler.close()
+            hooks.unregister_overwrite(
+                HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
+                align_dispatch,
+            )
+            hooks.unregister_overwrite(HookEvent.EXECUTION_QUERY_DATA_AGENT, data_dispatch)
+            hooks.unregister_overwrite(
+                HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS,
+                completeness_override,
+            )
+
+
+def _default_strategy_workers() -> int:
+    """Default number of parallel strategy worker processes per step."""
+    return max(1, min(os.cpu_count() or 1, 4))
+
+
+async def _run_strategies(
+    *,
+    step: MultiAgentQueryPlanStep,
+    step_meta: dict[str, Any],
+    canonical_sql: str,
+    canonical_table: str,
+    canonical_cols: list[str],
+    all_agents: list[DataAgent],
+    data_cache: dict[str, pd.DataFrame | None],
+    total_unique: int,
+    meta_mapping: dict[str, Any],
+    data_dir: Path,
+    query: str,
+    config: Config,
+    cache_dir: Path | None,
+    output_dir: Path,
+    strategy_workers: int,
+) -> list[tuple[str, EvaluationCurve | None, str | None]]:
+    """Run all selection strategies, in parallel worker processes when enabled.
+
+    Each strategy can run on its own core: agent-registry, sketch, and embedding
+    precomputes are CPU heavy and previously serialized inside one process.
+    Falls back to in-process `asyncio.gather` for ``strategy_workers <= 1``.
+    """
+    if strategy_workers <= 1:
+        align_handler = make_align_schema_override(step_meta, query)
+        data_handler = make_data_agent_override(canonical_sql, canonical_table, meta_mapping, data_cache, data_dir)
+        return list(
+            await asyncio.gather(
+                *[
+                    _run_one_strategy(
+                        strategy=s,
+                        step=step,
+                        align_handler=align_handler,
+                        data_handler=data_handler,
+                        all_agents=all_agents,
+                        data_cache=data_cache,
+                        total_unique=total_unique,
+                        canonical_cols=canonical_cols,
+                        config=config,
+                    )
+                    for s in SelectionStrategyType
+                ]
+            )
+        )
+
+    loop = asyncio.get_running_loop()
+    # One strategy per worker: each registers its own hooks/context/logging, so a
+    # fresh process avoids stale handlers and tracing re-entry (same rationale as
+    # the outer orchestrator's max_tasks_per_child=1).
+    with ProcessPoolExecutor(max_workers=strategy_workers, max_tasks_per_child=1) as pool:
+        futures = [
+            loop.run_in_executor(
+                pool,
+                _run_strategy_worker,
+                s,
+                step,
+                step_meta,
+                canonical_sql,
+                canonical_table,
+                canonical_cols,
+                all_agents,
+                data_cache,
+                total_unique,
+                meta_mapping,
+                str(data_dir),
+                query,
+                config,
+                str(cache_dir) if cache_dir is not None else None,
+                str(output_dir),
+            )
+            for s in SelectionStrategyType
+        ]
+        return list(await asyncio.gather(*futures))
+
+
 async def _run_step(
     step: MultiAgentQueryPlanStep,
     step_meta: dict[str, Any],
@@ -167,6 +341,8 @@ async def _run_step(
     output_dir: Path,
     data_dir: Path,
     config: Config,
+    cache_dir: Path | None = None,
+    strategy_workers: int | None = None,
 ) -> StepSummary | None:
     canonical_sql: str = step_meta["sql_query"]
     schema_meta = step_meta["aligned_schema_metadata"]
@@ -217,26 +393,23 @@ async def _run_step(
         for name, future in futures.items():
             data_cache[name] = future.result()
 
-    align_handler = make_align_schema_override(step_meta, query)
-    data_handler = make_data_agent_override(canonical_sql, canonical_table, meta_mapping, data_cache, data_dir)
-
-    strategy_runs = list(
-        await asyncio.gather(
-            *[
-                _run_one_strategy(
-                    strategy=s,
-                    step=step,
-                    align_handler=align_handler,
-                    data_handler=data_handler,
-                    all_agents=all_agents,
-                    data_cache=data_cache,
-                    total_unique=total_unique,
-                    canonical_cols=canonical_cols,
-                    config=config,
-                )
-                for s in SelectionStrategyType
-            ]
-        )
+    strategy_workers = strategy_workers or _default_strategy_workers()
+    strategy_runs = await _run_strategies(
+        step=step,
+        step_meta=step_meta,
+        canonical_sql=canonical_sql,
+        canonical_table=canonical_table,
+        canonical_cols=canonical_cols,
+        all_agents=all_agents,
+        data_cache=data_cache,
+        total_unique=total_unique,
+        meta_mapping=meta_mapping,
+        data_dir=data_dir,
+        query=query,
+        config=config,
+        cache_dir=cache_dir,
+        output_dir=output_dir,
+        strategy_workers=strategy_workers,
     )
     results = [(strategy, curve) for strategy, curve, _ in strategy_runs if curve is not None]
     failures = [(strategy, error or "unknown failure") for strategy, curve, error in strategy_runs if curve is None]
@@ -316,6 +489,8 @@ async def run_query(
         logging.warning("%s: no query_plan in extra — skipping", input_file.stem)
         return
 
+    strategy_workers: int | None = extra.get("strategy_workers")
+
     query_plan = QueryPlan.model_validate(raw_query_plan)
     multi_steps = [s for s in query_plan.steps if isinstance(s, MultiAgentQueryPlanStep)]
 
@@ -365,6 +540,8 @@ async def run_query(
                 output_dir=run_output_dir,
                 data_dir=data_dir,
                 config=config,
+                cache_dir=cache_dir,
+                strategy_workers=strategy_workers,
             )
         )
 

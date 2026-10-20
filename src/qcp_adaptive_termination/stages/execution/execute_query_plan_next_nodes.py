@@ -93,24 +93,35 @@ async def execute_query_plan_next_nodes(
                 return_exceptions=True,
             )
 
-            for step, result in zip(ready, results, strict=True):
-                if isinstance(result, BaseException):
-                    if isinstance(result, (MaxTurnsExceeded, AgentsException)):
+            for step, step_result in zip(ready, results, strict=True):
+                if isinstance(step_result, BaseException):
+                    if isinstance(step_result, (MaxTurnsExceeded, AgentsException)):
                         partial = PartialQueryAnswer()
-                        partial.add_needs({need_type.from_exception(result)})
+                        partial.add_needs({need_type.from_exception(step_result)})
+                        print(f"[STEP] {step.id} failed with exception: {step_result!r}", flush=True)
                         return FailedExecution(
                             step=step,
                             needs=partial.needs,
                             partial_answer=partial.answer,
                             has_partial_answer=partial.has_answer,
                         )
-                    raise result
+                    raise step_result
 
+                result, uncertainty = step_result
                 if result.has_answer and not result.has_needs:
                     step_id_to_answer[step.id] = cast(ResultType, result.answer)
-                    if result.uncertainty is not None:
-                        step_uncertainties.append(result.uncertainty)
+                    if uncertainty is not None:
+                        step_uncertainties.append(uncertainty)
+                    print(
+                        f"[STEP] {step.id} completed: answer={'yes' if result.has_answer else 'no'} "
+                        f"needs={list(result.needs)} uncertainty={'yes' if uncertainty is not None else 'no'}",
+                        flush=True,
+                    )
                 else:
+                    print(
+                        f"[STEP] {step.id} incomplete: needs={result.needs} has_answer={result.has_answer}",
+                        flush=True,
+                    )
                     return FailedExecution(
                         step=step,
                         needs=result.needs,
@@ -144,7 +155,7 @@ async def execute_query_plan_step(
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
     step_budgets: dict[str, StepBudget],
-) -> PartialQueryAnswer:
+) -> tuple[PartialQueryAnswer, StepUncertainty | None]:
     with tracing.own_span(
         f"Execute Step: {query_plan_step.id}",
         input={
@@ -152,6 +163,7 @@ async def execute_query_plan_step(
             "additional_information": additional_information,
         },
     ):
+        uncertainty: StepUncertainty | None = None
         if isinstance(query_plan_step, SingleAgentQueryPlanStep) and query_plan_step.to_agent == "Coordinator":
             result = await answer_step_coordinator(query_plan_step, additional_information)
         elif isinstance(query_plan_step, SingleAgentQueryPlanStep) and query_plan_step.to_agent != "Coordinator":
@@ -162,7 +174,7 @@ async def execute_query_plan_step(
                 additional_information,
             )
         elif isinstance(query_plan_step, MultiAgentQueryPlanStep):
-            result = await answer_step_multiple_agents(
+            result, uncertainty = await answer_step_multiple_agents(
                 data_agents=data_agents,
                 query_plan_step=query_plan_step,
                 additional_information=additional_information,
@@ -172,4 +184,4 @@ async def execute_query_plan_step(
             raise ValueError(f"Unsupported query plan step type: {type(query_plan_step)}")
 
         tracing.append_to_span_output({"partial_answer": result})
-        return result
+        return result, uncertainty

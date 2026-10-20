@@ -367,6 +367,7 @@ class Estimator:
                 self._count_estimator,
                 max_buckets=self._max_buckets,
             )
+            buckets = [b for b in buckets if b.samples]
             subs = [self._make_sub_estimator(b.to_sources()) for b in buckets]
             self._bucket_cache = _BucketCache(
                 sample_count=len(self._stats.all_samples),
@@ -385,6 +386,10 @@ class Estimator:
                     self._count_estimator,
                     max_buckets=self._max_buckets,
                 )
+                # A split at a duplicated boundary value can yield an empty
+                # bucket; it cannot back an Estimator (FrequencyStats requires
+                # at least one sample) and contributes nothing to the estimate.
+                new_buckets = [b for b in new_buckets if b.samples]
                 new_subs: list[Estimator] = []
                 for b in new_buckets:
                     bid = id(b)

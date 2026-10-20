@@ -1,6 +1,8 @@
 import asyncio
 import functools
+import sys
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any, Literal, cast
 
 from agents import (
@@ -24,6 +26,38 @@ from qcp_adaptive_termination.models import AgentRole, CacheMode, RoleConfig
 from qcp_adaptive_termination.observability import cache, context, tracing
 
 _AGENT_SEMAPHORE = asyncio.Semaphore(5)
+
+
+@dataclass(slots=True)
+class _SerializedModel:
+    """Pickle-safe stand-in for a dynamically-created pydantic model instance.
+
+    Dynamic models (built via ``create_model`` at runtime — e.g. the relevance
+    filter, schema descriptions, query plans) are not importable by module path,
+    so ``pickle.dump`` fails with "Can't pickle ... not found as ...". The LLM
+    runner caches every result through pickle, so such instances are stored as
+    their JSON dump and re-validated on load.
+    """
+
+    dump: dict[str, Any]
+
+
+def _is_dynamic_model(output_type: type[Any]) -> bool:
+    """True if ``output_type`` cannot be resolved from its declared module path.
+
+    Module-level models (``PartialQueryAnswer``, ``WorldKnowledgeStopResult``,
+    ...) have a resolvable ``module + qualname``. Models built at runtime with
+    ``create_model`` do not, and would fail pickling.
+    """
+    module = sys.modules.get(output_type.__module__)
+    if module is None:
+        return True
+    obj: Any = module
+    for part in output_type.__qualname__.split("."):
+        obj = getattr(obj, part, None)
+        if obj is None:
+            return True
+    return obj is not output_type
 
 
 @functools.cache
@@ -126,9 +160,15 @@ async def run_agent[TResult](
         except ModelBehaviorError as e:
             tracing.indented_logging(f"Model behavior error: {e}")
             raise e
-        return result.final_output
 
-    return await compute_value(
+        final_output = result.final_output
+        if isinstance(final_output, BaseModel) and _is_dynamic_model(type(final_output)):
+            # Dynamic output models can't be pickled (cache serializes via
+            # pickle); store the JSON dump and reconstruct on the way out.
+            return _SerializedModel(dump=final_output.model_dump(mode="json"))
+        return final_output
+
+    cached = await compute_value(
         instructions["content"],
         prompts=list(
             map(lambda p: {"role": p["role"], "content": p["content"]}, prompts),
@@ -151,6 +191,12 @@ async def run_agent[TResult](
         parallel_tool_calls=parallel_tool_calls,
         tool_choice=tool_choice,
     )
+
+    if isinstance(cached, _SerializedModel):
+        if not (isinstance(output_type, type) and issubclass(output_type, BaseModel)):
+            raise RuntimeError(f"Expected a BaseModel output for {output_type!r}, got a serialized model")
+        return cast(TResult, output_type.model_validate(cached.dump))
+    return cast(TResult, cached)
 
 
 async def run_llm[TResult](

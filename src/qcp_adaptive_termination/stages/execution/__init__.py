@@ -82,6 +82,11 @@ async def execute_query_plan(
             config.apportionment,
         )
 
+        print(
+            f"[EXEC] attempt {attempt}: executing {len(query_plan.steps)} step(s) "
+            f"across {len(relevant_data_agents)} relevant agent(s)",
+            flush=True,
+        )
         execution_result = await execute_query_plan_attempt(
             attempt=attempt,
             query_plan=query_plan,
@@ -90,12 +95,14 @@ async def execute_query_plan(
         )
 
         if execution_result.success:
+            print("[EXEC] plan executed successfully", flush=True)
             return CollaborativeQueryAnsweringResult(
                 result=cast(ResultType, execution_result.result),
                 step_uncertainties=execution_result.step_uncertainties,
             )
 
         if attempt >= max_replan_attempts:
+            print("[EXEC] max replan attempts reached — returning failed result", flush=True)
             return CollaborativeQueryAnsweringResult(
                 result=result_type.failed_result(),
             )

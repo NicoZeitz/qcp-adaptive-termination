@@ -76,7 +76,7 @@ def _replan_error(
 def _make_align_dispatch(
     handlers: dict[str, Callable[..., AlignedResultList]],
 ) -> Callable[..., AlignedResultList]:
-    """Dispatch ALIGN_SCHEMA by agent name (each step has a distinct agent set)."""
+    """Dispatch ALIGN_SCHEMA by step query (each step has a distinct query)."""
 
     def _dispatch(
         execution_id: str,
@@ -85,17 +85,16 @@ def _make_align_dispatch(
         query: str,
         merge_task: str,
     ) -> AlignedResultList:
-        for name in agent_names:
-            handler = handlers.get(name)
-            if handler is not None:
-                return handler(
-                    execution_id,
-                    data_agents=data_agents,
-                    agent_names=agent_names,
-                    query=query,
-                    merge_task=merge_task,
-                )
-        raise ValueError(f"No align_schema handler for agents={agent_names!r}")
+        handler = handlers.get(query)
+        if handler is None:
+            raise ValueError(f"No align_schema handler for query={query!r}")
+        return handler(
+            execution_id,
+            data_agents=data_agents,
+            agent_names=agent_names,
+            query=query,
+            merge_task=merge_task,
+        )
 
     return _dispatch
 
@@ -103,7 +102,7 @@ def _make_align_dispatch(
 def _make_data_dispatch(
     handlers: dict[str, Callable[..., PartialQueryAnswer]],
 ) -> Callable[..., PartialQueryAnswer]:
-    """Dispatch DATA_AGENT by agent name (each step has a distinct agent set)."""
+    """Dispatch DATA_AGENT by step query (each step has a distinct query)."""
 
     def _dispatch(
         execution_id: str,
@@ -112,9 +111,9 @@ def _make_data_dispatch(
         additional_information: list[AdditionalInformation],
         schema_metadata: AlignedSchemaMetadata | None,
     ) -> PartialQueryAnswer:
-        handler = handlers.get(data_agent.name)
+        handler = handlers.get(query)
         if handler is None:
-            raise ValueError(f"No data_agent handler for agent={data_agent.name!r}")
+            raise ValueError(f"No data_agent handler for query={query!r}")
         return handler(
             execution_id,
             data_agent=data_agent,
@@ -153,8 +152,8 @@ class _StepTracker:
     """Collects the per-step completeness trajectory during one plan execution."""
 
     def __init__(self) -> None:
-        # agent name -> step id
-        self._agent_to_step: dict[str, str] = {}
+        # step query -> step id
+        self._query_to_step: dict[str, str] = {}
         # step_id -> ordered agent names
         self._ordered: dict[str, list[str]] = {}
         # step_id -> list of BatchRecord
@@ -163,10 +162,9 @@ class _StepTracker:
         self._total_unique: dict[str, int] = {}
         self._key_cols: dict[str, list[str]] = {}
 
-    def register_step(self, step_id: str, agent_names: list[str], key_cols: list[str], total_unique: int) -> None:
-        """Declare a step's agents, key columns and ground-truth unique count."""
-        for name in agent_names:
-            self._agent_to_step[name] = step_id
+    def register_step(self, step_id: str, step_query: str, key_cols: list[str], total_unique: int) -> None:
+        """Declare a step's query, key columns and ground-truth unique count."""
+        self._query_to_step[step_query] = step_id
         self._key_cols[step_id] = key_cols
         self._total_unique[step_id] = total_unique
 
@@ -182,8 +180,8 @@ class _StepTracker:
         query: str,
         result: PartialQueryAnswer,
     ) -> None:
-        """Record one agent query for the step it belongs to (via agent name)."""
-        step_id = self._agent_to_step.get(data_agent.name)
+        """Record one agent query for the step it belongs to (via step query)."""
+        step_id = self._query_to_step.get(query)
         if step_id is None:
             return
         ordered = self._ordered.setdefault(step_id, [])
@@ -404,8 +402,9 @@ async def run_query(
                 data_cache[name] = future.result()
         step_infos.append((step, step_meta, data_cache, canonical_table))
 
-    # Register per-step dispatch handlers keyed by agent name (each step has a
-    # distinct agent set, so agent name uniquely identifies the step).
+    # Register per-step dispatch handlers keyed by step query (each step has a
+    # distinct query, so it uniquely identifies the step even when steps share
+    # agents).
     execution_id = uuid4().hex[:12]
     tracker = _StepTracker()
     for step, step_meta, data_cache, canonical_table in step_infos:
@@ -413,14 +412,13 @@ async def run_query(
         data_handler = make_data_agent_override(
             step_meta["sql_query"], canonical_table, meta_mapping, data_cache, data_dir
         )
-        for agent_name in step.to_agent:
-            _per_step_align[agent_name] = align_handler
-            _per_step_data[agent_name] = data_handler
+        _per_step_align[step.query] = align_handler
+        _per_step_data[step.query] = data_handler
         schema_meta = step_meta["aligned_schema_metadata"]
         key_cols: list[str] = schema_meta["keys"]
         value_column: str | None = schema_meta.get("value_column")
         gt = compute_ground_truth(data_cache, key_cols, value_column)
-        tracker.register_step(step.id, step.to_agent, key_cols, gt.count)
+        tracker.register_step(step.id, step.query, key_cols, gt.count)
 
     hooks.clear(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN)
     align_dispatch = _make_align_dispatch(_per_step_align)
@@ -465,9 +463,8 @@ async def run_query(
             tracker.on_completeness,
         )
         for step, _, _, _ in step_infos:
-            for agent_name in step.to_agent:
-                _per_step_align.pop(agent_name, None)
-                _per_step_data.pop(agent_name, None)
+            _per_step_align.pop(step.query, None)
+            _per_step_data.pop(step.query, None)
 
     # Build per-step results from the captured trajectory.
     for step, step_meta, _, _ in step_infos:

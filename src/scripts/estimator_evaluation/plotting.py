@@ -28,7 +28,7 @@ def save_step_plot(result: StepResult, gt: GroundTruth, prefix: str, output_dir:
     ax_cov.set_ylabel("Coverage (observed / true count)")
     ax_cov.set_ylim(0.0, 1.1)
     ax_cov.set_title(f"Coverage trajectory\n{prefix}")
-    ax_cov.legend(fontsize=8)
+    ax_cov.set_xticks(range(0, xs[-1] + 1))
 
     if has_value:
         ax_val = axes[1]
@@ -41,6 +41,7 @@ def save_step_plot(result: StepResult, gt: GroundTruth, prefix: str, output_dir:
         ax_val.set_xlabel("Agents queried")
         ax_val.set_ylabel("Count")
         ax_val.set_title(f"Count estimation trajectory\n{prefix}")
+        ax_val.set_xticks(range(0, xs[-1] + 1))
         ax_val.legend(fontsize=8)
 
     fig.tight_layout()
