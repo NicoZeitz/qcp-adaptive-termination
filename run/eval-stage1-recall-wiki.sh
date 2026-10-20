@@ -27,12 +27,7 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/dataset/_meta/input"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="150_DEEP_eval_stage1_recall_embedding_boundary_schema_embed_cache_llm_no_cache"
-
-# TODO: Set to true to run files in parallel, false for sequential execution
-PARALLEL=true
-# TODO: set to true, then only print out the commands that would be executed, without actually running them
-TEST=false
+RUN_NAME="150_DEEP_eval_stage1_recall_llm_baseline_with_llm_reasoning"
 
 # write stdout and stderr to log files (in addition to printing to console)
 mkdir -p "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"
@@ -46,8 +41,8 @@ exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(t
 
 # Or use a specific list of files
 FILES=(
-    # "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
-    "How_many_FIFA_World_Cup_games_did_England_play.json"
+    "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
+    # "How_many_FIFA_World_Cup_games_did_England_play.json"
     # "How_many_airlines_are_headquartered_in_UK.json"
     # "How_many_chinese_woman_have_won_a_nobel_prize.json"
     # "How_many_countries_have_a_human_development_index_above_08.json"
@@ -131,20 +126,16 @@ for FILE in "${FILES[@]}"; do
     echo "  ================== Running file '${FILE}'"
     mkdir -p "${LOG_DIR}"
 
-    if [[ "${TEST}" == "true" ]]; then
-        echo "      [TEST] Would run: python3 -m scripts.main --name \"${NAME}\" --input \"${INPUT_FILE}\" --output_dir \"${LOG_DIR}\" --cache_dir \"${CACHE_DIR}\" --data_dir \"${DATA_DIR}\" --start-stage 1 --end-stage 1"
-    else
-        python3 -m scripts.main \
-          --name "${NAME}" \
-          --input "${INPUT_FILE}" \
-          --output_dir "${LOG_DIR}" \
-          --cache_dir "${CACHE_DIR}" \
-          --data_dir "${DATA_DIR}" \
-          --config "${PROJECT_DIR}/config.yaml" \
-          --start-stage 1 --end-stage 1 \
-          > >(tee "${LOG_DIR}/stdout.log") \
-          2> >(tee "${LOG_DIR}/stderr.log" >&2)
-    fi
+    python3 -m scripts.main \
+        --name "${NAME}" \
+        --input "${INPUT_FILE}" \
+        --output_dir "${LOG_DIR}" \
+        --cache_dir "${CACHE_DIR}" \
+        --data_dir "${DATA_DIR}" \
+        --config "${PROJECT_DIR}/config.yaml" \
+        --start-stage 1 --end-stage 1 \
+        > >(tee "${LOG_DIR}/stdout.log") \
+        2> >(tee "${LOG_DIR}/stderr.log" >&2)
 
     COMPLETED=$((COMPLETED + 1))
 
@@ -152,12 +143,10 @@ for FILE in "${FILES[@]}"; do
 
 done
 
-if [[ "${TEST}" != "true" ]]; then
-    echo "================== Computing precision / recall / F1"
-    python3 -m scripts.eval_stage1_recall \
-      --log_dir "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}" \
-      --input_dir "${INPUT_DIR}" \
-      --chart_output "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/chart_data"
-fi
+echo "================== Computing precision / recall / F1"
+python3 -m scripts.eval_stage1_recall \
+    --log_dir "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}" \
+    --input_dir "${INPUT_DIR}" \
+    --chart_output "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/chart_data"
 
 echo "================== All ${TOTAL} queries completed"
