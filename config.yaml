@@ -20,13 +20,13 @@ align_schema_agent_limit: 1000
 embedding_model: "openai/text-embedding-3-large"
 llm_timeout: 120.0
 log_llm_requests: false
-cache_mode: WRITE_ONLY # TODO:FW change this after evaluation
-discovery_filter_mode: embedding_boundary_recursive_v3
+cache_mode: READ_AND_WRITE # TODO:FW change this after evaluation
+discovery_filter_mode: embedding_boundary_iterative_v4
 
 agent_configs:
   coordinator_relevance:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   coordinator_planning:
     model: "openai/gpt-5"
     reasoning_effort: "high"
@@ -36,7 +36,7 @@ agent_configs:
     reasoning_effort: "high"
   coordinator_replanning:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   coordinator_align_schema:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
@@ -45,46 +45,58 @@ agent_configs:
     reasoning_effort: "high"
   data_agent_schema_description:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   data_agent_relevance:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   data_agent_code:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
   query_decomposer:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   embedding_text_generator:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   embedding_column_relevance:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   embedding_iterative_relevance:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   embedding_boundary_finder:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   embedding_boundary_finder_schema:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
-  embedding_boundary_recursive:
+    reasoning_effort: "high"
+  embedding_boundary_iterative:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
-  embedding_boundary_recursive_agent:
+    reasoning_effort: "high"
+  embedding_boundary_iterative_agent:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
-  embedding_boundary_recursive_aggregate:
+    reasoning_effort: "high"
+  embedding_boundary_iterative_aggregate:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
-  embedding_boundary_recursive_v3_agent:
+    reasoning_effort: "high"
+  embedding_boundary_iterative_v3_agent:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
-  embedding_boundary_recursive_v3_aggregate:
+    reasoning_effort: "high"
+  embedding_boundary_iterative_v3_aggregate:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"
+  embedding_boundary_finder_v4:
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    reasoning_effort: "high"
+  embedding_boundary_iterative_v4_agent:
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    reasoning_effort: "high"
+  embedding_boundary_iterative_v4_aggregate:
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    reasoning_effort: "high"
+  embedding_boundary_iterative_v4_decomposer:
+    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    reasoning_effort: "high"
   baseline_filter:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
+    reasoning_effort: "high"

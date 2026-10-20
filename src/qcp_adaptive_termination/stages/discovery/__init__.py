@@ -3,7 +3,7 @@ from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import AgentRegistryType, CacheMode, DataAgent
 from qcp_adaptive_termination.models.stages import FilteredRelevantAgents
 from qcp_adaptive_termination.observability import cache, context, tracing
-from qcp_adaptive_termination.stages.discovery.pre_filter import filter_by_llm_baseline, filter_embeddings, filter_embeddings_boundary, filter_embeddings_boundary_recursive, filter_embeddings_boundary_recursive_v2, filter_embeddings_boundary_recursive_v3, filter_embeddings_boundary_schema
+from qcp_adaptive_termination.stages.discovery.pre_filter import filter_by_llm_baseline, filter_embeddings, filter_embeddings_boundary, filter_embeddings_boundary_iterative, filter_embeddings_boundary_iterative_v2, filter_embeddings_boundary_iterative_v3, filter_embeddings_boundary_iterative_v4, filter_embeddings_boundary_schema
 
 DISCOVERY_STAGE_NAME = "Stage 1: Discovery"
 
@@ -99,54 +99,71 @@ async def filter_relevant_agents_internal(
                     "filtered_out_count": len(data_agents) - len(candidate_data_agents),
                 }
             )
-    elif filter_mode == "embedding_boundary_recursive" and pre_filter:
+    elif filter_mode == "embedding_boundary_iterative" and pre_filter:
         with tracing.own_span(
-            "Embedding Boundary Recursive Filter",
+            "Embedding Boundary Iterative Filter",
             input={
                 "query": query,
                 "total_agents": len(data_agents),
             },
         ):
-            max_rounds = context.get_config().embedding_boundary_recursive_max_rounds
-            candidate_data_agents = await filter_embeddings_boundary_recursive(query, data_agents, max_rounds=max_rounds)
-            tracing.indented_logging(f"Embedding boundary recursive filter: {len(data_agents)} → {len(candidate_data_agents)} agents")
+            max_rounds = context.get_config().embedding_boundary_iterative_max_rounds
+            candidate_data_agents = await filter_embeddings_boundary_iterative(query, data_agents, max_rounds=max_rounds)
+            tracing.indented_logging(f"Embedding boundary iterative filter: {len(data_agents)} → {len(candidate_data_agents)} agents")
             tracing.append_to_span_output(
                 {
-                    "candidates_after_boundary_recursive_filter": [a.name for a in candidate_data_agents],
+                    "candidates_after_boundary_iterative_filter": [a.name for a in candidate_data_agents],
                     "filtered_out_count": len(data_agents) - len(candidate_data_agents),
                 }
             )
-    elif filter_mode == "embedding_boundary_recursive_v2" and pre_filter:
+    elif filter_mode == "embedding_boundary_iterative_v2" and pre_filter:
         with tracing.own_span(
-            "Embedding Boundary Recursive V2 Filter",
+            "Embedding Boundary Iterative V2 Filter",
             input={
                 "query": query,
                 "total_agents": len(data_agents),
             },
         ):
-            max_queries = context.get_config().embedding_boundary_recursive_v2_max_queries
-            candidate_data_agents = await filter_embeddings_boundary_recursive_v2(query, data_agents, max_queries=max_queries)
-            tracing.indented_logging(f"Embedding boundary recursive v2 filter: {len(data_agents)} → {len(candidate_data_agents)} agents")
+            max_queries = context.get_config().embedding_boundary_iterative_v2_max_queries
+            candidate_data_agents = await filter_embeddings_boundary_iterative_v2(query, data_agents, max_queries=max_queries)
+            tracing.indented_logging(f"Embedding boundary iterative v2 filter: {len(data_agents)} → {len(candidate_data_agents)} agents")
             tracing.append_to_span_output(
                 {
-                    "candidates_after_boundary_recursive_v2_filter": [a.name for a in candidate_data_agents],
+                    "candidates_after_boundary_iterative_v2_filter": [a.name for a in candidate_data_agents],
                     "filtered_out_count": len(data_agents) - len(candidate_data_agents),
                 }
             )
-    elif filter_mode == "embedding_boundary_recursive_v3" and pre_filter:
+    elif filter_mode == "embedding_boundary_iterative_v3" and pre_filter:
         with tracing.own_span(
-            "Embedding Boundary Recursive V3 Filter",
+            "Embedding Boundary Iterative V3 Filter",
             input={
                 "query": query,
                 "total_agents": len(data_agents),
             },
         ):
-            max_queries = context.get_config().embedding_boundary_recursive_v3_max_queries
-            candidate_data_agents = await filter_embeddings_boundary_recursive_v3(query, data_agents, max_queries=max_queries)
-            tracing.indented_logging(f"Embedding boundary recursive v3 filter: {len(data_agents)} → {len(candidate_data_agents)} agents")
+            max_queries = context.get_config().embedding_boundary_iterative_v3_max_queries
+            candidate_data_agents = await filter_embeddings_boundary_iterative_v3(query, data_agents, max_queries=max_queries)
+            tracing.indented_logging(f"Embedding boundary iterative v3 filter: {len(data_agents)} → {len(candidate_data_agents)} agents")
             tracing.append_to_span_output(
                 {
-                    "candidates_after_boundary_recursive_v3_filter": [a.name for a in candidate_data_agents],
+                    "candidates_after_boundary_iterative_v3_filter": [a.name for a in candidate_data_agents],
+                    "filtered_out_count": len(data_agents) - len(candidate_data_agents),
+                }
+            )
+    elif filter_mode == "embedding_boundary_iterative_v4" and pre_filter:
+        with tracing.own_span(
+            "Embedding Boundary Iterative V4 Filter",
+            input={
+                "query": query,
+                "total_agents": len(data_agents),
+            },
+        ):
+            max_rounds = context.get_config().embedding_boundary_iterative_v4_max_rounds
+            candidate_data_agents = await filter_embeddings_boundary_iterative_v4(query, data_agents, max_rounds=max_rounds)
+            tracing.indented_logging(f"Embedding boundary iterative v4 filter: {len(data_agents)} → {len(candidate_data_agents)} agents")
+            tracing.append_to_span_output(
+                {
+                    "candidates_after_boundary_iterative_v4_filter": [a.name for a in candidate_data_agents],
                     "filtered_out_count": len(data_agents) - len(candidate_data_agents),
                 }
             )

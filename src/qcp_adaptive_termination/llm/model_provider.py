@@ -1,15 +1,19 @@
 import json
 import logging
 import os
+from typing import Any
 
 import httpx
 from agents import (
     MultiProvider,
+    OpenAIChatCompletionsModel,
     OpenAIProvider,
 )
+from agents.models.interface import Model, ModelResponse
 from agents.models.multi_provider import MultiProviderMap
 from httpx import AsyncClient
 from openai import AsyncOpenAI
+from openai.types.responses import ResponseOutputMessage, ResponseOutputText
 
 from qcp_adaptive_termination.observability.context import get_config
 
@@ -34,6 +38,44 @@ async def _log_request_hook(request: httpx.Request):
             request.url,
             body_bytes.decode("utf-8").replace("'", "'\\''"),
         )
+
+
+def _extract_last_json_object(text: str) -> str:
+    last_brace = text.rfind("{")
+    if last_brace == -1:
+        return text
+    candidate = text[last_brace:]
+    try:
+        json.loads(candidate)
+        return candidate
+    except json.JSONDecodeError:
+        return text
+
+
+def _strip_deepseek_prefix(response: ModelResponse) -> ModelResponse:
+    for item in response.output:
+        if not isinstance(item, ResponseOutputMessage):
+            continue
+        for content in item.content:
+            if isinstance(content, ResponseOutputText):
+                fixed = _extract_last_json_object(content.text)
+                if fixed != content.text:
+                    content.text = fixed
+    return response
+
+
+class DeepSeekFixModel(OpenAIChatCompletionsModel):
+    async def get_response(self, *args: Any, **kwargs: Any) -> ModelResponse:
+        response = await super().get_response(*args, **kwargs)
+        return _strip_deepseek_prefix(response)
+
+
+class DeepSeekFixProvider(OpenAIProvider):
+    def get_model(self, model_name: str | None) -> Model:
+        base = super().get_model(model_name)
+        model = DeepSeekFixModel.__new__(DeepSeekFixModel)
+        model.__dict__.update(base.__dict__)
+        return model
 
 
 async def _modify_request_hook(request: httpx.Request):
@@ -77,6 +119,7 @@ def _add_provider(
     *,
     responses_api: bool = True,
     http_client: AsyncClient | None = None,
+    provider_class: type[OpenAIProvider] = OpenAIProvider,
 ):
     base_url = os.getenv(f"{prefix.upper()}_BASE_URL")
     api_key = os.getenv(f"{prefix.upper()}_API_KEY")
@@ -91,7 +134,7 @@ def _add_provider(
         http_client=http_client or AsyncClient(event_hooks={"request": [_log_request_hook]}),
         timeout=timeout,
     )
-    provider = OpenAIProvider(
+    provider = provider_class(
         openai_client=client,
         use_responses=responses_api,
     )
@@ -103,11 +146,19 @@ def _setup_multi_provider() -> MultiProvider:
     timeout = get_config().llm_timeout
     _add_provider("OPENAI", provider_map=provider_map, timeout=timeout)
     _add_provider(
+        "OPENROUTER",
+        provider_map=provider_map,
+        timeout=timeout,
+        responses_api=False,
+        http_client=AsyncClient(event_hooks={"request": [_log_request_hook, _modify_request_hook]}),
+    )
+    _add_provider(
         "UNIVERSITY",
         provider_map=provider_map,
         timeout=timeout,
         responses_api=False,
         http_client=AsyncClient(event_hooks={"request": [_log_request_hook, _modify_request_hook]}),
+        provider_class=DeepSeekFixProvider,
     )
     _add_provider("LOCAL", provider_map=provider_map, timeout=timeout)
     return MultiProvider(provider_map=provider_map)
