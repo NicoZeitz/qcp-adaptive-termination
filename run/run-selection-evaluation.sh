@@ -7,7 +7,7 @@ source "${RUN_DIR}/setup.sh"
 RUN_NAME="evaluate-selection-strategies"
 DATASET_NAME="web-data-commons-product"
 DATASET_DIR="dataset"
-STRATEGY_WORKERS="${STRATEGY_WORKERS:-6}"
+STRATEGY_WORKERS="${STRATEGY_WORKERS:-16}"
 
 echo "================== Running '${RUN_NAME}' with dataset '${DATASET_NAME}/${DATASET_DIR}'"
 LOG_DIR="${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}-$(date +%Y-%m-%d-%H-%M)"
