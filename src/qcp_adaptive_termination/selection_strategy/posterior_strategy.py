@@ -31,13 +31,12 @@ class PosteriorState:
     queried_embeddings: list[np.ndarray] = field(default_factory=list)
 
 
-def _normalize_probability(values: list[float]) -> list[float]:
-    if not values:
-        return []
-    total = sum(values)
+def _normalize_probability(values: np.ndarray) -> np.ndarray:
+    """Normalize a numpy array of scores to probabilities (vectorized)."""
+    total = values.sum()
     if total == 0:
-        return [1.0 / len(values)] * len(values)
-    return [v / total for v in values]
+        return np.ones(values.size, dtype=float) / values.size
+    return values / total
 
 
 @dataclass(slots=True)
@@ -86,13 +85,10 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         remaining: list[ScoredDataAgent],
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
-    ) -> list[float]:
-        if not remaining:
-            return []
-
+    ) -> np.ndarray:
         if len(state.queried_embeddings) == 0:
             # uniform prior if no agents have been queried yet
-            return [1.0 / len(remaining)] * len(remaining)
+            return np.ones(len(remaining), dtype=float) / len(remaining)
 
         if self.clustered_prior:
             return self._calculate_clustered_prior(remaining, state, precomputed)
@@ -104,11 +100,11 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         remaining: list[ScoredDataAgent],
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
-    ) -> list[float]:
-        likelihood_raw: list[float] = []
-        for s in remaining:
+    ) -> np.ndarray:
+        likelihood_raw = np.empty(len(remaining), dtype=float)
+        for i, s in enumerate(remaining):
             a_not_b = theta_a_not_b().compute(precomputed[s.agent.name].theta_sketch, state.theta)
-            likelihood_raw.append(max(0.0, a_not_b.get_estimate()))
+            likelihood_raw[i] = max(0.0, a_not_b.get_estimate())
 
         return _normalize_probability(likelihood_raw)
 
@@ -118,12 +114,15 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         precomputed: dict[str, PosteriorPrecomputedState],
         state: PosteriorState,
     ) -> list[ScoredDataAgent]:
+        if not remaining:
+            return []
+
         prior = self.calculate_prior(remaining, state, precomputed)
         likelihood = self.calculate_likelihood(remaining, state, precomputed)
 
-        # posterior (unnormalized product) → sort
+        posterior = prior * likelihood
         for i, s in enumerate(remaining):
-            s.score = prior[i] * likelihood[i]
+            s.score = float(posterior[i])
 
         return sorted(remaining, key=lambda s: cast(float, s.score), reverse=True)
 
@@ -147,33 +146,36 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         remaining: list[ScoredDataAgent],
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
-    ) -> list[float]:
+    ) -> np.ndarray:
         # EVoC's knn graph requires n_samples > n_neighbors (default 15); fall back for small sets
         if len(remaining) <= 15:
             return self._calculate_non_clustered_prior(remaining, state, precomputed)
 
         import evoc  # lazy: numba JIT on import is expensive; only needed for clustered prior
 
-        reference_embeddings = np.array(state.queried_embeddings, dtype=float)
-
-        agent_embeddings = np.array([precomputed[s.agent.name].embedding for s in remaining], dtype=float)
+        reference_embeddings = np.asarray(state.queried_embeddings, dtype=float)  # (Q, D)
+        agent_embeddings = np.asarray(
+            [precomputed[s.agent.name].embedding for s in remaining],
+            dtype=float,  # (R, D)
+        )
 
         min_cluster_size = max(5, int(len(remaining) * self.min_cluster_size_ratio))
-        labels = evoc.EVoC(
-            base_min_cluster_size=min_cluster_size, min_samples=self.min_samples, random_state=42
-        ).fit_predict(agent_embeddings.astype(np.float32))
+        labels = np.asarray(
+            evoc.EVoC(
+                base_min_cluster_size=min_cluster_size, min_samples=self.min_samples, random_state=42
+            ).fit_predict(agent_embeddings.astype(np.float32))
+        )
 
-        centroids: dict[int, np.ndarray] = {}
-        for lbl in set(labels):
-            mask = labels == lbl
-            centroids[int(lbl)] = agent_embeddings[mask].mean(axis=0)
+        # Centroid per label, vectorized.
+        unique_labels = np.unique(labels)
+        centroids: dict[int, np.ndarray] = {
+            int(lbl): agent_embeddings[labels == lbl].mean(axis=0) for lbl in unique_labels
+        }
+        centroid_matrix = np.asarray([centroids[int(lbl)] for lbl in labels], dtype=float)  # (R, D)
 
-        prior_raw: list[float] = []
-        for i in range(len(remaining)):
-            centroid = centroids[labels[i]]
-            distances = np.linalg.norm(reference_embeddings - centroid, axis=1)
-            prior_raw.append(float(distances.min()))
-
+        # min L2 distance from each agent's centroid to all queried references (vectorized).
+        dists = np.linalg.norm(reference_embeddings[:, None, :] - centroid_matrix[None, :, :], axis=2)
+        prior_raw = dists.min(axis=0)
         return _normalize_probability(prior_raw)
 
     def _calculate_non_clustered_prior(
@@ -181,15 +183,13 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         remaining: list[ScoredDataAgent],
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
-    ) -> list[float]:
-        reference_embeddings = np.array(state.queried_embeddings, dtype=float)
-
-        # for each remaining agent
-        # compute for the embedding the distance to all reference embeddings, and take the minimum distance
-        prior_raw: list[float] = []
-        for s in remaining:
-            agent_embedding = np.array(precomputed[s.agent.name].embedding, dtype=float)
-            distances = np.linalg.norm(reference_embeddings - agent_embedding, axis=1)
-            prior_raw.append(float(distances.min()))
-
+    ) -> np.ndarray:
+        reference_embeddings = np.asarray(state.queried_embeddings, dtype=float)  # (Q, D)
+        agent_embeddings = np.asarray(
+            [precomputed[s.agent.name].embedding for s in remaining],
+            dtype=float,  # (R, D)
+        )
+        # diff: (Q, R, D) -> norm over D -> (Q, R) -> min over Q -> (R,)
+        dists = np.linalg.norm(reference_embeddings[:, None, :] - agent_embeddings[None, :, :], axis=2)
+        prior_raw = dists.min(axis=0)
         return _normalize_probability(prior_raw)

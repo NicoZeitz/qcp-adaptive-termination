@@ -113,6 +113,8 @@ async def _run_one_strategy(
     total_unique: int,
     canonical_cols: list[str],
     config: Config,
+    query_slug: str | None = None,
+    output_dir: Path | None = None,
 ) -> tuple[str, EvaluationCurve | None, str | None]:
     logging.info("Running strategy: %s / %s", step.id, strategy)
     execution_id = uuid4().hex[:12]
@@ -155,7 +157,38 @@ async def _run_one_strategy(
 
     curve = build_curve(deduped, data_cache, total_unique, canonical_cols)
     logging.info("  %s/%s AUC=%.4f agents=%d", step.id, strategy, curve.auc, len(deduped))
+    # Persist this strategy's curve immediately, independent of the other (possibly
+    # slow) strategies, so a later crash or kill does not lose completed curves.
+    if query_slug is not None and output_dir is not None:
+        _save_strategy_curve(output_dir, query_slug, step.id, str(strategy), curve)
     return str(strategy), curve, None
+
+
+def _save_strategy_curve(
+    output_dir: Path,
+    query_slug: str,
+    step_id: str,
+    strategy: str,
+    curve: EvaluationCurve,
+) -> None:
+    """Append a single strategy's curve to a per-strategy CSV, eagerly.
+
+    Writes to a dedicated file per strategy so results are durable even if the
+    overall step never finishes (e.g. a sibling strategy hangs on the full agent
+    set). Consumed by ``_save_results`` when available.
+    """
+    subdir = output_dir / "curves"
+    subdir.mkdir(parents=True, exist_ok=True)
+    file_path = subdir / f"{query_slug}_{step_id}__{strategy}.csv"
+    total = len(curve.x) - 1
+    rows = [
+        {"strategy": strategy, "agents_queried": x * total, "agents_fraction": x, "coverage": y}
+        for x, y in zip(curve.x, curve.y, strict=True)
+    ]
+    df = pd.DataFrame(rows)
+    header = not file_path.exists()
+    df.to_csv(file_path, mode="a", header=header, index=False)
+    logging.info("  %s/%s curve saved to %s", step_id, strategy, file_path)
 
 
 def _run_strategy_worker(
@@ -171,6 +204,7 @@ def _run_strategy_worker(
     meta_mapping: dict[str, Any],
     data_dir: str,
     query: str,
+    query_slug: str,
     config: Config,
     cache_dir: str | None,
     output_dir: str,
@@ -230,6 +264,8 @@ def _run_strategy_worker(
                     total_unique=total_unique,
                     canonical_cols=canonical_cols,
                     config=config,
+                    query_slug=query_slug,
+                    output_dir=Path(output_dir),
                 )
             )
         except Exception as exc:
@@ -267,6 +303,7 @@ async def _run_strategies(
     meta_mapping: dict[str, Any],
     data_dir: Path,
     query: str,
+    query_slug: str,
     config: Config,
     cache_dir: Path | None,
     output_dir: Path,
@@ -294,6 +331,8 @@ async def _run_strategies(
                         total_unique=total_unique,
                         canonical_cols=canonical_cols,
                         config=config,
+                        query_slug=query_slug,
+                        output_dir=output_dir,
                     )
                     for s in SelectionStrategyType
                 ]
@@ -321,6 +360,7 @@ async def _run_strategies(
                 meta_mapping,
                 str(data_dir),
                 query,
+                query_slug,
                 config,
                 str(cache_dir) if cache_dir is not None else None,
                 str(output_dir),
@@ -394,6 +434,18 @@ async def _run_step(
             data_cache[name] = future.result()
 
     strategy_workers = strategy_workers or _default_strategy_workers()
+    # Run the greedy oracle concurrently with the strategy workers: it only depends
+    # on data_cache/total_unique, not on any strategy result, so it should not wait
+    # for (possibly slow) strategies to finish.
+    loop = asyncio.get_running_loop()
+    oracle_task = loop.run_in_executor(
+        None,
+        compute_greedy_oracle,
+        step.to_agent,
+        data_cache,
+        total_unique,
+        canonical_cols,
+    )
     strategy_runs = await _run_strategies(
         step=step,
         step_meta=step_meta,
@@ -406,6 +458,7 @@ async def _run_step(
         meta_mapping=meta_mapping,
         data_dir=data_dir,
         query=query,
+        query_slug=query_slug,
         config=config,
         cache_dir=cache_dir,
         output_dir=output_dir,
@@ -414,7 +467,7 @@ async def _run_step(
     results = [(strategy, curve) for strategy, curve, _ in strategy_runs if curve is not None]
     failures = [(strategy, error or "unknown failure") for strategy, curve, error in strategy_runs if curve is None]
 
-    oracle_curve = compute_greedy_oracle(step.to_agent, data_cache, total_unique, canonical_cols)
+    oracle_curve = await oracle_task
     logging.info("Oracle AUC=%.4f", oracle_curve.auc)
     _save_results(results, oracle_curve, query_slug, step.id, output_dir)
 

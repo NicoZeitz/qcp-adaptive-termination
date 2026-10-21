@@ -76,37 +76,49 @@ def compute_greedy_oracle(
     total_unique: int,
     key_cols: list[str],
 ) -> EvaluationCurve:
-    """Greedy oracle: always pick the agent with the most new unique rows next."""
+    """Greedy oracle: always pick the agent with the most new unique rows next.
+
+    Each agent's key set is precomputed once up front, and the not-yet-seen
+    remainder is tracked incrementally per agent, so we never re-build key sets
+    nor recompute full cross-products on every greedy step. Same greedy result,
+    far less work for large agent sets.
+    """
+    # Precompute each agent's key set ONCE (the expensive part).
+    agent_keys: dict[str, frozenset] = {}
+    for name in relevant_agent_names:
+        df = data_cache.get(name)
+        if df is None or df.empty:
+            agent_keys[name] = frozenset()
+        else:
+            cols = [c for c in key_cols if c in df.columns]
+            agent_keys[name] = (
+                frozenset(map(tuple, df[cols].drop_duplicates().values.tolist())) if cols else frozenset()
+            )
+
     remaining = list(relevant_agent_names)
     ordered: list[str] = []
     seen_keys: set[tuple] = set()
+    # Incremental remainder per agent (monotonically shrinks as seen grows).
+    not_seen = {name: set(agent_keys[name]) for name in remaining}
+    not_seen_total = {name: len(not_seen[name]) for name in remaining}
 
     while remaining:
-        best_agent: str | None = None
-        best_new = -1
-
-        for agent_name in remaining:
-            df = data_cache.get(agent_name)
-            if df is None or df.empty:
-                new_unique = 0
-            else:
-                cols = [c for c in key_cols if c in df.columns]
-                new_unique = len(set(map(tuple, df[cols].drop_duplicates().values.tolist())) - seen_keys) if cols else 0
-
-            if new_unique > best_new:
-                best_new = new_unique
-                best_agent = agent_name
-
-        if best_agent is None:
+        # Pick the remaining agent contributing the most new keys.
+        best_agent = max(remaining, key=lambda name: not_seen_total[name])
+        best_keys = not_seen[best_agent]
+        if not best_keys:
+            # No new unique coverage from anyone left; remaining order is arbitrary.
+            ordered.extend(remaining)
             break
 
+        seen_keys.update(best_keys)
         remaining.remove(best_agent)
         ordered.append(best_agent)
 
-        df = data_cache.get(best_agent)
-        if df is not None and not df.empty:
-            cols = [c for c in key_cols if c in df.columns]
-            if cols:
-                seen_keys.update(map(tuple, df[cols].drop_duplicates().values.tolist()))
+        # Only agents whose not-yet-seen set overlaps what we just added change.
+        for name in remaining:
+            if agent_keys[name] & best_keys:
+                not_seen[name].difference_update(best_keys)
+                not_seen_total[name] = len(not_seen[name])
 
     return build_curve(ordered, data_cache, total_unique, key_cols)
