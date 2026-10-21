@@ -41,9 +41,9 @@ exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(t
 
 # Or use a specific list of files
 FILES=(
-    # "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
+    "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
     # "How_many_FIFA_World_Cup_games_did_England_play.json"
-    "How_many_airlines_are_headquartered_in_UK.json"
+    # "How_many_airlines_are_headquartered_in_UK.json"
     # "How_many_chinese_woman_have_won_a_nobel_prize.json"
     # "How_many_countries_have_a_human_development_index_above_08.json"
     # "How_many_games_was_Kurt_Tschenscher_referee_in_a_FIFA_World_Cup_in_Europe.json"
