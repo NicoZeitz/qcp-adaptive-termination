@@ -8,6 +8,7 @@ from datasketches import (
     theta_a_not_b,
     update_theta_sketch,
 )
+lazy import evoc
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.database as database
@@ -150,8 +151,6 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         # EVoC's knn graph requires n_samples > n_neighbors (default 15); fall back for small sets
         if len(remaining) <= 15:
             return self._calculate_non_clustered_prior(remaining, state, precomputed)
-
-        import evoc  # lazy: numba JIT on import is expensive; only needed for clustered prior
 
         reference_embeddings = np.asarray(state.queried_embeddings, dtype=float)  # (Q, D)
         agent_embeddings = np.asarray(

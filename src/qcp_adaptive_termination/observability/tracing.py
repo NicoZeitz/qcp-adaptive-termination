@@ -7,6 +7,7 @@ from typing import Any, overload
 
 from agents import CustomSpanData, Span, custom_span
 from pydantic import BaseModel, JsonValue
+lazy from langfuse import get_client
 
 _span_by_id: dict[str | None, int] = {}
 _span_context_var = ContextVar[Span[CustomSpanData] | None]("current_span", default=None)
@@ -97,8 +98,6 @@ def own_span(
             from qcp_adaptive_termination.observability.context import get_tracing_providers
 
             if "langfuse" in get_tracing_providers():
-                from langfuse import get_client
-
                 client = get_client()
                 if "input" in span.span_data.data:
                     client.update_current_span(input=span.span_data.data["input"])

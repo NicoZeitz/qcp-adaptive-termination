@@ -27,9 +27,10 @@ from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
 from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
 from opentelemetry import trace as otel_trace
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import SpanLimits, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from pydantic import JsonValue
+lazy from langfuse import get_client
 
 from qcp_adaptive_termination.models import CacheMode, Config
 from qcp_adaptive_termination.observability.cache import Cache
@@ -208,7 +209,7 @@ def tracing_context(
 
         provider = otel_trace.get_tracer_provider()
         if not isinstance(provider, TracerProvider):
-            provider = TracerProvider()
+            provider = TracerProvider(span_limits=SpanLimits(max_attributes=4096))
             otel_trace.set_tracer_provider(provider)
 
         if "file" in tracing_providers:
@@ -217,8 +218,6 @@ def tracing_context(
             logging.info(f"Tracing initialized. Trace file: {tracing_log_file}")
 
         if "langfuse" in tracing_providers:
-            from langfuse import get_client
-
             client = get_client()
 
             if not client.auth_check():
@@ -242,8 +241,6 @@ def tracing_context(
         if "langfuse" in tracing_providers:
             assert langfuse_observation is not None
             langfuse_observation.__exit__(None, None, None)
-
-            from langfuse import get_client
 
             client = get_client()
             client.flush()

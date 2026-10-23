@@ -78,12 +78,8 @@ async def run_parallel(
         logging.warning("No input files found in %s", input_dir)
         return []
 
-    # Each input file runs in a fresh worker process (max_tasks_per_child=1) so
-    # per-file logging/tracing contexts are isolated (tracing cannot re-enter a
-    # reused process). Sequential mode uses a single worker.
-    # Cap workers to avoid OOM: each worker loads the full ML stack (~1.5GB).
     if max_workers is None:
-        max_workers = min(os.cpu_count() or 1, 2)
+        max_workers = min(os.cpu_count() or 1, 6)
     workers = max_workers if parallel else 1
     loop = asyncio.get_running_loop()
     with ProcessPoolExecutor(max_workers=workers, max_tasks_per_child=1) as pool:
