@@ -5,7 +5,9 @@ Drives the step-by-step execution loop, handles replanning on failure
 (up to `config.max_replan_attempts`), and returns a `CollaborativeQueryAnsweringResult`.
 """
 
-from typing import cast
+from typing import Any, cast
+
+from agents.items import TResponseInputItem
 
 from qcp_adaptive_termination import hooks
 from qcp_adaptive_termination.hooks import HookEvent
@@ -65,16 +67,20 @@ async def execute_query_plan_attempt(
 
 
 @hooks.hook(HookEvent.EXECUTION_STAGE, stage_context=True)
-@cache.cached(mode=CacheMode.WRITE_ONLY)
+@cache.cached(mode=CacheMode.WRITE_ONLY, ignore_args={"planning_continuation"})
 async def execute_query_plan(
     query_plan: QueryPlan,
     relevant_data_agents: list[DataAgent],
     data_agents: list[DataAgent],
+    planning_continuation: list[Any] | None = None,
 ) -> CollaborativeQueryAnsweringResult:
     config = context.get_config()
     max_replan_attempts = config.max_replan_attempts
 
     attempt = 0
+    # Conversation history threaded through replans: seeded with the initial
+    # plan draft, extended with each replan attempt (mirrors completeness LLM).
+    replan_history: list[TResponseInputItem] = list(planning_continuation or [])
     while True:
         step_budgets = compute_step_budgets(
             query_plan,
@@ -113,5 +119,6 @@ async def execute_query_plan(
             data_agents=data_agents,
             query_plan=query_plan,
             failed_execution=cast(FailedExecution, execution_result.failed_execution),
+            history=replan_history,
         )
         attempt += 1

@@ -1,5 +1,6 @@
 """Cross-query aggregation for completeness evaluation."""
 
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,39 @@ def _build_step_frame(results_dir: Path, step_frames: list[pd.DataFrame]) -> pd.
         last["query"] = query
         step_rows.append(last)
     return pd.DataFrame(step_rows)
+
+
+def _aggregate_usage(results_dir: Path, input_dir: Path) -> pd.DataFrame | None:
+    """Collapse each query's ``usage.json`` into one summary row (LLM + embeddings)."""
+    rows: list[dict[str, Any]] = []
+    for input_file in sorted(input_dir.glob("*.json")):
+        query_slug = input_file.stem
+        usage_path = results_dir / query_slug / "usage.json"
+        if not usage_path.exists():
+            continue
+        with usage_path.open(encoding="utf-8") as f:
+            usage = json.load(f)
+        llm = usage["llm"]
+        emb = usage["embeddings"]
+        llm_input = sum(v.get("input_tokens", 0) for v in llm["per_model"].values())
+        emb_tokens = sum(v.get("input_tokens", 0) for v in emb["per_model"].values())
+        rows.append(
+            {
+                "query": query_slug,
+                "llm_runs": llm["runs"],
+                "llm_requests": llm["requests"],
+                "llm_input_tokens": llm_input,
+                "llm_cost": llm["cost"],
+                "embedding_calls": emb["calls"],
+                "embedding_tokens": emb_tokens,
+                "embedding_cost": emb["cost"],
+                "total_cost": usage["total_cost"],
+                "time_s": usage["time_s"],
+            }
+        )
+    if not rows:
+        return None
+    return pd.DataFrame(rows)
 
 
 def aggregate(results_dir: Path, input_dir: Path) -> Path:
@@ -72,6 +106,11 @@ def aggregate(results_dir: Path, input_dir: Path) -> Path:
         logging.info("Aggregated %d/%d input queries to %s", len(frames), len(status_rows), results_dir)
     else:
         logging.warning("No evaluator summaries found under %s", results_dir)
+
+    usage_frame = _aggregate_usage(results_dir, input_dir)
+    if usage_frame is not None:
+        usage_frame.to_csv(results_dir / "usage_summary.csv", index=False)
+        logging.info("Aggregated usage for %d queries to %s", len(usage_frame), results_dir / "usage_summary.csv")
 
     pd.DataFrame(status_rows).to_csv(results_dir / "evaluator_run_status.csv", index=False)
     return results_dir

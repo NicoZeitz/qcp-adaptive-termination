@@ -17,6 +17,7 @@ from agents import (
 )
 from agents.exceptions import ModelBehaviorError
 from agents.run_config import DEFAULT_MAX_TURNS
+from agents.usage import Usage
 from openai.types.shared import Reasoning
 from pydantic import BaseModel, JsonValue
 
@@ -76,6 +77,8 @@ class AgentRunResult[TResult]:
     """Parsed final result."""
     continuation_input: list[TResponseInputItem]
     """Raw conversation items (``to_input_list()``: reasoning, messages, tool calls/outputs)."""
+    usage: Usage
+    """Raw SDK token usage for this run (aggregated across requests)."""
 
 
 @functools.cache
@@ -180,9 +183,12 @@ async def run_agent[TResult](
             raise e
 
         final_output = _SerializedModel.wrap(cast(TResult, result.final_output))
+        usage = result.context_wrapper.usage
+
         return AgentRunResult(
             output=final_output,
             continuation_input=result.to_input_list(),
+            usage=usage,
         )
 
     cached = await compute_value(
@@ -213,17 +219,20 @@ async def run_agent[TResult](
     # Fire on both real runs and cache hits; the raw continuation is passed so
     # consumers can render a transcript / extract reasoning from it directly.
     await hooks.fire_post(
-        hooks.HookEvent.LLM_RUN_COMPLETED,
+        hooks.HookEvent.AGENT_COMPLETED,
         role=role,
         agent_name=display_name,
         label=label,
+        model=model,
         continuation_input=continuation_input,
         output=output,
+        usage=cached.usage,
     )
 
     return AgentRunResult(
         output=output,
         continuation_input=continuation_input,
+        usage=cached.usage,
     )
 
 

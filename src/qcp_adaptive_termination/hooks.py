@@ -89,7 +89,8 @@ class HookEvent(StrEnum):
     SYNTHESIS_STAGE = "synthesis_stage"
 
     # ── General Hooks ───────────────────────────────────────────────────
-    LLM_RUN_COMPLETED = "llm_run_completed"
+    AGENT_COMPLETED = "agent_completed"
+    EMBEDDING_COMPLETED = "embedding_completed"
 
 
 # ── Registration ─────────────────────────────────────────────────────────────

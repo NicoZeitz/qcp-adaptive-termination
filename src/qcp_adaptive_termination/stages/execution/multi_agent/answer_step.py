@@ -97,7 +97,7 @@ async def answer_step_multiple_agents(
             break
 
         result_list = merge_agent_result_into_result_list(result_list, agent_name, result.answer)
-        estimator = update_estimator(estimator, result_list, agent_name)
+        estimator = update_estimator(estimator, result_list, agent_name, step_budget)
 
         # Decide whether to stop (all agents queried, or completeness evaluator says stop).
         decision = await run_completeness_evaluator(

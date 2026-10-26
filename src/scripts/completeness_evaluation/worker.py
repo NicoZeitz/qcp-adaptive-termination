@@ -11,6 +11,7 @@ order, the estimator state, and the stop decision. Per-step results are then
 built from that captured trajectory.
 """
 
+import csv
 import json
 import logging
 import math
@@ -24,6 +25,7 @@ from uuid import uuid4
 import pandas as pd
 import requests
 from agents.items import TResponseInputItem
+from agents.usage import Usage
 from pydantic import BaseModel
 
 import qcp_adaptive_termination.hooks as hooks
@@ -53,6 +55,7 @@ from qcp_adaptive_termination.models.query_plan import (
 )
 from qcp_adaptive_termination.models.stages import CollaborativeQueryAnswering
 from qcp_adaptive_termination.observability import context
+from qcp_adaptive_termination.observability.usage import CSV_COLUMNS, UsageReport
 from qcp_adaptive_termination.stages import execute_query_plan
 from scripts.completeness_evaluation.ground_truth import compute_ground_truth
 from scripts.completeness_evaluation.models import BatchRecord, GroundTruth, StepResult
@@ -78,6 +81,14 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, pd.DataFrame):
         return value.to_dict(orient="records")
     return value
+
+
+def _write_usage_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    """Write one row per call to ``path``."""
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def _replan_error(
@@ -511,9 +522,10 @@ class _StepTracker:
         label: str | None,
         continuation_input: list[TResponseInputItem],
         output: Any,
+        usage: Usage,
     ) -> None:
-        """Write the run's Markdown transcript + raw continuation input."""
-        del execution_id
+        """Write the run's Markdown transcript and raw input JSON."""
+        del execution_id, usage
         meta = transcript_mod.RunMeta(role=role, agent_name=agent_name, label=label)
         filename = transcript_mod.transcript_filename(meta)
         markdown = transcript_mod.render_run_markdown(meta, continuation_input, output)
@@ -806,7 +818,20 @@ async def run_query(
         HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_RESULT_PRODUCER,
         tracker.on_produce_result,
     )
-    hooks.register_post(HookEvent.LLM_RUN_COMPLETED, tracker.on_llm_completed)
+    hooks.register_post(HookEvent.AGENT_COMPLETED, tracker.on_llm_completed)
+
+    usage_report = UsageReport()
+
+    def _on_llm_usage(execution_id, role, agent_name, label, model, usage) -> None:
+        del execution_id
+        usage_report.record_llm(role, agent_name, label, model, usage)
+
+    def _on_embedding_usage(execution_id, text: str, model: str, prompt_tokens: int) -> None:
+        del execution_id
+        usage_report.record_embedding(text, model, prompt_tokens)
+
+    hooks.register_post(HookEvent.AGENT_COMPLETED, _on_llm_usage)
+    hooks.register_post(HookEvent.EMBEDDING_COMPLETED, _on_embedding_usage)
 
     try:
         with (
@@ -847,12 +872,17 @@ async def run_query(
             HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_RESULT_PRODUCER,
             tracker.on_produce_result,
         )
-        hooks.unregister_post(HookEvent.LLM_RUN_COMPLETED, tracker.on_llm_completed)
+        hooks.unregister_post(HookEvent.AGENT_COMPLETED, tracker.on_llm_completed)
+        hooks.unregister_post(HookEvent.AGENT_COMPLETED, _on_llm_usage)
+        hooks.unregister_post(HookEvent.EMBEDDING_COMPLETED, _on_embedding_usage)
         for step, _, _, _ in step_infos:
             _per_step_align.pop(step.query, None)
             _per_step_data.pop(step.query, None)
 
     tracker.fill_batch_derived()
+
+    (run_output_dir / "usage.json").write_text(json.dumps(usage_report.summarize(config), indent=2), encoding="utf-8")
+    _write_usage_csv(run_output_dir / "usage.csv", usage_report.call_rows(config))
 
     # Build per-step results from the captured trajectory.
     for step, step_meta, _, _ in step_infos:

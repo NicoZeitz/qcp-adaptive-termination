@@ -156,6 +156,7 @@ async def run_stages(
             query_plan,
             drafted.relevant_data_agents,
             drafted.data_agents,
+            planning_continuation=drafted.planning_continuation,
         )
 
     if start_stage.order <= Stage.SYNTHESIS.order <= end_stage.order:

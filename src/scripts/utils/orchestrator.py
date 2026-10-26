@@ -67,13 +67,18 @@ async def run_parallel(
     parallel: bool = True,
     max_workers: int | None = None,
     extra: dict[str, Any] | None = None,
+    query: str | None = None,
 ) -> list[Any]:
     """Run `worker` for every input file in ``dataset_dir/_meta/input``.
 
-    Returns the list of worker results in input-file order.
+    If ``query`` is given, only files whose stem contains it (case-insensitive)
+    are run. Returns worker results in input-file order.
     """
     input_dir = dataset_dir / "_meta" / "input"
     input_files = sorted(input_dir.glob("*.json"))
+    if query:
+        needle = query.lower()
+        input_files = [f for f in input_files if needle in f.stem.lower()]
     if not input_files:
         logging.warning("No input files found in %s", input_dir)
         return []
@@ -133,3 +138,9 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--parallel", action="store_true", default=True, help="Run queries in parallel (default)")
     parser.add_argument("--sequential", action="store_true", help="Run queries sequentially")
     parser.add_argument("--max_workers", type=int, default=None, help="Max parallel worker processes")
+    parser.add_argument(
+        "--query",
+        type=str,
+        default=None,
+        help="Only run input queries whose filename stem contains this substring (case-insensitive).",
+    )

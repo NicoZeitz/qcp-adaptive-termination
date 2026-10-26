@@ -21,7 +21,6 @@ _CSV_COLUMNS = [
     "stop_reason",
     "estimator_decision",
     "llm_decision",
-    "llm_reasoning",
     "warmup_reached",
     "sample_coverage",
     "aggregation",
@@ -86,10 +85,9 @@ def save_step_results(result: StepResult, query_slug: str, output_dir: Path) -> 
                 "agents_queried_fraction": b.agents_queried_fraction,
                 "decision": b.decision,
                 "stop": b.stop,
-                "stop_reason": b.stop_reason,
+                "stop_reason": b.decision,
                 "estimator_decision": b.estimator_decision,
                 "llm_decision": b.llm_decision or "not_called",
-                "llm_reasoning": b.llm_reasoning,
                 "warmup_reached": b.warmup_reached,
                 "sample_coverage": b.sample_coverage,
                 "aggregation": b.aggregation,
@@ -142,7 +140,7 @@ def _save_result_txt(result: StepResult, query_slug: str, output_dir: Path) -> N
 
 def _save_transcripts_removed() -> None:
     """Per-run Markdown transcripts are now written by the worker via the
-    ``LLM_RUN_COMPLETED`` hook (see ``worker.on_llm_completed``), which emits a
+    ``AGENT_COMPLETED`` hook (see ``worker.on_llm_completed``), which emits a
     full interleaved transcript per agent run directly from ``RunResult``.
     The aggregate per-step Markdown/JSONL writer is gone, replaced by those
     richer per-run files.

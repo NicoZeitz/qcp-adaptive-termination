@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -18,6 +19,18 @@ class RoleConfig(BaseModel):
     model: str
     reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = "none"
     reasoning_summary: Literal["auto", "concise", "detailed"] | None = None
+
+
+class ModelCost(BaseModel):
+    """Per-model pricing, USD per 1M tokens. Each rate is optional; unused rates may be omitted."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    input: Decimal | None = None
+    cached_input: Decimal | None = None
+    cache_write: Decimal | None = None
+    output: Decimal | None = None
+    embedding: Decimal | None = None
 
 
 class EstimatorConfig(BaseModel):
@@ -53,6 +66,16 @@ class Config(BaseModel):
     warmup_agents: int = 2  # TODO: find good k value
     """Never stop deterministically before this many agents have been queried."""
 
+    stop_llm_max_list_items: int = 1000
+    """When the deduplicated result list exceeds this many rows, long-list behavior kicks in."""
+
+    long_list_behavior: Literal["prevent", "estimator_reasoning"] = "prevent"
+    """What to do when the result list is long:
+    - ``prevent``: skip the LLM stop; rely only on the deterministic estimator.
+    - ``estimator_reasoning``: still ask the LLM, but feed it the estimator's
+      unknown-unknowns (estimated count, bounds, coverage) to reason with.
+    """
+
     max_replan_attempts: int = 2
     """Maximum number of replan attempts before giving up on a query plan."""
 
@@ -67,4 +90,14 @@ class Config(BaseModel):
     embedding_model: str = "openai/text-embedding-3-large"
     agent_configs: dict[str, RoleConfig] = Field(default_factory=dict)
 
+    costs: dict[str, ModelCost] = Field(default_factory=dict)
+    """Per-model pricing keyed by model name exactly as configured elsewhere."""
+
     cache_mode: CacheMode = CacheMode.READ_AND_WRITE
+
+    # -- Completeness LLM prompt context --
+    completeness_show_estimator_stats: bool = False
+    """Feed estimator unknown-unknown stats into the completeness LLM prompt."""
+
+    completeness_summarize_history: bool = True
+    """Tell the completeness LLM it is a continuation and to decide on the new state."""

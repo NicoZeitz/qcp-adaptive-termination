@@ -1,5 +1,7 @@
 import argparse
 import asyncio
+import csv
+import json
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from datetime import datetime
@@ -17,7 +19,17 @@ from qcp_adaptive_termination.models.stages import (
     Stage,
 )
 from qcp_adaptive_termination.observability import context
+from qcp_adaptive_termination.observability.usage import CSV_COLUMNS, UsageReport
 from qcp_adaptive_termination.pipeline import load_config, load_input
+
+
+def _write_usage_reports(output_dir: Path, usage_report: UsageReport, config: Config) -> None:
+    """Write the per-call usage CSV and JSON next to the run outputs."""
+    (output_dir / "usage.json").write_text(json.dumps(usage_report.summarize(config), indent=2), encoding="utf-8")
+    with (output_dir / "usage.csv").open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
+        writer.writeheader()
+        writer.writerows(usage_report.call_rows(config))
 
 
 @dataclass(slots=True)
@@ -92,7 +104,8 @@ def run_script(
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    cli.register_default_output_hooks()
+    usage_report = UsageReport()
+    cli.register_default_output_hooks(usage_report)
 
     if start_stage.order > end_stage.order:
         raise ValueError("start_stage must be <= end_stage")
@@ -151,4 +164,7 @@ def run_script(
 
             return result
 
-    return asyncio.run(_runner())
+    result = asyncio.run(_runner())
+    if output_dir:
+        _write_usage_reports(output_dir, usage_report, config)
+    return result

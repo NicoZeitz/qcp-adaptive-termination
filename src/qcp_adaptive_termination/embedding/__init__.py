@@ -14,7 +14,9 @@ from agents import OpenAIProvider
 from openai import AsyncOpenAI
 
 import qcp_adaptive_termination.observability.cache as cache
+from qcp_adaptive_termination import hooks
 from qcp_adaptive_termination.embedding.vector_index import VectorIndex
+from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.llm import model_provider
 from qcp_adaptive_termination.observability import context, tracing
 
@@ -146,6 +148,15 @@ async def create(text):
             texts,
             _create_with_inflight,
         )
+
+        for t, tokens in zip(texts, _num_tokens_from_string(texts), strict=True):
+            await hooks.fire_post(
+                HookEvent.EMBEDDING_COMPLETED,
+                text=t,
+                model=context.get_config().embedding_model,
+                prompt_tokens=tokens,
+            )
+
         return results[0] if is_single else results
 
 

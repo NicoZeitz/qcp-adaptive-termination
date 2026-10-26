@@ -59,6 +59,7 @@ async def _run_subcommand(args: argparse.Namespace) -> None:
             parallel=parallel,
             max_workers=args.max_workers,
             extra=extra,
+            query=args.query,
         )
         selection_strategy_evaluation.aggregate(output_dir, input_dir)
     elif args.subcommand == "estimator":
@@ -70,6 +71,7 @@ async def _run_subcommand(args: argparse.Namespace) -> None:
             cache_dir=args.cache_dir,
             parallel=parallel,
             max_workers=args.max_workers,
+            query=args.query,
         )
         completeness_evaluation.aggregate(output_dir, input_dir)
     else:

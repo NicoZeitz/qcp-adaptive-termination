@@ -19,6 +19,7 @@ from qcp_adaptive_termination.models.agent import (
 from qcp_adaptive_termination.models.cache_mode import CacheMode
 from qcp_adaptive_termination.models.config import (
     Config,
+    ModelCost,
     RoleConfig,
 )
 from qcp_adaptive_termination.models.estimation import (
@@ -63,6 +64,7 @@ __all__ = [
     "CacheMode",
     # config
     "Config",
+    "ModelCost",
     "RoleConfig",
     # estimation
     "AggregationType",

@@ -1,6 +1,8 @@
 import json
 import logging
+from typing import Any
 
+from agents.items import TResponseInputItem
 from pydantic import BaseModel
 
 import qcp_adaptive_termination.agent_registry as agent_registry
@@ -94,23 +96,36 @@ async def replan_query_plan(
     relevant_data_agents: list[DataAgent],
     query_plan: QueryPlan,
     reason: FailedExecution,
+    history: list[TResponseInputItem] | None = None,
 ) -> QueryPlan:
     registry_string = await agent_registry.build_registry_string(relevant_data_agents, AgentRegistryType.TECHNICAL)
     answer_map = create_answer_map_from_query_plan(query_plan)
     QueryReplanModel = create_query_plan_model(relevant_data_agents)
 
-    result = await runner.run_llm(
+    prompt_parameters: dict[str, Any] = {
+        "agent_registry": registry_string,
+        "old_query_plan": create_query_plan_prompt_context(query_plan),
+        "query": query_plan.query,
+        "reason": create_reason_prompt_context(reason),
+    }
+    if history:
+        prompt_parameters["is_continuation"] = True
+
+    run_result = await runner.run_agent(
         role=AgentRole.EXECUTION_COORDINATOR_REPLAN,
-        prompt_parameters={
-            "agent_registry": registry_string,
-            "old_query_plan": create_query_plan_prompt_context(query_plan),
-            "query": query_plan.query,
-            "reason": create_reason_prompt_context(reason),
-        },
+        prompt_parameters=prompt_parameters,
         output_type=QueryReplanModel,
+        max_turns=1,
+        tools=[],
+        previous_input=history or None,
     )
 
-    query_plan = map_query_replan_model_to_query_plan(result, query_plan.query, answer_map)
+    # Carry the conversation forward so the next replan continues from here
+    # (mirrors the completeness LLM's history threading).
+    if history is not None:
+        history[:] = run_result.continuation_input
+
+    query_plan = map_query_replan_model_to_query_plan(run_result.output, query_plan.query, answer_map)
     return query_plan
 
 
@@ -121,6 +136,7 @@ async def replan(
     data_agents: list[DataAgent],
     query_plan: QueryPlan,
     failed_execution: FailedExecution,
+    history: list[TResponseInputItem] | None = None,
 ) -> tuple[list[DataAgent], QueryPlan]:
     with tracing.own_span(
         f"{attempt} - {Stage.EXECUTION.label} (Replan)",
@@ -151,6 +167,7 @@ async def replan(
             relevant_data_agents=updated_data_agents,
             query_plan=query_plan,
             reason=failed_execution,
+            history=history,
         )
 
         tracing.append_to_span_output(

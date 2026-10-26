@@ -9,7 +9,7 @@ they need from the estimator on demand.
 import pandas as pd
 
 from qcp_adaptive_termination.estimator import DataItem, Estimator
-from qcp_adaptive_termination.models import AlignedResultList
+from qcp_adaptive_termination.models import AlignedResultList, StepBudget
 from qcp_adaptive_termination.observability import context
 
 
@@ -37,6 +37,7 @@ def update_estimator(
     estimator: Estimator | None,
     result_list: AlignedResultList,
     agent_name: str,
+    step_budget: StepBudget | None,
 ) -> Estimator | None:
     """Fold one agent's merged rows into the estimator, creating it if needed.
 
@@ -54,6 +55,10 @@ def update_estimator(
         return estimator
 
     if estimator is None:
-        return Estimator([[item] for item in items], context.get_config().estimator)
+        estimator_params = context.get_config().estimator
+        if step_budget is not None:
+            estimator_params.confidence_epsilon = 1 - step_budget.t_step
+
+        return Estimator([[item] for item in items], estimator_params)
     estimator.add_source(items)
     return estimator

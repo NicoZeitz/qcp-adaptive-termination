@@ -146,21 +146,24 @@ async def draft_query_plan(
         )
         QueryPlanModel = create_query_plan_model(relevant_data_agents)
 
-        result = await runner.run_llm(
+        result = await runner.run_agent(
             role=AgentRole.PLANNING_COORDINATOR_DRAFT_QUERY_PLAN,
             prompt_parameters={
                 "agent_registry": registry_string,
                 "query": query,
             },
             output_type=QueryPlanModel,
+            max_turns=1,
+            tools=[],
         )
 
-        query_plan = map_query_plan_model_to_query_plan(result, query)
+        query_plan = map_query_plan_model_to_query_plan(result.output, query)
         tracing.append_to_span_output({"query_plan": query_plan})
 
         drafted_query_plan = DraftedQueryPlan(
             relevant_data_agents=relevant_data_agents,
             data_agents=data_agents,
             query_plan=query_plan,
+            planning_continuation=result.continuation_input,
         )
         return drafted_query_plan

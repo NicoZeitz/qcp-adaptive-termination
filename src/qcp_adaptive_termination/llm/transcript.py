@@ -24,6 +24,7 @@ class RunMeta:
     agent_name: str | None
     label: str | None
 
+
 def _content_text(content: Any) -> str:
     """Flatten a message content list/string into text."""
     if isinstance(content, str):

@@ -1,4 +1,5 @@
 import asyncio
+import csv
 import json
 import logging
 import shutil
@@ -12,12 +13,14 @@ import yaml
 from qcp_adaptive_termination import hooks
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import result_type
+from qcp_adaptive_termination.models.config import Config
 from qcp_adaptive_termination.models.stages import Stage, SynthesizedResult
 from qcp_adaptive_termination.observability import context
+from qcp_adaptive_termination.observability.usage import CSV_COLUMNS, UsageReport
 from qcp_adaptive_termination.pipeline import load_config, run_pipeline
 
 if TYPE_CHECKING:
-    from qcp_adaptive_termination.models import Config, DataAgent, ResultType
+    from qcp_adaptive_termination.models import DataAgent, ResultType
     from qcp_adaptive_termination.models.execution import ExecutionResult
     from qcp_adaptive_termination.models.query_plan import QueryPlan
     from qcp_adaptive_termination.models.stages import (
@@ -28,7 +31,7 @@ if TYPE_CHECKING:
     )
 
 
-def register_default_output_hooks() -> None:
+def register_default_output_hooks(usage_report: UsageReport) -> None:
     def _write_output_file(filename: str, data: dict) -> None:
         if output_dir := context.get_output_dir():
             path = output_dir / filename
@@ -109,6 +112,18 @@ def register_default_output_hooks() -> None:
             result.model_dump(),
         )
 
+    @hooks.post(HookEvent.AGENT_COMPLETED)
+    def _write_llm_usage(execution_id: str, role, agent_name: str | None, label: str | None, model: str, usage) -> None:
+        """Record one LLM run's usage into the report."""
+        del execution_id
+        usage_report.record_llm(role, agent_name, label, model, usage)
+
+    @hooks.post(HookEvent.EMBEDDING_COMPLETED)
+    def _write_embedding_usage(execution_id: str, text: str, model: str, prompt_tokens: int) -> None:
+        """Record one embedding computation's usage into the report."""
+        del execution_id
+        usage_report.record_embedding(text, model, prompt_tokens)
+
 
 def argument_parser(
     prog: str = "qcp-adaptive-termination", description="Collaborative Query Processing with Adaptive Termination"
@@ -175,7 +190,8 @@ def main() -> None:
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    register_default_output_hooks()
+    usage_report = UsageReport()
+    register_default_output_hooks(usage_report)
 
     result = asyncio.run(
         run_pipeline(
@@ -190,6 +206,13 @@ def main() -> None:
             config=config,
         )
     )
+
+    if output_dir:
+        (output_dir / "usage.json").write_text(json.dumps(usage_report.summarize(config), indent=2), encoding="utf-8")
+        with (output_dir / "usage.csv").open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
+            writer.writeheader()
+            writer.writerows(usage_report.call_rows(config))
 
     if result_type.is_result_type(result):
         print("Pipeline completed. Result preview:")

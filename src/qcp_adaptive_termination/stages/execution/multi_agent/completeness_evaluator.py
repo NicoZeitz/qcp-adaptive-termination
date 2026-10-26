@@ -8,6 +8,7 @@ Implements PLAN.md step 2/3: the completeness evaluator is split into
 """
 
 import math
+from typing import Any
 
 import pandas as pd
 from agents import (
@@ -44,6 +45,33 @@ def _result_list_for_llm(aligned_result_list: AlignedResultList) -> pd.DataFrame
         data = data.drop(columns=[schema.source_agent_column])
     keys = [c for c in schema.keys if c in data.columns]
     return data.drop_duplicates(subset=keys) if keys else data
+
+
+def _estimator_stats(estimator: Estimator | None) -> str | None:
+    """Render the estimator's unknown-unknowns for the LLM stopper prompt.
+
+    Returns a compact block of observed/estimated counts, confidence bounds and
+    coverage, or ``None`` when there is no estimator.
+    """
+    if estimator is None:
+        return None
+    observed = estimator.sample_count()
+    estimated = estimator.estimated_count()
+    lower, upper = estimator.estimated_count_bounds()
+
+    def ratio(num: float, den):
+        return f"{num / den:.3f}" if den and den > 0 else "n/a"
+
+    return (
+        f"\n\n## Estimator (unknown-unknowns) stats\n"
+        f"Observed unique: {observed}\n"
+        f"Estimated total: {estimated:.1f}\n"
+        f"Estimated bound: [{lower:.1f}, {upper:.1f}]\n"
+        f"Sample coverage: {estimator.sample_coverage():.3f}\n"
+        f"Observed / lower (best-case completeness): {ratio(observed, lower)}\n"
+        f"Observed / middle (estimated completeness): {ratio(observed, estimated)}\n"
+        f"Observed / upper (worst-case completeness): {ratio(observed, upper)}\n"
+    )
 
 
 @hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_ESTIMATOR)
@@ -99,8 +127,9 @@ async def run_world_knowledge_stop(
     query: str,
     label: str | None = None,
     history: list[TResponseInputItem] | None = None,
+    estimator: Estimator | None = None,
 ) -> bool:
-    """LLM world-knowledge stop: sees only query + result list, no estimator stats.
+    """LLM world-knowledge stop: sees query + result list, optionally estimator stats.
 
     ``label`` (e.g. ``COMPLETENESS step=s1 agents=3``) is attached to any
     reasoning printed by the provider hook for this call, so the model's
@@ -109,7 +138,12 @@ async def run_world_knowledge_stop(
     ``history`` carries the previous runs' conversation items (including
     reconstructed reasoning) forward, so the model continues from where it left
     off instead of starting fresh each queried agent.
+
+    ``estimator`` supplies unknown-unknown stats when the config asks for
+    ``estimator_reasoning`` in the long-list case (or always, see
+    ``completeness_show_estimator_stats``).
     """
+    config = context.get_config()
     result: bool | None = None
 
     def stop():
@@ -121,6 +155,18 @@ async def run_world_knowledge_stop(
         result = False
 
     llm_result_list = _result_list_for_llm(aligned_result_list)
+    result_list_preview = result_type.serialize(llm_result_list, context="preview")
+    prompt_parameters: dict[str, Any] = {
+        "query": query,
+        "result_list_preview": result_list_preview,
+    }
+    if config.completeness_show_estimator_stats or config.long_list_behavior == "estimator_reasoning":
+        stats = _estimator_stats(estimator)
+        if stats:
+            prompt_parameters["estimator_stats"] = stats
+    if config.completeness_summarize_history and history:
+        prompt_parameters["is_continuation"] = True
+
     code_environment = CodeExecutionEnvironment(
         variables={
             "query": query,
@@ -142,8 +188,6 @@ async def run_world_knowledge_stop(
             final_output=result,
         )
 
-    result_list_preview = result_type.serialize(llm_result_list, context="preview")
-
     with tracing.own_span(
         "Coordinator - World Knowledge Stop",
         input={
@@ -151,17 +195,12 @@ async def run_world_knowledge_stop(
             "result_list_preview": result_list_preview,
         },
     ):
-        # Continue the conversation across queried agents (default read/write
-        # cache: identical runs are reused, including their continuation).
         max_turns_exceeded = False
         run_result = None
         try:
             run_result = await runner.run_agent(
                 role=AgentRole.EXECUTION_COORDINATOR_WORLD_KNOWLEDGE_STOP,
-                prompt_parameters={
-                    "query": query,
-                    "result_list_preview": result_list_preview,
-                },
+                prompt_parameters=prompt_parameters,
                 tools=[code_environment.as_function_tool()],
                 tool_use_behavior=custom_tool_handler,
                 reset_tool_choice=False,
@@ -176,9 +215,7 @@ async def run_world_knowledge_stop(
             max_turns_exceeded = True
             result = None
             tracing.indented_logging(f"[LLM] completeness reached max_turns without deciding — forcing continue ({e})")
-        # Carry the conversation forward for the next queried agent.
         if history is not None and run_result is not None:
-            history.extend(run_result.continuation_input)
             history[:] = run_result.continuation_input
         tracing.append_to_span_output({"stop": result, "max_turns_exceeded": max_turns_exceeded})
 
@@ -232,7 +269,25 @@ async def run_completeness_evaluator(
         return StopDecision(stop_reason=StopReason.ESTIMATOR)
 
     label = f"COMPLETENESS step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried}"
-    llm_stop = await run_world_knowledge_stop(aligned_result_list, query, label=label, history=history)
+    config = context.get_config()
+
+    # Long-list behavior: when the deduplicated result list is long, the LLM
+    # should either be skipped entirely (prevent) or given the estimator's
+    # unknown-unknown stats to reason with (estimator_reasoning).
+    list_len = len(_result_list_for_llm(aligned_result_list))
+    if list_len > config.stop_llm_max_list_items and config.long_list_behavior == "prevent":
+        print(
+            f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
+            f"observed={observed} decision=continue (long list {list_len} > {config.stop_llm_max_list_items}, "
+            f"LLM prevented)",
+            flush=True,
+        )
+        return None
+    # estimator_reasoning: fall through with estimator stats fed to the LLM.
+
+    llm_stop = await run_world_knowledge_stop(
+        aligned_result_list, query, label=label, history=history, estimator=estimator
+    )
     print(
         f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
         f"observed={observed} decision={'llm' if llm_stop else 'continue'}",
