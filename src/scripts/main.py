@@ -1,19 +1,18 @@
-"""CLI entry point for qcp-adaptive-termination (script wrapper)."""
+"""CLI entry point for qcp-adaptive-termination."""
 
 import asyncio
 import json
 from argparse import ArgumentParser, Namespace
-from typing import cast
 
-from qcp_adaptive_termination.models import ResultType, result_type
-from qcp_adaptive_termination.models.stages import Stage, SynthesizedResult
+from qcp_adaptive_termination.models import result_type
+from qcp_adaptive_termination.models.stages import DraftedQueryPlan, FilteredRelevantAgents, Stage, SynthesizedResult
+from qcp_adaptive_termination.pipeline import CollaborativeQueryAnsweringResult
 from scripts.utils.setup import run_script
 
 
-def argument_parser(
-    prog: str = "qcp-adaptive-termination", description="Collaborative Query Processing with Adaptive Termination"
-) -> Namespace:
+def _parse_arguments() -> Namespace:
     """Build the CLI argument parser for a QCP run."""
+
     parser = ArgumentParser(
         prog="qcp-adaptive-termination",
         description="Collaborative Query Processing with Adaptive Termination",
@@ -31,7 +30,7 @@ def argument_parser(
         "--end-stage",
         type=Stage,
         choices=list(Stage),
-        default=Stage.EXECUTION,
+        default=Stage.SYNTHESIS,
         help="Stage after which to end the pipeline at",
     )
     parser.add_argument(
@@ -61,37 +60,26 @@ def argument_parser(
     return parser.parse_args()
 
 
-def main() -> None:
-    """Parse CLI args and run the QCP pipeline."""
-    args = argument_parser()
+def _print_result(
+    result: FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult | SynthesizedResult,
+):
+    """Print the pipeline result to stdout."""
+    if isinstance(result, FilteredRelevantAgents):
+        print(f"Relevant data agents: {result.relevant_data_agents}")
+    elif isinstance(result, DraftedQueryPlan):
+        print(json.dumps(result.query_plan, indent=2))
+    elif isinstance(result, CollaborativeQueryAnsweringResult):
+        print(result_type.serialize(result.result, context="full_preview"))
+    elif isinstance(result, SynthesizedResult):
+        print(result.summary)
 
+
+def _main():
+    """Parse CLI args and run the QCP pipeline."""
+    args = _parse_arguments()
     result = asyncio.run(run_script(args=args))
     _print_result(result)
 
 
-def _print_result(result) -> None:
-    """Print the pipeline result to stdout."""
-    if result_type.is_result_type(result):
-        print("Pipeline completed. Result preview:")
-        print(
-            json.dumps(
-                result_type.serialize(cast(ResultType, result), context="preview"),
-                indent=2,
-                ensure_ascii=False,
-            )
-        )
-    elif isinstance(result, SynthesizedResult):
-        print("Pipeline completed. Result summary:")
-        print(result.summary)
-        print("Result preview:")
-        print(
-            json.dumps(
-                result_type.serialize(result.result, context="preview"),
-                indent=2,
-                ensure_ascii=False,
-            )
-        )
-
-
 if __name__ == "__main__":
-    main()
+    _main()

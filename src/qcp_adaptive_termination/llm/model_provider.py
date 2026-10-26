@@ -59,12 +59,12 @@ class _vLlmTransport(AsyncBaseTransport):
             history=response.history,
         )
 
-    async def aclose(self) -> None:
+    async def aclose(self):
         """Close the inner transport."""
         await self._inner.aclose()
 
     @staticmethod
-    async def _modify_request(request: Request) -> None:
+    async def _modify_request(request: Request):
         """Adapt a request to the university vLLM chat-completions dialect."""
 
         body_bytes = await request.aread()

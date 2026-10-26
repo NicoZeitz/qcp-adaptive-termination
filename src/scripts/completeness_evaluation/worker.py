@@ -40,7 +40,12 @@ from qcp_adaptive_termination.models.query_plan import (
     MultiAgentQueryPlanStep,
     QueryPlan,
 )
-from qcp_adaptive_termination.models.stages import CollaborativeQueryAnswering, Stage
+from qcp_adaptive_termination.models.stages import (
+    CollaborativeQueryAnswering,
+    CollaborativeQueryAnsweringResult,
+    DraftedQueryPlan,
+    Stage,
+)
 from qcp_adaptive_termination.observability import context
 from scripts.completeness_evaluation.ground_truth import compute_ground_truth
 from scripts.completeness_evaluation.models import BatchRecord, GroundTruth, StepResult
@@ -52,7 +57,7 @@ from scripts.utils.canonical import (
     parse_canonical_table,
     query_agent_canonical,
 )
-from scripts.utils.setup import run_script
+from scripts.utils.setup import ScriptContext, run_script
 from scripts.utils.sql import parse_select_columns
 
 # Per-step dispatch maps: step execution_id -> step-specific handler.
@@ -229,14 +234,6 @@ def _agents_from_label(label: str | None) -> int | None:
     return int(match.group(1)) if match else None
 
 
-def _step_from_label(label: str | None) -> str | None:
-    """Parse the step id out of a completeness label (``... step=s1 ...``)."""
-    if label is None:
-        return None
-    match = re.search(r"step=(\S+)", label)
-    return match.group(1) if match else None
-
-
 def _true_value_for(aggregation: AggregationType | None, gt: GroundTruth) -> float | None:
     """Ground-truth value matching the step's primary aggregation."""
     if aggregation in (AggregationType.SUM,):
@@ -296,7 +293,7 @@ def _produced_scalar_and_errors(
 class _StepTracker:
     """Collects one completeness-check record per queried agent, per step."""
 
-    def __init__(self, output_dir: Path) -> None:
+    def __init__(self, output_dir: Path):
         """Initialize per-step accumulation state."""
         self._output_dir = output_dir
         # step query -> step id
@@ -321,7 +318,7 @@ class _StepTracker:
         total_unique: int,
         agents_total: int,
         aggregation: AggregationType | None,
-    ) -> None:
+    ):
         """Declare a step's query, key columns, ground truth and aggregation."""
         self._query_to_step[step_query] = step_id
         self._key_cols[step_id] = key_cols
@@ -341,7 +338,7 @@ class _StepTracker:
         data_agent: DataAgent,
         query: str,
         result: PartialQueryAnswer,
-    ) -> None:
+    ):
         """Record one agent query for the step it belongs to (via step query)."""
         step_id = self._query_to_step.get(query)
         if step_id is None:
@@ -404,7 +401,7 @@ class _StepTracker:
         agents_queried: int,
         force_result: bool,
         result: StopDecision | None,
-    ) -> None:
+    ):
         """Record the estimator state + stop decision at each completeness check."""
         step_id = step_budget.step_id if step_budget is not None else None
         if step_id is None:
@@ -451,7 +448,7 @@ class _StepTracker:
         step_budget: StepBudget | None,
         agents_queried: int,
         result: bool,
-    ) -> None:
+    ):
         """Record the deterministic-estimator sub-decision + metrics for a check."""
         del execution_id
         step_id = step_budget.step_id if step_budget is not None else None
@@ -483,7 +480,7 @@ class _StepTracker:
         query: str,
         label: str | None,
         result: bool,
-    ) -> None:
+    ):
         """Record the LLM world-knowledge stop decision for a check."""
         del execution_id, aligned_result_list
         step_id = self._query_to_step.get(query)
@@ -505,7 +502,7 @@ class _StepTracker:
         continuation_input: list[TResponseInputItem],
         output: Any,
         usage: Usage,
-    ) -> None:
+    ):
         """Write the run's Markdown transcript and raw input JSON."""
         del execution_id, usage
         meta = transcript_mod.RunMeta(role=role, agent_name=agent_name, label=label)
@@ -529,14 +526,14 @@ class _StepTracker:
         merge_task: str,
         stop_reason: StopReason,
         result: Any,
-    ) -> None:
+    ):
         """Record the result-producer's final answer for its step (via step query)."""
         del aligned_result_list, estimator, merge_task, stop_reason, execution_id
         step_id = self._query_to_step.get(query)
         if step_id is None:
             return
         try:
-            self._produced[step_id] = result_type.serialize(result, context="full")
+            self._produced[step_id] = result_type.serialize(result, context="json")
         except Exception:
             self._produced[step_id] = result
 
@@ -552,7 +549,7 @@ class _StepTracker:
         """Return the step's primary aggregation type, if any."""
         return self._aggregation.get(step_id)
 
-    def fill_batch_derived(self) -> None:
+    def fill_batch_derived(self):
         """Fill per-check predicted-remaining and realized-unseen from observed counts."""
         for _step_id, batches in self._batches.items():
             prev_observed = 0
@@ -684,7 +681,7 @@ def _build_step_result(
 class _CompletenessRunner:
     """Hook-only completeness evaluation for one query."""
 
-    def __init__(self) -> None:
+    def __init__(self):
         """Initialize the hook-only evaluation runner."""
         self.tracker: _StepTracker | None = None
         self.step_infos: list[tuple[MultiAgentQueryPlanStep, dict[str, Any]]] = []
@@ -694,40 +691,39 @@ class _CompletenessRunner:
         self.data_dir: Path | None = None
         self.query: str = ""
         self.query_slug: str = ""
-        self.run_output_dir: Path | None = None
+        self.output_dir: Path | None = None
         self._align_dispatch: Callable[..., AlignedResultList] | None = None
         self._data_dispatch: Callable[..., PartialQueryAnswer] | None = None
 
-    async def before(self, ctx) -> None:
+    async def before(self, ctx: ScriptContext):
         """Pre-build data caches/ground truth and register all hooks."""
         extra = ctx.extra or {}
-        steps_metadata: dict[str, Any] = extra.get("steps_metadata", {})
-        raw_query_plan = extra.get("query_plan")
+        assert isinstance(ctx.data, CollaborativeQueryAnswering)
+        assert ctx.output_dir is not None
+        assert ctx.dataset_dir is not None
+        assert ctx.data_dir is not None
 
+        steps_metadata: dict[str, Any] = extra.get("steps_metadata", {})
+
+        raw_query_plan = extra.get("query_plan")
         if raw_query_plan is None:
             raise RuntimeError(f"{self.query_slug}: no query_plan in extra — cannot evaluate")
-
         query_plan = QueryPlan.model_validate(raw_query_plan)
+
         multi_steps = [s for s in query_plan.steps if isinstance(s, MultiAgentQueryPlanStep)]
         if not multi_steps:
             raise RuntimeError(f"{self.query_slug}: no multi-agent steps — nothing to evaluate")
 
-        data = ctx.data
-        assert isinstance(data, CollaborativeQueryAnswering)
-        assert ctx.output_dir is not None
-        dataset_dir = ctx.dataset_dir or ctx.data_dir
-        data_dir = dataset_dir.parent
-        run_output_dir: Path = ctx.output_dir
-        self.all_agents = data.data_agents
+        self.output_dir = ctx.output_dir
+        self.data_dir = ctx.data_dir
+        self.all_agents = ctx.data.data_agents
         relevant_names: set[str] = set(extra.get("relevant_data_agents", []))
         self.relevant_data_agents = [a for a in self.all_agents if a.name in relevant_names]
         self.query = query_plan.query
         self.query_slug = ctx.input_file.stem
-        self.run_output_dir = run_output_dir
-        self.data_dir = data_dir
-        self.meta_mapping = load_meta_mapping(dataset_dir)
-        run_output_dir.mkdir(parents=True, exist_ok=True)
-        self.tracker = _StepTracker(run_output_dir)
+        self.meta_mapping = load_meta_mapping(ctx.dataset_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.tracker = _StepTracker(self.output_dir)
 
         # Pre-build per-step data caches + ground truth.
         for step in multi_steps:
@@ -746,7 +742,7 @@ class _CompletenessRunner:
             with ThreadPoolExecutor() as pool:
                 futures = {
                     agent.name: pool.submit(
-                        query_agent_canonical, agent, canonical_sql, canonical_table, self.meta_mapping, data_dir
+                        query_agent_canonical, agent, canonical_sql, canonical_table, self.meta_mapping, self.data_dir
                     )
                     for agent in step_agents
                 }
@@ -754,7 +750,7 @@ class _CompletenessRunner:
                     data_cache[name] = future.result()
             align_handler = make_align_schema_override(step_meta, self.query)
             data_handler = make_data_agent_override(
-                canonical_sql, canonical_table, self.meta_mapping, data_cache, data_dir
+                canonical_sql, canonical_table, self.meta_mapping, data_cache, self.data_dir
             )
             _per_step_align[step.query] = align_handler
             _per_step_data[step.query] = data_handler
@@ -776,13 +772,10 @@ class _CompletenessRunner:
             self.step_infos.append((step, step_meta))
 
         # Inject the precomputed plan so run_stages at EXECUTION sees a DraftedQueryPlan.
-        from qcp_adaptive_termination.models.stages import DraftedQueryPlan
-
         drafted = DraftedQueryPlan(
             query_plan=query_plan,
             relevant_data_agents=self.relevant_data_agents,
             data_agents=self.all_agents,
-            planning_continuation=None,
         )
 
         @hooks.overwrite(HookEvent.SETUP_LOAD_INPUT)
@@ -791,7 +784,6 @@ class _CompletenessRunner:
             del execution_id, path
             return drafted, extra
 
-        hooks.clear(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN)
         self._align_dispatch = _make_align_dispatch(_per_step_align)
         self._data_dispatch = _make_data_dispatch(_per_step_data)
         hooks.register_overwrite(
@@ -819,9 +811,9 @@ class _CompletenessRunner:
         )
         hooks.register_post(HookEvent.AGENT_COMPLETED, self.tracker.on_llm_completed)
 
-    async def after(self, ctx, result) -> None:
+    async def after(self, ctx: ScriptContext, result: CollaborativeQueryAnsweringResult):
         """Unregister hooks and build per-step results from the trajectory."""
-        del ctx, result
+
         assert self.tracker is not None
         if self._align_dispatch is not None:
             hooks.unregister_overwrite(
@@ -855,7 +847,7 @@ class _CompletenessRunner:
 
         self.tracker.fill_batch_derived()
 
-        assert self.run_output_dir is not None and self.data_dir is not None
+        assert self.output_dir is not None and self.data_dir is not None
 
         # Build per-step results from the captured trajectory.
         for step, step_meta in self.step_infos:
@@ -866,14 +858,9 @@ class _CompletenessRunner:
                 meta_mapping=self.meta_mapping,
                 data_dir=self.data_dir,
                 query_slug=self.query_slug,
-                output_dir=self.run_output_dir,
+                output_dir=self.output_dir,
                 tracker=self.tracker,
             )
-
-
-def make_completeness_runner() -> _CompletenessRunner:
-    """Create the hook-only completeness evaluation runner for one query."""
-    return _CompletenessRunner()
 
 
 async def run_query(
@@ -885,7 +872,7 @@ async def run_query(
     cache_dir: Path | None,
     data: CollaborativeQueryAnswering,
     extra: dict[str, Any] | None,
-) -> None:
+):
     """Run completeness evaluation for one query.
 
     Args:
@@ -907,13 +894,12 @@ async def run_query(
         cache_dir=str(cache_dir) if cache_dir else None,
         dataset_dir=str(dataset_dir),
         start_stage=Stage.EXECUTION,
-        end_stage=Stage.EXECUTION,
+        end_stage=Stage.SYNTHESIS,
     )
-    runner = make_completeness_runner()
-    with context.config_context(config.model_copy(update={"continue_after_final_result": False})):
-        await run_script(
-            args=args,
-            before_fn=runner.before,
-            after_fn=runner.after,
-            config=config,
-        )
+    runner = _CompletenessRunner()
+    await run_script(
+        args=args,
+        before_fn=runner.before,
+        after_fn=runner.after,
+        config=config,
+    )

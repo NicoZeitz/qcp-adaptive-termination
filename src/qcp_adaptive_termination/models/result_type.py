@@ -34,21 +34,15 @@ def preview_dataframe(
 
 
 @overload
-def serialize(result: ResultType, context: Literal["preview"]) -> str:
-    """Serialize a result dataframe to a preview string."""
-    ...
-
-
+def serialize(result: ResultType, context: Literal["preview", "full_preview"]) -> str: ...
 @overload
-def serialize(result: ResultType, context: Literal["full"] = "full") -> dict[str, Any]:
-    """Serialize a result dataframe to a full dict."""
-    ...
-
-
-def serialize(result: ResultType, context: Literal["preview", "full"] = "full") -> str | dict[str, Any]:
+def serialize(result: ResultType, context: Literal["json"] = "json") -> dict[str, Any]: ...
+def serialize(result: ResultType, context: Literal["preview", "full_preview", "json"] = "json") -> str | dict[str, Any]:
     """Serialize a result dataframe to a preview string or full dict."""
     if context == "preview":
         return preview_dataframe(result)
+    if context == "full_preview":
+        return preview_dataframe(result, top_rows=len(result), bottom_rows=len(result))
 
     # Replace NaN with None for JSON serialization (null in JSON)
     result_with_none = result.replace(np.nan, None)
@@ -99,7 +93,7 @@ def _serialize_result(result: ResultType, info: SerializationInfo) -> JsonValue:
     if info.context == "preview":
         return serialize(result, context="preview")
     else:
-        return serialize(result, context="full")
+        return serialize(result, context="json")
 
 
 def _validate_result(value: Any) -> ResultType:

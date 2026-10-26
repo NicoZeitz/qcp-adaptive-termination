@@ -267,7 +267,7 @@ class UsageReport:
         label: str | None,
         model: str,
         usage,
-    ) -> None:
+    ):
         """Record one LLM run from an SDK usage object plus the model it ran on.
 
         Args:

@@ -203,6 +203,5 @@ async def draft_query_plan(
             relevant_data_agents=relevant_data_agents,
             data_agents=data_agents,
             query_plan=query_plan,
-            planning_continuation=result.continuation_input,
         )
         return drafted_query_plan

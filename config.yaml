@@ -20,7 +20,7 @@ warmup_agents: 2
 # Replanning
 # replan_include_prior_attempts: true
 
-continue_after_final_result: true
+continue_after_final_result: false
 selection_type: theta_sketch
 selection_kwargs:
   # registry_type: natural_language  # technical | natural_language                  # embedding

@@ -12,7 +12,7 @@ from scripts.completeness_evaluation.models import StepResult
 _PLOT_EXTS = ("png", "pdf", "svg")
 
 
-def _save(fig, output_dir: Path, stem: str) -> None:
+def _save(fig, output_dir: Path, stem: str):
     """Save a figure in all configured formats."""
     fig.tight_layout()
     for ext in _PLOT_EXTS:
@@ -43,7 +43,7 @@ def _fill_bounds(ax, xs, lo_key, hi_key, rows, **kwargs):
         ax.fill_between(xs, lo, hi, **kwargs)
 
 
-def save_step_plot(result: StepResult, prefix: str, output_dir: Path) -> None:
+def save_step_plot(result: StepResult, prefix: str, output_dir: Path):
     """Rich per-step figure: coverage, count bounds, c_* ratios, and value (if any)."""
     checks = result.checks
     if not checks:
@@ -129,7 +129,7 @@ def save_step_plot(result: StepResult, prefix: str, output_dir: Path) -> None:
     _save(fig, output_dir, f"{prefix}_evaluator")
 
 
-def save_aggregate_plots(step_df: pd.DataFrame, output_dir: Path) -> None:
+def save_aggregate_plots(step_df: pd.DataFrame, output_dir: Path):
     """Cross-query plots from the merged step-level dataframe.
 
     ``step_df`` carries one row per (query, step) with stop decision, ground

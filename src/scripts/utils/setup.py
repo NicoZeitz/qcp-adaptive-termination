@@ -14,7 +14,7 @@ import yaml
 
 from qcp_adaptive_termination import hooks, run_stages
 from qcp_adaptive_termination.hooks import HookEvent
-from qcp_adaptive_termination.models import Config, DataAgent, StepUncertainty
+from qcp_adaptive_termination.models import Config, DataAgent, StepUncertainty, result_type
 from qcp_adaptive_termination.models.execution import ExecutionResult
 from qcp_adaptive_termination.models.query_plan import QueryPlan
 from qcp_adaptive_termination.models.result_type import SerializedResultType
@@ -27,34 +27,41 @@ from qcp_adaptive_termination.models.stages import (
     SynthesizedResult,
 )
 from qcp_adaptive_termination.observability import context
-from qcp_adaptive_termination.observability.usage import CSV_COLUMNS, UsageReport
 from qcp_adaptive_termination.pipeline import load_config, load_input
+from scripts.usage import CSV_COLUMNS, UsageReport
 
 
-def register_default_hooks() -> None:
+def register_default_hooks():
     """Register default hooks: usage/cost tracking and stage I/O dumps."""
     usage_report = UsageReport()
 
     @hooks.post(HookEvent.AGENT_COMPLETED)
-    def _write_llm_usage(execution_id: str, role, agent_name: str | None, label: str | None, model: str, usage) -> None:
+    def _write_llm_usage(execution_id: str, role, agent_name: str | None, label: str | None, model: str, usage):
         """Record one LLM run's usage into the report."""
         del execution_id
         usage_report.record_llm(role, agent_name, label, model, usage)
 
     @hooks.post(HookEvent.EMBEDDING_COMPLETED)
-    def _write_embedding_usage(execution_id: str, text: str, model: str, prompt_tokens: int) -> None:
+    def _write_embedding_usage(execution_id: str, text: str, model: str, prompt_tokens: int):
         """Record one embedding computation's usage into the report."""
         del execution_id
         usage_report.record_embedding(text, model, prompt_tokens)
 
     @hooks.post(HookEvent.PIPELINE_END)
-    def _write_usage_report(execution_id: str) -> None:
+    def _write_usage_report(execution_id: str):
         """Write the per-call usage CSV and JSON at the end of the pipeline run."""
         del execution_id
         if output_dir := context.get_output_dir():
-            _write_usage_reports(output_dir, usage_report, context.get_config())
+            config = context.get_config()
+            (output_dir / "usage.json").write_text(
+                json.dumps(usage_report.summarize(config), indent=2), encoding="utf-8"
+            )
+            with (output_dir / "usage.csv").open("w", encoding="utf-8", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
+                writer.writeheader()
+                writer.writerows(usage_report.call_rows(config))
 
-    def _write_output_file(filename: str, data: dict) -> None:
+    def _write_output_file(filename: str, data: dict):
         """Write stage I/O data as JSON into the output dir."""
         if output_dir := context.get_output_dir():
             path = output_dir / filename
@@ -62,21 +69,14 @@ def register_default_hooks() -> None:
                 json.dump(data, f, sort_keys=False, ensure_ascii=False, indent=4)
 
     @hooks.pre(HookEvent.SETUP_LOAD_INPUT)
-    def _write_input_file(
-        execution_id: str,
-        input_file: Path,
-        data: CollaborativeQueryAnswering
-        | CollaborativeQueryAnsweringResult
-        | DraftedQueryPlan
-        | FilteredRelevantAgents,
-        extra: dict | None,
-    ) -> None:
+    def _write_input_file(execution_id: str, path: Path):
         """Copy the input file into the output dir."""
+        del execution_id
         if output_dir := context.get_output_dir():
-            shutil.copy(input_file, output_dir / input_file.name)
+            shutil.copy(path, output_dir / Path(path).name)
 
     @hooks.pre(HookEvent.SETUP_LOAD_CONFIG)
-    def _write_config_file(execution_id: str, config: Config) -> None:
+    def _write_config_file(execution_id: str, config: Config):
         """Dump the loaded config into the output dir."""
         if output_dir := context.get_output_dir():
             with open(output_dir / "config.yaml", "w", encoding="utf-8") as f:
@@ -84,7 +84,7 @@ def register_default_hooks() -> None:
             logging.info(f"Config: {config.model_dump_json(ensure_ascii=False)}")
 
     @hooks.pre(HookEvent.DISCOVERY_FILTER_RELEVANT_AGENTS)
-    def _write_stage_1_input(execution_id: str, query: str, data_agents: list[DataAgent]) -> None:  # noqa: ARG001
+    def _write_stage_1_input(execution_id: str, query: str, data_agents: list[DataAgent]):  # noqa: ARG001
         """Dump the stage-1 input (query and agents) to JSON."""
         _write_output_file(
             "stage_1_input.json",
@@ -92,7 +92,7 @@ def register_default_hooks() -> None:
         )
 
     @hooks.post(HookEvent.DISCOVERY_FILTER_RELEVANT_AGENTS)
-    def _write_stage_1(execution_id: str, result: FilteredRelevantAgents) -> None:
+    def _write_stage_1(execution_id: str, result: FilteredRelevantAgents):
         """Dump the stage-1 output (filtered relevant agents) to JSON."""
         _write_output_file(
             "stage_1_output_filtered_relevant_agents.json",
@@ -102,7 +102,7 @@ def register_default_hooks() -> None:
     @hooks.pre(HookEvent.PLANNING_STAGE)
     def _write_stage_2_input(
         execution_id: str, query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
-    ) -> None:
+    ):
         """Dump the stage-2 input (query and agents) to JSON."""
         _write_output_file(
             "stage_2_input_filtered_relevant_agents.json",
@@ -114,7 +114,7 @@ def register_default_hooks() -> None:
         )
 
     @hooks.post(HookEvent.PLANNING_STAGE)
-    def _write_stage_2(execution_id: str, result: DraftedQueryPlan) -> None:
+    def _write_stage_2(execution_id: str, result: DraftedQueryPlan):
         """Dump the stage-2 output (drafted query plan) to JSON."""
         _write_output_file(
             "stage_2_output_drafted_query_plan.json",
@@ -124,7 +124,7 @@ def register_default_hooks() -> None:
     @hooks.pre(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN)
     def _write_stage_3_input(
         execution_id: str, attempt: int, query_plan: QueryPlan, current_data_agents: list[DataAgent]
-    ) -> None:
+    ):
         """Dump the stage-3 input (query plan and agents) to JSON."""
         _write_output_file(
             "stage_3_input_drafted_query_plan.json",
@@ -136,7 +136,7 @@ def register_default_hooks() -> None:
         )
 
     @hooks.post(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN)
-    def _write_stage_3(execution_id: str, result: ExecutionResult) -> None:
+    def _write_stage_3(execution_id: str, result: ExecutionResult):
         """Dump the stage-3 output (execution result) to JSON."""
         _write_output_file(
             "stage_3_output_collaborative_query_answering_result.json",
@@ -146,38 +146,29 @@ def register_default_hooks() -> None:
     @hooks.pre(HookEvent.SYNTHESIS_STAGE)
     def _write_stage_4_input(
         execution_id: str,
-        query: str,
-        query_plan: QueryPlan | None,
+        query_plan: QueryPlan,
         result: SerializedResultType,
-        step_uncertainties: list[StepUncertainty],
-    ) -> None:
-        """Dump the stage-4 input (query, plan, and uncertainty) to JSON."""
+        step_uncertainties: dict[str, StepUncertainty],
+    ):
+        """Dump the stage-4 input (plan and uncertainty) to JSON."""
         _write_output_file(
             "stage_4_input_synthesized_result.json",
             {
-                "query": query,
-                "query_plan": query_plan.model_dump() if query_plan else None,
-                "result": result,
-                "step_uncertainties": [u.model_dump() for u in step_uncertainties],
+                "query_plan": query_plan.model_dump(),
+                "result": result_type.serialize(result, context="json"),
+                "step_uncertainties": {k: u.model_dump() for k, u in step_uncertainties.items()},
             },
         )
 
     @hooks.post(HookEvent.SYNTHESIS_STAGE)
-    def _write_stage_4(execution_id: str, result: SynthesizedResult) -> None:
-        """Dump the stage-4 output (synthesized result) to JSON."""
+    def _write_stage_4(execution_id: str, result: SynthesizedResult):
+        """Dump the stage-4 output (synthesized result) to JSON and Markdown."""
         _write_output_file(
             "stage_4_output_synthesized_result.json",
             result.model_dump(),
         )
-
-
-def _write_usage_reports(output_dir: Path, usage_report: UsageReport, config: Config) -> None:
-    """Write the per-call usage CSV and JSON next to the run outputs."""
-    (output_dir / "usage.json").write_text(json.dumps(usage_report.summarize(config), indent=2), encoding="utf-8")
-    with (output_dir / "usage.csv").open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
-        writer.writeheader()
-        writer.writerows(usage_report.call_rows(config))
+        if output_dir := context.get_output_dir():
+            (output_dir / "stage_4_output_synthesized_result.md").write_text(result.summary, encoding="utf-8")
 
 
 @dataclass(slots=True)
@@ -266,59 +257,54 @@ async def run_script(
 
     data, extra = load_input(input_file)
 
-    async def _runner():
-        """Run the script within a pipeline context."""
-        with context.pipeline_context(
-            name=name,
-            trace_name=trace_name,
+    with context.pipeline_context(
+        name=name,
+        trace_name=trace_name,
+        output_dir=output_dir,
+        cache_dir=cache_dir,
+        data_dir=data_dir,
+        cache_mode=cache_mode,
+        config=config,
+        trace_metadata={
+            "start_stage": start_stage.value,
+            "end_stage": end_stage.value,
+            "input_file": str(input_file),
+        },
+    ):
+        ctx = ScriptContext(
+            args=args,
+            datetime_str=datetime_str,
+            config=config,
+            input_file=input_file,
             output_dir=output_dir,
             cache_dir=cache_dir,
             data_dir=data_dir,
-            cache_mode=cache_mode,
-            config=config,
-            trace_metadata={
-                "start_stage": start_stage.value,
-                "end_stage": end_stage.value,
-                "input_file": str(input_file),
-            },
-        ):
-            ctx = ScriptContext(
-                args=args,
-                datetime_str=datetime_str,
-                config=config,
+            dataset_dir=dataset_dir,
+            start_stage=start_stage,
+            end_stage=end_stage,
+            name=name,
+            trace_name=trace_name,
+            data=data,
+            extra=extra,
+        )
+
+        if before_fn is not None:
+            await before_fn(ctx)
+
+        await hooks.fire_post(HookEvent.PIPELINE_START, name=name, input_file=str(input_file))
+
+        if run_fn is not None:
+            result = await run_fn(ctx)
+        else:
+            result = await run_stages(
                 input_file=input_file,
-                output_dir=output_dir,
-                cache_dir=cache_dir,
-                data_dir=data_dir,
-                dataset_dir=dataset_dir,
                 start_stage=start_stage,
                 end_stage=end_stage,
-                name=name,
-                trace_name=trace_name,
-                data=data,
-                extra=extra,
             )
 
-            if before_fn is not None:
-                await before_fn(ctx)
+        await hooks.fire_post(HookEvent.PIPELINE_END, result=result)
 
-            await hooks.fire_post(HookEvent.PIPELINE_START, name=name, input_file=str(input_file))
+        if after_fn is not None:
+            await after_fn(ctx, result)
 
-            if run_fn is not None:
-                result = await run_fn(ctx)
-            else:
-                result = await run_stages(
-                    input_file=input_file,
-                    start_stage=start_stage,
-                    end_stage=end_stage,
-                )
-
-            await hooks.fire_post(HookEvent.PIPELINE_END, result=result)
-
-            if after_fn is not None:
-                await after_fn(ctx, result)
-
-            return result
-
-    result = await _runner()
-    return result
+        return result

@@ -17,7 +17,7 @@ from typing import IO, Literal
 
 import agents.tracing.setup as _agents_tracing_setup
 import nest_asyncio2
-from agents import get_current_trace, set_trace_processors, set_tracing_export_api_key, trace
+from agents import set_trace_processors, set_tracing_export_api_key, trace
 from agents.tracing.processors import BatchTraceProcessor
 from dotenv import load_dotenv
 from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
@@ -50,7 +50,7 @@ _tracing_providers_var: ContextVar[list[Literal["openai", "file", "langfuse"]] |
 class _Tee(io.TextIOBase):
     """Write the same data to multiple streams (e.g. a file and real stdout)."""
 
-    def __init__(self, *streams: IO[str]) -> None:
+    def __init__(self, *streams: IO[str]):
         """Initialize the tee with the streams to mirror into."""
         super().__init__()
         self.streams = streams
@@ -61,7 +61,7 @@ class _Tee(io.TextIOBase):
             stream.write(data)
         return len(data)
 
-    def flush(self) -> None:
+    def flush(self):
         """Flush all wrapped streams."""
         for stream in self.streams:
             if not getattr(stream, "closed", False):
@@ -96,31 +96,6 @@ def get_tracing_providers() -> list[Literal["openai", "file", "langfuse"]]:
     """Return the enabled tracing providers."""
     providers = _tracing_providers_var.get()
     return providers or []
-
-
-def _is_cache_active() -> bool:
-    """Return whether a cache context is active."""
-    return _cache_var.get() is not None
-
-
-def _config_is_active() -> bool:
-    """Return whether a config context is active."""
-    return _config_var.get() is not None
-
-
-def _is_logging_active() -> bool:
-    """Return whether the logging context is active."""
-    return _logging_active_var.get()
-
-
-def _is_tracing_active() -> bool:
-    """Return whether a trace is active."""
-    return get_current_trace() is not None
-
-
-def _is_data_dir_active() -> bool:
-    """Return whether a data-dir context is active."""
-    return _data_dir_var.get() is not None
 
 
 @contextmanager
@@ -382,22 +357,18 @@ def pipeline_context(
     }
 
     with ExitStack() as stack:
-        if not _is_logging_active():
-            stack.enter_context(logging_context(output_dir))
-        if not _is_tracing_active():
-            stack.enter_context(
-                tracing_context(
-                    trace_name,
-                    output_dir,
-                    metadata=trace_metadata,
-                    tracing_providers=tracing_providers,
-                )
+        stack.enter_context(logging_context(output_dir))
+        stack.enter_context(
+            tracing_context(
+                trace_name,
+                output_dir,
+                metadata=trace_metadata,
+                tracing_providers=tracing_providers,
             )
-        if not _is_cache_active():
-            stack.enter_context(cache_context(cache_dir, cache_mode))
-        if not _config_is_active():
-            stack.enter_context(config_context(config))
-        if not _is_data_dir_active() and data_dir is not None:
+        )
+        stack.enter_context(cache_context(cache_dir, cache_mode))
+        stack.enter_context(config_context(config))
+        if data_dir is not None:
             stack.enter_context(data_context(data_dir))
 
         yield

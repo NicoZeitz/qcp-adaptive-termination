@@ -142,7 +142,11 @@ async def answer_step_multiple_agents(
             )
             if final_result is not None:
                 answer.set_answer(final_result)
-            uncertainty = build_step_uncertainty(query_plan_step.id, estimator, decision.stop_reason)
+            uncertainty = build_step_uncertainty(
+                estimator,
+                decision.stop_reason,
+                result_list.schema_metadata.aggregation_types,
+            )
             if not context.get_config().continue_after_final_result or not remaining_selections:
                 break
 

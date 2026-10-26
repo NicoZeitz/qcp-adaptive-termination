@@ -1,6 +1,6 @@
 """Execution stage: run a query plan against the selected data agents."""
 
-from typing import Any, cast
+from typing import cast
 
 from agents.items import TResponseInputItem
 
@@ -73,12 +73,11 @@ async def execute_query_plan_attempt(
 
 
 @hooks.hook(HookEvent.EXECUTION_STAGE, stage_context=True)
-@cache.cached(mode=CacheMode.WRITE_ONLY, ignore_args={"planning_continuation"})
+@cache.cached(mode=CacheMode.WRITE_ONLY)
 async def execute_query_plan(
     query_plan: QueryPlan,
     relevant_data_agents: list[DataAgent],
     data_agents: list[DataAgent],
-    planning_continuation: list[Any] | None = None,
 ) -> CollaborativeQueryAnsweringResult:
     """Execute a query plan, replanning on failure up to the configured limit.
 
@@ -86,7 +85,6 @@ async def execute_query_plan(
         query_plan: the query plan to execute
         relevant_data_agents: the agents selected for this plan
         data_agents: all known data agents
-        planning_continuation: conversation history threaded through replans
 
     Returns:
         (CollaborativeQueryAnsweringResult): the execution result
@@ -95,9 +93,9 @@ async def execute_query_plan(
     max_replan_attempts = config.max_replan_attempts
 
     attempt = 0
-    # Conversation history threaded through replans: seeded with the initial
-    # plan draft, extended with each replan attempt (mirrors completeness LLM).
-    replan_history: list[TResponseInputItem] = list(planning_continuation or [])
+    # Conversation history threaded through replan attempts, extended with each replan's
+    # continuation so the next replan continues from there.
+    replan_history: list[TResponseInputItem] = []
     while True:
         step_budgets = compute_step_budgets(
             query_plan,
@@ -121,6 +119,7 @@ async def execute_query_plan(
             print("[EXEC] plan executed successfully", flush=True)
             return CollaborativeQueryAnsweringResult(
                 result=cast(ResultType, execution_result.result),
+                query_plan=query_plan,
                 step_uncertainties=execution_result.step_uncertainties,
             )
 
@@ -128,6 +127,7 @@ async def execute_query_plan(
             print("[EXEC] max replan attempts reached — returning failed result", flush=True)
             return CollaborativeQueryAnsweringResult(
                 result=result_type.failed_result(),
+                query_plan=query_plan,
             )
 
         relevant_data_agents, query_plan = await replan(

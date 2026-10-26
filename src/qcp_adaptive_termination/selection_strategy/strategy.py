@@ -74,7 +74,7 @@ class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[P
         """Return a per-agent mapping of static precomputed scores."""
         raise NotImplementedError
 
-    def init_state(self) -> None:
+    def init_state(self):
         """Return None, since static strategies keep no running state."""
         return None
 
@@ -100,6 +100,6 @@ class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[P
         values: list[str],
         agent_names: list[str] | None = None,
         precomputed: dict[str, PrecomputedScoredState] | None = None,
-    ) -> None:
+    ):
         """Return None, since static strategies fold no state."""
         return None

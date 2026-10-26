@@ -54,7 +54,7 @@ class Estimator:
         self,
         source_samples: list[list[DataItem]],
         config: EstimatorConfig | None = None,
-    ) -> None:
+    ):
         """Initialize with samples grouped by source and the estimator config."""
         config = config or EstimatorConfig()
         self._stats = FrequencyStats(source_samples)
@@ -74,7 +74,7 @@ class Estimator:
         self._cached_avg: float | None = None
         self._cached_quantiles: dict[float, float] = {}
 
-    def add_source(self, items: list[DataItem]) -> None:
+    def add_source(self, items: list[DataItem]):
         """Add one source's observations, updating observed statistics incrementally."""
         self._stats.add_source(items)
         self._cached_count = None

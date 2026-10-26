@@ -134,37 +134,37 @@ def post(event: HookEvent):
     return decorator
 
 
-def register_pre(event: HookEvent, handler: Callable[..., Any]) -> None:
+def register_pre(event: HookEvent, handler: Callable[..., Any]):
     """Register a pre-handler for an event."""
     _pre_hooks[event].append(handler)
 
 
-def register_overwrite(event: HookEvent, handler: Callable[..., Any]) -> None:
+def register_overwrite(event: HookEvent, handler: Callable[..., Any]):
     """Register the replacement handler for an event."""
     _overwrite_hooks[event] = handler
 
 
-def register_post(event: HookEvent, handler: Callable[..., Any]) -> None:
+def register_post(event: HookEvent, handler: Callable[..., Any]):
     """Register a post-handler for an event."""
     _post_hooks[event].append(handler)
 
 
-def unregister_pre(event: HookEvent, handler: Callable[..., Any]) -> None:
+def unregister_pre(event: HookEvent, handler: Callable[..., Any]):
     """Unregister a pre-handler for an event."""
     _pre_hooks[event].remove(handler)
 
 
-def unregister_overwrite(event: HookEvent, handler: Callable[..., Any]) -> None:
+def unregister_overwrite(event: HookEvent, handler: Callable[..., Any]):
     """Unregister the replacement handler for an event."""
     _overwrite_hooks.pop(event, None)
 
 
-def unregister_post(event: HookEvent, handler: Callable[..., Any]) -> None:
+def unregister_post(event: HookEvent, handler: Callable[..., Any]):
     """Unregister a post-handler for an event."""
     _post_hooks[event].remove(handler)
 
 
-def clear(event: HookEvent | None = None) -> None:
+def clear(event: HookEvent | None = None):
     """Clear all handlers, or only those registered for a given event."""
     if event is None:
         _pre_hooks.clear()
@@ -176,7 +176,7 @@ def clear(event: HookEvent | None = None) -> None:
         _post_hooks.pop(event, None)
 
 
-async def fire_post(event: HookEvent, **kwargs: Any) -> None:
+async def fire_post(event: HookEvent, **kwargs: Any):
     """Invoke only the registered post-handlers for `event`."""
     execution_id = get_execution_id()
     for handler in _post_hooks[event]:

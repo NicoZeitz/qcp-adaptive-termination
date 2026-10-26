@@ -70,7 +70,7 @@ def write_summary(
     output_dir: Path,
     filename_prefix: str,
     title_suffix: str,
-) -> None:
+):
     """Write summary CSVs and averaged fraction plots for a set of step summaries."""
     if not summaries:
         return

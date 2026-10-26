@@ -8,7 +8,7 @@ from scripts.utils.canonical import (
     query_agent_canonical,
     slug_from_agent,
 )
-from scripts.utils.orchestrator import add_common_args, run_parallel
+from scripts.utils.orchestrator import run_parallel
 from scripts.utils.overrides import (
     make_align_schema_dispatch,
     make_completeness_override,
@@ -19,7 +19,6 @@ from scripts.utils.sql import parse_select_columns, rewrite_sql_identifiers
 
 __all__ = [
     "ScriptContext",
-    "add_common_args",
     "load_meta_mapping",
     "make_align_schema_dispatch",
     "make_align_schema_override",

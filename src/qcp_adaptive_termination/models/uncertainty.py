@@ -38,30 +38,30 @@ class StepBudget(BaseModel):
 class StopReason(StrEnum):
     """The reason a query plan step stopped."""
 
-    ESTIMATOR = "estimator"
-    LLM = "llm"
-    ALL_AGENTS = "all_agents"
+    ESTIMATOR = "Estimator"
+    LLM = "LLM World Knowledge"
+    ALL_AGENTS = "All Agents Queried"
 
 
 class StepUncertainty(BaseModel):
-    """Recorded uncertainty metadata for a single query plan step."""
+    """Recorded uncertainty metadata for a single query plan step.
+
+    The owning step id is the key of the `step_uncertainties` map that holds
+    these, so it is not stored on the model itself.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    step_id: str = Field(description="The query plan step this uncertainty belongs to")
-
-    completeness: float | None = Field(
-        default=None, description="observed / N_hat at stop time (None if not estimable)"
-    )
+    completeness: float = Field(..., description="observed / N_hat at stop time")
 
     completeness_lower: float | None = Field(
         default=None,
-        description="observed / N_hat_upper at stop time (worst-case completeness)",
+        description="observed / N_hat_upper at stop time (worst-case completeness), None if not estimable",
     )
 
     completeness_upper: float | None = Field(
         default=None,
-        description="observed / N_hat_lower at stop time (best-case completeness)",
+        description="observed / N_hat_lower at stop time (best-case completeness), None if not estimable",
     )
 
     observed_count: int | None = Field(default=None, description="Observed entity count at stop time")
@@ -69,18 +69,11 @@ class StepUncertainty(BaseModel):
     estimated_count_lower: float | None = Field(default=None, description="Lower bound of the estimated count")
     estimated_count_upper: float | None = Field(default=None, description="Upper bound of the estimated count")
 
-    value_point: dict[str, float] = Field(default_factory=dict, description="Per-aggregation point estimate")
-    value_lower: dict[str, float] = Field(default_factory=dict, description="Per-aggregation lower CI bound")
-    value_upper: dict[str, float] = Field(default_factory=dict, description="Per-aggregation upper CI bound")
+    observed_value: dict[str, float] = Field(default_factory=dict, description="Per-aggregation observed value")
+    estimated_value: dict[str, float] = Field(default_factory=dict, description="Per-aggregation point estimate")
+    estimated_value_lower: dict[str, float] = Field(default_factory=dict, description="Per-aggregation lower CI bound")
+    estimated_value_upper: dict[str, float] = Field(default_factory=dict, description="Per-aggregation upper CI bound")
 
-    min_confirmed: bool | None = Field(
-        default=None,
-        description="True if the observed min is confirmed (no missing entity below it)",
-    )
-    max_confirmed: bool | None = Field(
-        default=None,
-        description="True if the observed max is confirmed (no missing entity above it)",
-    )
     stop_reason: StopReason | None = Field(
         default=None, description="How this step stopped: estimator, llm, or all_agents"
     )

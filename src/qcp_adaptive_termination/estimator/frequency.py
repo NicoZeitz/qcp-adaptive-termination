@@ -22,7 +22,7 @@ class EntityRecord:
 class FrequencyStats:
     """Observed (known) statistics over the integrated sample."""
 
-    def __init__(self, source_samples: list[list[DataItem]]) -> None:
+    def __init__(self, source_samples: list[list[DataItem]]):
         """Compute observed statistics by integrating samples from all sources."""
         self._source_samples: list[list[DataItem]] = []  # samples grouped by source
         self._all_samples: list[DataItem] = []  # all samples across all sources
@@ -45,7 +45,7 @@ class FrequencyStats:
 
     # ── Incremental update ───────────────────────────────────────────────────
 
-    def add_source(self, items: list[DataItem]) -> None:
+    def add_source(self, items: list[DataItem]):
         """Add one source's observations, updating all statistics incrementally"""
         if not items:
             return

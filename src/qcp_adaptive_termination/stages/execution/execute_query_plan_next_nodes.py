@@ -63,7 +63,7 @@ async def execute_query_plan_next_nodes(
         (QueryPlanStepExecutionResult): the execution outcome
     """
     step_id_to_answer: dict[str, ResultType] = {}
-    step_uncertainties: list[StepUncertainty] = []
+    step_uncertainties: dict[str, StepUncertainty] = {}
     for step in query_plan.steps:
         if step.answer is not None:
             step_id_to_answer[step.id] = step.answer
@@ -118,7 +118,7 @@ async def execute_query_plan_next_nodes(
                 if result.has_answer and not result.has_needs:
                     step_id_to_answer[step.id] = cast(ResultType, result.answer)
                     if uncertainty is not None:
-                        step_uncertainties.append(uncertainty)
+                        step_uncertainties[step.id] = uncertainty
                     print(
                         f"[STEP] {step.id} completed: answer={'yes' if result.has_answer else 'no'} "
                         f"needs={list(result.needs)} uncertainty={'yes' if uncertainty is not None else 'no'}",
@@ -184,6 +184,7 @@ async def execute_query_plan_step(
         uncertainty: StepUncertainty | None = None
         if isinstance(query_plan_step, SingleAgentQueryPlanStep) and query_plan_step.to_agent == "Coordinator":
             result = await answer_step_coordinator(query_plan_step, additional_information)
+            uncertainty = StepUncertainty(completeness=1.0)
         elif isinstance(query_plan_step, SingleAgentQueryPlanStep) and query_plan_step.to_agent != "Coordinator":
             result = await answer_step_data_agent(
                 data_agents,
@@ -191,6 +192,7 @@ async def execute_query_plan_step(
                 query_plan_step.to_agent,
                 additional_information,
             )
+            uncertainty = StepUncertainty(completeness=1.0)
         elif isinstance(query_plan_step, MultiAgentQueryPlanStep):
             result, uncertainty = await answer_step_multiple_agents(
                 data_agents=data_agents,

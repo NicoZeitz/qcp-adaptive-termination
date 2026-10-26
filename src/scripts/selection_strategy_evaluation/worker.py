@@ -97,7 +97,7 @@ def _register_agent_tracking(target_execution_id: str) -> tuple[list[str], Any]:
         data_agent: DataAgent,
         query: str,
         result: PartialQueryAnswer,
-    ) -> None:
+    ):
         """Append the queried agent for the target execution."""
         if execution_id == target_execution_id:
             ordered.append(data_agent.name)
@@ -174,7 +174,7 @@ def _save_strategy_curve(
     step_id: str,
     strategy: str,
     curve: EvaluationCurve,
-) -> None:
+):
     """Append a single strategy's curve to a per-strategy CSV, eagerly."""
     subdir = output_dir / "curves"
     subdir.mkdir(parents=True, exist_ok=True)
@@ -473,7 +473,7 @@ def _save_results(
     query_slug: str,
     step_id: str,
     output_dir: Path,
-) -> None:
+):
     """Write per-step AUC/curve CSVs and plots."""
     from scripts.selection_strategy_evaluation.plotting import plot_step_curves
 
@@ -515,7 +515,7 @@ async def run_query(
     cache_dir: Path | None,
     data: CollaborativeQueryAnswering,
     extra: dict[str, Any] | None,
-) -> None:
+):
     """Evaluate all selection strategies for one input query (worker)."""
     extra = extra or {}
     steps_metadata: dict[str, Any] = extra.get("steps_metadata", {})

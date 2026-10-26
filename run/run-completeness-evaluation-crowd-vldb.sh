@@ -4,7 +4,7 @@ set -euo pipefail
 RUN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${RUN_DIR}/setup.sh"
 
-RUN_NAME="evaluate-estimator"
+RUN_NAME="evaluate-completeness"
 DATASET_NAME="crowdwork-query-estimation"
 DATASET_DIR="dataset_vldbsigmod"
 
@@ -12,9 +12,10 @@ echo "================== Running '${RUN_NAME}' with dataset '${DATASET_NAME}/${D
 LOG_DIR="${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}-$(date +%Y-%m-%d-%H-%M)"
 mkdir -p "${LOG_DIR}"
 
-python3 -m scripts.evaluation estimator \
+python3 -m scripts.evaluation completeness \
   --dataset_dir "${BASE_DATASET_DIR}/${DATASET_NAME}/${DATASET_DIR}" \
   --output_dir "${LOG_DIR}" \
   --cache_dir "${CACHE_DIR}" \
   --config "${PROJECT_DIR}/config.yaml" \
-  --parallel
+  --parallel \
+  --max_workers 6

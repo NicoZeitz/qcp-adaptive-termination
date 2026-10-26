@@ -103,7 +103,7 @@ class AgentSelector:
         precomputed: dict[str, Any],
         state: Any,
         selections: list[ScoredDataAgent],
-    ) -> None:
+    ):
         """Store the strategy, precomputed data, and running selection state."""
         self._strategy = strategy
         self._precomputed = precomputed
@@ -138,7 +138,7 @@ class AgentSelector:
         """Rank the remaining agents best-first using the strategy."""
         return self._strategy.rank(remaining, self._precomputed, self._state)
 
-    def update(self, result_list: AlignedResultList, agent_names: list[str] | None = None) -> None:
+    def update(self, result_list: AlignedResultList, agent_names: list[str] | None = None):
         """Fold the seen column values into the strategy state."""
         col = result_list.schema_metadata.value_column or result_list.schema_metadata.keys[0]
         df = result_list.data

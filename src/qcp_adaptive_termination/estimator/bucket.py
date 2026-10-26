@@ -19,7 +19,7 @@ class HistogramBar:
     count: int = 0
     """Number of times this entity was observed within the bucket. >= 1 after first add."""
 
-    def add_sample(self, value: float) -> None:
+    def add_sample(self, value: float):
         """Record one observation of this entity at the given value."""
         self.count += 1
         self.lower_bound = min(self.lower_bound, value)
@@ -76,14 +76,14 @@ class Bucket:
             per_source.setdefault(item.source_id, []).append(item)
         return list(per_source.values())
 
-    def add_sample(self, sample: DataItem) -> None:
+    def add_sample(self, sample: DataItem):
         """Add one observation to this bucket, marking derived stats as stale."""
         self.samples.append(sample)
         self.histogram[sample.name].add_sample(sample.value)
         self._dirty = True
         self.entity_positions = None
 
-    def rebuild_frequency_vector(self) -> None:
+    def rebuild_frequency_vector(self):
         """Recompute f, number_of_samples, and number_of_unique_samples from the histogram."""
         n = len(self.samples)
         f = [0] * n
@@ -94,7 +94,7 @@ class Bucket:
         self.number_of_unique_samples = len(self.histogram)
         self._dirty = False
 
-    def _ensure_fresh(self) -> None:
+    def _ensure_fresh(self):
         """Rebuild the frequency vector if cached stats are stale."""
         if self._dirty:
             self.rebuild_frequency_vector()

@@ -2,88 +2,109 @@
 
 Usage:
     python -m scripts.evaluation selection-strategies --dataset_dir ... --output_dir ...
-    python -m scripts.evaluation estimator --dataset_dir ... --output_dir ...
+    python -m scripts.evaluation completeness --dataset_dir ... --output_dir ...
 """
 
-import argparse
 import asyncio
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 from qcp_adaptive_termination import load_config
 from qcp_adaptive_termination.observability import context
 from scripts import completeness_evaluation, selection_strategy_evaluation
-from scripts.utils.orchestrator import (
-    add_common_args,
-    run_parallel,
-)
+from scripts.utils.orchestrator import run_parallel
 
 
-def _build_parser() -> argparse.ArgumentParser:
+def _parse_arguments() -> Namespace:
     """Build the CLI parser with an evaluation subcommand per benchmark."""
-    parser = argparse.ArgumentParser(prog="python -m scripts.evaluation", description="Evaluation scripts")
+    parser = ArgumentParser(prog="qcp-adaptive-termination-evaluation", description="Evaluation scripts for QCP")
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
     for name, help_text in (
         ("selection-strategies", "Benchmark all selection strategies across query steps"),
-        ("estimator", "Evaluate the completeness evaluator across query steps"),
+        ("completeness", "Evaluate the completeness evaluator across query steps"),
     ):
         sub = subparsers.add_parser(name, help=help_text)
-        add_common_args(sub)
+        sub.add_argument(
+            "--config",
+            type=str,
+            default=None,
+            help="Config as a YAML file path or inline YAML string",
+        )
+        sub.add_argument(
+            "--output_dir",
+            type=str,
+            default=None,
+            help="Directory to write per-query + aggregate results",
+        )
+        sub.add_argument(
+            "--cache_dir",
+            type=str,
+            default=None,
+            help="Directory for cache files",
+        )
+        sub.add_argument(
+            "--dataset_dir",
+            type=str,
+            default=None,
+            help="Dataset folder containing _meta/input (query JSONs) and _meta/meta_mapping.yaml",
+        )
+        sub.add_argument(
+            "--query",
+            type=str,
+            default=None,
+            help="Only run input queries whose filename stem contains this substring (case-insensitive).",
+        )
 
-    selection_sub = subparsers.choices["selection-strategies"]
-    selection_sub.add_argument(
-        "--strategy_workers",
-        type=int,
-        default=None,
-        help="Parallel strategy worker processes per query step (default: min(cpu, 4)).",
-    )
+        sub.add_argument("--parallel", action="store_true", default=True, help="Run queries in parallel (default)")
+        sub.add_argument("--sequential", action="store_true", help="Run queries sequentially")
+        sub.add_argument("--max_workers", type=int, default=None, help="Max parallel worker processes")
 
-    return parser
+    return parser.parse_args()
 
 
-async def _run_subcommand(args: argparse.Namespace) -> None:
+def _functions_for_subcommand(subcommand: str):
+    """Return the run_query worker+aggregate pair for an evaluation subcommand."""
+    if subcommand == "selection-strategies":
+        return selection_strategy_evaluation.run_query, selection_strategy_evaluation.aggregate
+    if subcommand == "completeness":
+        return completeness_evaluation.run_query, completeness_evaluation.aggregate
+    raise ValueError(f"Unknown subcommand: {subcommand}")
+
+
+async def _run_subcommand(args: Namespace):
     """Load config and run the selected evaluation subcommand."""
-    config = load_config(args.config)
+
     output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    context.configure_logging(output_dir)
-    parallel = not args.sequential
-    dataset_dir = Path(args.dataset_dir)
-    input_dir = dataset_dir / "_meta" / "input"
 
-    if args.subcommand == "selection-strategies":
-        extra = {"strategy_workers": args.strategy_workers} if args.strategy_workers is not None else {}
+    with context.logging_context(output_dir):
+        config = load_config(args.config)
+
+        dataset_dir = Path(args.dataset_dir)
+        input_dir = dataset_dir / "_meta" / "input"
+
+        run_query, aggregate = _functions_for_subcommand(args.subcommand)
+        input_files = sorted((dataset_dir / "_meta" / "input").glob("*.json"))
+        if args.query:
+            needle = args.query.lower()
+            input_files = [f for f in input_files if needle in f.stem.lower()]
+
         await run_parallel(
-            selection_strategy_evaluation.run_query,
-            dataset_dir=dataset_dir,
+            run_query,
+            input_files,
             config=config,
+            dataset_dir=dataset_dir,
             output_dir=output_dir,
             cache_dir=args.cache_dir,
-            parallel=parallel,
+            parallel=not args.sequential,
             max_workers=args.max_workers,
-            extra=extra,
-            query=args.query,
         )
-        selection_strategy_evaluation.aggregate(output_dir, input_dir)
-    elif args.subcommand == "estimator":
-        await run_parallel(
-            completeness_evaluation.run_query,
-            dataset_dir=dataset_dir,
-            config=config,
-            output_dir=output_dir,
-            cache_dir=args.cache_dir,
-            parallel=parallel,
-            max_workers=args.max_workers,
-            query=args.query,
-        )
-        completeness_evaluation.aggregate(output_dir, input_dir)
-    else:
-        raise ValueError(f"Unknown subcommand: {args.subcommand}")
+        aggregate(output_dir, input_dir)
 
 
-def main() -> None:
+def main():
     """Parse CLI args and run the requested evaluation."""
-    args = _build_parser().parse_args()
+    args = _parse_arguments()
     asyncio.run(_run_subcommand(args))
 
 

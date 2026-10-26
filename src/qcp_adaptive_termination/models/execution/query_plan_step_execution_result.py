@@ -22,8 +22,8 @@ class SuccessfulExecution(BaseModel):
     execution_finished: bool = Field(
         default=False, description="Whether the step finished executing without interruption."
     )
-    step_uncertainties: list[StepUncertainty] = Field(
-        default_factory=list, description="Recorded uncertainty per sub-step."
+    step_uncertainties: dict[str, StepUncertainty] = Field(
+        default_factory=dict, description="Recorded uncertainty per sub-step, keyed by step id."
     )
 
 

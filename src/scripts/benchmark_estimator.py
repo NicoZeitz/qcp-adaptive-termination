@@ -45,7 +45,7 @@ def _generate_source(agent_idx: int, entity_pool: list[str], rng: random.Random)
     return items
 
 
-def _compute_all_stats(estimator: Estimator) -> None:
+def _compute_all_stats(estimator: Estimator):
     """Call every public stat to ensure caches are exercised."""
     estimator.sample_count()
     estimator.sample_sum()
@@ -76,7 +76,7 @@ def _generate_data(rng: random.Random) -> list[list[DataItem]]:
     return [_generate_source(i, entity_pool, rng) for i in range(AGENTS)]
 
 
-def _run_forced_split(sources: list[list[DataItem]]) -> None:
+def _run_forced_split(sources: list[list[DataItem]]):
     """
     Build estimator from ALL sources at once and report bucket structure.
 
@@ -135,7 +135,7 @@ def _run_benchmark(sources: list[list[DataItem]]) -> list[float]:
     return step_times
 
 
-def _report(step_times: list[float], total_elapsed: float) -> None:
+def _report(step_times: list[float], total_elapsed: float):
     """Log the benchmark's timing summary."""
     avg = sum(step_times) / len(step_times)
     p50 = sorted(step_times)[len(step_times) // 2]
@@ -153,7 +153,7 @@ def _report(step_times: list[float], total_elapsed: float) -> None:
     logging.info("Step max        : %.3fs", max_t)
 
 
-def main() -> None:
+def main():
     """Run the estimator performance benchmark."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     rng = random.Random(RANDOM_SEED)

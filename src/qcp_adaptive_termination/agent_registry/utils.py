@@ -108,7 +108,7 @@ async def _describe_schema_via_llm(
     missing_tables: list[str],
     missing_fields: list[tuple[str, str]],
     db_missing: bool,
-) -> None:
+):
     """Fill missing schema comments via the LLM (overridable)."""
     m_schema_without_comments = schema_engine.mschema.to_mschema(include_db_id=False)
     DatabaseDescriptionModel = _create_database_description_model(

@@ -19,6 +19,6 @@ class ExecutionResult(BaseModel):
     failed_execution: FailedExecution | None = Field(
         default=None, description="Details of the failure, if the step failed."
     )
-    step_uncertainties: list[StepUncertainty] = Field(
-        default_factory=list, description="Recorded uncertainty per sub-step."
+    step_uncertainties: dict[str, StepUncertainty] = Field(
+        default_factory=dict, description="Recorded uncertainty per sub-step, keyed by step id."
     )

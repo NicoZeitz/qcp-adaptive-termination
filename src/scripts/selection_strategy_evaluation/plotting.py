@@ -10,7 +10,7 @@ import pandas as pd
 from scripts.selection_strategy_evaluation.metrics import EvaluationCurve
 
 
-def _save_figure(fig: Any, output_dir: Path, prefix: str) -> None:
+def _save_figure(fig: Any, output_dir: Path, prefix: str):
     """Save the figure in multiple formats and close it."""
     for ext in ("png", "pdf", "svg"):
         fig.savefig(output_dir / f"{prefix}.{ext}", dpi=150, bbox_inches="tight")
@@ -23,7 +23,7 @@ def plot_step_curves(
     query_slug: str,
     step_id: str,
     output_dir: Path,
-) -> None:
+):
     """Plot per-strategy coverage curves for one step (agents-queried x-axis)."""
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(
@@ -62,7 +62,7 @@ def plot_summary_curves(
     output_dir: Path,
     filename_prefix: str,
     title_suffix: str,
-) -> None:
+):
     """Plot averaged coverage curves across steps (fraction x-axis)."""
     fig, ax = plt.subplots(figsize=(10, 6))
     oracle_points = averaged.get("oracle")

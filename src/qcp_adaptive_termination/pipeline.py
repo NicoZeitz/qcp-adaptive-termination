@@ -11,7 +11,6 @@ import qcp_adaptive_termination.hooks as hooks
 import qcp_adaptive_termination.stages as stages
 from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import CacheMode, Config
-from qcp_adaptive_termination.models.query_plan import QueryPlan
 from qcp_adaptive_termination.models.stages import (
     CollaborativeQueryAnswering,
     CollaborativeQueryAnsweringResult,
@@ -143,39 +142,26 @@ async def run_stages(
 
     data, _extra = load_input(input_file)
 
-    query: str = ""
-    query_plan: QueryPlan | None = None
-
     if start_stage.order <= Stage.DISCOVERY.order <= end_stage.order:
         data = cast(CollaborativeQueryAnswering, data)
-        query = data.query
         data = await stages.discovery_stage(data.query, data.data_agents)
 
     if start_stage.order <= Stage.PLANNING.order <= end_stage.order:
         data = cast(FilteredRelevantAgents, data)
-        query = data.query
         data = await stages.planning_stage(data.query, data.data_agents, data.relevant_data_agents)
 
     if start_stage.order <= Stage.EXECUTION.order <= end_stage.order:
-        drafted = cast(DraftedQueryPlan, data)
-        query = drafted.query_plan.query
-        query_plan = drafted.query_plan
+        data = cast(DraftedQueryPlan, data)
         data = await stages.execute_query_plan(
-            query_plan,
-            drafted.relevant_data_agents,
-            drafted.data_agents,
-            planning_continuation=drafted.planning_continuation,
+            data.query_plan,
+            data.relevant_data_agents,
+            data.data_agents,
         )
 
     if start_stage.order <= Stage.SYNTHESIS.order <= end_stage.order:
-        # When starting at EXECUTION or SYNTHESIS, derive query/query_plan from the input.
-        if query_plan is None and isinstance(data, DraftedQueryPlan):
-            query = data.query_plan.query
-            query_plan = data.query_plan
         data = cast(CollaborativeQueryAnsweringResult, data)
         data = await stages.synthesize_result(
-            query=query,
-            query_plan=query_plan,
+            query_plan=data.query_plan,
             result=data.result,
             step_uncertainties=data.step_uncertainties,
         )

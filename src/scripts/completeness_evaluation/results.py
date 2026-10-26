@@ -73,7 +73,7 @@ def _step_level(result: StepResult) -> dict:
     }
 
 
-def save_step_results(result: StepResult, query_slug: str, output_dir: Path) -> None:
+def save_step_results(result: StepResult, query_slug: str, output_dir: Path):
     """Write one step's evaluator CSV, result txt, and plot."""
     output_dir.mkdir(parents=True, exist_ok=True)
     prefix = f"{query_slug}_{result.step_id}"
@@ -125,7 +125,7 @@ def save_step_results(result: StepResult, query_slug: str, output_dir: Path) -> 
     logging.info("Saved evaluator results to %s", output_dir)
 
 
-def _save_result_txt(result: StepResult, query_slug: str, output_dir: Path) -> None:
+def _save_result_txt(result: StepResult, query_slug: str, output_dir: Path):
     """Write the result synthesis as a human-readable txt."""
     if result.produced_result is not None:
         try:
@@ -140,7 +140,7 @@ def _save_result_txt(result: StepResult, query_slug: str, output_dir: Path) -> N
     )
 
 
-def _save_transcripts_removed() -> None:
+def _save_transcripts_removed():
     """Per-run Markdown transcripts are now written by the worker via the
     ``AGENT_COMPLETED`` hook (see ``worker.on_llm_completed``), which emits a
     full interleaved transcript per agent run directly from ``RunResult``.

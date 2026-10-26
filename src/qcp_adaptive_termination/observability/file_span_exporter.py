@@ -16,7 +16,7 @@ class FileSpanExporter(SpanExporter):
     def __init__(
         self,
         file_path: str | Path,
-    ) -> None:
+    ):
         """Initialize the exporter with the target file path."""
         self.file_path = Path(file_path) if isinstance(file_path, str) else file_path
         self._lock = threading.Lock()
@@ -47,7 +47,7 @@ class FileSpanExporter(SpanExporter):
                 self._file.write(json.dumps(span_dict, default=lambda x: dict(x)) + "\n")
         return SpanExportResult.SUCCESS
 
-    def shutdown(self) -> None:
+    def shutdown(self):
         """Release any resources held by the exporter."""
         pass
 
