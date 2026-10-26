@@ -14,23 +14,26 @@ import yaml
 
 from qcp_adaptive_termination import hooks, run_stages
 from qcp_adaptive_termination.hooks import HookEvent
-from qcp_adaptive_termination.models import Config, DataAgent
+from qcp_adaptive_termination.models import Config, DataAgent, StepUncertainty
 from qcp_adaptive_termination.models.execution import ExecutionResult
 from qcp_adaptive_termination.models.query_plan import QueryPlan
+from qcp_adaptive_termination.models.result_type import SerializedResultType
 from qcp_adaptive_termination.models.stages import (
     CollaborativeQueryAnswering,
     CollaborativeQueryAnsweringResult,
     DraftedQueryPlan,
     FilteredRelevantAgents,
     Stage,
+    SynthesizedResult,
 )
 from qcp_adaptive_termination.observability import context
 from qcp_adaptive_termination.observability.usage import CSV_COLUMNS, UsageReport
 from qcp_adaptive_termination.pipeline import load_config, load_input
 
 
-def register_usage_hooks(usage_report: UsageReport) -> None:
-    """Register usage/cost hooks (LLM and embedding)."""
+def register_default_hooks() -> None:
+    """Register default hooks: usage/cost tracking and stage I/O dumps."""
+    usage_report = UsageReport()
 
     @hooks.post(HookEvent.AGENT_COMPLETED)
     def _write_llm_usage(execution_id: str, role, agent_name: str | None, label: str | None, model: str, usage) -> None:
@@ -44,9 +47,12 @@ def register_usage_hooks(usage_report: UsageReport) -> None:
         del execution_id
         usage_report.record_embedding(text, model, prompt_tokens)
 
-
-def register_stage_output_hooks() -> None:
-    """Register stage input/output JSON dump hooks for full-pipeline runs."""
+    @hooks.post(HookEvent.PIPELINE_END)
+    def _write_usage_report(execution_id: str) -> None:
+        """Write the per-call usage CSV and JSON at the end of the pipeline run."""
+        del execution_id
+        if output_dir := context.get_output_dir():
+            _write_usage_reports(output_dir, usage_report, context.get_config())
 
     def _write_output_file(filename: str, data: dict) -> None:
         """Write stage I/O data as JSON into the output dir."""
@@ -137,6 +143,33 @@ def register_stage_output_hooks() -> None:
             result.model_dump(),
         )
 
+    @hooks.pre(HookEvent.SYNTHESIS_STAGE)
+    def _write_stage_4_input(
+        execution_id: str,
+        query: str,
+        query_plan: QueryPlan | None,
+        result: SerializedResultType,
+        step_uncertainties: list[StepUncertainty],
+    ) -> None:
+        """Dump the stage-4 input (query, plan, and uncertainty) to JSON."""
+        _write_output_file(
+            "stage_4_input_synthesized_result.json",
+            {
+                "query": query,
+                "query_plan": query_plan.model_dump() if query_plan else None,
+                "result": result,
+                "step_uncertainties": [u.model_dump() for u in step_uncertainties],
+            },
+        )
+
+    @hooks.post(HookEvent.SYNTHESIS_STAGE)
+    def _write_stage_4(execution_id: str, result: SynthesizedResult) -> None:
+        """Dump the stage-4 output (synthesized result) to JSON."""
+        _write_output_file(
+            "stage_4_output_synthesized_result.json",
+            result.model_dump(),
+        )
+
 
 def _write_usage_reports(output_dir: Path, usage_report: UsageReport, config: Config) -> None:
     """Write the per-call usage CSV and JSON next to the run outputs."""
@@ -222,8 +255,7 @@ async def run_script(
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    usage_report = UsageReport()
-    register_usage_hooks(usage_report)
+    register_default_hooks()
 
     if start_stage.order > end_stage.order:
         raise ValueError("start_stage must be <= end_stage")
@@ -270,6 +302,8 @@ async def run_script(
             if before_fn is not None:
                 await before_fn(ctx)
 
+            await hooks.fire_post(HookEvent.PIPELINE_START, name=name, input_file=str(input_file))
+
             if run_fn is not None:
                 result = await run_fn(ctx)
             else:
@@ -279,12 +313,12 @@ async def run_script(
                     end_stage=end_stage,
                 )
 
+            await hooks.fire_post(HookEvent.PIPELINE_END, result=result)
+
             if after_fn is not None:
                 await after_fn(ctx, result)
 
             return result
 
     result = await _runner()
-    if output_dir:
-        _write_usage_reports(output_dir, usage_report, config)
     return result

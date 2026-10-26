@@ -92,6 +92,8 @@ class HookEvent(StrEnum):
     SYNTHESIS_STAGE = "synthesis_stage"
 
     # ── General Hooks ───────────────────────────────────────────────────
+    PIPELINE_START = "pipeline_start"
+    PIPELINE_END = "pipeline_end"
     AGENT_COMPLETED = "agent_completed"
     EMBEDDING_COMPLETED = "embedding_completed"
 

@@ -2,17 +2,17 @@
 
 import asyncio
 import json
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from typing import cast
 
 from qcp_adaptive_termination.models import ResultType, result_type
 from qcp_adaptive_termination.models.stages import Stage, SynthesizedResult
-from scripts.utils.setup import register_stage_output_hooks, run_script
+from scripts.utils.setup import run_script
 
 
 def argument_parser(
     prog: str = "qcp-adaptive-termination", description="Collaborative Query Processing with Adaptive Termination"
-) -> ArgumentParser:
+) -> Namespace:
     """Build the CLI argument parser for a QCP run."""
     parser = ArgumentParser(
         prog="qcp-adaptive-termination",
@@ -58,13 +58,12 @@ def argument_parser(
         default=None,
         help="Dataset folder containing _meta/input (default: derived from input file)",
     )
-    return parser
+    return parser.parse_args()
 
 
 def main() -> None:
     """Parse CLI args and run the QCP pipeline."""
-    args = argument_parser().parse_args()
-    register_stage_output_hooks()
+    args = argument_parser()
 
     result = asyncio.run(run_script(args=args))
     _print_result(result)
