@@ -66,21 +66,23 @@ async def answer_step_coordinator(
                 final_output=partial_answer,
             )
 
-        result = await runner.run_agent(
-            role=AgentRole.COORDINATOR_CODE,
-            prompt_parameters={
-                "query": query,
-                "additional_information_preview": AdditionalInformation.preview_additional_information(
-                    additional_information
-                ),
-            },
-            tools=[code_environment.as_function_tool()],
-            tool_use_behavior=custom_tool_handler,
-            reset_tool_choice=False,
-            parallel_tool_calls=False,
-            tool_choice="required",
-            output_type=PartialQueryAnswer,
-        )
+        result = (
+            await runner.run_agent(
+                role=AgentRole.EXECUTION_COORDINATOR_ANSWER_STEP,
+                prompt_parameters={
+                    "query": query,
+                    "additional_information_preview": AdditionalInformation.preview_additional_information(
+                        additional_information
+                    ),
+                },
+                tools=[code_environment.as_function_tool()],
+                tool_use_behavior=custom_tool_handler,
+                reset_tool_choice=False,
+                parallel_tool_calls=False,
+                tool_choice="required",
+                output_type=PartialQueryAnswer,
+            )
+        ).output
 
         tracing.append_to_span_output(
             {

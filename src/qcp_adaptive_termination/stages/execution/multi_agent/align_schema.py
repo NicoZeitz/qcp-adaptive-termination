@@ -87,20 +87,22 @@ async def align_schema(
             "agent_names": agent_names,
         },
     ):
-        schema_metadata = await runner.run_agent(
-            role=AgentRole.COORDINATOR_ALIGN_SCHEMA,
-            prompt_parameters={
-                "query": query,
-                "merge_task": merge_task,
-                "agents_description": agents_description_text,
-            },
-            tools=[set_schema],
-            tool_use_behavior=custom_tool_handler,
-            reset_tool_choice=False,
-            parallel_tool_calls=False,
-            tool_choice="required",
-            output_type=AlignedSchemaMetadata,
-        )
+        schema_metadata = (
+            await runner.run_agent(
+                role=AgentRole.EXECUTION_COORDINATOR_ALIGN_SCHEMA,
+                prompt_parameters={
+                    "query": query,
+                    "merge_task": merge_task,
+                    "agents_description": agents_description_text,
+                },
+                tools=[set_schema],
+                tool_use_behavior=custom_tool_handler,
+                reset_tool_choice=False,
+                parallel_tool_calls=False,
+                tool_choice="required",
+                output_type=AlignedSchemaMetadata,
+            )
+        ).output
 
         tracing.append_to_span_output({"schema_metadata": schema_metadata})
         return AlignedResultList(

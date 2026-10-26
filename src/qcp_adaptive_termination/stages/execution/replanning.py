@@ -100,7 +100,7 @@ async def replan_query_plan(
     QueryReplanModel = create_query_plan_model(relevant_data_agents)
 
     result = await runner.run_llm(
-        role=AgentRole.COORDINATOR_REPLANNING,
+        role=AgentRole.EXECUTION_COORDINATOR_REPLAN,
         prompt_parameters={
             "agent_registry": registry_string,
             "old_query_plan": create_query_plan_prompt_context(query_plan),

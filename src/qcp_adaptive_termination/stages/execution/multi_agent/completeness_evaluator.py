@@ -14,8 +14,9 @@ from agents import (
     FunctionToolResult,
     RunContextWrapper,
     ToolsToFinalOutputResult,
+    TResponseInputItem,
 )
-from pydantic import BaseModel, ConfigDict
+from agents.exceptions import MaxTurnsExceeded
 
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
@@ -23,11 +24,10 @@ from qcp_adaptive_termination.code_execution.code_execution_environment import (
 )
 from qcp_adaptive_termination.estimator import Estimator
 from qcp_adaptive_termination.hooks import HookEvent
-from qcp_adaptive_termination.llm import model_provider, runner
+from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import (
     AgentRole,
     AlignedResultList,
-    CacheMode,
     StepBudget,
     StopReason,
     result_type,
@@ -36,10 +36,14 @@ from qcp_adaptive_termination.models.execution import StopDecision
 from qcp_adaptive_termination.observability import context, tracing
 
 
-class WorldKnowledgeStopResult(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-    stop: bool = False
+def _result_list_for_llm(aligned_result_list: AlignedResultList) -> pd.DataFrame:
+    """Deduplicated result list without the source-agent column, for the LLM."""
+    schema = aligned_result_list.schema_metadata
+    data = aligned_result_list.data
+    if schema.source_agent_column in data.columns:
+        data = data.drop(columns=[schema.source_agent_column])
+    keys = [c for c in schema.keys if c in data.columns]
+    return data.drop_duplicates(subset=keys) if keys else data
 
 
 @hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_ESTIMATOR)
@@ -94,25 +98,33 @@ async def run_world_knowledge_stop(
     aligned_result_list: AlignedResultList,
     query: str,
     label: str | None = None,
+    history: list[TResponseInputItem] | None = None,
 ) -> bool:
     """LLM world-knowledge stop: sees only query + result list, no estimator stats.
 
     ``label`` (e.g. ``COMPLETENESS step=s1 agents=3``) is attached to any
     reasoning printed by the provider hook for this call, so the model's
     rationale can be associated back to the exact completeness evaluation.
+
+    ``history`` carries the previous runs' conversation items (including
+    reconstructed reasoning) forward, so the model continues from where it left
+    off instead of starting fresh each queried agent.
     """
-    result = WorldKnowledgeStopResult()
+    result: bool | None = None
 
     def stop():
-        result.stop = True
+        nonlocal result
+        result = True
 
     def continue_querying():
-        result.stop = False
+        nonlocal result
+        result = False
 
+    llm_result_list = _result_list_for_llm(aligned_result_list)
     code_environment = CodeExecutionEnvironment(
         variables={
             "query": query,
-            "result_list": aligned_result_list.data,
+            "result_list": llm_result_list,
             "pd": pd,
         },
         tools={
@@ -126,11 +138,11 @@ async def run_world_knowledge_stop(
         _tool_results: list[FunctionToolResult],
     ) -> ToolsToFinalOutputResult:
         return ToolsToFinalOutputResult(
-            is_final_output=result.stop is not None,
+            is_final_output=result is not None,
             final_output=result,
         )
 
-    result_list_preview = result_type.serialize(aligned_result_list.data, context="preview")
+    result_list_preview = result_type.serialize(llm_result_list, context="preview")
 
     with tracing.own_span(
         "Coordinator - World Knowledge Stop",
@@ -139,14 +151,13 @@ async def run_world_knowledge_stop(
             "result_list_preview": result_list_preview,
         },
     ):
-        # Always run the completeness LLM fresh (write-only cache): we want to
-        # observe every stop/continue decision, not reuse a cached answer.
-        # Tag any provider-emitted reasoning with the completeness context so it
-        # can be associated back to query/step/agents.
-        token = model_provider.llm_reasoning_context.set(label)
+        # Continue the conversation across queried agents (default read/write
+        # cache: identical runs are reused, including their continuation).
+        max_turns_exceeded = False
+        run_result = None
         try:
-            result = await runner.run_agent(
-                role=AgentRole.COORDINATOR_WORLD_KNOWLEDGE_STOP,
+            run_result = await runner.run_agent(
+                role=AgentRole.EXECUTION_COORDINATOR_WORLD_KNOWLEDGE_STOP,
                 prompt_parameters={
                     "query": query,
                     "result_list_preview": result_list_preview,
@@ -156,14 +167,22 @@ async def run_world_knowledge_stop(
                 reset_tool_choice=False,
                 parallel_tool_calls=False,
                 tool_choice="required",
-                output_type=WorldKnowledgeStopResult,
-                cache_mode=CacheMode.WRITE_ONLY,
+                output_type=bool,
+                previous_input=history,
+                label=label,
             )
-        finally:
-            model_provider.llm_reasoning_context.reset(token)
-        tracing.append_to_span_output({"stop": result.stop})
+            result = run_result.output
+        except MaxTurnsExceeded as e:
+            max_turns_exceeded = True
+            result = None
+            tracing.indented_logging(f"[LLM] completeness reached max_turns without deciding — forcing continue ({e})")
+        # Carry the conversation forward for the next queried agent.
+        if history is not None and run_result is not None:
+            history.extend(run_result.continuation_input)
+            history[:] = run_result.continuation_input
+        tracing.append_to_span_output({"stop": result, "max_turns_exceeded": max_turns_exceeded})
 
-    return result.stop
+    return bool(result)
 
 
 @hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS)
@@ -175,6 +194,7 @@ async def run_completeness_evaluator(
     step_budget: StepBudget | None,
     agents_queried: int,
     force_result: bool,
+    history: list[TResponseInputItem] | None = None,
 ) -> StopDecision | None:
     """
     Combined completeness decision: deterministic estimator, then LLM world knowledge.
@@ -212,7 +232,7 @@ async def run_completeness_evaluator(
         return StopDecision(stop_reason=StopReason.ESTIMATOR)
 
     label = f"COMPLETENESS step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried}"
-    llm_stop = await run_world_knowledge_stop(aligned_result_list, query, label=label)
+    llm_stop = await run_world_knowledge_stop(aligned_result_list, query, label=label, history=history)
     print(
         f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
         f"observed={observed} decision={'llm' if llm_stop else 'continue'}",

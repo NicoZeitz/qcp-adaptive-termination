@@ -1,10 +1,10 @@
-"""Ground-truth computation for estimator evaluation."""
+"""Ground-truth computation for completeness evaluation."""
 
 from typing import Any, cast
 
 import pandas as pd
 
-from scripts.estimator_evaluation.models import GroundTruth
+from scripts.completeness_evaluation.models import GroundTruth
 
 
 def compute_ground_truth(

@@ -112,24 +112,26 @@ async def answer_query_data_agent(
                 final_output=partial_answer,
             )
 
-        result = await runner.run_agent(
-            role=AgentRole.DATA_AGENT_CODE,
-            agent_name=data_agent.name,
-            prompt_parameters={
-                "m_schema": m_schema,
-                "query": query,
-                "additional_information_preview": AdditionalInformation.preview_additional_information(
-                    additional_information
-                ),
-                "columns": ", ".join(schema_metadata.columns) if schema_metadata is not None else None,
-            },
-            tools=[code_environment.as_function_tool()],
-            tool_use_behavior=custom_tool_handler,
-            reset_tool_choice=False,
-            parallel_tool_calls=False,
-            tool_choice="required",
-            output_type=PartialQueryAnswer,
-        )
+        result = (
+            await runner.run_agent(
+                role=AgentRole.EXECUTION_DATA_AGENT_QUERY,
+                agent_name=data_agent.name,
+                prompt_parameters={
+                    "m_schema": m_schema,
+                    "query": query,
+                    "additional_information_preview": AdditionalInformation.preview_additional_information(
+                        additional_information
+                    ),
+                    "columns": ", ".join(schema_metadata.columns) if schema_metadata is not None else None,
+                },
+                tools=[code_environment.as_function_tool()],
+                tool_use_behavior=custom_tool_handler,
+                reset_tool_choice=False,
+                parallel_tool_calls=False,
+                tool_choice="required",
+                output_type=PartialQueryAnswer,
+            )
+        ).output
 
         tracing.append_to_span_output(
             {

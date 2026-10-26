@@ -20,6 +20,7 @@ from agents.run_config import DEFAULT_MAX_TURNS
 from openai.types.shared import Reasoning
 from pydantic import BaseModel, JsonValue
 
+import qcp_adaptive_termination.hooks as hooks
 import qcp_adaptive_termination.llm.model_provider as model_provider
 import qcp_adaptive_termination.llm.prompt as prompt
 from qcp_adaptive_termination.models import AgentRole, CacheMode, RoleConfig
@@ -30,34 +31,51 @@ _AGENT_SEMAPHORE = asyncio.Semaphore(5)
 
 @dataclass(slots=True)
 class _SerializedModel:
-    """Pickle-safe stand-in for a dynamically-created pydantic model instance.
-
-    Dynamic models (built via ``create_model`` at runtime — e.g. the relevance
-    filter, schema descriptions, query plans) are not importable by module path,
-    so ``pickle.dump`` fails with "Can't pickle ... not found as ...". The LLM
-    runner caches every result through pickle, so such instances are stored as
-    their JSON dump and re-validated on load.
-    """
+    """Pickle-safe stand-in for dynamic pydantic outputs that can't be pickled directly."""
 
     dump: dict[str, Any]
 
+    @staticmethod
+    def wrap(input: Any) -> Any | _SerializedModel:
+        def _is_dynamic_model(output_type: type[Any]) -> bool:
+            module = sys.modules.get(output_type.__module__)
+            if module is None:
+                return True
 
-def _is_dynamic_model(output_type: type[Any]) -> bool:
-    """True if ``output_type`` cannot be resolved from its declared module path.
+            obj: Any = module
+            for part in output_type.__qualname__.split("."):
+                obj = getattr(obj, part, None)
+                if obj is None:
+                    return True
 
-    Module-level models (``PartialQueryAnswer``, ``WorldKnowledgeStopResult``,
-    ...) have a resolvable ``module + qualname``. Models built at runtime with
-    ``create_model`` do not, and would fail pickling.
-    """
-    module = sys.modules.get(output_type.__module__)
-    if module is None:
-        return True
-    obj: Any = module
-    for part in output_type.__qualname__.split("."):
-        obj = getattr(obj, part, None)
-        if obj is None:
-            return True
-    return obj is not output_type
+            return obj is not output_type
+
+        if isinstance(input, BaseModel) and _is_dynamic_model(type(input)):
+            return _SerializedModel(dump=input.model_dump())
+
+        return input
+
+    @staticmethod
+    def unwrap(input: Any | _SerializedModel, output_type: type[Any] | None = None) -> Any:
+        if isinstance(input, _SerializedModel):
+            if output_type is None:
+                raise RuntimeError("Output type must be provided for serialized models")
+
+            if not (isinstance(output_type, type) and issubclass(output_type, BaseModel)):
+                raise RuntimeError(f"Expected a BaseModel output for {output_type!r}, got a serialized model")
+
+            return output_type.model_validate(input.dump)
+        return input
+
+
+@dataclass(slots=True)
+class AgentRunResult[TResult]:
+    """Parsed output plus the raw conversation continuation for the next call."""
+
+    output: TResult
+    """Parsed final result."""
+    continuation_input: list[TResponseInputItem]
+    """Raw conversation items (``to_input_list()``: reasoning, messages, tool calls/outputs)."""
 
 
 @functools.cache
@@ -99,16 +117,15 @@ async def run_agent[TResult](
     parallel_tool_calls: bool = True,
     tool_choice: Literal["auto", "required", "none"] | None = None,
     cache_mode: CacheMode | None = None,
-) -> TResult:
+    previous_input: list[TResponseInputItem] | None = None,
+    label: str | None = None,
+) -> AgentRunResult[TResult]:
     display_name = f"{agent_name} - {role.value}" if agent_name else role.value
     model, reasoning = _resolve_model_config(role)
     if max_turns is None:
         max_turns = DEFAULT_MAX_TURNS * 2
 
-    prompts = prompt.load_prompt(role.value, prompt_parameters)
-    # use 1st message as instructions, rest as part of prompt
-    instructions, prompts = prompts[0], prompts[1:]
-
+    instructions, prompts = prompt.load_prompt(role.value, prompt_parameters)
     tools = tools or []
     tool_use = (
         tool_use_behavior
@@ -121,7 +138,7 @@ async def run_agent[TResult](
     @cache.cached(mode=cache_mode)
     async def compute_value(
         instructions: str,
-        prompts: list[dict[str, str]],
+        input: list[TResponseInputItem],
         context: JsonValue,
         output: JsonValue,
         function_tools: list[dict[str, Any]],
@@ -129,7 +146,8 @@ async def run_agent[TResult](
         tool_use: str,
         parallel_tool_calls: bool,
         tool_choice: Literal["auto", "required", "none"] | None,
-    ):
+        label: str | None,
+    ) -> AgentRunResult[Any]:
         nonlocal tool_use_behavior
         agent = Agent[JsonValue](
             name=display_name,
@@ -152,7 +170,7 @@ async def run_agent[TResult](
             async with _AGENT_SEMAPHORE:
                 result = await Runner.run(
                     agent,
-                    cast(list[TResponseInputItem], prompts),
+                    input,
                     context=context,
                     max_turns=max_turns,
                     run_config=RunConfig(model_provider=model_provider.get_multi_provider()),
@@ -161,18 +179,15 @@ async def run_agent[TResult](
             tracing.indented_logging(f"Model behavior error: {e}")
             raise e
 
-        final_output = result.final_output
-        if isinstance(final_output, BaseModel) and _is_dynamic_model(type(final_output)):
-            # Dynamic output models can't be pickled (cache serializes via
-            # pickle); store the JSON dump and reconstruct on the way out.
-            return _SerializedModel(dump=final_output.model_dump(mode="json"))
-        return final_output
+        final_output = _SerializedModel.wrap(cast(TResult, result.final_output))
+        return AgentRunResult(
+            output=final_output,
+            continuation_input=result.to_input_list(),
+        )
 
     cached = await compute_value(
-        instructions["content"],
-        prompts=list(
-            map(lambda p: {"role": p["role"], "content": p["content"]}, prompts),
-        ),
+        instructions,
+        input=[*(previous_input or []), *prompts],
         context=context,
         output=output,
         function_tools=list(
@@ -190,13 +205,26 @@ async def run_agent[TResult](
         tool_use=tool_use,
         parallel_tool_calls=parallel_tool_calls,
         tool_choice=tool_choice,
+        label=label,
+    )
+    output = _SerializedModel.unwrap(cached.output, output_type)
+    continuation_input = cached.continuation_input
+
+    # Fire on both real runs and cache hits; the raw continuation is passed so
+    # consumers can render a transcript / extract reasoning from it directly.
+    await hooks.fire_post(
+        hooks.HookEvent.LLM_RUN_COMPLETED,
+        role=role,
+        agent_name=display_name,
+        label=label,
+        continuation_input=continuation_input,
+        output=output,
     )
 
-    if isinstance(cached, _SerializedModel):
-        if not (isinstance(output_type, type) and issubclass(output_type, BaseModel)):
-            raise RuntimeError(f"Expected a BaseModel output for {output_type!r}, got a serialized model")
-        return cast(TResult, output_type.model_validate(cached.dump))
-    return cast(TResult, cached)
+    return AgentRunResult(
+        output=output,
+        continuation_input=continuation_input,
+    )
 
 
 async def run_llm[TResult](
@@ -208,7 +236,7 @@ async def run_llm[TResult](
     context: JsonValue = None,
     cache_mode: CacheMode | None = None,
 ) -> TResult:
-    return await run_agent(
+    result = await run_agent(
         role=role,
         agent_name=agent_name,
         prompt_parameters=prompt_parameters,
@@ -218,3 +246,4 @@ async def run_llm[TResult](
         tools=[],
         cache_mode=cache_mode,
     )
+    return result.output

@@ -23,7 +23,7 @@ async def filter_data_agent(
     }
 
     is_relevant = await runner.run_llm(
-        role=AgentRole.DATA_AGENT_RELEVANCE,
+        role=AgentRole.DISCOVERY_DATA_AGENT_RELEVANCE,
         agent_name=data_agent.name,
         prompt_parameters=prompt_parameters,
         output_type=bool,

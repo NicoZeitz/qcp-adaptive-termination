@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from contextvars import ContextVar
+from typing import Any
 
 import httpx
 from agents import (
@@ -9,14 +9,10 @@ from agents import (
     OpenAIProvider,
 )
 from agents.models.multi_provider import MultiProviderMap
-from httpx import AsyncClient
+from httpx import AsyncBaseTransport, AsyncClient, Request, Response
 from openai import AsyncOpenAI
 
 _multi_provider: MultiProvider | None = None
-
-# When set (e.g. by the completeness evaluator), each [REASONING] line is tagged
-# with this label so reasoning can be associated back to query/step/agents.
-llm_reasoning_context: ContextVar[str | None] = ContextVar("llm_reasoning_context", default=None)
 
 
 def get_multi_provider() -> MultiProvider:
@@ -27,10 +23,58 @@ def get_multi_provider() -> MultiProvider:
     return _multi_provider
 
 
-async def _modify_request_hook(request: httpx.Request):
-    if request.method == "POST" and "application/json" in request.headers.get("content-type", ""):
+class _vLlmTransport(AsyncBaseTransport):
+    """
+    Transport for the university vLLM chat-completions endpoint.
+
+    Wraps the default HTTP transport to translate between the OpenAI dialect the
+    SDK sends and the endpoint's vLLM dialect.
+    """
+
+    def __init__(self, **kwargs):
+        self._inner = httpx.AsyncHTTPTransport(**kwargs)
+
+    async def handle_async_request(self, request: Request) -> Response:
+        await self._modify_request(request)
+
+        response = await self._inner.handle_async_request(request)
+
+        if not response.is_success:
+            return response
+
+        if "application/json" not in response.headers.get("content-type", ""):
+            return response
+
+        await response.aread()
+
+        content = response.json()
+        content = self._modify_response_content(content)
+
+        return Response(
+            status_code=response.status_code,
+            headers=response.headers,
+            content=content,
+            request=request,
+            extensions=response.extensions,
+            history=response.history,
+        )
+
+    async def aclose(self) -> None:
+        await self._inner.aclose()
+
+    @staticmethod
+    async def _modify_request(request: Request) -> None:
+        """Adapt a request to the university vLLM chat-completions dialect."""
+
         body_bytes = await request.aread()
         request_json = json.loads(body_bytes.decode("utf-8"))
+
+        # Mirror fields `reasoning` and `reasoning_content` in the request messages
+        for message in request_json.get("messages", []) or []:
+            reasoning = message.get("reasoning_content") or message.get("reasoning")
+            if isinstance(reasoning, str) and reasoning.strip():
+                message["reasoning"] = reasoning
+                message["reasoning_content"] = reasoning
 
         request_json["temperature"] = 0.0
 
@@ -58,52 +102,19 @@ async def _modify_request_hook(request: httpx.Request):
         request.stream = httpx.ByteStream(modified_bytes)
         request.headers["Content-Length"] = str(len(modified_bytes))
 
-    return request
+    @staticmethod
+    def _modify_response_content(payload: dict[str, Any]) -> bytes:
+        """Mirror ``reasoning`` and ``reasoning_content`` on the response."""
 
+        for choice in payload.get("choices", []) or []:
+            message = choice.get("message") or {}
+            reasoning = message.get("reasoning_content") or message.get("reasoning")
 
-def _extract_reasoning_body(response: httpx.Response) -> list[str]:
-    """Pull chat-completion reasoning from a raw provider response.
+            if isinstance(reasoning, str) and reasoning.strip():
+                message["reasoning"] = reasoning
+                message["reasoning_content"] = reasoning
 
-    Real OpenAI models surface reasoning as ``reasoning_content`` on the message;
-    the university vLLM endpoint returns it as plain ``message.reasoning``. The
-    AGENTS SDK only reads ``reasoning_content``, so vLLM reasoning is otherwise
-    dropped before it ever reaches ``runner.py``.
-    """
-    if not response.is_success:
-        return []
-    try:
-        payload = response.json()
-    except Exception:
-        return []
-
-    texts: list[str] = []
-    for choice in payload.get("choices", []) or []:
-        message = choice.get("message", {}) or {}
-        reasoning = message.get("reasoning") or message.get("reasoning_content")
-        if isinstance(reasoning, str) and reasoning.strip():
-            texts.append(reasoning)
-    return texts
-
-
-async def _modify_response_hook(response: httpx.Response):
-    """Log the model's chain-of-thought reasoning to stdout.log.
-
-    The SDK discards vLLM's ``message.reasoning``, so we capture it here at the
-    HTTP layer. If ``llm_reasoning_context`` is set (e.g. by the completeness
-    evaluator), the label is prepended so reasoning can be associated back to
-    query/step/agents.
-    """
-    # httpx response hooks fire before the body is read; read it here so we can
-    # parse reasoning. httpx caches the loaded content, so the SDK's subsequent
-    # read/json() reuses these bytes and is unaffected.
-    await response.aread()
-
-    reasoning = _extract_reasoning_body(response)
-    tag = llm_reasoning_context.get()
-    prefix = f"[{tag}] " if tag else ""
-    for text in reasoning:
-        print(f"[REASONING]{prefix}{text}", flush=True)
-    return response
+        return json.dumps(payload).encode("utf-8")
 
 
 def _add_provider(
@@ -111,7 +122,6 @@ def _add_provider(
     provider_map: MultiProviderMap,
     *,
     responses_api: bool = True,
-    http_client: AsyncClient | None = None,
 ):
     base_url = os.getenv(f"{prefix.upper()}_BASE_URL")
     api_key = os.getenv(f"{prefix.upper()}_API_KEY")
@@ -120,11 +130,11 @@ def _add_provider(
         logging.warning(f"{prefix.upper()}_BASE_URL not set; skipping provider registration.")
         return
 
+    http_client = AsyncClient(transport=_vLlmTransport()) if prefix.upper() == "UNIVERSITY" else AsyncClient()
     client = AsyncOpenAI(
         base_url=base_url,
         api_key=api_key or "not-required",
         http_client=http_client,
-        # timeout=httpx.Timeout(connect=60, read=600, write=600, pool=60),
     )
     provider = OpenAIProvider(
         openai_client=client,
@@ -133,29 +143,12 @@ def _add_provider(
     provider_map.add_provider(prefix.lower(), provider)
 
 
-def _response_hook_client() -> AsyncClient:
-    """Shared client that only logs reasoning (applies to every provider).
-
-    The reasoning-logging response hook is generic (safe on any provider —
-    it just extracts `message.reasoning`/`reasoning_content` when present).
-    The vLLM-specific request hook stays on the UNIVERSITY client only.
-    """
-    return AsyncClient(event_hooks={"response": [_modify_response_hook]})
-
-
 def _setup_multi_provider() -> MultiProvider:
     provider_map = MultiProviderMap()
-    _add_provider("OPENAI", provider_map=provider_map, http_client=_response_hook_client())
+    _add_provider("OPENAI", provider_map=provider_map)
     _add_provider(
         "UNIVERSITY",
         provider_map=provider_map,
         responses_api=False,
-        http_client=AsyncClient(
-            event_hooks={
-                "request": [_modify_request_hook],
-                "response": [_modify_response_hook],
-            }
-        ),
     )
-    _add_provider("LOCAL", provider_map=provider_map, http_client=_response_hook_client())
     return MultiProvider(provider_map=provider_map)

@@ -53,13 +53,13 @@ class AgentRegistryType(StrEnum):
 
 
 class AgentRole(StrEnum):
-    COORDINATOR_RELEVANCE = "discovery-coordinator-relevance"
-    COORDINATOR_PLANNING = "planning-draft-query-plan"
-    COORDINATOR_CODE = "execution-answer-step-coordinator"
-    COORDINATOR_REPLANNING = "execution-replan-draft-query-plan"
-    COORDINATOR_ALIGN_SCHEMA = "execution-align-schema"
-    COORDINATOR_WORLD_KNOWLEDGE_STOP = "execution-completeness-llm"
-    COORDINATOR_RESULT_PRODUCER = "execution-result-producer"
-    DATA_AGENT_SCHEMA_DESCRIPTION = "discovery-data-agent-schema-description"
-    DATA_AGENT_RELEVANCE = "discovery-data-agent-relevance"
-    DATA_AGENT_CODE = "execution-query-data-agent"
+    DISCOVERY_DATA_AGENT_SCHEMA_DESCRIPTION = "discovery-data-agent-schema-description"
+    DISCOVERY_COORDINATOR_RELEVANCE = "discovery-coordinator-relevance"
+    DISCOVERY_DATA_AGENT_RELEVANCE = "discovery-data-agent-relevance"
+    PLANNING_COORDINATOR_DRAFT_QUERY_PLAN = "planning-coordinator-draft-query-plan"
+    EXECUTION_COORDINATOR_ALIGN_SCHEMA = "execution-coordinator-align-schema"
+    EXECUTION_COORDINATOR_WORLD_KNOWLEDGE_STOP = "execution-coordinator-world-knowledge-stop"
+    EXECUTION_COORDINATOR_RESULT_PRODUCER = "execution-coordinator-result-producer"
+    EXECUTION_COORDINATOR_ANSWER_STEP = "execution-coordinator-answer-step"
+    EXECUTION_DATA_AGENT_QUERY = "execution-data-agent-query"
+    EXECUTION_COORDINATOR_REPLAN = "execution-coordinator-replan"

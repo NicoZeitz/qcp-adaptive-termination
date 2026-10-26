@@ -78,20 +78,22 @@ async def produce_result(
             "has_estimator": estimator is not None,
         },
     ):
-        result = await runner.run_agent(
-            role=AgentRole.COORDINATOR_RESULT_PRODUCER,
-            prompt_parameters={
-                "query": query,
-                "result_list_preview": result_list_preview,
-                "merge_task": merge_task,
-            },
-            tools=[code_environment.as_function_tool()],
-            tool_use_behavior=custom_tool_handler,
-            reset_tool_choice=False,
-            parallel_tool_calls=False,
-            tool_choice="required",
-            output_type=ResultProducerResult,
-        )
+        result = (
+            await runner.run_agent(
+                role=AgentRole.EXECUTION_COORDINATOR_RESULT_PRODUCER,
+                prompt_parameters={
+                    "query": query,
+                    "result_list_preview": result_list_preview,
+                    "merge_task": merge_task,
+                },
+                tools=[code_environment.as_function_tool()],
+                tool_use_behavior=custom_tool_handler,
+                reset_tool_choice=False,
+                parallel_tool_calls=False,
+                tool_choice="required",
+                output_type=ResultProducerResult,
+            )
+        ).output
         tracing.append_to_span_output({"result": result.result})
 
     if result.result is None:

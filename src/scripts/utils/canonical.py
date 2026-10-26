@@ -1,6 +1,6 @@
 """Canonical query execution against agent databases.
 
-Shared by the selection-strategy and estimator evaluation workers. Given a
+Shared by the selection-strategy and completeness evaluation workers. Given a
 canonical step SQL (written against a canonical table/column schema), these
 helpers rewrite it per agent database via ``meta_mapping.yaml`` and execute it,
 returning dataframes with canonical column names.

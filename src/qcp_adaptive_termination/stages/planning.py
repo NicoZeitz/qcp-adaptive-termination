@@ -147,7 +147,7 @@ async def draft_query_plan(
         QueryPlanModel = create_query_plan_model(relevant_data_agents)
 
         result = await runner.run_llm(
-            role=AgentRole.COORDINATOR_PLANNING,
+            role=AgentRole.PLANNING_COORDINATOR_DRAFT_QUERY_PLAN,
             prompt_parameters={
                 "agent_registry": registry_string,
                 "query": query,

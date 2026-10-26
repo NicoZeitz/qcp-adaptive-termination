@@ -1,6 +1,7 @@
 """Multi-agent step execution: query agents in ranked order until complete."""
 
 import pandas as pd
+from agents import TResponseInputItem
 
 from qcp_adaptive_termination import hooks
 from qcp_adaptive_termination.estimator import Estimator
@@ -72,6 +73,7 @@ async def answer_step_multiple_agents(
     answer = PartialQueryAnswer()
     uncertainty: StepUncertainty | None = None
     estimator: Estimator | None = None
+    history: list[TResponseInputItem] = []
 
     while remaining_selections:
         next_agent, *remaining_selections = remaining_selections
@@ -106,6 +108,7 @@ async def answer_step_multiple_agents(
             step_budget,
             agents_queried=len(agents_in_step) - len(remaining_selections),
             force_result=not remaining_selections,
+            history=history,
         )
 
         if isinstance(decision, StopDecision):

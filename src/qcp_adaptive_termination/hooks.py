@@ -88,6 +88,9 @@ class HookEvent(StrEnum):
     # ── Stage 4: Synthesis ───────────────────────────────────────────────────
     SYNTHESIS_STAGE = "synthesis_stage"
 
+    # ── General Hooks ───────────────────────────────────────────────────
+    LLM_RUN_COMPLETED = "llm_run_completed"
+
 
 # ── Registration ─────────────────────────────────────────────────────────────
 
@@ -155,6 +158,15 @@ def clear(event: HookEvent | None = None) -> None:
         _pre_hooks.pop(event, None)
         _overwrite_hooks.pop(event, None)
         _post_hooks.pop(event, None)
+
+
+async def fire_post(event: HookEvent, **kwargs: Any) -> None:
+    """Invoke only the registered post-handlers for `event`."""
+    execution_id = get_execution_id()
+    for handler in _post_hooks[event]:
+        result = _call(handler, execution_id, kwargs)
+        if inspect.isawaitable(result):
+            await result
 
 
 # ── Dispatch ─────────────────────────────────────────────────────────────────

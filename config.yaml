@@ -29,22 +29,22 @@ agent_configs:
   discovery-coordinator-relevance:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
-  planning-draft-query-plan:
+  planning-coordinator-draft-query-plan:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
-  execution-answer-step-coordinator:
+  execution-coordinator-answer-step:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
-  execution-replan-draft-query-plan:
+  execution-coordinator-replan:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
-  execution-align-schema:
+  execution-coordinator-align-schema:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
-  execution-completeness-llm:
+  execution-coordinator-world-knowledge-stop:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
-  execution-result-producer:
+  execution-coordinator-result-producer:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"
   discovery-data-agent-schema-description:
@@ -53,6 +53,6 @@ agent_configs:
   discovery-data-agent-relevance:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "none"
-  execution-query-data-agent:
+  execution-data-agent-query:
     model: "university/unsloth/DeepSeek-V4-Flash-0731"
     reasoning_effort: "high"

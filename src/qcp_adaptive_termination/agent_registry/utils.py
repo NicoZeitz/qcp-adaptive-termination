@@ -105,7 +105,7 @@ async def describe_schema_via_llm(
         schema_engine, missing_tables, missing_fields, db_missing
     )
     result: Any = await runner.run_llm(
-        role=AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION,
+        role=AgentRole.DISCOVERY_DATA_AGENT_SCHEMA_DESCRIPTION,
         agent_name=data_agent.name,
         prompt_parameters={
             "m_schema_without_comments": m_schema_without_comments,

@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 
 from qcp_adaptive_termination import load_config
-from scripts import estimator_evaluation, selection_strategy_evaluation
+from scripts import completeness_evaluation, selection_strategy_evaluation
 from scripts.utils.orchestrator import (
     add_common_args,
     run_parallel,
@@ -63,7 +63,7 @@ async def _run_subcommand(args: argparse.Namespace) -> None:
         selection_strategy_evaluation.aggregate(output_dir, input_dir)
     elif args.subcommand == "estimator":
         await run_parallel(
-            estimator_evaluation.run_query,
+            completeness_evaluation.run_query,
             dataset_dir=dataset_dir,
             config=config,
             output_dir=output_dir,
@@ -71,7 +71,7 @@ async def _run_subcommand(args: argparse.Namespace) -> None:
             parallel=parallel,
             max_workers=args.max_workers,
         )
-        estimator_evaluation.aggregate(output_dir, input_dir)
+        completeness_evaluation.aggregate(output_dir, input_dir)
     else:
         raise ValueError(f"Unknown subcommand: {args.subcommand}")
 
