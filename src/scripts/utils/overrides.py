@@ -1,10 +1,4 @@
-"""Shared hook overrides for evaluation workers.
-
-Both evaluation packages stub the LLM-heavy parts of the pipeline
-(``align_schema``, ``data_agent``, ``completeness``) and route them through
-per-execution-id dispatch maps so multiple steps/strategies can run in
-parallel within one process.
-"""
+"""Shared hook overrides for evaluation workers."""
 
 from collections.abc import Callable
 from typing import Any
@@ -23,11 +17,7 @@ from qcp_adaptive_termination.models.execution import (
 
 
 def make_completeness_override() -> Callable[..., StopDecision | None]:
-    """Completeness evaluator that never stops early (used by selection strategies).
-
-    Always returns ``None`` so the caller never produces a final result via the
-    LLM result producer — the eval only cares about the agent query order.
-    """
+    """Completeness evaluator that never stops early (used by selection strategies)."""
 
     def _handler(
         execution_id: str,

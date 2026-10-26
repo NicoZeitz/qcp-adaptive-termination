@@ -1,4 +1,7 @@
+"""Utility functions for the agent registry."""
+
 import asyncio
+import logging
 from collections.abc import Callable
 from typing import Any, overload
 
@@ -17,23 +20,27 @@ from qcp_adaptive_termination.models import (
     DataAgent,
     TableDescription,
 )
-from qcp_adaptive_termination.observability import tracing
 
 
 def _missing_comments(
     mschema: MSchema,
 ) -> tuple[list[str], list[tuple[str, str]], bool]:
     """Return (table_names_missing, (table,col) pairs missing, database_missing)."""
+
     missing_tables = []
     missing_fields = []
+
     for table_name, table_info in mschema.tables.items():
         if not table_info.get("comment"):
             missing_tables.append(table_name)
+
         for col_name, field_info in table_info["fields"].items():
             if not field_info.get("comment"):
                 missing_fields.append((table_name, col_name))
-    db_missing = not mschema.database_comment
-    return missing_tables, missing_fields, db_missing
+
+    database_missing = not mschema.database_comment
+
+    return missing_tables, missing_fields, database_missing
 
 
 def _create_database_description_model(
@@ -92,7 +99,7 @@ def _load_schema_engine(data_agent: DataAgent) -> SchemaEngine:
 
 
 @hooks.hook(HookEvent.DISCOVERY_DATA_AGENT_SCHEMA_DESCRIPTION)
-async def describe_schema_via_llm(
+async def _describe_schema_via_llm(
     data_agent: DataAgent,
     schema_engine: SchemaEngine,
     missing_tables: list[str],
@@ -140,9 +147,10 @@ async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
     needs_llm = missing_tables or missing_fields or db_missing
 
     if needs_llm:
-        await describe_schema_via_llm(data_agent, schema_engine, missing_tables, missing_fields, db_missing)
+        logging.debug(f"{data_agent.name} Missing comments detected, invoking LLM for database description")
+        await _describe_schema_via_llm(data_agent, schema_engine, missing_tables, missing_fields, db_missing)
     else:
-        tracing.indented_logging(f"{data_agent.name} Skipping LLM call for database description, all comments present")
+        logging.debug(f"{data_agent.name} Skipping LLM call for database description, all comments present")
 
     natural_language_description = schema_engine.mschema.database_comment
 

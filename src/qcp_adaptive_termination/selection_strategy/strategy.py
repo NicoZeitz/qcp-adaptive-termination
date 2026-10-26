@@ -7,15 +7,7 @@ from qcp_adaptive_termination.models import DataAgent, ScoredDataAgent
 
 @dataclass(slots=True)
 class SelectionStrategy[PrecomputedState, RunningState](ABC):
-    """
-    Stateful ranking strategy for dynamic agent selection.
-
-    Lifecycle per multi-agent step:
-      1. precompute(agents)  — build per-agent sketches/scores once
-      2. rank(remaining, state)  — score remaining agents given current state
-      3. update(state, values)  — fold newly-seen column values into state
-         (repeat 2-3 until done)
-    """
+    """Stateful ranking strategy for dynamic agent selection."""
 
     def needs_table(self) -> bool:
         """Return True if this strategy requires a table name to be resolved per agent."""
@@ -64,13 +56,7 @@ class SelectionStrategy[PrecomputedState, RunningState](ABC):
 
 
 class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[PrecomputedScoredState, None]):
-    """
-    Base for strategies whose ranking does not change between iterations
-    (COUNT, DISTINCT_COUNT, statistics-based, embedding).
-
-    Subclasses only need to implement precompute(). Set ascending=True when
-    lower scores are better (e.g. L2 distance). rank() is a no-op for update().
-    """
+    """Base for strategies whose ranking does not change between iterations."""
 
     ascending: bool = False
 
@@ -85,6 +71,7 @@ class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[P
         raise NotImplementedError
 
     def init_state(self) -> None:
+        """Return None, since static strategies keep no running state."""
         return None
 
     def rank(
@@ -93,6 +80,7 @@ class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[P
         precomputed: dict[str, PrecomputedScoredState],
         state: None,
     ) -> list[ScoredDataAgent]:
+        """Score and sort remaining agents by their precomputed score."""
         for s in remaining:
             s.score = precomputed.get(s.agent.name, 0.0)
 
@@ -109,4 +97,5 @@ class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[P
         agent_names: list[str] | None = None,
         precomputed: dict[str, PrecomputedScoredState] | None = None,
     ) -> None:
+        """Return None, since static strategies fold no state."""
         return None

@@ -28,6 +28,8 @@ from qcp_adaptive_termination.observability import tracing
 
 
 class ResultProducerResult(BaseModel):
+    """The final answer produced by the result-producing agent."""
+
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     result: SerializedOptionalResultType = None
@@ -41,7 +43,18 @@ async def produce_result(
     merge_task: str,
     stop_reason: StopReason,
 ) -> SerializedOptionalResultType:
-    """Produce the final answer via the result-producing agent."""
+    """Produce the final answer via the result-producing agent.
+
+    Args:
+        aligned_result_list: the aligned result list
+        estimator: the current estimator
+        query: the step's query
+        merge_task: how agent results should be merged
+        stop_reason: why execution stopped
+
+    Returns:
+        (SerializedOptionalResultType): the final produced answer
+    """
     result = ResultProducerResult()
 
     def final_result(result_value: Any):

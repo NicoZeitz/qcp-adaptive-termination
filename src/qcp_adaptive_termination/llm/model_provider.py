@@ -1,3 +1,5 @@
+"""Provide model providers (OpenAI and university vLLM) for the agent runner."""
+
 import json
 import logging
 import os
@@ -16,6 +18,7 @@ _multi_provider: MultiProvider | None = None
 
 
 def get_multi_provider() -> MultiProvider:
+    """Return the lazily-initialized MultiProvider."""
     global _multi_provider
     if _multi_provider is None:
         _multi_provider = _setup_multi_provider()
@@ -24,17 +27,14 @@ def get_multi_provider() -> MultiProvider:
 
 
 class _vLlmTransport(AsyncBaseTransport):
-    """
-    Transport for the university vLLM chat-completions endpoint.
-
-    Wraps the default HTTP transport to translate between the OpenAI dialect the
-    SDK sends and the endpoint's vLLM dialect.
-    """
+    """Transport for the university vLLM chat-completions endpoint."""
 
     def __init__(self, **kwargs):
+        """Initialize the vLLM transport."""
         self._inner = httpx.AsyncHTTPTransport(**kwargs)
 
     async def handle_async_request(self, request: Request) -> Response:
+        """Modify and forward a request, adapting its response."""
         await self._modify_request(request)
 
         response = await self._inner.handle_async_request(request)
@@ -60,6 +60,7 @@ class _vLlmTransport(AsyncBaseTransport):
         )
 
     async def aclose(self) -> None:
+        """Close the inner transport."""
         await self._inner.aclose()
 
     @staticmethod
@@ -123,6 +124,7 @@ def _add_provider(
     *,
     responses_api: bool = True,
 ):
+    """Register a provider from environment variables into the provider map."""
     base_url = os.getenv(f"{prefix.upper()}_BASE_URL")
     api_key = os.getenv(f"{prefix.upper()}_API_KEY")
 
@@ -144,6 +146,7 @@ def _add_provider(
 
 
 def _setup_multi_provider() -> MultiProvider:
+    """Set up and return the MultiProvider from configured providers."""
     provider_map = MultiProviderMap()
     _add_provider("OPENAI", provider_map=provider_map)
     _add_provider(

@@ -1,3 +1,5 @@
+"""Dependency-based DAG scheduling of query plan steps."""
+
 import asyncio
 from typing import cast
 
@@ -33,6 +35,7 @@ def _build_additional_information(
     query_plan_step: QueryPlanStep,
     step_id_to_answer: dict[str, ResultType],
 ) -> list[AdditionalInformation]:
+    """Collect the satisfying dependency answers for a step."""
     return [
         AdditionalInformation(
             step_id=dependency.step_id,
@@ -49,11 +52,15 @@ async def execute_query_plan_next_nodes(
     query_plan: QueryPlan,
     step_budgets: dict[str, StepBudget],
 ) -> QueryPlanStepExecutionResult:
-    """
-    Execute all ready steps in parallel (dependency-based DAG scheduling).
+    """Execute all ready steps in parallel until the plan finishes or fails.
 
-    Steps whose dependencies are all satisfied run concurrently; answers are
-    kept in a separate map, not mutated on the plan object.
+    Args:
+        data_agents: the available data agents
+        query_plan: the query plan to execute
+        step_budgets: per-step completeness budgets
+
+    Returns:
+        (QueryPlanStepExecutionResult): the execution outcome
     """
     step_id_to_answer: dict[str, ResultType] = {}
     step_uncertainties: list[StepUncertainty] = []
@@ -156,6 +163,17 @@ async def execute_query_plan_step(
     additional_information: list[AdditionalInformation],
     step_budgets: dict[str, StepBudget],
 ) -> tuple[PartialQueryAnswer, StepUncertainty | None]:
+    """Execute one query plan step and return its answer and uncertainty.
+
+    Args:
+        data_agents: the available data agents
+        query_plan_step: the step to execute
+        additional_information: the satisfying dependency answers
+        step_budgets: per-step completeness budgets
+
+    Returns:
+        (tuple[PartialQueryAnswer, StepUncertainty | None]): the step answer and its uncertainty
+    """
     with tracing.own_span(
         f"Execute Step: {query_plan_step.id}",
         input={

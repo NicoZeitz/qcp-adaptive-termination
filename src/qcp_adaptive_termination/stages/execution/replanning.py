@@ -1,3 +1,5 @@
+"""Replanning: revise the query plan after a failed execution."""
+
 import json
 import logging
 from typing import Any
@@ -25,6 +27,7 @@ from qcp_adaptive_termination.stages.planning import (
 
 
 def create_answer_map_from_query_plan(query_plan: QueryPlan) -> dict[str, ResultType]:
+    """Map each already-answered step id to its answer."""
     answer_map = {}
     for step in query_plan.steps:
         if step.answer is not None:
@@ -33,6 +36,7 @@ def create_answer_map_from_query_plan(query_plan: QueryPlan) -> dict[str, Result
 
 
 def create_query_plan_prompt_context(query_plan: QueryPlan) -> str:
+    """Serialize a query plan for the replanning LLM prompt."""
     return json.dumps(
         {
             "steps": [
@@ -66,6 +70,7 @@ def create_query_plan_prompt_context(query_plan: QueryPlan) -> str:
 
 
 def create_reason_prompt_context(reason: FailedExecution) -> str:
+    """Serialize a failed execution for the replanning LLM prompt."""
     reason_data = {
         "raised_needs": [need_type.serialize(need, context="preview") for need in reason.needs],
         "failed_step_id": reason.step.id,
@@ -81,6 +86,16 @@ def create_reason_prompt_context(reason: FailedExecution) -> str:
 def map_query_replan_model_to_query_plan(
     query_replan_model: BaseModel, query: str, answer_map: dict[str, ResultType]
 ) -> QueryPlan:
+    """Convert a replan model to a QueryPlan, preserving prior answers.
+
+    Args:
+        query_replan_model: the model output by the replanning LLM
+        query: the user query
+        answer_map: answers of steps already executed
+
+    Returns:
+        (QueryPlan): the parsed replanned query plan
+    """
     query_plan = map_query_plan_model_to_query_plan(query_replan_model, query)
 
     for step in query_plan.steps:
@@ -98,6 +113,18 @@ async def replan_query_plan(
     reason: FailedExecution,
     history: list[TResponseInputItem] | None = None,
 ) -> QueryPlan:
+    """Revise the query plan after a failed execution.
+
+    Args:
+        data_agents: all known data agents
+        relevant_data_agents: the agents considered for the replan
+        query_plan: the current query plan
+        reason: the failed execution to recover from
+        history: conversation history threaded through replans
+
+    Returns:
+        (QueryPlan): the revised query plan
+    """
     registry_string = await agent_registry.build_registry_string(relevant_data_agents, AgentRegistryType.TECHNICAL)
     answer_map = create_answer_map_from_query_plan(query_plan)
     QueryReplanModel = create_query_plan_model(relevant_data_agents)
@@ -138,6 +165,19 @@ async def replan(
     failed_execution: FailedExecution,
     history: list[TResponseInputItem] | None = None,
 ) -> tuple[list[DataAgent], QueryPlan]:
+    """Replan: expand the agent set if needed and revise the query plan.
+
+    Args:
+        attempt: the current replan attempt index
+        current_data_agents: the agents in the current attempt
+        data_agents: all known data agents
+        query_plan: the current query plan
+        failed_execution: the failed execution to recover from
+        history: conversation history threaded through replans
+
+    Returns:
+        (tuple[list[DataAgent], QueryPlan]): the updated agents and query plan
+    """
     with tracing.own_span(
         f"{attempt} - {Stage.EXECUTION.label} (Replan)",
         input={

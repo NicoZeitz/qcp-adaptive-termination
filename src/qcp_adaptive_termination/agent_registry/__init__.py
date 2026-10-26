@@ -1,8 +1,4 @@
-"""
-Agent registry utilities.
-
-Provides a registry of available agents.
-"""
+"""Agent registry, that provides a registry of available agents with metadata about them."""
 
 import asyncio
 from typing import overload

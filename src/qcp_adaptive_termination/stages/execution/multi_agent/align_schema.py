@@ -1,3 +1,5 @@
+"""Align a unified output schema across the agents in a multi-agent step."""
+
 import hashlib
 from collections import OrderedDict
 
@@ -32,6 +34,17 @@ async def align_schema(
     query: str,
     merge_task: str,
 ) -> AlignedResultList:
+    """Align a unified output schema across a set of data agents.
+
+    Args:
+        data_agents: the available data agents
+        agent_names: the agents participating in the step
+        query: the step's query
+        merge_task: how agent results should be merged
+
+    Returns:
+        (AlignedResultList): the empty aligned result list with the schema
+    """
     agents = [a for a in data_agents if a.name in agent_names]
     agents_description_text = await agent_registry.build_registry_string(
         agents, AgentRegistryType.TECHNICAL, include_capabilities=False

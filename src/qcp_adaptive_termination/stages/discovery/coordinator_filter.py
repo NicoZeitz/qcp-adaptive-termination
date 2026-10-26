@@ -1,3 +1,5 @@
+"""Coordinator-based relevance filtering of data agents."""
+
 from typing import Any
 
 from pydantic import BaseModel, Field, create_model
@@ -10,6 +12,7 @@ from qcp_adaptive_termination.observability import tracing
 
 
 def _build_relevance_model(data_agents: list[DataAgent]) -> type[BaseModel]:
+    """Build a Pydantic model with one relevance field per data agent."""
     agent_fields: dict[str, Any] = {}
     for agent in data_agents:
         AgentRelevanceModel = create_model(
@@ -38,6 +41,17 @@ async def filter_coordinator(
     registry_string: str,
     additional_context: str | None = None,
 ) -> list[tuple[DataAgent, str]]:
+    """Ask the coordinator which data agents are relevant to the query.
+
+    Args:
+        query: the user query
+        data_agents: all known data agents
+        registry_string: registry description of the data agents
+        additional_context: extra context for the coordinator
+
+    Returns:
+        (list[tuple[DataAgent, str]]): relevant agents paired with their reasoning
+    """
     RelevanceModel = _build_relevance_model(data_agents)
 
     relevances = await runner.run_llm(

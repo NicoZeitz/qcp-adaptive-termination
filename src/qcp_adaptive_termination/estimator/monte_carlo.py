@@ -24,12 +24,7 @@ def _rbf_search_min(
     count_upper_bound: int,
     lambda_grid: Sequence[float],
 ) -> tuple[int, float]:
-    """
-    Fit a thin-plate-spline RBF surface over (N, λ, KL) points and return the minimum.
-
-    Falls back to the raw minimum point when there are fewer than 3 points or
-    when all N or λ values are identical (degenerate 2D surface).
-    """
+    """Fit an RBF surface over (N, λ, KL) points and return the minimum."""
     if len(points) < 3:
         best_count, best_lambda, _ = min(points, key=lambda p: p[2])
         return int(best_count), float(best_lambda)
@@ -69,14 +64,9 @@ def mc_count(
     max_theta_points: int = MC_DEFAULT_MAX_THETA_POINTS,
     laplace_alpha: float = MC_LAPLACE_ALPHA,
 ) -> int:
-    """
-    Estimate total unique entity count via Monte Carlo simulation.
+    """Estimate total unique entity count via Monte Carlo simulation.
 
-    Searches over a grid of (N, λ) parameters where N is the candidate population
-    size and λ governs the skew of an exponential publicity distribution.
-    For each candidate, simulates the sampling process and measures KL-divergence
-    from the observed frequency statistics. Fits an RBF surface over the grid
-    and returns the N at the minimum.
+    Searches a grid of (N, λ) parameters and returns the N at the minimum KL-divergence.
     """
     estimated_count = estimate_count(stats, count_estimator)
     count_upper_bound = (

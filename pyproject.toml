@@ -37,7 +37,7 @@ dependencies = [
 ]
 
 [project.scripts]
-qcp-adaptive-termination = "qcp_adaptive_termination.cli:main"
+qcp-adaptive-termination = "scripts.main:main"
 
 [build-system]
 requires = ["hatchling"]

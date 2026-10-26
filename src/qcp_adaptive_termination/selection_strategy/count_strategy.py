@@ -8,7 +8,10 @@ from qcp_adaptive_termination.selection_strategy.strategy import StaticSelection
 
 @dataclass(slots=True)
 class CountStrategy(StaticSelectionStrategy[int]):
+    """Ranks agents by total row count."""
+
     def needs_table(self) -> bool:
+        """Return True, since this strategy requires a table per agent."""
         return True
 
     async def precompute(
@@ -18,6 +21,7 @@ class CountStrategy(StaticSelectionStrategy[int]):
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, int]:
+        """Precompute per-agent row counts."""
         assert table_per_agent
 
         mapped_agents = [agent for agent in agents if agent.name in table_per_agent]
@@ -30,10 +34,14 @@ class CountStrategy(StaticSelectionStrategy[int]):
 
 @dataclass(slots=True)
 class DistinctCountStrategy(StaticSelectionStrategy[int]):
+    """Ranks agents by distinct value count."""
+
     def needs_table(self) -> bool:
+        """Return True, since this strategy requires a table per agent."""
         return True
 
     def needs_column(self) -> bool:
+        """Return True, since this strategy requires a column per agent."""
         return True
 
     async def precompute(
@@ -43,6 +51,7 @@ class DistinctCountStrategy(StaticSelectionStrategy[int]):
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, int]:
+        """Precompute per-agent distinct value counts."""
         assert table_per_agent and column_per_agent
 
         mapped_agents = [agent for agent in agents if agent.name in table_per_agent and agent.name in column_per_agent]

@@ -21,6 +21,7 @@ class RandomStrategy(StaticSelectionStrategy[float]):
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, float]:
+        """Precompute a per-agent seeded random ranking score."""
         names = [a.name for a in agents]
         random.Random(self.seed).shuffle(names)
         return {name: float(i) for i, name in enumerate(names)}

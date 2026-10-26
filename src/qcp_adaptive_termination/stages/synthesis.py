@@ -1,9 +1,4 @@
-"""
-Result synthesis stage: turns recorded uncertainty into a user-facing answer.
-
-Implements PLAN.md §6. Computes the final value + CI and combined completeness
-deterministically, then uses an LLM only for the natural-language phrasing.
-"""
+"""Synthesis stage: turn recorded uncertainty into a user-facing answer."""
 
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.hooks import HookEvent
@@ -32,7 +27,17 @@ async def synthesize_result(
     result: SerializedResultType,
     step_uncertainties: list[StepUncertainty],
 ) -> SynthesizedResult:
-    """Combine recorded uncertainty into a final user-facing answer."""
+    """Combine recorded uncertainty into a final user-facing answer.
+
+    Args:
+        query: the user query
+        query_plan: the executed query plan
+        result: the base result to summarize
+        step_uncertainties: the per-step uncertainty metadata
+
+    Returns:
+        (SynthesizedResult): the synthesized answer with combined completeness
+    """
     with tracing.own_span(
         Stage.SYNTHESIS.label,
         input={

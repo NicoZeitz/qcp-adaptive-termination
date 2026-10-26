@@ -1,4 +1,7 @@
+"""Discovery stage: select and pre-filter the data agents relevant to a query."""
+
 import asyncio
+import logging
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.hooks as hooks
@@ -14,6 +17,15 @@ from qcp_adaptive_termination.stages.discovery.embedding_pre_filter import filte
 @hooks.hook(HookEvent.DISCOVERY_STAGE, stage_context=True)
 @cache.cached(mode=CacheMode.WRITE_ONLY)
 async def discovery_stage(query: str, data_agents: list[DataAgent]) -> FilteredRelevantAgents:
+    """Return the data agents relevant to a query.
+
+    Args:
+        query: the user query
+        data_agents: all known data agents
+
+    Returns:
+        (FilteredRelevantAgents): the queried agents and the relevant subset
+    """
     with tracing.own_span(
         Stage.DISCOVERY.label,
         input={
@@ -42,6 +54,18 @@ async def filter_relevant_agents(
     additional_context: str | None = None,
     pre_filter: bool = True,
 ) -> FilteredRelevantAgents:
+    """Select relevant data agents via embedding pre-filter, coordinator, and per-agent checks.
+
+    Args:
+        query: the user query
+        data_agents: all known data agents
+        registry_type: how data agents are described to the LLM
+        additional_context: extra context passed to the filters
+        pre_filter: whether to apply the embedding pre-filter
+
+    Returns:
+        (FilteredRelevantAgents): the relevant data agents
+    """
     if pre_filter:
         with tracing.own_span(
             "Embedding Pre-Filter",
@@ -51,7 +75,7 @@ async def filter_relevant_agents(
             },
         ):
             candidate_data_agents = await filter_embedding_pre_filter(query, data_agents, registry_type)
-            tracing.indented_logging(f"Embedding filter: {len(data_agents)} → {len(candidate_data_agents)} agents")
+            logging.info("Embedding filter: %d → %d agents", len(data_agents), len(candidate_data_agents))
             tracing.append_to_span_output(
                 {
                     "candidates_after_embedding_filter": [a.name for a in candidate_data_agents],

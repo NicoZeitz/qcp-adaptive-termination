@@ -1,9 +1,4 @@
-"""
-Execution stage: runs a query plan against selected data agents.
-
-Drives the step-by-step execution loop, handles replanning on failure
-(up to `config.max_replan_attempts`), and returns a `CollaborativeQueryAnsweringResult`.
-"""
+"""Execution stage: run a query plan against the selected data agents."""
 
 from typing import Any, cast
 
@@ -42,6 +37,17 @@ async def execute_query_plan_attempt(
     current_data_agents: list[DataAgent],
     step_budgets: dict[str, StepBudget],
 ) -> ExecutionResult:
+    """Run one execution attempt over the query plan's nodes.
+
+    Args:
+        attempt: the current replan attempt index
+        query_plan: the query plan to execute
+        current_data_agents: the agents available for this attempt
+        step_budgets: per-step completeness budgets
+
+    Returns:
+        (ExecutionResult): the outcome of the attempt
+    """
     with tracing.own_span(
         f"{attempt} - {Stage.EXECUTION.label}",
         input={
@@ -74,6 +80,17 @@ async def execute_query_plan(
     data_agents: list[DataAgent],
     planning_continuation: list[Any] | None = None,
 ) -> CollaborativeQueryAnsweringResult:
+    """Execute a query plan, replanning on failure up to the configured limit.
+
+    Args:
+        query_plan: the query plan to execute
+        relevant_data_agents: the agents selected for this plan
+        data_agents: all known data agents
+        planning_continuation: conversation history threaded through replans
+
+    Returns:
+        (CollaborativeQueryAnsweringResult): the execution result
+    """
     config = context.get_config()
     max_replan_attempts = config.max_replan_attempts
 

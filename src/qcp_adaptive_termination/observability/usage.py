@@ -1,10 +1,6 @@
 """Per-query usage and cost tracking for LLM and embedding calls.
 
-Records an immutable log of every call (deduplicated for embeddings), then
-computes cost from configured per-model pricing. Money is always computed in
-``Decimal`` and only converted to ``float`` at report serialization time so
-results are exact.
-"""
+Records every call and computes USD cost from configured per-model pricing."""
 
 import time
 from collections import defaultdict
@@ -46,12 +42,30 @@ class LLMCall:
 
 
 def _embedding_cost(model_cost: ModelCost | None, tokens: int) -> Decimal:
+    """Compute the USD cost of an embedding computation.
+
+    Args:
+        model_cost: pricing for the model, or None to return zero
+        tokens: the number of prompt tokens
+
+    Returns:
+        The cost in dollars
+    """
     if model_cost is None or model_cost.embedding is None:
         return Decimal(0)
     return Decimal(tokens) * model_cost.embedding / _PER_MILLION
 
 
 def _llm_cost(model_cost: ModelCost | None, call: LLMCall) -> Decimal:
+    """Compute the USD cost of an LLM call from its token usage.
+
+    Args:
+        model_cost: pricing for the model, or None to return zero
+        call: the LLM call with raw token counts
+
+    Returns:
+        The cost in dollars
+    """
     if model_cost is None:
         return Decimal(0)
     non_cached_input = call.input_tokens - call.cached_input_tokens - call.cache_write_tokens
@@ -84,7 +98,18 @@ CSV_COLUMNS = [
 
 
 def embedding_csv_row(config: Config, model: str, prompt_tokens: int, call_id: str, text: str = "") -> dict[str, Any]:
-    """One CSV row for a distinct embedding computation."""
+    """Build a CSV row for a distinct embedding computation.
+
+    Args:
+        config: pricing for cost computation
+        model: the embedding model
+        prompt_tokens: prompt token count
+        call_id: unique call identifier
+        text: the embedded text, for reference
+
+    Returns:
+        A row dict matching ``CSV_COLUMNS``
+    """
     cost = _embedding_cost(config.costs.get(model), prompt_tokens)
     return {
         "type": "embedding",
@@ -120,7 +145,25 @@ def llm_csv_row(
     output_tokens: int,
     reasoning_tokens: int,
 ) -> dict[str, Any]:
-    """One CSV row for a single LLM run."""
+    """Build a CSV row for a single LLM run.
+
+    Args:
+        config: pricing for cost computation
+        role: the agent role
+        agent_name: optional agent display name
+        label: optional run label
+        model: the model used
+        call_id: unique call identifier
+        requests: number of API requests in the run
+        input_tokens: input token count
+        cached_input_tokens: input tokens served from cache
+        cache_write_tokens: input tokens written to cache
+        output_tokens: output token count
+        reasoning_tokens: reasoning token count
+
+    Returns:
+        A row dict matching ``CSV_COLUMNS``
+    """
     call = LLMCall(
         call_id=call_id,
         role=role,
@@ -176,7 +219,16 @@ class UsageReport:
     started_at: float = field(default_factory=time.monotonic)
 
     def record_embedding(self, text: str, model: str, prompt_tokens: int) -> bool:
-        """Record one embedding computation. Returns False if text already seen (deduplicated)."""
+        """Record one embedding computation, deduplicated by text.
+
+        Args:
+            text: the embedded text
+            model: the embedding model
+            prompt_tokens: prompt token count for the text
+
+        Returns:
+            False if text was already recorded
+        """
         if any(call.text == text for call in self.embeddings):
             return False
         self.embeddings.append(EmbeddingCall(call_id=uuid4().hex, text=text, model=model, prompt_tokens=prompt_tokens))
@@ -190,7 +242,15 @@ class UsageReport:
         model: str,
         usage,
     ) -> None:
-        """Record one LLM run from an SDK usage object plus the model it ran on."""
+        """Record one LLM run from an SDK usage object plus the model it ran on.
+
+        Args:
+            role: the agent role that made the run
+            agent_name: optional agent display name
+            label: optional run label
+            model: the model used
+            usage: the SDK Usage object with token counts
+        """
         self.llm.append(
             LLMCall(
                 call_id=uuid4().hex,
@@ -208,6 +268,14 @@ class UsageReport:
         )
 
     def _embedding_totals(self, costs: dict[str, ModelCost]) -> dict[str, ModelTotals]:
+        """Aggregate embedding usage per model.
+
+        Args:
+            costs: pricing keyed by model name
+
+        Returns:
+            Model name to accumulated totals
+        """
         totals: dict[str, ModelTotals] = defaultdict(ModelTotals)
         for call in self.embeddings:
             t = totals[call.model]
@@ -217,6 +285,14 @@ class UsageReport:
         return dict(totals)
 
     def _llm_totals(self, costs: dict[str, ModelCost]) -> dict[str, ModelTotals]:
+        """Aggregate LLM usage per model.
+
+        Args:
+            costs: pricing keyed by model name
+
+        Returns:
+            Model name to accumulated totals
+        """
         totals: dict[str, ModelTotals] = defaultdict(ModelTotals)
         for call in self.llm:
             t = totals[call.model]
@@ -231,7 +307,14 @@ class UsageReport:
         return dict(totals)
 
     def call_rows(self, config: Config) -> list[dict[str, Any]]:
-        """One row per call (embeddings then LLM) for the per-call CSV."""
+        """Build one row per call (embeddings then LLM) for the per-call CSV.
+
+        Args:
+            config: pricing for cost computation
+
+        Returns:
+            A list of row dicts matching ``CSV_COLUMNS``
+        """
         rows = [embedding_csv_row(config, c.model, c.prompt_tokens, c.call_id, c.text) for c in self.embeddings]
         rows.extend(
             llm_csv_row(
@@ -253,10 +336,15 @@ class UsageReport:
         return rows
 
     def summarize(self, config: Config) -> dict:
-        """Build a JSON-serializable summary (money as float) for the report.
+        """Build a JSON-serializable usage report (money as float).
 
-        Both the aggregated totals and the per-call breakdown are included so
-        the JSON mirrors the per-call detail of ``usage.csv``.
+        Includes aggregated totals per model and the full per-call breakdown.
+
+        Args:
+            config: pricing for cost computation
+
+        Returns:
+            A JSON-ready dict with time, embeddings, llm and total cost
         """
         embedding_totals = self._embedding_totals(config.costs)
         llm_totals = self._llm_totals(config.costs)

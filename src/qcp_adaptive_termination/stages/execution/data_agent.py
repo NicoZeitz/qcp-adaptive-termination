@@ -1,3 +1,5 @@
+"""Data agent answer step: execute SQL against a data agent and return a partial answer."""
+
 from dataclasses import dataclass
 from typing import Any
 
@@ -31,11 +33,14 @@ from qcp_adaptive_termination.stages.execution.validation import validate_agent_
 
 @dataclass(slots=True)
 class SqlQuery:
+    """A single SQL query executed against a data agent."""
+
     query: str
     error: Exception | None = None
     result: pd.DataFrame | None = None
 
     def to_span_data(self) -> JsonValue:
+        """Serialize the query for tracing output."""
         span_data: dict[str, JsonValue] = {"query": self.query}
 
         if self.result is not None:
@@ -53,6 +58,17 @@ async def answer_query_data_agent(
     additional_information: list[AdditionalInformation],
     schema_metadata: AlignedSchemaMetadata | None = None,
 ) -> PartialQueryAnswer:
+    """Answer a query against one data agent.
+
+    Args:
+        data_agent: the agent to query
+        query: the query to answer
+        additional_information: the satisfying dependency answers
+        schema_metadata: the schema the output must conform to
+
+    Returns:
+        (PartialQueryAnswer): the data agent's partial answer
+    """
     with tracing.own_span(
         f"Data Agent {data_agent.name} - answer_query",
         input={
@@ -151,5 +167,17 @@ async def answer_step_data_agent(
     additional_information: list[AdditionalInformation],
     schema_metadata: AlignedSchemaMetadata | None = None,
 ) -> PartialQueryAnswer:
+    """Answer one query plan step as a named data agent.
+
+    Args:
+        data_agents: the available data agents
+        query: the query to answer
+        to_agent: the name of the agent answering
+        additional_information: the satisfying dependency answers
+        schema_metadata: the schema the output must conform to
+
+    Returns:
+        (PartialQueryAnswer): the data agent's partial answer
+    """
     responsible_data_agent = next(agent for agent in data_agents if agent.name == to_agent)
     return await answer_query_data_agent(responsible_data_agent, query, additional_information, schema_metadata)

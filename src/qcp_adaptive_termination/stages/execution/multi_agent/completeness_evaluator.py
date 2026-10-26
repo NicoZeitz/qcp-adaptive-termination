@@ -1,12 +1,6 @@
-"""
-Split completeness decision: deterministic estimator + LLM world-knowledge stop.
+"""Completeness decision: deterministic estimator, then LLM world-knowledge stop."""
 
-Implements PLAN.md step 2/3: the completeness evaluator is split into
-- a deterministic estimator stop (world-knowledge-free, based on worst-case completeness)
-- an LLM world-knowledge stop agent (sees only query + result list)
-- a result-producing agent (produces the final answer once a stop is decided)
-"""
-
+import logging
 import math
 from typing import Any
 
@@ -50,8 +44,8 @@ def _result_list_for_llm(aligned_result_list: AlignedResultList) -> pd.DataFrame
 def _estimator_stats(estimator: Estimator | None) -> str | None:
     """Render the estimator's unknown-unknowns for the LLM stopper prompt.
 
-    Returns a compact block of observed/estimated counts, confidence bounds and
-    coverage, or ``None`` when there is no estimator.
+    Returns:
+        (str | None): a compact stats block, or None when there is no estimator
     """
     if estimator is None:
         return None
@@ -80,17 +74,21 @@ def run_deterministic_estimator(
     step_budget: StepBudget | None,
     agents_queried: int,
 ) -> bool:
-    """
-    Decide whether to stop based on worst-case completeness.
+    """Decide whether to stop based on worst-case completeness.
 
-    Returns True to stop, False to keep querying. Computes only what the stop
-    rule needs: observed count and the upper bound of the estimated count.
+    Args:
+        estimator: the current estimator
+        step_budget: the step's completeness budget
+        agents_queried: how many agents have been queried
+
+    Returns:
+        (bool): True to stop, False to keep querying
     """
     config = context.get_config()
 
     # Warm-up: never stop deterministically before enough agents have been queried.
     if agents_queried <= config.warmup_agents:
-        tracing.indented_logging(f"Estimator: warm-up ({agents_queried} <= {config.warmup_agents} agents) — continue")
+        logging.info("Estimator: warm-up (%s <= %s agents) — continue", agents_queried, config.warmup_agents)
         return False
 
     # No budget (e.g. find queries or no multi-agent budget) → no deterministic stop.
@@ -109,9 +107,13 @@ def run_deterministic_estimator(
     c_worst = observed / upper
     stop = c_worst >= step_budget.t_step
 
-    tracing.indented_logging(
-        f"Estimator: C_worst={c_worst:.4f} (observed={observed}, N_hat_upper={upper:.2f}) "
-        f"threshold={step_budget.t_step:.4f} → {'STOP' if stop else 'continue'}"
+    logging.info(
+        "Estimator: C_worst=%.4f (observed=%s, N_hat_upper=%.2f) threshold=%.4f → %s",
+        c_worst,
+        observed,
+        upper,
+        step_budget.t_step,
+        "STOP" if stop else "continue",
     )
     print(
         f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
@@ -129,19 +131,20 @@ async def run_world_knowledge_stop(
     history: list[TResponseInputItem] | None = None,
     estimator: Estimator | None = None,
 ) -> bool:
-    """LLM world-knowledge stop: sees query + result list, optionally estimator stats.
+    """Ask the LLM whether the result list is complete using world knowledge.
 
-    ``label`` (e.g. ``COMPLETENESS step=s1 agents=3``) is attached to any
-    reasoning printed by the provider hook for this call, so the model's
-    rationale can be associated back to the exact completeness evaluation.
+    ``label`` identifies this evaluation in traces; ``history`` carries prior
+    turns forward; ``estimator`` supplies unknown-unknown stats when configured.
 
-    ``history`` carries the previous runs' conversation items (including
-    reconstructed reasoning) forward, so the model continues from where it left
-    off instead of starting fresh each queried agent.
+    Args:
+        aligned_result_list: the aligned result list
+        query: the step's query
+        label: identifier for trace and print association
+        history: prior conversation items to continue from
+        estimator: the current estimator for unknown-unknown stats
 
-    ``estimator`` supplies unknown-unknown stats when the config asks for
-    ``estimator_reasoning`` in the long-list case (or always, see
-    ``completeness_show_estimator_stats``).
+    Returns:
+        (bool): True to stop, False to keep querying
     """
     config = context.get_config()
     result: bool | None = None
@@ -214,7 +217,7 @@ async def run_world_knowledge_stop(
         except MaxTurnsExceeded as e:
             max_turns_exceeded = True
             result = None
-            tracing.indented_logging(f"[LLM] completeness reached max_turns without deciding — forcing continue ({e})")
+            logging.warning("[LLM] completeness reached max_turns without deciding — forcing continue (%s)", e)
         if history is not None and run_result is not None:
             history[:] = run_result.continuation_input
         tracing.append_to_span_output({"stop": result, "max_turns_exceeded": max_turns_exceeded})
@@ -233,11 +236,20 @@ async def run_completeness_evaluator(
     force_result: bool,
     history: list[TResponseInputItem] | None = None,
 ) -> StopDecision | None:
-    """
-    Combined completeness decision: deterministic estimator, then LLM world knowledge.
+    """Return the combined completeness decision for a step.
 
-    Returns a `StopDecision` when the result is complete (the caller produces the
-    final answer), or ``None`` to keep querying.
+    Args:
+        aligned_result_list: the aligned result list
+        estimator: the current estimator
+        query: the step's query
+        merge_task: how agent results are merged
+        step_budget: the step's completeness budget
+        agents_queried: how many agents have been queried
+        force_result: whether to stop because all agents were queried
+        history: prior conversation items to continue from
+
+    Returns:
+        (StopDecision | None): the stop decision, or None to keep querying
     """
     observed = estimator.sample_count() if estimator is not None else None
 

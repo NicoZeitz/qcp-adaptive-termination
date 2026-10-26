@@ -1,29 +1,16 @@
-"""Completeness evaluation worker.
+"""Completeness evaluation worker: run one query and capture per-step results."""
 
-Runs the full execution pipeline (including the real completeness evaluator:
-deterministic estimator stop + LLM world-knowledge stop + result producer) once
-per query and records, for each multi-agent step, where it stopped vs ground
-truth.
-
-The query plan is executed exactly once per input query. Post-hooks on the
-data-agent query and completeness events capture, per step, the agent query
-order, the estimator state, and the stop decision. Per-step results are then
-built from that captured trajectory.
-"""
-
-import csv
 import json
 import logging
 import math
 import re
+from argparse import Namespace
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 import pandas as pd
-import requests
 from agents.items import TResponseInputItem
 from agents.usage import Usage
 from pydantic import BaseModel
@@ -53,10 +40,8 @@ from qcp_adaptive_termination.models.query_plan import (
     MultiAgentQueryPlanStep,
     QueryPlan,
 )
-from qcp_adaptive_termination.models.stages import CollaborativeQueryAnswering
+from qcp_adaptive_termination.models.stages import CollaborativeQueryAnswering, Stage
 from qcp_adaptive_termination.observability import context
-from qcp_adaptive_termination.observability.usage import CSV_COLUMNS, UsageReport
-from qcp_adaptive_termination.stages import execute_query_plan
 from scripts.completeness_evaluation.ground_truth import compute_ground_truth
 from scripts.completeness_evaluation.models import BatchRecord, GroundTruth, StepResult
 from scripts.completeness_evaluation.results import save_step_results
@@ -67,6 +52,7 @@ from scripts.utils.canonical import (
     parse_canonical_table,
     query_agent_canonical,
 )
+from scripts.utils.setup import run_script
 from scripts.utils.sql import parse_select_columns
 
 # Per-step dispatch maps: step execution_id -> step-specific handler.
@@ -81,14 +67,6 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, pd.DataFrame):
         return value.to_dict(orient="records")
     return value
-
-
-def _write_usage_csv(path: Path, rows: list[dict[str, Any]]) -> None:
-    """Write one row per call to ``path``."""
-    with path.open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
-        writer.writeheader()
-        writer.writerows(rows)
 
 
 def _replan_error(
@@ -288,11 +266,8 @@ def _produced_scalar_and_errors(
 ) -> tuple[float | None, float | None, float | None]:
     """Extract a scalar from the produced answer and relative errors vs truth.
 
-    The produced answer is a serialized result dict (``{columns, index, data}``)
-    from ``result_type.serialize(..., context=\"full\")``. A single numeric cell
-    is treated as the produced scalar; relative errors are computed against the
-    ground-truth average and sum independently, since the evaluator does not know
-    which aggregate the query asks for.
+    A single numeric cell is treated as the produced scalar; errors are computed
+    against the ground-truth average and sum.
     """
     if isinstance(produced, dict) and produced.get("data"):
         cells = [c for row in produced["data"] for c in row]
@@ -569,13 +544,7 @@ class _StepTracker:
         return self._aggregation.get(step_id)
 
     def fill_batch_derived(self) -> None:
-        """Fill per-check predicted-remaining and realized-unseen from observed counts.
-
-        ``predicted_remaining`` is the estimator's upper-bound missing mass
-        (N_hat_upper - observed) at that check; ``realized_unseen`` is how many
-        genuinely new unique rows the next check actually added (post-hoc, from
-        the observed unique count) — used to calibrate continue decisions.
-        """
+        """Fill per-check predicted-remaining and realized-unseen from observed counts."""
         for _step_id, batches in self._batches.items():
             prev_observed = 0
             for batch in batches:
@@ -703,6 +672,199 @@ def _build_step_result(
     return result
 
 
+class _CompletenessRunner:
+    """Hook-only completeness evaluation for one query."""
+
+    def __init__(self) -> None:
+        self.tracker: _StepTracker | None = None
+        self.step_infos: list[tuple[MultiAgentQueryPlanStep, dict[str, Any]]] = []
+        self.relevant_data_agents: list[DataAgent] = []
+        self.all_agents: list[DataAgent] = []
+        self.meta_mapping: dict[str, Any] = {}
+        self.data_dir: Path | None = None
+        self.query: str = ""
+        self.query_slug: str = ""
+        self.run_output_dir: Path | None = None
+        self._align_dispatch: Callable[..., AlignedResultList] | None = None
+        self._data_dispatch: Callable[..., PartialQueryAnswer] | None = None
+
+    async def before(self, ctx) -> None:
+        """Pre-build data caches/ground truth and register all hooks."""
+        extra = ctx.extra or {}
+        steps_metadata: dict[str, Any] = extra.get("steps_metadata", {})
+        raw_query_plan = extra.get("query_plan")
+
+        if raw_query_plan is None:
+            raise RuntimeError(f"{self.query_slug}: no query_plan in extra — cannot evaluate")
+
+        query_plan = QueryPlan.model_validate(raw_query_plan)
+        multi_steps = [s for s in query_plan.steps if isinstance(s, MultiAgentQueryPlanStep)]
+        if not multi_steps:
+            raise RuntimeError(f"{self.query_slug}: no multi-agent steps — nothing to evaluate")
+
+        data = ctx.data
+        assert isinstance(data, CollaborativeQueryAnswering)
+        assert ctx.output_dir is not None
+        dataset_dir = ctx.dataset_dir or ctx.data_dir
+        data_dir = dataset_dir.parent
+        run_output_dir: Path = ctx.output_dir
+        self.all_agents = data.data_agents
+        relevant_names: set[str] = set(extra.get("relevant_data_agents", []))
+        self.relevant_data_agents = [a for a in self.all_agents if a.name in relevant_names]
+        self.query = query_plan.query
+        self.query_slug = ctx.input_file.stem
+        self.run_output_dir = run_output_dir
+        self.data_dir = data_dir
+        self.meta_mapping = load_meta_mapping(dataset_dir)
+        run_output_dir.mkdir(parents=True, exist_ok=True)
+        self.tracker = _StepTracker(run_output_dir)
+
+        # Pre-build per-step data caches + ground truth.
+        for step in multi_steps:
+            step_meta = steps_metadata.get(step.id)
+            if step_meta is None:
+                logging.warning("%s/%s: no steps_metadata — skipping", self.query_slug, step.id)
+                continue
+            canonical_sql: str = step_meta["sql_query"]
+            schema_meta = step_meta["aligned_schema_metadata"]
+            canonical_table = parse_canonical_table(canonical_sql)
+            if canonical_table is None:
+                continue
+            step_agent_names = set(step.to_agent)
+            step_agents = [a for a in self.relevant_data_agents if a.name in step_agent_names]
+            data_cache: dict[str, pd.DataFrame | None] = {}
+            with ThreadPoolExecutor() as pool:
+                futures = {
+                    agent.name: pool.submit(
+                        query_agent_canonical, agent, canonical_sql, canonical_table, self.meta_mapping, data_dir
+                    )
+                    for agent in step_agents
+                }
+                for name, future in futures.items():
+                    data_cache[name] = future.result()
+            align_handler = make_align_schema_override(step_meta, self.query)
+            data_handler = make_data_agent_override(
+                canonical_sql, canonical_table, self.meta_mapping, data_cache, data_dir
+            )
+            _per_step_align[step.query] = align_handler
+            _per_step_data[step.query] = data_handler
+
+            key_cols: list[str] = schema_meta["keys"]
+            value_column: str | None = schema_meta.get("value_column")
+            aggregation = (
+                AggregationType(schema_meta["aggregation_types"][0]) if schema_meta["aggregation_types"] else None
+            )
+            gt = compute_ground_truth(data_cache, key_cols, value_column)
+            self.tracker.register_step(
+                step_id=step.id,
+                step_query=step.query,
+                key_cols=key_cols,
+                total_unique=gt.count,
+                agents_total=len(step.to_agent),
+                aggregation=aggregation,
+            )
+            self.step_infos.append((step, step_meta))
+
+        # Inject the precomputed plan so run_stages at EXECUTION sees a DraftedQueryPlan.
+        from qcp_adaptive_termination.models.stages import DraftedQueryPlan
+
+        drafted = DraftedQueryPlan(
+            query_plan=query_plan,
+            relevant_data_agents=self.relevant_data_agents,
+            data_agents=self.all_agents,
+            planning_continuation=None,
+        )
+
+        @hooks.overwrite(HookEvent.SETUP_LOAD_INPUT)
+        def _load_input_override(execution_id, path) -> tuple[Any, dict[str, Any] | None]:
+            del execution_id, path
+            return drafted, extra
+
+        hooks.clear(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN)
+        self._align_dispatch = _make_align_dispatch(_per_step_align)
+        self._data_dispatch = _make_data_dispatch(_per_step_data)
+        hooks.register_overwrite(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
+            self._align_dispatch,
+        )
+        hooks.register_overwrite(HookEvent.EXECUTION_QUERY_DATA_AGENT, self._data_dispatch)
+        hooks.register_overwrite(HookEvent.EXECUTION_REPLAN_DRAFT_QUERY_PLAN, _replan_error)
+        hooks.register_post(HookEvent.EXECUTION_QUERY_DATA_AGENT, self.tracker.on_agent_query)
+        hooks.register_post(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS,
+            self.tracker.on_completeness,
+        )
+        hooks.register_post(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_ESTIMATOR,
+            self.tracker.on_estimator,
+        )
+        hooks.register_post(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_LLM,
+            self.tracker.on_llm,
+        )
+        hooks.register_post(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_RESULT_PRODUCER,
+            self.tracker.on_produce_result,
+        )
+        hooks.register_post(HookEvent.AGENT_COMPLETED, self.tracker.on_llm_completed)
+
+    async def after(self, ctx, result) -> None:
+        """Unregister hooks and build per-step results from the trajectory."""
+        del ctx, result
+        assert self.tracker is not None
+        if self._align_dispatch is not None:
+            hooks.unregister_overwrite(
+                HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
+                self._align_dispatch,
+            )
+        if self._data_dispatch is not None:
+            hooks.unregister_overwrite(HookEvent.EXECUTION_QUERY_DATA_AGENT, self._data_dispatch)
+        hooks.unregister_overwrite(HookEvent.EXECUTION_REPLAN_DRAFT_QUERY_PLAN, _replan_error)
+        hooks.unregister_post(HookEvent.EXECUTION_QUERY_DATA_AGENT, self.tracker.on_agent_query)
+        hooks.unregister_post(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS,
+            self.tracker.on_completeness,
+        )
+        hooks.unregister_post(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_ESTIMATOR,
+            self.tracker.on_estimator,
+        )
+        hooks.unregister_post(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_LLM,
+            self.tracker.on_llm,
+        )
+        hooks.unregister_post(
+            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_RESULT_PRODUCER,
+            self.tracker.on_produce_result,
+        )
+        hooks.unregister_post(HookEvent.AGENT_COMPLETED, self.tracker.on_llm_completed)
+        for step, _ in self.step_infos:
+            _per_step_align.pop(step.query, None)
+            _per_step_data.pop(step.query, None)
+
+        self.tracker.fill_batch_derived()
+
+        assert self.run_output_dir is not None and self.data_dir is not None
+
+        # Build per-step results from the captured trajectory.
+        for step, step_meta in self.step_infos:
+            _build_step_result(
+                step=step,
+                step_meta=step_meta,
+                relevant_data_agents=self.relevant_data_agents,
+                meta_mapping=self.meta_mapping,
+                data_dir=self.data_dir,
+                query_slug=self.query_slug,
+                output_dir=self.run_output_dir,
+                tracker=self.tracker,
+            )
+
+
+def make_completeness_runner() -> _CompletenessRunner:
+    """Create the hook-only completeness evaluation runner for one query."""
+    return _CompletenessRunner()
+
+
 async def run_query(
     *,
     input_file: Path,
@@ -713,186 +875,34 @@ async def run_query(
     data: CollaborativeQueryAnswering,
     extra: dict[str, Any] | None,
 ) -> None:
-    """Evaluate the completeness evaluator for one input query (worker)."""
-    extra = extra or {}
-    steps_metadata: dict[str, Any] = extra.get("steps_metadata", {})
+    """Run completeness evaluation for one query.
 
-    raw_query_plan = extra.get("query_plan")
-    if raw_query_plan is None:
-        logging.warning("%s: no query_plan in extra — skipping", input_file.stem)
-        return
-
-    query_plan = QueryPlan.model_validate(raw_query_plan)
-    multi_steps = [s for s in query_plan.steps if isinstance(s, MultiAgentQueryPlanStep)]
-
-    if not multi_steps:
-        logging.warning("%s: no multi-agent steps — skipping", input_file.stem)
-        return
-
-    data_dir = dataset_dir.parent
-    meta_mapping = load_meta_mapping(dataset_dir)
-    all_agents = data.data_agents
-    relevant_agent_names: set[str] = set(extra.get("relevant_data_agents", []))
-    relevant_data_agents = [a for a in all_agents if a.name in relevant_agent_names]
-    query = query_plan.query
+    Args:
+        input_file: input query JSON path
+        config: config to use for the run
+        dataset_dir: dataset folder with _meta/input and meta mapping
+        output_dir: directory to write per-query outputs
+        cache_dir: directory for cache files
+        data: parsed collaborative query answering input
+        extra: extra context (query plan and step metadata)
+    """
     query_slug = input_file.stem
     run_output_dir = output_dir / query_slug
-
-    # Pre-build per-step data caches + ground truth (needed by the tracker and
-    # the per-step result builder).
-    step_infos: list[tuple[MultiAgentQueryPlanStep, dict[str, Any], dict[str, pd.DataFrame | None], str]] = []
-    for step in multi_steps:
-        step_meta = steps_metadata.get(step.id)
-        if step_meta is None:
-            logging.warning("%s/%s: no steps_metadata — skipping", input_file.stem, step.id)
-            continue
-        canonical_sql: str = step_meta["sql_query"]
-        schema_meta = step_meta["aligned_schema_metadata"]
-        canonical_table = parse_canonical_table(canonical_sql)
-        if canonical_table is None:
-            continue
-        step_agent_names = set(step.to_agent)
-        step_agents = [a for a in relevant_data_agents if a.name in step_agent_names]
-        data_cache: dict[str, pd.DataFrame | None] = {}
-        with ThreadPoolExecutor() as pool:
-            futures = {
-                agent.name: pool.submit(
-                    query_agent_canonical, agent, canonical_sql, canonical_table, meta_mapping, data_dir
-                )
-                for agent in step_agents
-            }
-            for name, future in futures.items():
-                data_cache[name] = future.result()
-        step_infos.append((step, step_meta, data_cache, canonical_table))
-
-    # Register per-step dispatch handlers keyed by step query (each step has a
-    # distinct query, so it uniquely identifies the step even when steps share
-    # agents).
-    execution_id = uuid4().hex[:12]
-    run_output_dir.mkdir(parents=True, exist_ok=True)
-    tracker = _StepTracker(run_output_dir)
-    for step, step_meta, data_cache, canonical_table in step_infos:
-        align_handler = make_align_schema_override(step_meta, query)
-        data_handler = make_data_agent_override(
-            step_meta["sql_query"], canonical_table, meta_mapping, data_cache, data_dir
-        )
-        _per_step_align[step.query] = align_handler
-        _per_step_data[step.query] = data_handler
-        schema_meta = step_meta["aligned_schema_metadata"]
-        key_cols: list[str] = schema_meta["keys"]
-        value_column: str | None = schema_meta.get("value_column")
-        aggregation = AggregationType(schema_meta["aggregation_types"][0]) if schema_meta["aggregation_types"] else None
-        gt = compute_ground_truth(data_cache, key_cols, value_column)
-        tracker.register_step(
-            step_id=step.id,
-            step_query=step.query,
-            key_cols=key_cols,
-            total_unique=gt.count,
-            agents_total=len(step.to_agent),
-            aggregation=aggregation,
-        )
-
-    hooks.clear(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN)
-    align_dispatch = _make_align_dispatch(_per_step_align)
-    data_dispatch = _make_data_dispatch(_per_step_data)
-    hooks.register_overwrite(
-        HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
-        align_dispatch,
+    args = Namespace(
+        name="",
+        input=str(input_file),
+        config=None,
+        output_dir=str(run_output_dir),
+        cache_dir=str(cache_dir) if cache_dir else None,
+        dataset_dir=str(dataset_dir),
+        start_stage=Stage.EXECUTION,
+        end_stage=Stage.EXECUTION,
     )
-    hooks.register_overwrite(HookEvent.EXECUTION_QUERY_DATA_AGENT, data_dispatch)
-    hooks.register_overwrite(HookEvent.EXECUTION_REPLAN_DRAFT_QUERY_PLAN, _replan_error)
-    hooks.register_post(HookEvent.EXECUTION_QUERY_DATA_AGENT, tracker.on_agent_query)
-    hooks.register_post(
-        HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS,
-        tracker.on_completeness,
-    )
-    hooks.register_post(
-        HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_ESTIMATOR,
-        tracker.on_estimator,
-    )
-    hooks.register_post(
-        HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_LLM,
-        tracker.on_llm,
-    )
-    hooks.register_post(
-        HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_RESULT_PRODUCER,
-        tracker.on_produce_result,
-    )
-    hooks.register_post(HookEvent.AGENT_COMPLETED, tracker.on_llm_completed)
-
-    usage_report = UsageReport()
-
-    def _on_llm_usage(execution_id, role, agent_name, label, model, usage) -> None:
-        del execution_id
-        usage_report.record_llm(role, agent_name, label, model, usage)
-
-    def _on_embedding_usage(execution_id, text: str, model: str, prompt_tokens: int) -> None:
-        del execution_id
-        usage_report.record_embedding(text, model, prompt_tokens)
-
-    hooks.register_post(HookEvent.AGENT_COMPLETED, _on_llm_usage)
-    hooks.register_post(HookEvent.EMBEDDING_COMPLETED, _on_embedding_usage)
-
-    try:
-        with (
-            hooks.execution_context(execution_id),
-            context.config_context(config.model_copy(update={"continue_after_final_result": False})),
-        ):
-            await execute_query_plan(
-                query_plan=QueryPlan.model_validate(raw_query_plan),
-                relevant_data_agents=relevant_data_agents,
-                data_agents=all_agents,
-            )
-    except Exception as exc:
-        logging.warning("%s: query failed: %s", query_slug, exc)
-        logging.exception(exc)
-        if isinstance(exc, requests.exceptions.Timeout):
-            raise SystemExit(1) from exc
-    finally:
-        hooks.unregister_overwrite(
-            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
-            align_dispatch,
-        )
-        hooks.unregister_overwrite(HookEvent.EXECUTION_QUERY_DATA_AGENT, data_dispatch)
-        hooks.unregister_overwrite(HookEvent.EXECUTION_REPLAN_DRAFT_QUERY_PLAN, _replan_error)
-        hooks.unregister_post(HookEvent.EXECUTION_QUERY_DATA_AGENT, tracker.on_agent_query)
-        hooks.unregister_post(
-            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS,
-            tracker.on_completeness,
-        )
-        hooks.unregister_post(
-            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_ESTIMATOR,
-            tracker.on_estimator,
-        )
-        hooks.unregister_post(
-            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_LLM,
-            tracker.on_llm,
-        )
-        hooks.unregister_post(
-            HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_RESULT_PRODUCER,
-            tracker.on_produce_result,
-        )
-        hooks.unregister_post(HookEvent.AGENT_COMPLETED, tracker.on_llm_completed)
-        hooks.unregister_post(HookEvent.AGENT_COMPLETED, _on_llm_usage)
-        hooks.unregister_post(HookEvent.EMBEDDING_COMPLETED, _on_embedding_usage)
-        for step, _, _, _ in step_infos:
-            _per_step_align.pop(step.query, None)
-            _per_step_data.pop(step.query, None)
-
-    tracker.fill_batch_derived()
-
-    (run_output_dir / "usage.json").write_text(json.dumps(usage_report.summarize(config), indent=2), encoding="utf-8")
-    _write_usage_csv(run_output_dir / "usage.csv", usage_report.call_rows(config))
-
-    # Build per-step results from the captured trajectory.
-    for step, step_meta, _, _ in step_infos:
-        _build_step_result(
-            step=step,
-            step_meta=step_meta,
-            relevant_data_agents=relevant_data_agents,
-            meta_mapping=meta_mapping,
-            data_dir=data_dir,
-            query_slug=query_slug,
-            output_dir=run_output_dir,
-            tracker=tracker,
+    runner = make_completeness_runner()
+    with context.config_context(config.model_copy(update={"continue_after_final_result": False})):
+        await run_script(
+            args=args,
+            before_fn=runner.before,
+            after_fn=runner.after,
+            config=config,
         )

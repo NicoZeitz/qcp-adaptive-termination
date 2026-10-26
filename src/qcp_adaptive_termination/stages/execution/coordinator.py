@@ -1,3 +1,5 @@
+"""Coordinator answer step for a single-agent query plan step."""
+
 from typing import Any
 
 import pandas as pd
@@ -31,6 +33,15 @@ async def answer_step_coordinator(
     query_plan_step: QueryPlanStep,
     additional_information: list[AdditionalInformation],
 ) -> PartialQueryAnswer:
+    """Answer one query plan step as the coordinator.
+
+    Args:
+        query_plan_step: the step to answer
+        additional_information: the satisfying dependency answers
+
+    Returns:
+        (PartialQueryAnswer): the coordinator's partial answer
+    """
     query = query_plan_step.query
 
     with tracing.own_span(

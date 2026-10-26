@@ -1,10 +1,4 @@
-"""Render a run's raw conversation into a full, interleaved Markdown transcript.
-
-The transcript is derived purely from the raw ``continuation_input`` (the
-``to_input_list()`` dicts: reasoning, messages, tool calls/outputs), which is
-also what gets cached. This keeps the cache bare metal and lets rendering change
-independently of how runs are executed.
-"""
+"""Render a run's raw conversation into a full, interleaved Markdown transcript."""
 
 import json
 import re
@@ -89,9 +83,7 @@ def render_run_markdown(
 def transcript_filename(meta: RunMeta) -> str:
     """Derive a meaningful filename from a run's identifiers.
 
-    Uses the label when present (carries step + agents_queried, e.g.
-    ``COMPLETENESS step=s1 agents_queried=2``); otherwise a role + agent-name
-    based name.
+    Uses the label when present; otherwise a role + agent-name based name.
     """
     if meta.label:
         slug = re.sub(r"[^A-Za-z0-9_-]+", "_", meta.label).strip("_")

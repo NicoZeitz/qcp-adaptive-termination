@@ -1,9 +1,4 @@
-"""
-Text embedding creation and vector search.
-
-Wraps an embedding model to produce dense vectors and provides an in-memory
-`VectorIndex` for top-k nearest-neighbor lookups.
-"""
+"""Text embedding creation and vector search."""
 
 import asyncio
 from typing import cast, overload
@@ -26,6 +21,7 @@ _EMBEDDING_SEMAPHORE = asyncio.Semaphore(5)
 
 
 def _get_embedding_client_and_model() -> tuple[AsyncOpenAI, str]:
+    """Resolve and return the embedding client and model name."""
     embedding_model = context.get_config().embedding_model
     multi_provider = model_provider.get_multi_provider()
     prefix, stripped = cast(tuple[str, str], multi_provider._get_prefix_and_model_name(embedding_model))  # type: ignore[reportPrivateUsage]
@@ -41,11 +37,13 @@ def _get_embedding_client_and_model() -> tuple[AsyncOpenAI, str]:
 
 
 def _num_tokens_from_string(string: list[str], encoding_name: str = "cl100k_base") -> list[int]:
+    """Return the token count of each input string."""
     encoding = tiktoken.get_encoding(encoding_name)
     return list(map(lambda x: len(x), encoding.encode_batch(string)))
 
 
 async def _create_batched(texts: list[str]) -> list[np.ndarray]:
+    """Create embeddings for texts, batching when over the per-request token limit."""
     client, model = _get_embedding_client_and_model()
 
     if len(texts) == 1:
@@ -109,6 +107,7 @@ _inflight: dict[str, asyncio.Future[np.ndarray]] = {}
 
 
 async def _create_with_inflight(texts: list[str]) -> list[np.ndarray]:
+    """Create embeddings, sharing in-flight requests for identical texts."""
     loop = asyncio.get_running_loop()
 
     to_request: list[str] = []
@@ -141,6 +140,7 @@ async def create(text: str) -> np.ndarray: ...
 @overload
 async def create(text: list[str]) -> list[np.ndarray]: ...
 async def create(text):
+    """Create dense embeddings for a single text or a list of texts."""
     with tracing.own_span("Embedding", input={"text": text}):
         is_single = not isinstance(text, list)
         texts = [text] if is_single else text

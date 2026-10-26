@@ -1,3 +1,5 @@
+"""Per-agent relevance filtering of data agents."""
+
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.hooks import HookEvent
@@ -12,6 +14,16 @@ async def filter_data_agent(
     item: tuple[DataAgent, str],
     additional_context: str | None = None,
 ) -> DataAgent | None:
+    """Ask one data agent whether it is relevant to the query.
+
+    Args:
+        query: the user query
+        item: the agent and its coordinator reasoning
+        additional_context: extra context
+
+    Returns:
+        (DataAgent | None): the agent if relevant, else None
+    """
     data_agent, reasoning = item
     prompt_parameters: dict[str, str | None] = {
         "query": query,

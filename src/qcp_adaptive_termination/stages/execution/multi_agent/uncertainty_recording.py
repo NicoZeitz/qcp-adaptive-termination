@@ -13,7 +13,16 @@ def build_step_uncertainty(
     estimator: Estimator | None,
     stop_reason: StopReason,
 ) -> StepUncertainty:
-    """Record the uncertainty metadata for one step from its final estimator."""
+    """Record the uncertainty metadata for one step from its final estimator.
+
+    Args:
+        step_id: the step id
+        estimator: the final estimator
+        stop_reason: why execution stopped
+
+    Returns:
+        (StepUncertainty): the step's uncertainty metadata
+    """
     if estimator is None:
         return StepUncertainty(step_id=step_id, stop_reason=stop_reason)
 

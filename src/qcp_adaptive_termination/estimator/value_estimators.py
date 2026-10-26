@@ -8,11 +8,7 @@ from qcp_adaptive_termination.models.estimation import ValueEstimator
 
 
 def estimate_sum(stats: FrequencyStats, value_estimator: ValueEstimator, estimated_count: float) -> float:
-    """
-    Estimated total SUM including the contribution from missing entities.
-
-    Returns inf if the delta is not finite.
-    """
+    """Estimated total SUM including the contribution from missing entities."""
     d = estimate_delta(stats, value_estimator, estimated_count)
     return math.inf if not math.isfinite(d) else stats.observed_value_sum + d
 
@@ -22,12 +18,7 @@ def estimate_delta(
     value_estimator: ValueEstimator,
     estimated_count: float,
 ) -> float:
-    """
-    Estimated SUM contribution of missing entities (Δ = φ_D - φ_K).
-
-    ``estimated_count`` is the precomputed N_hat (observed + missing) so the
-    caller can reuse a single count estimate across value estimators.
-    """
+    """Estimated SUM contribution of missing entities (Δ = φ_D - φ_K)."""
     if value_estimator is ValueEstimator.NAIVE:
         return _naive_delta(stats, estimated_count)
     if value_estimator is ValueEstimator.FREQUENCY:
@@ -40,12 +31,7 @@ def estimate_delta(
 
 
 def _naive_delta(stats: FrequencyStats, estimated_count: float) -> float:
-    """
-    Estimated SUM of missing entities using mean substitution.
-
-    Assumes missing entities have the same average value as the observed ones:
-    Δ = (φ_K / c) * (N_hat - c).
-    """
+    """Estimated SUM of missing entities using mean substitution."""
     if not math.isfinite(estimated_count):
         return math.inf
     return (stats.observed_value_sum / stats.observed_unique_entities) * (
@@ -54,13 +40,7 @@ def _naive_delta(stats: FrequencyStats, estimated_count: float) -> float:
 
 
 def _frequency_delta(stats: FrequencyStats, estimated_count: float) -> float:
-    """
-    Estimated SUM of missing entities using the average singleton value.
-
-    Uses φ_f1 / f1 as the value estimate instead of the overall mean,
-    since singletons are the best proxy for unseen entities.
-    Returns 0 when there are no singletons.
-    """
+    """Estimated SUM of missing entities using the average singleton value."""
     singleton_count = stats.singleton_count
     if singleton_count == 0:
         return 0.0
@@ -70,14 +50,7 @@ def _frequency_delta(stats: FrequencyStats, estimated_count: float) -> float:
 
 
 def _good_turing_delta(stats: FrequencyStats) -> float:
-    """
-    Estimated SUM of missing entities using Good-Turing frequency smoothing.
-
-    Does not require a separate count estimator: derives Δ directly from
-    the singleton sum and the ratio f1 / (n - f1), which is the Good-Turing
-    estimate of the missing probability mass scaled to the observed aggregate.
-    Returns 0 when there are no singletons or all observations are singletons.
-    """
+    """Estimated SUM of missing entities using Good-Turing frequency smoothing."""
     singleton_count = stats.singleton_count
     if singleton_count == 0:
         return 0.0
@@ -87,13 +60,7 @@ def _good_turing_delta(stats: FrequencyStats) -> float:
 
 
 def _frequency_f12_delta(stats: FrequencyStats, estimated_count: float) -> float:
-    """
-    Estimated SUM of missing entities using the average singleton+doubleton value.
-
-    Uses φ_f12 / (f1 + f2) as the value estimate, blending singletons and
-    doubletons to reduce variance compared to singletons alone.
-    Returns 0 when there are neither singletons nor doubletons.
-    """
+    """Estimated SUM of missing entities using the average singleton+doubleton value."""
     doubleton_count = stats.doubleton_count
     denom = stats.singleton_count + doubleton_count
     if denom == 0:

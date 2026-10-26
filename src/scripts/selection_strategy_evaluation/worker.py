@@ -1,8 +1,8 @@
 """Selection strategy evaluation worker.
 
 Benchmarks every selection strategy on each multi-agent step of a query plan.
-The LLM-heavy parts of the pipeline (align_schema, data_agent, completeness)
-are stubbed; only the selection-strategy ranking machinery runs for real.
+Only the selection-strategy ranking machinery runs for real; the LLM-heavy
+pipeline parts are stubbed.
 """
 
 import asyncio
@@ -171,12 +171,7 @@ def _save_strategy_curve(
     strategy: str,
     curve: EvaluationCurve,
 ) -> None:
-    """Append a single strategy's curve to a per-strategy CSV, eagerly.
-
-    Writes to a dedicated file per strategy so results are durable even if the
-    overall step never finishes (e.g. a sibling strategy hangs on the full agent
-    set). Consumed by ``_save_results`` when available.
-    """
+    """Append a single strategy's curve to a per-strategy CSV, eagerly."""
     subdir = output_dir / "curves"
     subdir.mkdir(parents=True, exist_ok=True)
     file_path = subdir / f"{query_slug}_{step_id}__{strategy}.csv"
@@ -209,12 +204,7 @@ def _run_strategy_worker(
     cache_dir: str | None,
     output_dir: str,
 ) -> tuple[str, EvaluationCurve | None, str | None]:
-    """Run one strategy in a fresh worker process (its own hooks + context).
-
-    The strategy machinery is process-local: each worker registers its own
-    ALIGN_SCHEMA / DATA_AGENT / COMPLETENESS overwrites and its own agent
-    query-tracking post hook, so strategies can run concurrently across cores.
-    """
+    """Run one strategy in a fresh worker process (its own hooks and context)."""
     _per_strategy_align.clear()
     _per_strategy_data.clear()
     align_dispatch = make_align_schema_dispatch(_per_strategy_align)
@@ -234,18 +224,8 @@ def _run_strategy_worker(
     align_handler = make_align_schema_override(step_meta, query)
     data_handler = make_data_agent_override(canonical_sql, canonical_table, meta_mapping, data_cache, data_dir_path)
 
-    # Route this worker's logs to the same stderr log as the parent without the
-    # redirect/tee-based `logging_context` (which corrupts shared handlers when a
-    # pool worker is reused). Use a plain append FileHandler instead. In a fresh
-    # worker process the root logger defaults to WARNING, so raise it to INFO.
-    log_file = Path(output_dir) / "stderr.log"
-    log_file.parent.mkdir(parents=True, exist_ok=True)
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    file_handler = logging.FileHandler(log_file, mode="a")
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
-    root_logger.addHandler(file_handler)
+    # Fresh worker process: apply the shared logging config (writes to stderr.log).
+    context.configure_logging(Path(output_dir))
 
     with (
         context.config_context(config),
@@ -272,8 +252,8 @@ def _run_strategy_worker(
             logging.exception("Strategy %s/%s crashed in worker", step.id, strategy)
             return str(strategy), None, f"{type(exc).__name__}: {exc}"
         finally:
-            logging.getLogger().removeHandler(file_handler)
-            file_handler.close()
+            for handler in logging.getLogger().handlers:
+                handler.close()
             hooks.unregister_overwrite(
                 HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_ALIGN_SCHEMA,
                 align_dispatch,
@@ -311,9 +291,7 @@ async def _run_strategies(
 ) -> list[tuple[str, EvaluationCurve | None, str | None]]:
     """Run all selection strategies, in parallel worker processes when enabled.
 
-    Each strategy can run on its own core: agent-registry, sketch, and embedding
-    precomputes are CPU heavy and previously serialized inside one process.
-    Falls back to in-process `asyncio.gather` for ``strategy_workers <= 1``.
+    Falls back to in-process ``asyncio.gather`` for ``strategy_workers <= 1``.
     """
     if strategy_workers <= 1:
         align_handler = make_align_schema_override(step_meta, query)

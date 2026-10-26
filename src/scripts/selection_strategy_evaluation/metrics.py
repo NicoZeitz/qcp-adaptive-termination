@@ -15,11 +15,10 @@ class EvaluationCurve:
 
 
 def compute_auc(coverages: list[float]) -> float:
-    """
-    Mean coverage over the full sequence of queried agents.
+    """Mean coverage over the full sequence of queried agents.
 
-    `coverages` holds coverage after each queried agent, including agents queried
-    after full coverage. Fixed horizon keeps scores comparable across strategies.
+    Args:
+        coverages: coverage after each queried agent
     """
     if not coverages:
         return 0.0
@@ -27,10 +26,13 @@ def compute_auc(coverages: list[float]) -> float:
 
 
 def compute_relative_auc(auc: float, oracle_auc: float) -> float:
-    """
-    AUC normalized by the oracle AUC, so the oracle scores exactly 1.0.
+    """AUC normalized by the oracle AUC, so the oracle scores exactly 1.0.
 
     Degenerate case (oracle AUC = 0, i.e. nothing to cover) counts as perfect.
+
+    Args:
+        auc: strategy AUC
+        oracle_auc: oracle (ground-truth best) AUC
     """
     if oracle_auc <= 0.0:
         return 1.0
@@ -43,10 +45,15 @@ def build_curve(
     total_unique: int,
     key_cols: list[str],
 ) -> EvaluationCurve:
-    """
-    Build coverage curve from ordered agent query sequence.
+    """Build a coverage curve from the ordered agent query sequence.
 
     X = fraction of agents queried, Y = fraction of total unique rows covered.
+
+    Args:
+        ordered_agents: agents in query order
+        data_cache: agent name to result dataframe
+        total_unique: total distinct rows across all agents
+        key_cols: key columns used to deduplicate rows
     """
     agents_total = len(ordered_agents)
     if total_unique == 0 or agents_total == 0:
@@ -76,13 +83,7 @@ def compute_greedy_oracle(
     total_unique: int,
     key_cols: list[str],
 ) -> EvaluationCurve:
-    """Greedy oracle: always pick the agent with the most new unique rows next.
-
-    Each agent's key set is precomputed once up front, and the not-yet-seen
-    remainder is tracked incrementally per agent, so we never re-build key sets
-    nor recompute full cross-products on every greedy step. Same greedy result,
-    far less work for large agent sets.
-    """
+    """Greedy oracle: always pick the agent with the most new unique rows next."""
     # Precompute each agent's key set ONCE (the expensive part).
     agent_keys: dict[str, frozenset] = {}
     for name in relevant_agent_names:

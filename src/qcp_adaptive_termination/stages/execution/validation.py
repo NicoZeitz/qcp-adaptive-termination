@@ -1,3 +1,5 @@
+"""Validation of data agent outputs and schemas."""
+
 import pandas as pd
 from pandas import DataFrame
 
@@ -8,6 +10,15 @@ from qcp_adaptive_termination.models import (
 
 
 def validate_agent_output(dataframe: DataFrame, metadata: AlignedSchemaMetadata) -> DataFrame:
+    """Validate a data agent's output against the aligned schema.
+
+    Args:
+        dataframe: the agent's output
+        metadata: the expected schema metadata
+
+    Returns:
+        (DataFrame): the validated dataframe
+    """
     # if the dataframe is empty, just create a dataframe that is aligned with the schema metadata and return it
     if dataframe.empty:
         empty_df = pd.DataFrame(columns=metadata.columns)
@@ -53,6 +64,15 @@ def validate_schema_output(
     source_agent_column: str,
     aggregation_types: list[AggregationType],
 ):
+    """Validate a proposed aligned schema definition.
+
+    Args:
+        columns: the schema columns
+        keys: the key columns
+        value_column: the numeric value column
+        source_agent_column: the reserved source-agent column
+        aggregation_types: the allowed aggregation types
+    """
     errors = []
 
     if not keys.issubset(columns):

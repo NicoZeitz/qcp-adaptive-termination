@@ -1,10 +1,4 @@
-"""Adaptive bucket splitting for the bucket-based estimator.
-
-Implements the greedy split loop that partitions the value range into buckets
-so each bucket is roughly homogeneous in value, improving the accuracy of the
-per-bucket count/value estimates. The NAIVE value estimator uses an O(n)
-incremental sweep (numba-accelerated for CHAO92).
-"""
+"""Adaptive bucket splitting for the bucket-based estimator."""
 
 import bisect
 import math
@@ -38,17 +32,10 @@ def _sweep_chao92(
     entity_observation_counts: np.ndarray,
     parent_score: float,
 ) -> int:
-    """
-    O(n) sweep to find the best split index for CHAO92/NAIVE scoring.
+    """Find the best split index for CHAO92/NAIVE scoring via an O(n) sweep.
 
-    Arrays are precomputed by _prepare_sweep_arrays and stored in sorted-samples order.
-    entity_ids[k]                    — integer entity id for samples[k]
-    values[k]                        — samples[k].value
-    entity_position_data/start       — CSR: entity j's positions = data[start[j]:start[j+1]]
-    entity_observation_counts[j]     — total occurrences of entity j in the bucket
-
-    Returns the index k of the last sample to assign to the LEFT partition (split after k),
-    or -1 if no split improves parent_score.
+    Returns:
+        Index of the last sample for the left partition, or -1 if no improvement
     """
     n = len(values)
     c = len(entity_observation_counts)
@@ -145,13 +132,7 @@ def _chao92_naive_score(
     singleton_count: int,
     pair_moment: int,
 ) -> float:  # type: ignore[return]
-    """
-    NAIVE estimated-sum score for a partition using the Chao92 count estimator.
-
-    representative_value_sum — sum of representative (first-occurrence) values for the entities.
-    pair_moment — sum of count*(count-1) across all entities in the partition.
-    Returns inf when sample coverage is zero (all entities are singletons).
-    """
+    """NAIVE estimated-sum score for a partition using the Chao92 count estimator."""
     if unique_count == 0 or observation_count == 0:
         return 0.0
     estimated_count = chao92_scalar(unique_count, observation_count, singleton_count, pair_moment)
@@ -171,15 +152,7 @@ def _prepare_sweep_arrays(
     samples: list[DataItem],
     entity_positions: dict[str, list[int]],
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Build numba-compatible arrays from sorted samples and per-entity position lists.
-
-    Returns (entity_ids, values, position_data, position_start, observation_counts) where:
-      entity_ids[k]                    — integer entity id for samples[k]
-      values[k]                        — samples[k].value
-      position_data / position_start   — CSR: entity j's positions = data[start[j]:start[j+1]]
-      observation_counts[j]            — total occurrences of entity j
-    """
+    """Build numba-compatible arrays from sorted samples and per-entity position lists."""
     entity_list = list(entity_positions.keys())
     entity_count = len(entity_list)
     sample_count = len(samples)
@@ -206,13 +179,7 @@ def bucket_sum_est(
     bucket_value_estimator: ValueEstimator,
     bucket_count_estimator: CountEstimator,
 ) -> float:
-    """
-    Estimated SUM for a single bucket, used as the splitting score.
-
-    Computed directly from Bucket.histogram and Bucket.f — no Estimator object
-    created — so the split loop avoids thousands of pandas groupby calls.
-    Only the CHAO92 count estimator is supported for bucket splitting.
-    """
+    """Estimated SUM for a single bucket, used as the splitting score."""
     if bucket_count_estimator is not CountEstimator.CHAO92:
         raise ValueError(f"Bucket splitting only supports CHAO92, got {bucket_count_estimator}")
 
@@ -253,13 +220,7 @@ def bucket_sum_est(
 
 
 def split_bucket(bucket: Bucket, split_value: float) -> tuple[Bucket, Bucket]:
-    """
-    Split a bucket at split_value into left (≤ split_value) and right (> split_value).
-
-    Assumes bucket.samples is sorted by value ascending (guaranteed by _dynamic_buckets).
-    Uses bisect to find the partition point in O(log n), then bulk-loads each half and
-    rebuilds the frequency vector once per child instead of once per sample.
-    """
+    """Split a bucket at split_value into left (≤ split_value) and right (> split_value)."""
     samples = bucket.samples
     keys = [s.value for s in samples]
     cut = bisect.bisect_right(keys, split_value)
@@ -285,11 +246,10 @@ def find_best_split(
     count_estimator: CountEstimator,
     parent_score: float,
 ) -> float | None:
-    """
-    Find best split value via O(n) incremental sweep for NAIVE value estimator.
+    """Find the best split value for the NAIVE value estimator via an O(n) sweep.
 
-    Delegates to the numba-compiled _sweep_chao92 for maximum throughput.
-    Returns the split value that minimises left+right score, or None if no improvement.
+    Returns:
+        The split value that minimises left+right score, or None if no improvement
     """
     if value_estimator is not ValueEstimator.NAIVE:
         return None
@@ -318,11 +278,7 @@ def run_split_loop(
     *,
     max_buckets: int,
 ) -> list[Bucket]:
-    """
-    Run the greedy split loop until no bucket can be improved.
-
-    Uses the O(n) sweep per bucket — no temporary Bucket copies.
-    """
+    """Run the greedy split loop until no bucket can be improved."""
     previous_count = 0
 
     while len(buckets) > previous_count:
@@ -375,13 +331,7 @@ def warm_split(
     *,
     max_buckets: int,
 ) -> tuple[list[Bucket], dict[int, dict[str, list[DataItem]]]]:
-    """
-    Insert new samples into existing buckets and re-split only the affected ones.
-
-    Returns (new_buckets, new_items_per_surviving_bucket) where the dict maps
-    id(bucket) → {source_id → [DataItem]} for buckets that survived the split loop.
-    Split children are excluded; they must be built from scratch via to_sources().
-    """
+    """Insert new samples into existing buckets and re-split only the affected ones."""
     lower_bounds = [b.lower_bound for b in buckets]
     new_items_per_bucket: dict[int, dict[str, list[DataItem]]] = {}
 

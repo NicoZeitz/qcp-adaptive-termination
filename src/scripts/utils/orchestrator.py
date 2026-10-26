@@ -1,8 +1,7 @@
 """Shared orchestration for evaluation scripts.
 
-Runs a per-query worker function across all input files, either in parallel
-(process pool) or sequentially, then optionally aggregates the per-query
-outputs. Replaces the old bash loop + inline `python3 -c` aggregation.
+Runs a per-query worker function across all input files, in parallel or
+sequentially.
 """
 
 import argparse
@@ -29,12 +28,7 @@ async def _run_worker(
     cache_dir: Path | None,
     extra: dict[str, Any] | None,
 ) -> Any:
-    """Load input + config for one query and run the worker.
-
-    Each worker runs inside its own logging/tracing/data/config context scoped
-    to the per-query output subfolder, so every input file gets its own
-    ``traces.jsonl`` and ``stdout.log``/``stderr.log``.
-    """
+    """Load input and config for one query and run the worker."""
     data, input_extra = load_input(input_file)
     merged_extra = {**(input_extra or {}), **(extra or {})}
     query_slug = input_file.stem

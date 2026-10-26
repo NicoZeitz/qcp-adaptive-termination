@@ -1,20 +1,15 @@
-"""
-Context managers for logging, tracing, cache, and config setup.
-
-Use individually (stacking) or via `pipeline_context` which composes all four.
-`pipeline_context` is idempotent: if already active it is a no-op.
-"""
+"""Context managers for logging, tracing, cache, and config setup, composed via `pipeline_context`."""
 
 import atexit
-import contextlib
 import io
 import logging
+import logging.config
 import os
 import subprocess
 import sys
 import time
 from collections.abc import Generator
-from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from contextlib import ExitStack, contextmanager, redirect_stdout
 from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
@@ -53,26 +48,33 @@ _tracing_providers_var: ContextVar[list[Literal["openai", "file", "langfuse"]] |
 
 
 class _Tee(io.TextIOBase):
+    """Write the same data to multiple streams (e.g. a file and real stdout)."""
+
     def __init__(self, *streams: IO[str]) -> None:
+        """Initialize the tee with the streams to mirror into."""
         super().__init__()
         self.streams = streams
 
     def write(self, data: str) -> int:
+        """Write data to all wrapped streams."""
         for stream in self.streams:
             stream.write(data)
         return len(data)
 
     def flush(self) -> None:
+        """Flush all wrapped streams."""
         for stream in self.streams:
             if not getattr(stream, "closed", False):
                 stream.flush()
 
 
 def get_cache() -> Cache | None:
+    """Return the active cache, or None if not set."""
     return _cache_var.get()
 
 
 def get_config() -> Config:
+    """Return the active config, creating a default one if not set."""
     cfg = _config_var.get()
     if cfg is None:
         cfg = Config()
@@ -81,35 +83,43 @@ def get_config() -> Config:
 
 
 def get_data_dir() -> Path | None:
+    """Return the active data directory, or None if not set."""
     return _data_dir_var.get()
 
 
 def get_output_dir() -> Path | None:
+    """Return the active output directory, or None if not set."""
     return _output_dir_var.get()
 
 
 def get_tracing_providers() -> list[Literal["openai", "file", "langfuse"]]:
+    """Return the enabled tracing providers."""
     providers = _tracing_providers_var.get()
     return providers or []
 
 
 def _is_cache_active() -> bool:
+    """Return whether a cache context is active."""
     return _cache_var.get() is not None
 
 
 def _config_is_active() -> bool:
+    """Return whether a config context is active."""
     return _config_var.get() is not None
 
 
 def _is_logging_active() -> bool:
+    """Return whether the logging context is active."""
     return _logging_active_var.get()
 
 
 def _is_tracing_active() -> bool:
+    """Return whether a trace is active."""
     return get_current_trace() is not None
 
 
 def _is_data_dir_active() -> bool:
+    """Return whether a data-dir context is active."""
     return _data_dir_var.get() is not None
 
 
@@ -118,7 +128,12 @@ def cache_context(
     cache_dir: Path,
     mode: CacheMode = CacheMode.READ_AND_WRITE,
 ) -> Generator[None]:
-    """Set up cache folder and mode. Stacks with existing cache context."""
+    """Set up cache folder and mode. Stacks with existing cache context.
+
+    Args:
+        cache_dir: Directory to store the cache in
+        mode: Cache read/write mode
+    """
     token_cache = _cache_var.set(Cache(folder=cache_dir, mode=mode))
     try:
         cache_dir.mkdir(parents=True, exist_ok=True)
@@ -130,42 +145,65 @@ def cache_context(
         _cache_var.reset(token_cache)
 
 
+def configure_logging(output_dir: Path) -> Path:
+    """Apply ``logging.conf`` so logging writes to ``<output_dir>/stderr.log``.
+
+    Args:
+        output_dir: Directory to write the log file into
+
+    Returns:
+        (Path): Resolved stderr log path
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stderr_log = output_dir / "stderr.log"
+    logging.config.fileConfig(
+        _PROJECT_ROOT / "logging.conf",
+        defaults={"logfile": str(stderr_log)},
+        disable_existing_loggers=False,
+    )
+    return stderr_log
+
+
 @contextmanager
 def logging_context(output_dir: Path) -> Generator[None]:
-    """Set up logging to file + stderr. Stacks with existing logging context."""
+    """Set up logging and output capture in one block.
+
+    Args:
+        output_dir: Directory to write stdout and stderr logs into
+    """
     token_dir = _output_dir_var.set(output_dir)
     token_active = _logging_active_var.set(True)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    with (
-        open(output_dir / "stdout.log", "a") as stdout_file,
-        open(output_dir / "stderr.log", "a") as stderr_file,
-    ):
-        stdout_tee = _Tee(stdout_file, sys.stdout)
-        stderr_tee = _Tee(stderr_file, sys.stderr)
+    stdout_log = output_dir / "stdout.log"
 
-        with (
-            redirect_stdout(stdout_tee),
-            redirect_stderr(stderr_tee),
-        ):
-            _start = time.monotonic()
+    root = logging.getLogger()
+    previous_level = root.level
+    previous_handlers = root.handlers[:]
+    stderr_log = configure_logging(output_dir)
+
+    _start = time.monotonic()
+    with open(stdout_log, "a") as stdout_file, redirect_stdout(_Tee(stdout_file, sys.stdout)):
+        try:
+            logging.info("Logging initialized. Log file: %s", stderr_log)
             try:
-                logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
-                logging.info(f"Logging initialized. Log file: {output_dir / 'stdout.log'}")
-                try:
-                    git_log = subprocess.check_output(
-                        ["git", "log", "-1", "--oneline"], text=True, stderr=subprocess.DEVNULL
-                    ).strip()
-                    logging.info("Git commit: %s", git_log)
-                except Exception:
-                    pass
+                git_log = subprocess.check_output(
+                    ["git", "log", "-1", "--oneline"], text=True, stderr=subprocess.DEVNULL
+                ).strip()
+                logging.info("Git commit: %s", git_log)
+            except Exception:
+                pass
 
-                yield
-            finally:
-                elapsed = time.monotonic() - _start
-                logging.info("Execution time: %.2fs", elapsed)
-                _output_dir_var.reset(token_dir)
-                _logging_active_var.reset(token_active)
+            yield
+        finally:
+            elapsed = time.monotonic() - _start
+            logging.info("Execution time: %.2fs", elapsed)
+            for handler in root.handlers:
+                handler.close()
+            root.handlers = previous_handlers
+            root.setLevel(previous_level)
+            _output_dir_var.reset(token_dir)
+            _logging_active_var.reset(token_active)
 
 
 @contextmanager
@@ -176,7 +214,14 @@ def tracing_context(
     metadata: dict[str, JsonValue] | None = None,
     tracing_providers: list[Literal["openai", "file", "langfuse"]] | None = None,
 ) -> Generator[None]:
-    """Set up tracing providers + agents trace. Stacks with existing tracing context."""
+    """Set up tracing providers and an agents trace. Stacks with existing tracing context.
+
+    Args:
+        name: Name for the trace
+        output_dir: Directory to write trace files into
+        metadata: Metadata to attach to the trace
+        tracing_providers: Tracing backends to enable
+    """
     load_dotenv(override=True)
 
     if tracing_providers is None:
@@ -256,7 +301,11 @@ def tracing_context(
 
 @contextmanager
 def data_context(data_dir: Path) -> Generator[None]:
-    """Set the data directory used to resolve agent paths."""
+    """Set the data directory used to resolve agent paths.
+
+    Args:
+        data_dir: Data directory to resolve agent paths against
+    """
     token = _data_dir_var.set(data_dir)
     try:
         yield
@@ -266,7 +315,11 @@ def data_context(data_dir: Path) -> Generator[None]:
 
 @contextmanager
 def config_context(cfg: Config) -> Generator[Config]:
-    """Activate a Config for the duration of the block. Stacks with existing config context."""
+    """Activate a Config for the duration of the block. Stacks with existing config context.
+
+    Args:
+        cfg: Config to activate
+    """
     token = _config_var.set(cfg)
     try:
         yield cfg
@@ -287,7 +340,19 @@ def pipeline_context(
     trace_metadata: dict[str, JsonValue] | None = None,
     tracing_providers: list[Literal["openai", "file", "langfuse"]] | None = None,
 ) -> Generator[None]:
-    """Activate logging, tracing, cache, data dir, and config in one block. Skips already-active ones."""
+    """Activate logging, tracing, cache, data dir, and config in one block. Skips already-active ones.
+
+    Args:
+        name: Name for the run
+        trace_name: Name for the trace
+        output_dir: Directory for run logs and traces
+        cache_dir: Directory for the cache
+        data_dir: Data directory used to resolve agent paths
+        cache_mode: Cache read/write mode
+        config: Config to activate
+        trace_metadata: Metadata to attach to the trace
+        tracing_providers: Tracing backends to enable
+    """
     load_dotenv(override=True)
 
     datetime_str = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
@@ -316,7 +381,7 @@ def pipeline_context(
         **(trace_metadata or {}),
     }
 
-    with contextlib.ExitStack() as stack:
+    with ExitStack() as stack:
         if not _is_logging_active():
             stack.enter_context(logging_context(output_dir))
         if not _is_tracing_active():

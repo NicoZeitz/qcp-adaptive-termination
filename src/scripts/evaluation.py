@@ -7,10 +7,10 @@ Usage:
 
 import argparse
 import asyncio
-import logging
 from pathlib import Path
 
 from qcp_adaptive_termination import load_config
+from qcp_adaptive_termination.observability import context
 from scripts import completeness_evaluation, selection_strategy_evaluation
 from scripts.utils.orchestrator import (
     add_common_args,
@@ -44,6 +44,7 @@ async def _run_subcommand(args: argparse.Namespace) -> None:
     config = load_config(args.config)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    context.configure_logging(output_dir)
     parallel = not args.sequential
     dataset_dir = Path(args.dataset_dir)
     input_dir = dataset_dir / "_meta" / "input"
@@ -79,7 +80,6 @@ async def _run_subcommand(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
     args = _build_parser().parse_args()
     asyncio.run(_run_subcommand(args))
 

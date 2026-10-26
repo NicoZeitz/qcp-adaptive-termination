@@ -17,12 +17,11 @@ import orjson
 import xxhash
 from pydantic import BaseModel
 
-import qcp_adaptive_termination.observability.tracing as tracing
 from qcp_adaptive_termination.models import CacheMode
 
 
 def _key_default(obj: Any) -> Any:
-    """orjson serialization hook for cache key hashing: handles pydantic models and enums."""
+    """orjson serialization hook for cache key hashing, handling pydantic models and enums."""
     if isinstance(obj, BaseModel):
         return obj.model_dump(mode="json")
     if isinstance(obj, Enum):
@@ -36,6 +35,15 @@ class Cache:
     mode: CacheMode = field(default=CacheMode.READ_AND_WRITE)
 
     def get(self, key: Any) -> tuple[Any, bool]:
+        """Read a value from the cache by key.
+
+        Args:
+            key: the cache key to find a cached value for
+
+        Returns:
+            (value, found): the stored value and whether it was present.
+            When `found` is False, `value` is None
+        """
         if self.mode in [CacheMode.WRITE_ONLY, CacheMode.DISABLED]:
             return None, False
 
@@ -43,13 +51,13 @@ class Cache:
         try:
             with cache_file.open("rb") as f:
                 value = pickle.load(f)
-            # tracing.indented_logging(f"Cache: HIT ({cache_file})")
             return value, True
         except Exception:
             self._throw_on_miss(key)
             return None, False
 
     def store(self, key: Any, value: Any):
+        """Write a value to the cache under the given key."""
         if self.mode in [
             CacheMode.READ_ONLY,
             CacheMode.READ_ONLY_THROW_ON_MISS,
@@ -63,17 +71,14 @@ class Cache:
             cache_file.parent.mkdir(parents=True, exist_ok=True)
             with temporary_file.open("wb") as f:
                 pickle.dump(value, f, protocol=pickle.HIGHEST_PROTOCOL)
-            # tracing.indented_logging(f"Cache: STORE ({cache_file})")
             temporary_file.replace(cache_file)
         except Exception as exc:
-            tracing.indented_logging(
-                f"Cache: ERROR storing cache file {cache_file}: {exc}",
-                log_level=logging.ERROR,
-            )
+            logging.error("Cache: ERROR storing cache file %s: %s", cache_file, exc)
             if temporary_file.exists():
                 temporary_file.unlink()
 
     def cache_file_for_key(self, key: Any) -> Path:
+        """Return the cache file path for a key."""
         key_bytes = orjson.dumps(key, default=_key_default, option=orjson.OPT_SORT_KEYS)
         hash = xxhash.xxh3_128_hexdigest(key_bytes)
         return self.folder / f"{hash}.pkl"
@@ -87,6 +92,14 @@ class Cache:
 
 
 def load_cache_file(cache_file: Path) -> tuple[Any, dict[str, Any] | None]:
+    """Read a cached value and its optional extra metadata from a cache file.
+
+    Args:
+        cache_file: path to a pickled cache file
+
+    Returns:
+        (value, extra): the stored value and optional extra dict, or None for extra
+    """
     try:
         with cache_file.open("rb") as f:
             payload = pickle.load(f)
@@ -99,6 +112,16 @@ def cached[**Param, RetType](
     mode: CacheMode | None = None,
     ignore_args: set[str] | list[str] | None = None,
 ) -> Callable[[Callable[Param, Awaitable[RetType]]], Callable[Param, Awaitable[RetType]]]:
+    """Wrap an async function so its result is cached across calls.
+
+    Args:
+        mode: cache mode override; uses the active cache's mode when None
+        ignore_args: argument names to exclude from the cache key
+
+    Returns:
+        A decorator wrapping the async function with cache hit/miss handling
+    """
+
     def decorator(
         func: Callable[Param, Awaitable[RetType]],
     ) -> Callable[Param, Awaitable[RetType]]:
@@ -139,6 +162,15 @@ async def get_or_compute_batch[T, R](
     items: list[T],
     batch_fn: Callable[[list[T]], Awaitable[list[R]]],
 ) -> list[R]:
+    """Return cached results for items, computing and storing only the misses.
+
+    Args:
+        items: the items to resolve
+        batch_fn: computes results for a set of missing items
+
+    Returns:
+        A list of results aligned with `items`, in the same order
+    """
     from qcp_adaptive_termination.observability.context import get_cache
 
     cache_instance = get_cache()

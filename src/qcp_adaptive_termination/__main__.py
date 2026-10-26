@@ -1,4 +1,4 @@
-import qcp_adaptive_termination.cli as cli
+from scripts.main import main
 
 if __name__ == "__main__":
-    cli.main()
+    main()

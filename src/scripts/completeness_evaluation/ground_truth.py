@@ -12,6 +12,7 @@ def compute_ground_truth(
     key_cols: list[str],
     value_column: str | None,
 ) -> GroundTruth:
+    """Compute ground truth (distinct count and value stats) from a data cache."""
     frames = [df for df in data_cache.values() if df is not None and not df.empty]
     if not frames:
         return GroundTruth(count=0, value_sum=None, value_avg=None, value_min=None, value_max=None)

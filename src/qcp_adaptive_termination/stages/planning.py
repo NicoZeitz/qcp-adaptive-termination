@@ -1,3 +1,5 @@
+"""Planning stage: draft a query plan for the selected data agents."""
+
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
@@ -20,6 +22,14 @@ from qcp_adaptive_termination.observability import cache, tracing
 
 
 def create_query_plan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
+    """Build a Pydantic model describing the query plan's steps.
+
+    Args:
+        data_agents: the data agents the plan may target
+
+    Returns:
+        (type[BaseModel]): the dynamic query plan model
+    """
     data_agent_names = [agent.name for agent in data_agents]
     AgentName = Literal["Coordinator", *data_agent_names]  # ty: ignore[invalid-type-form]
     DataAgentName = Literal[*data_agent_names]  # ty: ignore[invalid-type-form]
@@ -76,6 +86,15 @@ def create_query_plan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
 
 
 def map_query_plan_model_to_query_plan(query_plan_model: BaseModel, query: str) -> QueryPlan:
+    """Convert a drafted query plan model into a validated QueryPlan.
+
+    Args:
+        query_plan_model: the model output by the planning LLM
+        query: the user query
+
+    Returns:
+        (QueryPlan): the parsed query plan
+    """
     step_mapping: dict[str, QueryPlanStep] = {}
     steps = []
 
@@ -126,6 +145,16 @@ def map_query_plan_model_to_query_plan(query_plan_model: BaseModel, query: str) 
 async def planning_stage(
     query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
 ) -> DraftedQueryPlan:
+    """Plan the query steps for the relevant data agents.
+
+    Args:
+        query: the user query
+        data_agents: all known data agents
+        relevant_data_agents: the selected data agents
+
+    Returns:
+        (DraftedQueryPlan): the drafted query plan
+    """
     return await draft_query_plan(query, data_agents, relevant_data_agents)
 
 
@@ -133,6 +162,16 @@ async def planning_stage(
 async def draft_query_plan(
     query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
 ) -> DraftedQueryPlan:
+    """Draft a query plan against the relevant data agents.
+
+    Args:
+        query: the user query
+        data_agents: all known data agents
+        relevant_data_agents: the selected data agents
+
+    Returns:
+        (DraftedQueryPlan): the drafted query plan
+    """
     with tracing.own_span(
         Stage.PLANNING.label,
         input={

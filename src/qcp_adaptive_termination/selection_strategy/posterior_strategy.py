@@ -22,12 +22,16 @@ DEFAULT_MIN_CLUSTER_SIZE_RATIO = 0.05
 
 @dataclass(slots=True)
 class PosteriorPrecomputedState:
+    """Precomputed embedding and theta sketch for an agent."""
+
     embedding: np.ndarray
     theta_sketch: compact_theta_sketch
 
 
 @dataclass(slots=True)
 class PosteriorState:
+    """Running posterior state: theta sketch and queried embeddings."""
+
     theta: update_theta_sketch
     queried_embeddings: list[np.ndarray] = field(default_factory=list)
 
@@ -42,15 +46,19 @@ def _normalize_probability(values: np.ndarray) -> np.ndarray:
 
 @dataclass(slots=True)
 class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorState]):
+    """Ranks agents by a Bayesian posterior over column overlap."""
+
     lg_k: int = DEFAULT_LG_K
     clustered_prior: bool = False
     min_samples: int = DEFAULT_MIN_SAMPLES
     min_cluster_size_ratio: float = DEFAULT_MIN_CLUSTER_SIZE_RATIO
 
     def needs_table(self) -> bool:
+        """Return True, since this strategy requires a table per agent."""
         return True
 
     def needs_column(self) -> bool:
+        """Return True, since this strategy requires a column per agent."""
         return True
 
     async def precompute(
@@ -60,6 +68,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, PosteriorPrecomputedState]:
+        """Precompute each agent's embedding and theta sketch."""
         assert table_per_agent and column_per_agent
 
         vectors = await agent_registry.embedding_vector_for_table(agents, table_per_agent)
@@ -79,6 +88,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         return dict(await asyncio.gather(*[_build(a) for a in agents]))
 
     def init_state(self) -> PosteriorState:
+        """Return an empty posterior state."""
         return PosteriorState(theta=update_theta_sketch(self.lg_k))
 
     def calculate_prior(
@@ -87,6 +97,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> np.ndarray:
+        """Prior probability over remaining agents from queried embeddings."""
         if len(state.queried_embeddings) == 0:
             # uniform prior if no agents have been queried yet
             return np.ones(len(remaining), dtype=float) / len(remaining)
@@ -102,6 +113,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> np.ndarray:
+        """Likelihood of new distinct values for each remaining agent."""
         likelihood_raw = np.empty(len(remaining), dtype=float)
         for i, s in enumerate(remaining):
             a_not_b = theta_a_not_b().compute(precomputed[s.agent.name].theta_sketch, state.theta)
@@ -115,6 +127,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         precomputed: dict[str, PosteriorPrecomputedState],
         state: PosteriorState,
     ) -> list[ScoredDataAgent]:
+        """Score and sort remaining agents by the prior * likelihood posterior."""
         if not remaining:
             return []
 
@@ -134,6 +147,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         agent_names: list[str],
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> PosteriorState:
+        """Fold seen values and queried agent embeddings into the running state."""
         for v in values:
             state.theta.update(v)
 
@@ -148,6 +162,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> np.ndarray:
+        """Prior probability using EVoC-clustered embeddings."""
         # EVoC's knn graph requires n_samples > n_neighbors (default 15); fall back for small sets
         if len(remaining) <= 15:
             return self._calculate_non_clustered_prior(remaining, state, precomputed)
@@ -183,6 +198,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         state: PosteriorState,
         precomputed: dict[str, PosteriorPrecomputedState],
     ) -> np.ndarray:
+        """Prior probability from embedding distances to queried agents."""
         reference_embeddings = np.asarray(state.queried_embeddings, dtype=float)  # (Q, D)
         agent_embeddings = np.asarray(
             [precomputed[s.agent.name].embedding for s in remaining],

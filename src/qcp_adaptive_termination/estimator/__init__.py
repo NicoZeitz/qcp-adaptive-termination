@@ -1,10 +1,4 @@
-"""
-Statistical estimators for adaptive query termination.
-
-Implements histogram-based count and value estimators (`CountEstimator`,
-`ValueEstimator`) over `DataItem` / `Bucket` primitives, with configurable
-bound types for confidence-interval queries.
-"""
+"""Statistical estimators for adaptive query termination."""
 
 from qcp_adaptive_termination.estimator.data_item import DataItem
 from qcp_adaptive_termination.estimator.estimator import Estimator

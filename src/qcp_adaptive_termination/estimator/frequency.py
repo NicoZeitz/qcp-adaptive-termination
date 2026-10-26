@@ -1,11 +1,4 @@
-"""Observed frequency statistics for the unknown-unknowns estimator.
-
-Holds the raw per-source samples and the derived frequency statistics
-(unique count c, observation count n, frequency vector f, and the
-singleton/doubleton value sums). Supports incremental updates via
-``add_source`` so the estimator can be maintained across agent queries
-without a full rebuild.
-"""
+"""Observed frequency statistics for the unknown-unknowns estimator."""
 
 import math
 from dataclasses import dataclass
@@ -27,17 +20,7 @@ class EntityRecord:
 
 
 class FrequencyStats:
-    """
-    Observed (known) statistics over the integrated sample.
-
-    Paper notation (Chung et al. 2018, Table 1):
-        c       — number of unique observed entities (size of integrated database K)
-        n       — total observations including duplicates (|S|)
-        f_j     — number of entities observed exactly j times (freq[j-1])
-        φ_K     — SUM of first-observed attribute values across unique entities
-        φ_f1    — SUM of attribute values of singleton entities (seen exactly once)
-        φ_f12   — SUM of attribute values of singleton + doubleton entities
-    """
+    """Observed (known) statistics over the integrated sample."""
 
     def __init__(self, source_samples: list[list[DataItem]]) -> None:
         self._source_samples: list[list[DataItem]] = []  # samples grouped by source
@@ -185,12 +168,7 @@ class FrequencyStats:
         return math.sqrt(max(0.0, sq_mean - mean * mean))
 
     def γ_sq(self) -> float:
-        """
-        Squared coefficient of variation of the publicity distribution, estimated from f-statistics.
-
-        Returns 0 when there is only one observation (no variance possible).
-        Returns inf when sample coverage is zero (all entities are singletons).
-        """
+        """Squared coefficient of variation of the publicity distribution."""
         if self._observed_total_entities == 1:
             return 0.0
 
@@ -205,13 +183,7 @@ class FrequencyStats:
         return max(γ_sq, 0.0)
 
     def sample_coverage(self) -> float:
-        """
-        Good-Turing sample coverage C = 1 - f1/n.
-
-        Measures the fraction of total probability mass covered by observed entities.
-        0 when every entity is a singleton (maximum uncertainty), 1 when there are
-        no singletons (complete coverage of the observed population).
-        """
+        """Good-Turing sample coverage C = 1 - f1/n."""
         return 1.0 - self.singleton_count / self._observed_total_entities
 
     def sample_sum(self) -> float:
@@ -235,13 +207,7 @@ class FrequencyStats:
         return self._observed_value_max
 
     def sample_quantile(self, q: float) -> float:
-        """
-        q-th quantile (0 ≤ q ≤ 1) of observed unique entity values.
-
-        Uses numpy's default Type-7 linear interpolation on the first-observed
-        values of unique entities, consistent with sample_sum and sample_avg
-        which also count each entity once.
-        """
+        """Quantile of observed unique entity values."""
         if not 0.0 <= q <= 1.0:
             raise ValueError(f"q must be in [0, 1], got {q}")
         values = np.array([v.first_value for v in self._entities.values()], dtype=np.float64)
@@ -252,10 +218,6 @@ class FrequencyStats:
         return self.sample_quantile(0.5)
 
     def sample_cdf(self, x: float) -> float:
-        """
-        Fraction of observed unique entities with first-observed value ≤ x.
-
-        Returns a value in [0, 1].
-        """
+        """Fraction of observed unique entities with first-observed value at most x."""
         values = np.array([v.first_value for v in self._entities.values()], dtype=np.float64)
         return float(np.mean(values <= x))

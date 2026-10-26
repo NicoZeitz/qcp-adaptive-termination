@@ -29,19 +29,13 @@ DEFAULT_MIN_HASH_NUM_PERM = 128
 
 @dataclass(slots=True)
 class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
-    """
-    Ranks by estimated new unique values each remaining agent would contribute.
-
-    Precomputed: hll_sketch per agent.
-    State: hll_sketch accumulating all values seen so far.
-    Score: estimate(union(state, agent)) - estimate(state)  [i.e. new distinct est.]
-    UCB variant uses upper_bound instead of point estimate.
-    """
+    """Ranks by estimated new unique values each remaining agent would contribute."""
 
     lg_k: int = DEFAULT_LG_K
     use_ucb: bool = False
 
     def needs_column(self) -> bool:
+        """Return True, since this strategy requires a column per agent."""
         return True
 
     async def precompute(
@@ -51,6 +45,7 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, hll_sketch]:
+        """Precompute an HLL sketch of each agent's column values."""
         assert table_per_agent and column_per_agent
 
         async def _build(agent: DataAgent) -> tuple[str, hll_sketch]:
@@ -65,6 +60,7 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
         return dict(await asyncio.gather(*[_build(a) for a in agents]))
 
     def init_state(self) -> hll_sketch:
+        """Return an empty HLL sketch."""
         return hll_sketch(self.lg_k)
 
     def rank(
@@ -73,6 +69,8 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
         precomputed: dict[str, hll_sketch],
         state: hll_sketch,
     ) -> list[ScoredDataAgent]:
+        """Score remaining agents by the new distinct values they would add."""
+
         def score(s: ScoredDataAgent) -> float:
             union = hll_union(self.lg_k)
             union.update(state)
@@ -93,6 +91,7 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
         agent_names: list[str] | None = None,
         precomputed: dict[str, hll_sketch] | None = None,
     ) -> hll_sketch:
+        """Fold the seen column values into the running sketch."""
         for v in values:
             state.update(v)
         return state
@@ -105,18 +104,13 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
 
 @dataclass(slots=True)
 class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_sketch]):
-    """
-    Ranks by estimated new unique values (A NOT B: agent sketch minus seen state).
-
-    Precomputed: compact_theta_sketch per agent.
-    State: update_theta_sketch accumulating all seen values.
-    UCB variant uses upper_bound of the A-NOT-B result.
-    """
+    """Ranks by estimated new unique values (agent sketch minus seen state)."""
 
     lg_k: int = DEFAULT_LG_K
     use_ucb: bool = False
 
     def needs_column(self) -> bool:
+        """Return True, since this strategy requires a column per agent."""
         return True
 
     async def precompute(
@@ -126,6 +120,7 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, compact_theta_sketch]:
+        """Precompute a compact theta sketch of each agent's column values."""
         assert table_per_agent and column_per_agent
 
         async def _build(agent: DataAgent) -> tuple[str, compact_theta_sketch] | None:
@@ -143,6 +138,7 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
         return dict(pairs)
 
     def init_state(self) -> update_theta_sketch:
+        """Return an empty update theta sketch."""
         return update_theta_sketch(self.lg_k)
 
     def rank(
@@ -151,6 +147,8 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
         precomputed: dict[str, compact_theta_sketch],
         state: update_theta_sketch,
     ) -> list[ScoredDataAgent]:
+        """Score remaining agents by the estimated A-NOT-B new distinct values."""
+
         def score(s: ScoredDataAgent) -> float:
             a_not_b = theta_a_not_b().compute(precomputed[s.agent.name], state)
             if self.use_ucb:
@@ -169,6 +167,7 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
         agent_names: list[str] | None = None,
         precomputed: dict[str, compact_theta_sketch] | None = None,
     ) -> update_theta_sketch:
+        """Fold the seen column values into the running sketch."""
         for v in values:
             state.update(v)
         return state
@@ -181,23 +180,20 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
 
 @dataclass(slots=True)
 class MinHashState:
+    """Running MinHash and seen-set state for MinHashStrategy."""
+
     minhash: MinHash
     seen: set[str] = field(default_factory=set)
 
 
 @dataclass(slots=True)
 class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
-    """
-    Ranks by estimated new unique values via containment estimation.
-
-    Precomputed: MinHash per agent.
-    State: running MinHash of all seen values + seen set for exact cardinality.
-    Score: (1 - Jaccard(state, agent)) * agent_cardinality  — estimated new entries.
-    """
+    """Ranks by estimated new unique values via containment estimation."""
 
     num_perm: int = DEFAULT_MIN_HASH_NUM_PERM
 
     def needs_column(self) -> bool:
+        """Return True, since this strategy requires a column per agent."""
         return True
 
     async def precompute(
@@ -207,6 +203,7 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, tuple[MinHash, int]]:
+        """Precompute a MinHash and distinct-count over each agent's column values."""
         assert table_per_agent and column_per_agent
 
         async def _build(agent: DataAgent) -> tuple[str, tuple[MinHash, int]] | None:
@@ -224,6 +221,7 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
         return dict(pairs)
 
     def init_state(self) -> MinHashState:
+        """Return an empty MinHash state."""
         return MinHashState(minhash=MinHash(num_perm=self.num_perm))
 
     def rank(
@@ -232,6 +230,8 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
         precomputed: dict[str, tuple[MinHash, int]],
         state: MinHashState,
     ) -> list[ScoredDataAgent]:
+        """Score remaining agents by their estimated new distinct values."""
+
         def score(s: ScoredDataAgent) -> float:
             agent_mh, cardinality = precomputed[s.agent.name]
             jaccard = state.minhash.jaccard(agent_mh)
@@ -251,6 +251,7 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
         agent_names: list[str] | None = None,
         precomputed: dict[str, tuple[MinHash, int]] | None = None,
     ) -> MinHashState:
+        """Fold the seen column values into the running MinHash state."""
         for v in values:
             state.minhash.update(v.encode("utf8"))
             state.seen.add(v)

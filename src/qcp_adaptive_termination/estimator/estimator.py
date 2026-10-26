@@ -1,13 +1,4 @@
-"""Unknown-unknowns estimator facade.
-
-Combines observed frequency statistics, count estimators, value estimators,
-adaptive bucket splitting, and Monte Carlo into a single lazy interface.
-Estimated values are computed on demand — nothing is precomputed eagerly.
-
-The estimator carries its full configuration (count/value estimator, bucket/MC
-flags, max buckets) from construction, so the public methods take no estimator
-parameters.
-"""
+"""Unknown-unknowns estimator facade for correcting aggregate query results."""
 
 import math
 from dataclasses import dataclass
@@ -37,22 +28,15 @@ from qcp_adaptive_termination.models.estimation import (
 
 @dataclass(slots=True)
 class _BucketCache:
+    """Cache of computed buckets with their sub-estimators."""
+
     sample_count: int
     buckets: list[Bucket]
     sub_estimators: list[Estimator]
 
 
 class Estimator:
-    """
-    Unknown-unknowns estimators for correcting aggregate query results.
-
-    Accepts samples grouped by source. Each source contributes a list of DataItems;
-    the estimator uses the overlap pattern across sources to infer how many entities
-    are likely missing from the integrated dataset.
-
-    All estimated values are computed lazily on first access and cached per
-    (value_estimator, count_estimator, max_buckets) configuration.
-    """
+    """Unknown-unknowns estimators for correcting aggregate query results."""
 
     DEFAULT_COUNT_ESTIMATOR: CountEstimator = CountEstimator.CHAO92
     DEFAULT_VALUE_ESTIMATOR: ValueEstimator = ValueEstimator.NAIVE
@@ -64,6 +48,7 @@ class Estimator:
         source_samples: list[list[DataItem]],
         config: EstimatorConfig | None = None,
     ) -> None:
+        """Initialize with samples grouped by source and the estimator config."""
         config = config or EstimatorConfig()
         self._stats = FrequencyStats(source_samples)
         self._bucket_cache: _BucketCache | None = None
@@ -94,39 +79,51 @@ class Estimator:
     # ── Observed (known) aggregates ───────────────────────────────────────────
 
     def sample_mean(self) -> float:
+        """Observed mean of all raw observations."""
         return self._stats.sample_mean()
 
     def sample_std(self) -> float:
+        """Observed standard deviation of all raw observations."""
         return self._stats.sample_std()
 
     def γ_sq(self) -> float:
+        """Observed squared coefficient of variation of the publicity distribution."""
         return self._stats.γ_sq()
 
     def sample_coverage(self) -> float:
+        """Observed Good-Turing sample coverage."""
         return self._stats.sample_coverage()
 
     def sample_sum(self) -> float:
+        """Observed sum of first-observed attribute values."""
         return self._stats.sample_sum()
 
     def sample_count(self) -> int:
+        """Observed number of unique entities."""
         return self._stats.sample_count()
 
     def sample_avg(self) -> float:
+        """Observed average value across observed entities."""
         return self._stats.sample_avg()
 
     def sample_min(self) -> float:
+        """Observed minimum value."""
         return self._stats.sample_min()
 
     def sample_max(self) -> float:
+        """Observed maximum value."""
         return self._stats.sample_max()
 
     def sample_quantile(self, q: float) -> float:
+        """Observed quantile of first-observed values."""
         return self._stats.sample_quantile(q)
 
     def sample_median(self) -> float:
+        """Observed median of first-observed values."""
         return self._stats.sample_median()
 
     def sample_cdf(self, x: float) -> float:
+        """Observed fraction of entities with value at most x."""
         return self._stats.sample_cdf(x)
 
     # ── Estimated counts ───────────────────────────────────────────
@@ -159,11 +156,7 @@ class Estimator:
         return upper
 
     def estimated_count_bounds(self) -> tuple[float, float]:
-        """
-        Lower and upper bounds for the estimated total unique entity count.
-
-        Uses the estimator's configured confidence interval type and epsilon.
-        """
+        """Lower and upper bounds for the estimated total unique entity count."""
         if self._cached_count_bounds is None:
             self._cached_count_bounds = estimate_count_bounds(
                 self._stats, self._confidence_interval_type, self._confidence_epsilon
@@ -173,11 +166,7 @@ class Estimator:
     # ── Estimated sums ───────────────────────────────────────────
 
     def estimated_sum(self) -> float:
-        """
-        Corrected SUM including the estimated contribution from missing entities.
-
-        Returns inf if the delta is not finite.
-        """
+        """Corrected SUM including the estimated contribution from missing entities."""
         d = self.delta()
         return math.inf if not math.isfinite(d) else self._stats.observed_value_sum + d
 
@@ -207,14 +196,9 @@ class Estimator:
         return upper
 
     def estimated_sum_bounds(self) -> tuple[float, float]:
-        """
-        Lower and upper bounds for the corrected SUM.
+        """Lower and upper bounds for the corrected SUM.
 
-        Computed as avg_bound * N_hat_bound. The two sides are statistically
-        independent, so by Bonferroni's inequality the joint failure probability
-        is at most the sum of the individual failure probabilities. Each side
-        therefore receives half of the configured confidence epsilon so the
-        combined bound holds with probability at least 1 - epsilon.
+        Computed as avg_bound * N_hat_bound, splitting the confidence epsilon across the two independent sides.
         """
         half_epsilon = self._confidence_epsilon / 2.0
         avg_lower, avg_upper = self.estimated_avg_bounds(half_epsilon)
@@ -224,13 +208,7 @@ class Estimator:
     # ── Estimated averages ───────────────────────────────────────────
 
     def estimated_avg(self) -> float:
-        """
-        Estimated average across all entities (observed + missing).
-
-        Without buckets, returns the observed sample average (law of large numbers).
-        With buckets, returns a weighted mean of per-bucket sample averages where
-        each bucket's weight is its estimated unique count (N_hat).
-        """
+        """Estimated average across all entities (observed + missing)."""
 
         def _compute_avg() -> float:
             if not self._use_bucket:
@@ -258,12 +236,9 @@ class Estimator:
         return upper
 
     def estimated_avg_bounds(self, confidence_epsilon: float | None = None) -> tuple[float, float]:
-        """
-        Lower and upper bounds for the estimated average.
+        """Lower and upper bounds for the estimated average.
 
-        Since AVG = SUM / N and both SUM bounds and N bounds scale by N, the N
-        cancels and the interval reduces to φ_K/c ± z·σ_K — a confidence interval
-        on the observed mean value, independent of the count estimator.
+        The N cancels between SUM and count bounds, giving a confidence interval on the observed mean.
         """
 
         epsilon = self._confidence_epsilon if confidence_epsilon is None else confidence_epsilon
@@ -281,14 +256,7 @@ class Estimator:
     # ── Estimated min/max ───────────────────────────────────────────
 
     def estimated_min(self) -> float | None:
-        """
-        Confirmed minimum value, or None if unknown unknowns may lie below it.
-
-        Divides the value range into buckets and estimates the number of missing
-        entities in the lowest-value bucket.  If that estimate is zero we have
-        likely observed the true minimum and return it; otherwise we return None
-        to signal that the true minimum is unknown.
-        """
+        """Confirmed minimum value, or None if missing entities may lie below it."""
         _, subs = self._get_sub_estimators()
         sub = subs[0]
         if sub.estimated_count() - sub._stats.observed_unique_entities == 0:
@@ -296,14 +264,7 @@ class Estimator:
         return None
 
     def estimated_max(self) -> float | None:
-        """
-        Confirmed maximum value, or None if unknown unknowns may lie above it.
-
-        Divides the value range into buckets and estimates the number of missing
-        entities in the highest-value bucket.  If that estimate is zero we have
-        likely observed the true maximum and return it; otherwise we return None
-        to signal that the true maximum is unknown.
-        """
+        """Confirmed maximum value, or None if missing entities may lie above it."""
         _, subs = self._get_sub_estimators()
         sub = subs[-1]
         if sub.estimated_count() - sub._stats.observed_unique_entities == 0:
@@ -311,12 +272,9 @@ class Estimator:
         return None
 
     def estimated_quantile(self, q: float) -> float:
-        """
-        Estimated q-th quantile (0 < q < 1) via the bucket-based CDF.
+        """Estimated q-th quantile (0 < q < 1) via the bucket-based CDF.
 
-        Builds a weighted histogram where each bucket's weight is its estimated
-        unique count (N_hat, including missing entities), then inverts the CDF.
-        Linear interpolation within each bucket assumes uniform distribution within [lb, ub].
+        Builds a weighted histogram over buckets and inverts the CDF with linear interpolation.
         """
 
         def _compute_quantile(q: float) -> float:
@@ -409,11 +367,7 @@ class Estimator:
         return cache.buckets, cache.sub_estimators
 
     def _make_sub_estimator(self, source_samples: list[list[DataItem]]) -> Estimator:
-        """Create a per-bucket sub-estimator inheriting this estimator's config.
-
-        Sub-estimators operate on a single bucket slice, so they must not
-        bucket-split again (that would recurse infinitely).
-        """
+        """Create a per-bucket sub-estimator inheriting this estimator's config."""
 
         return Estimator(
             source_samples,

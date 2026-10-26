@@ -7,6 +7,8 @@ from qcp_adaptive_termination.models import AggregationType
 
 @dataclass(slots=True)
 class GroundTruth:
+    """Ground truth for one step's answer (distinct count + value stats)."""
+
     count: int
     value_sum: float | None
     value_avg: float | None
@@ -64,6 +66,8 @@ class BatchRecord:
 
 @dataclass(slots=True)
 class StepResult:
+    """Result for one completeness evaluation step."""
+
     step_id: str
     agents_total: int
     agents_queried_at_stop: int

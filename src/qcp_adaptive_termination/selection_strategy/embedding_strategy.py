@@ -13,12 +13,7 @@ from qcp_adaptive_termination.selection_strategy.strategy import StaticSelection
 
 @dataclass(slots=True)
 class EmbeddingStrategy(StaticSelectionStrategy[float]):
-    """
-    Ranks agents by embedding distance to the query.
-
-    Each agent's tables are embedded separately; scores are collapsed
-    per-agent using `scorer` (default: min distance across tables).
-    """
+    """Ranks agents by embedding distance to the query."""
 
     ascending: bool = True
     scorer: Callable[[list[float]], float] = field(default=min)
@@ -31,6 +26,7 @@ class EmbeddingStrategy(StaticSelectionStrategy[float]):
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, float]:
+        """Precompute a per-agent distance score against the query."""
         agent_vectors = await agent_registry.embedding_vectors_for_all_tables(agents, registry_type=self.registry_type)
         query_embedding = await embedding.create(query)
 

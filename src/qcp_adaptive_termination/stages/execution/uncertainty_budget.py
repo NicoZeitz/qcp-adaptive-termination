@@ -1,10 +1,4 @@
-"""
-Uncertainty budget computation for a query plan.
-
-Splits the global confidence threshold across multi-agent steps via Lusser's
-product rule. Single-agent and coordinator steps introduce no new uncertainty
-and get no budget.
-"""
+"""Uncertainty budget computation for a query plan."""
 
 import math
 from typing import assert_never
@@ -21,10 +15,15 @@ def compute_step_budgets(
     target_confidence: float,
     apportionment: ApportionmentType,
 ) -> dict[str, StepBudget]:
-    """
-    Compute per-step completeness thresholds for a query plan.
+    """Compute per-step completeness thresholds for a query plan.
 
-    Only multi-agent steps are budgeted. Returns a dict keyed by step id.
+    Args:
+        query_plan: the query plan to budget
+        target_confidence: the global confidence target
+        apportionment: how to split the target across steps
+
+    Returns:
+        (dict[str, StepBudget]): per-step budgets keyed by step id
     """
     multi_steps = [s for s in query_plan.steps if isinstance(s, MultiAgentQueryPlanStep)]
     if not multi_steps:

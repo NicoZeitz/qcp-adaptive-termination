@@ -21,12 +21,7 @@ def _save(fig, output_dir: Path, stem: str) -> None:
 
 
 def _series(rows, key):
-    """Return a float numpy array for ``key`` with missing values as NaN.
-
-    Missing values (None) must become NaN *before* touching matplotlib/numpy:
-    passing Python None into np.isfinite (triggered by fill_between etc.) raises
-    ``ufunc 'isfinite' not supported ... 'safe'``.
-    """
+    """Return a float numpy array for ``key`` with missing values as NaN."""
     return np.array(
         [float(v) if (v := getattr(b, key, None)) is not None else np.nan for b in rows],
         dtype=float,

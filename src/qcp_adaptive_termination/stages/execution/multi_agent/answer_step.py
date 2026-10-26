@@ -41,6 +41,16 @@ def merge_agent_result_into_result_list(
     agent_name: str,
     agent_result: pd.DataFrame,
 ) -> AlignedResultList:
+    """Merge one agent's result into the aligned result list.
+
+    Args:
+        result_list: the aligned result list so far
+        agent_name: the agent that produced the result
+        agent_result: the agent's result dataframe
+
+    Returns:
+        (AlignedResultList): the merged aligned result list
+    """
     schema = result_list.schema_metadata
 
     agent_result[schema.source_agent_column] = agent_name
@@ -56,6 +66,17 @@ async def answer_step_multiple_agents(
     additional_information: list[AdditionalInformation],
     step_budgets: dict[str, StepBudget],
 ) -> tuple[PartialQueryAnswer, StepUncertainty | None]:
+    """Execute a multi-agent step, querying agents until the result is complete.
+
+    Args:
+        data_agents: the available data agents
+        query_plan_step: the multi-agent step to execute
+        additional_information: the satisfying dependency answers
+        step_budgets: per-step completeness budgets
+
+    Returns:
+        (tuple[PartialQueryAnswer, StepUncertainty | None]): the step answer and its uncertainty
+    """
     agents_by_name = {a.name: a for a in data_agents}
     agents_in_step = [agents_by_name[name] for name in query_plan_step.to_agent]
 

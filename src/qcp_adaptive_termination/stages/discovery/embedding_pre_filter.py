@@ -49,6 +49,16 @@ async def filter_embedding_pre_filter(
     data_agents: list[DataAgent],
     registry_type: AgentRegistryType,
 ) -> list[DataAgent]:
+    """Keep the data agents whose table embeddings are most similar to the query.
+
+    Args:
+        query: the user query
+        data_agents: all known data agents
+        registry_type: how data agents are described for embedding
+
+    Returns:
+        (list[DataAgent]): the data agents kept by the pre-filter
+    """
     table_vectors: dict[str, dict[str, np.ndarray]] = await agent_registry.embedding_vectors_for_all_tables(
         data_agents, registry_type
     )

@@ -6,7 +6,6 @@ LLM provider setup, caching, and tracing/logging utilities.
 """
 
 from qcp_adaptive_termination import hooks
-from qcp_adaptive_termination.cli import main as main
 from qcp_adaptive_termination.models import Config
 from qcp_adaptive_termination.observability.context import (
     cache_context,
@@ -33,7 +32,6 @@ __all__ = [
     "load_config",
     "load_input",
     "logging_context",
-    "main",
     "pipeline_context",
     "run_pipeline",
     "run_query",

@@ -1,3 +1,5 @@
+"""Helpers for creating custom spans and serializing data for tracing."""
+
 import logging
 import math
 from contextlib import contextmanager
@@ -9,7 +11,8 @@ from agents import CustomSpanData, Span, custom_span
 from pydantic import BaseModel, JsonValue
 lazy from langfuse import get_client
 
-_span_by_id: dict[str | None, int] = {}
+lazy from qcp_adaptive_termination.observability.context import get_tracing_providers
+
 _span_context_var = ContextVar[Span[CustomSpanData] | None]("current_span", default=None)
 
 
@@ -18,6 +21,7 @@ def serialize_data_for_tracing(value: dict[str, Any]) -> dict[str, JsonValue]: .
 @overload
 def serialize_data_for_tracing(value: Any) -> JsonValue: ...
 def serialize_data_for_tracing(value):
+    """Serialize a value into a JSON-safe form for tracing."""
     if isinstance(value, float) and not math.isfinite(value):
         if math.isnan(value):
             return "NaN"
@@ -43,6 +47,7 @@ def serialize_data_for_tracing(value):
 
 
 def append_to_span_input(data: dict[str, Any], span: Span[CustomSpanData] | None = None):
+    """Merge data into the current span's input."""
     data = serialize_data_for_tracing(data)
     span = span or _span_context_var.get()
     if span is not None:
@@ -50,6 +55,7 @@ def append_to_span_input(data: dict[str, Any], span: Span[CustomSpanData] | None
 
 
 def append_to_span_output(data: dict[str, Any], span: Span[CustomSpanData] | None = None):
+    """Merge data into the current span's output."""
     data = serialize_data_for_tracing(data)
     span = span or _span_context_var.get()
     if span is not None:
@@ -60,16 +66,8 @@ def append_to_span_output(data: dict[str, Any], span: Span[CustomSpanData] | Non
 
 
 def get_current_span() -> Span[CustomSpanData] | None:
+    """Return the currently active custom span."""
     return _span_context_var.get()
-
-
-def indented_logging(message: str, log_level: int = logging.INFO):
-    span = _span_context_var.get()
-    if span is not None:
-        parent_depth = _span_by_id.get(span.parent_id, 0)
-        logging.log(log_level, "  " * (parent_depth + 1) + message)
-    else:
-        logging.log(log_level, message)
 
 
 @contextmanager
@@ -79,23 +77,26 @@ def own_span(
     input: dict[str, Any] | None = None,
     output: dict[str, Any] | None = None,
 ):
+    """Run a block within a named custom span, updating tracing providers.
+
+    Args:
+        span_name: Name for the span
+        data: Extra data to store on the span
+        input: Data to merge into the span's input
+        output: Data to merge into the span's output
+    """
     with custom_span(span_name, data=data) as span:
         token = _span_context_var.set(span)
         try:
             if input is not None:
                 append_to_span_input(input, span)
 
-            parent_depth = _span_by_id.get(span.parent_id, 0)
-            _span_by_id[span.span_id] = parent_depth + 1
-
-            logging.info("  " * parent_depth + f"Start span: {span_name}")
+            logging.info(f"Start span: {span_name}")
             yield span
-            logging.info("  " * parent_depth + f"End span: {span_name}")
+            logging.info(f"End span: {span_name}")
 
             if output is not None:
                 append_to_span_output(output, span)
-
-            from qcp_adaptive_termination.observability.context import get_tracing_providers
 
             if "langfuse" in get_tracing_providers():
                 client = get_client()

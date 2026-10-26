@@ -1,5 +1,8 @@
+"""Run agents and LLMs through the SDK with caching and tracing hooks."""
+
 import asyncio
 import functools
+import logging
 import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -25,7 +28,7 @@ import qcp_adaptive_termination.hooks as hooks
 import qcp_adaptive_termination.llm.model_provider as model_provider
 import qcp_adaptive_termination.llm.prompt as prompt
 from qcp_adaptive_termination.models import AgentRole, CacheMode, RoleConfig
-from qcp_adaptive_termination.observability import cache, context, tracing
+from qcp_adaptive_termination.observability import cache, context
 
 _AGENT_SEMAPHORE = asyncio.Semaphore(5)
 
@@ -38,6 +41,8 @@ class _SerializedModel:
 
     @staticmethod
     def wrap(input: Any) -> Any | _SerializedModel:
+        """Wrap dynamic pydantic models in a pickle-safe form."""
+
         def _is_dynamic_model(output_type: type[Any]) -> bool:
             module = sys.modules.get(output_type.__module__)
             if module is None:
@@ -58,6 +63,7 @@ class _SerializedModel:
 
     @staticmethod
     def unwrap(input: Any | _SerializedModel, output_type: type[Any] | None = None) -> Any:
+        """Unwrap a serialized model back to the requested output type."""
         if isinstance(input, _SerializedModel):
             if output_type is None:
                 raise RuntimeError("Output type must be provided for serialized models")
@@ -83,16 +89,19 @@ class AgentRunResult[TResult]:
 
 @functools.cache
 def _cached_json_schema(output_type: type[BaseModel]) -> dict:
+    """Return the cached JSON schema for an output type."""
     return output_type.model_json_schema()
 
 
 def _resolve_model_config(role: AgentRole) -> tuple[str, Reasoning]:
+    """Resolve the model and reasoning config for a role."""
     role_cfg: RoleConfig = context.get_config().agent_configs[role.value]
     reasoning = Reasoning(effort=role_cfg.reasoning_effort, summary=role_cfg.reasoning_summary)
     return role_cfg.model, reasoning
 
 
 def _get_output_schema(output_type: type | None) -> JsonValue:
+    """Return the JSON schema for an output type."""
     if output_type is None or output_type is str:
         return {"type": "string"}
     if output_type is bool:
@@ -123,6 +132,7 @@ async def run_agent[TResult](
     previous_input: list[TResponseInputItem] | None = None,
     label: str | None = None,
 ) -> AgentRunResult[TResult]:
+    """Run an agent for a role against the current prompt, with caching and hooks."""
     display_name = f"{agent_name} - {role.value}" if agent_name else role.value
     model, reasoning = _resolve_model_config(role)
     if max_turns is None:
@@ -167,7 +177,7 @@ async def run_agent[TResult](
             output_type=output_type,
         )
 
-        tracing.indented_logging(f"Running agent: {display_name}")
+        logging.info("Running agent: %s", display_name)
 
         try:
             async with _AGENT_SEMAPHORE:
@@ -179,7 +189,7 @@ async def run_agent[TResult](
                     run_config=RunConfig(model_provider=model_provider.get_multi_provider()),
                 )
         except ModelBehaviorError as e:
-            tracing.indented_logging(f"Model behavior error: {e}")
+            logging.error("Model behavior error: %s", e)
             raise e
 
         final_output = _SerializedModel.wrap(cast(TResult, result.final_output))
@@ -245,6 +255,7 @@ async def run_llm[TResult](
     context: JsonValue = None,
     cache_mode: CacheMode | None = None,
 ) -> TResult:
+    """Run a single-turn LLM call for a role and return the parsed output."""
     result = await run_agent(
         role=role,
         agent_name=agent_name,

@@ -44,13 +44,7 @@ def chao92_scalar(
     singleton_count: int,
     pair_moment: int,
 ) -> float:  # type: ignore[return]
-    """
-    Chao92 formula on raw partition statistics (numba core).
-
-    Uses the Good-Turing estimate of sample coverage C = 1 - f1/n, then corrects
-    for skew in the publicity distribution via the squared CV γ².
-    Returns inf when coverage is zero (every entity seen exactly once).
-    """
+    """Chao92 unique-count estimate from raw partition statistics."""
     sample_coverage = 1.0 - singleton_count / observation_count
     if sample_coverage <= 0.0:
         return np.inf
@@ -71,13 +65,7 @@ def chao92_scalar(
 
 
 def _chao92(stats: FrequencyStats) -> float:
-    """
-    Chao92 estimated unique count.
-
-    Uses the Good-Turing estimate of sample coverage C = 1 - f1/n, then corrects
-    for skew in the publicity distribution via the squared CV γ².
-    Returns inf when coverage is zero (every entity seen exactly once).
-    """
+    """Chao92 estimated unique count from FrequencyStats."""
     sample_coverage = stats.sample_coverage()
     if sample_coverage == 0:
         return math.inf
@@ -93,35 +81,19 @@ def _chao92(stats: FrequencyStats) -> float:
 
 
 def _chao84_scalar(unique_count: int, singleton_count: int, doubleton_count: int) -> float:
-    """
-    Chao84 estimated unique count from raw partition statistics.
-
-    Uses the ratio of singletons to doubletons (f1² / 2·f2). Falls back to the
-    observed count when there are no doubletons (f2 == 0), since the estimator
-    is undefined in that case.
-    """
+    """Chao84 estimated unique count from raw partition statistics."""
     if doubleton_count == 0:
         return float(unique_count)
     return max(float(unique_count), unique_count + (singleton_count * singleton_count) / (2.0 * doubleton_count))
 
 
 def _jackknife1_scalar(unique_count: int, singleton_count: int) -> float:
-    """
-    First-order jackknife estimated unique count from raw partition statistics.
-
-    Adds the singleton count f1 to the observed count c as a bias correction
-    for the number of unseen entities.
-    """
+    """First-order jackknife estimated unique count from raw partition statistics."""
     return float(unique_count + singleton_count)
 
 
 def _jackknife2_scalar(unique_count: int, singleton_count: int, doubleton_count: int) -> float:
-    """
-    Second-order jackknife estimated unique count from raw partition statistics.
-
-    Extends jackknife1 by subtracting the doubleton count f2, reducing the
-    bias when many entities appear exactly twice.
-    """
+    """Second-order jackknife estimated unique count from raw partition statistics."""
     return float(unique_count + 2 * singleton_count - doubleton_count)
 
 
@@ -146,13 +118,7 @@ def _pair_moment(stats: FrequencyStats) -> int:
 
 
 def _unseen(stats: FrequencyStats) -> float:
-    """
-    Estimate total unique entity count using a linear-programming based approach.
-
-    Fits a non-parametric probability distribution over entity frequencies via LP,
-    then estimates the total species count from that distribution.
-    Falls back to chao92 if the LP solver fails.
-    """
+    """Estimate total unique entity count via linear programming, falling back to chao92 on failure."""
     try:
         return _unseen_lp(stats)
     except Exception:
@@ -160,6 +126,7 @@ def _unseen(stats: FrequencyStats) -> float:
 
 
 def _unseen_lp(stats: FrequencyStats) -> float:
+    """LP-based estimate of the total unique entity count."""
     grid_factor = 1.1
     alpha = 0.5
 
@@ -273,11 +240,7 @@ def estimate_count_bounds(
     confidence_interval_type: ConfidenceIntervalType,
     confidence_epsilon: float,
 ) -> tuple[float, float]:
-    """
-    Lower and upper bounds for the estimated total unique entity count.
-
-    confidence_epsilon is the total error probability; e.g. 0.05 gives 95% confidence.
-    """
+    """Lower and upper bounds for the estimated total unique entity count."""
     if confidence_epsilon <= 0.0 or confidence_epsilon > 1.0:
         raise ValueError("confidence_epsilon must be in (0, 1]")
 
@@ -292,12 +255,7 @@ def estimate_count_bounds(
 
 
 def _good_turing_confidence_interval(stats: FrequencyStats, confidence_epsilon: float) -> tuple[float, float]:
-    """
-    Confidence interval for total unique entity count using a Good-Turing error bound.
-
-    Bounds the missing mass M0 = f1/n with an additive error term derived from
-    the sample size, then converts the M0 interval to an N interval via N = c / (1 - M0).
-    """
+    """Confidence interval for total unique entity count using a Good-Turing error bound."""
     numeric_eps = sys.float_info.epsilon
     observation_count = stats.observed_total_entities
     singleton_count = stats.singleton_count
@@ -315,14 +273,7 @@ def _good_turing_confidence_interval(stats: FrequencyStats, confidence_epsilon: 
 
 
 def _chao84_confidence_interval(stats: FrequencyStats, confidence_epsilon: float) -> tuple[float, float]:
-    """
-    Confidence interval for total unique entity count using the asymmetric Chao84 interval.
-
-    Uses the log-normal approximation for N - c, which gives a tighter interval
-    than the symmetric normal approximation. Falls back to the Good-Turing interval
-    when there are no doubletons (variance formula requires f2 > 0). When variance
-    is zero (f1 == 0), the CI collapses to the point estimate.
-    """
+    """Confidence interval for total unique entity count using the asymmetric Chao84 interval."""
     singleton_count = stats.singleton_count
     doubleton_count = stats.doubleton_count
     unique_count = stats.observed_unique_entities

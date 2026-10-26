@@ -6,11 +6,14 @@ from faiss import Index, IndexFlatL2
 
 @dataclass(slots=True)
 class VectorIndex[T]:
+    """In-memory vector index for top-k nearest-neighbor lookups."""
+
     index: Index
     mapping: dict[int, T]
 
     @classmethod
     def build(cls, data: list[tuple[T, np.ndarray]]) -> VectorIndex[T]:
+        """Build an index over the given (item, vector) pairs."""
         if not data:
             raise ValueError("Data cannot be empty")
 
@@ -25,6 +28,7 @@ class VectorIndex[T]:
         return cls(index=index, mapping=mapping)
 
     def search_top_k(self, query: np.ndarray, k: int) -> list[tuple[T, float]]:
+        """Return the k nearest items to the query with their distances."""
         query_vector = np.array([query], dtype="float32")
         distances, indices = self.index.search(query_vector, k)
 
@@ -36,4 +40,5 @@ class VectorIndex[T]:
         return results
 
     def search_all(self, query: np.ndarray) -> list[tuple[T, float]]:
+        """Return all indexed items sorted by distance to the query."""
         return self.search_top_k(query, k=len(self.mapping))
