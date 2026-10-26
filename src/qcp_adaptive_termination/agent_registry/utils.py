@@ -49,9 +49,11 @@ def _create_database_description_model(
     missing_fields: list[tuple[str, str]],
     db_missing: bool,
 ) -> type[BaseModel]:
+    """Create a Pydantic model for collecting missing schema descriptions."""
     missing_fields_set = set(missing_fields)
 
     def create_table_column_model(table_name: str, table_info: dict[str, Any]) -> type[BaseModel] | None:
+        """Create a column-description model for one table."""
         fields = {}
         for col_name in table_info["fields"]:
             if (table_name, col_name) in missing_fields_set:
@@ -95,6 +97,7 @@ def _create_database_description_model(
 
 
 def _load_schema_engine(data_agent: DataAgent) -> SchemaEngine:
+    """Create a SchemaEngine for the given data agent."""
     return SchemaEngine(database.get_database_engine(data_agent), db_name=data_agent.name)
 
 
@@ -141,6 +144,7 @@ async def _describe_schema_via_llm(
 @alru_cache(maxsize=None)
 @hooks.hook(HookEvent.DISCOVERY_LOAD_REGISTRY_DATA)
 async def load_registry_data(data_agent: DataAgent) -> AgentRegistryData:
+    """Load and build the registry data for a data agent."""
     schema_engine = await asyncio.to_thread(_load_schema_engine, data_agent)
 
     missing_tables, missing_fields, db_missing = _missing_comments(schema_engine.mschema)
@@ -186,6 +190,7 @@ def map_entries[T](data_agents: list[AgentRegistryData], mapping: Callable[[Agen
 @overload
 def map_entries[T](data_agents: AgentRegistryData, mapping: Callable[[AgentRegistryData], T]) -> T: ...
 def map_entries(data_agents, mapping):
+    """Apply a mapping to single or multiple registry entries."""
     if isinstance(data_agents, list):
         return [mapping(agent) for agent in data_agents]
     return mapping(data_agents)

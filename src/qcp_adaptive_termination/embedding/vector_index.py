@@ -1,3 +1,5 @@
+"""In-memory faiss vector index for nearest-neighbor search."""
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -9,7 +11,9 @@ class VectorIndex[T]:
     """In-memory vector index for top-k nearest-neighbor lookups."""
 
     index: Index
+    """FAISS index holding the indexed vectors"""
     mapping: dict[int, T]
+    """Maps FAISS vector ids to the indexed items"""
 
     @classmethod
     def build(cls, data: list[tuple[T, np.ndarray]]) -> VectorIndex[T]:

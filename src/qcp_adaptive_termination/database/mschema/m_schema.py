@@ -1,3 +1,5 @@
+"""Structured representation of a database schema for LLM context."""
+
 import json
 from typing import Any
 
@@ -5,7 +7,10 @@ from qcp_adaptive_termination.database.mschema.utils import examples_to_str
 
 
 class MSchema:
+    """Structured representation of a database schema."""
+
     def __init__(self, db_id: str = "Anonymous", schema: str | None = None):
+        """Initialize an empty MSchema."""
         self.db_id = db_id
         self.schema = schema
         self.tables = {}
@@ -13,6 +18,7 @@ class MSchema:
         self.database_comment: str = ""
 
     def add_table(self, name, fields=None, comment=None):
+        """Register a table in the schema."""
         self.tables[name] = {
             "fields": (fields or {}).copy(),
             "examples": [],
@@ -32,6 +38,7 @@ class MSchema:
         examples: list | None = None,
         **kwargs,
     ):
+        """Register a field on a table in the schema."""
         if examples is None:
             examples = []
         self.tables[table_name]["fields"][field_name] = {
@@ -46,24 +53,29 @@ class MSchema:
         }
 
     def add_foreign_key(self, table_name, field_name, ref_schema, ref_table_name, ref_field_name):
+        """Register a foreign key relation between two fields."""
         self.foreign_keys.append([table_name, field_name, ref_schema, ref_table_name, ref_field_name])
 
     def get_field_type(self, field_type, simple_mode=True) -> str:
+        """Return the field type, optionally stripped to its base type."""
         if not simple_mode:
             return field_type
         else:
             return field_type.split("(")[0]
 
     def has_table(self, table_name: str) -> bool:
+        """Return whether the schema contains the given table."""
         return table_name in self.tables
 
     def has_column(self, table_name: str, field_name: str) -> bool:
+        """Return whether the table contains the given column."""
         if self.has_table(table_name):
             return field_name in self.tables[table_name]["fields"]
         else:
             return False
 
     def get_field_info(self, table_name: str, field_name: str) -> dict:
+        """Return the field info dict for a table column."""
         try:
             return self.tables[table_name]["fields"][field_name]
         except Exception:
@@ -76,6 +88,7 @@ class MSchema:
         example_num: int = 3,
         show_type_detail: bool = False,
     ) -> str:
+        """Render one field as a single-line MSchema entry."""
         field_info = self.get_field_info(table_name, field_name)
         if not field_info:
             return ""
@@ -109,6 +122,7 @@ class MSchema:
         example_num: int = 3,
         show_type_detail: bool = False,
     ) -> dict[str, str]:
+        """Render all fields of a table as MSchema entries."""
         return {
             field_name: self.single_field_mschema(table_name, field_name, example_num, show_type_detail)
             for field_name in self.tables.get(table_name, {}).get("fields", {})
@@ -121,6 +135,7 @@ class MSchema:
         example_num=3,
         show_type_detail=False,
     ) -> str:
+        """Render one table as an MSchema block."""
         table_info = self.tables.get(table_name, {})
         output = []
         table_comment = table_info.get("comment", "")
@@ -154,6 +169,7 @@ class MSchema:
         example_num: int = 3,
         show_type_detail: bool = False,
     ) -> dict[str, str]:
+        """Render all tables as MSchema blocks."""
         return {
             table_name: self.single_table_mschema(table_name, None, example_num, show_type_detail)
             for table_name in self.tables
@@ -213,6 +229,7 @@ class MSchema:
         return "\n".join(output)
 
     def dump(self):
+        """Return the schema as a plain dict for JSON serialization."""
         schema_dict = {
             "db_id": self.db_id,
             "schema": self.schema,
@@ -222,11 +239,13 @@ class MSchema:
         return schema_dict
 
     def save(self, file_path: str):
+        """Persist the schema as JSON to a file."""
         schema_dict = self.dump()
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(schema_dict, f, ensure_ascii=False, indent=2)
 
     def load(self, file_path: str):
+        """Populate this schema from a JSON file."""
         with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
         self.db_id = data.get("db_id", "Anonymous")

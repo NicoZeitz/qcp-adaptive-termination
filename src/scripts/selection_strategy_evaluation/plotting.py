@@ -11,6 +11,7 @@ from scripts.selection_strategy_evaluation.metrics import EvaluationCurve
 
 
 def _save_figure(fig: Any, output_dir: Path, prefix: str) -> None:
+    """Save the figure in multiple formats and close it."""
     for ext in ("png", "pdf", "svg"):
         fig.savefig(output_dir / f"{prefix}.{ext}", dpi=150, bbox_inches="tight")
     plt.close(fig)

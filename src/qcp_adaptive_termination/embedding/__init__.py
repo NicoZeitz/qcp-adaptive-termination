@@ -89,6 +89,7 @@ async def _create_batched(texts: list[str]) -> list[np.ndarray]:
         batches.append(current_batch)
 
     async def _fetch(batch: list[str]):
+        """Create embeddings for a single batch."""
         async with _EMBEDDING_SEMAPHORE:
             return await client.embeddings.create(model=model, input=batch)
 

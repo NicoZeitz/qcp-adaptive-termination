@@ -1,3 +1,5 @@
+"""SQLAlchemy-backed engine that builds an `MSchema` from a live database."""
+
 import os
 
 import yaml
@@ -13,6 +15,8 @@ from qcp_adaptive_termination.database.mschema.utils import examples_to_str
 
 
 class SchemaEngine(SQLDatabase):
+    """Database engine that builds an `MSchema` from a live SQLAlchemy connection."""
+
     def __init__(
         self,
         engine: Engine,
@@ -28,6 +32,7 @@ class SchemaEngine(SQLDatabase):
         mschema: MSchema | None = None,
         db_name: str = "",
     ):
+        """Initialize the engine, discover tables, and build the MSchema."""
         super().__init__(
             engine,
             schema,
@@ -87,9 +92,11 @@ class SchemaEngine(SQLDatabase):
         return self._mschema
 
     def get_pk_constraint(self, table_name: str) -> list[str]:
+        """Return the primary key columns for a table."""
         return self._inspector.get_pk_constraint(table_name, self._tables_schemas[table_name])["constrained_columns"]
 
     def load_sqlite_comments(self) -> dict:
+        """Load table and field comments from a `.comments.yaml` sidecar, if present."""
         if self._engine.dialect.name != "sqlite":
             return {}
         db_path = self._engine.url.database
@@ -109,6 +116,7 @@ class SchemaEngine(SQLDatabase):
             return {}
 
     def get_table_comment(self, table_name: str):
+        """Return the comment for a table."""
         if self._engine.dialect.name == "sqlite":
             entry = self._sqlite_comments.get(table_name)
             if isinstance(entry, dict):
@@ -120,6 +128,7 @@ class SchemaEngine(SQLDatabase):
             return ""
 
     def get_field_comment(self, table_name: str, field_name: str) -> str:
+        """Return the comment for a field."""
         if self._engine.dialect.name == "sqlite":
             entry = self._sqlite_comments.get(table_name)
             if isinstance(entry, dict):
@@ -127,15 +136,19 @@ class SchemaEngine(SQLDatabase):
         return ""
 
     def default_schema_name(self) -> str | None:
+        """Return the database's default schema name."""
         return self._inspector.default_schema_name
 
     def get_schema_names(self) -> list[str]:
+        """Return all schema names in the database."""
         return self._inspector.get_schema_names()
 
     def get_foreign_keys(self, table_name: str):
+        """Return the foreign keys of a table."""
         return self._inspector.get_foreign_keys(table_name, self._tables_schemas[table_name])
 
     def get_unique_constraints(self, table_name: str):
+        """Return the unique constraints of a table."""
         return self._inspector.get_unique_constraints(table_name, self._tables_schemas[table_name])
 
     def fetch_distinct_values(self, table_name: str, column_names: list[str], max_num: int = 5) -> dict[str, list]:
@@ -204,6 +217,7 @@ class SchemaEngine(SQLDatabase):
         return out
 
     def init_mschema(self):
+        """Build the MSchema from inspector metadata and example values."""
         # Step 1: Sequential — gather inspector metadata (Inspector is not thread-safe)
         table_meta: dict = {}
         for table_name in self._usable_tables:

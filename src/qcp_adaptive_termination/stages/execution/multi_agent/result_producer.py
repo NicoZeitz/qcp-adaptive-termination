@@ -8,7 +8,7 @@ from agents import (
     RunContextWrapper,
     ToolsToFinalOutputResult,
 )
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.code_execution.code_execution_environment import (
@@ -32,7 +32,7 @@ class ResultProducerResult(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
-    result: SerializedOptionalResultType = None
+    result: SerializedOptionalResultType = Field(default=None, description="Serialized final produced answer.")
 
 
 @hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_RESULT_PRODUCER)
@@ -58,6 +58,7 @@ async def produce_result(
     result = ResultProducerResult()
 
     def final_result(result_value: Any):
+        """Set the final produced answer."""
         result.result = result_type.try_parse_value(result_value)
 
     code_environment = CodeExecutionEnvironment(
@@ -76,6 +77,7 @@ async def produce_result(
         _context: RunContextWrapper[None],
         _tool_results: list[FunctionToolResult],
     ) -> ToolsToFinalOutputResult:
+        """Expose the final result as output once produced."""
         return ToolsToFinalOutputResult(
             is_final_output=result.result is not None,
             final_output=result,

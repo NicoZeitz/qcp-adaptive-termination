@@ -32,10 +32,13 @@ def execution_context(execution_id: str):
 
 
 def get_execution_id() -> str:
+    """Return the current execution id."""
     return _execution_id.get()
 
 
 class HookEvent(StrEnum):
+    """Names of the pipeline events that pre/overwrite/post handlers can register on."""
+
     # ── Setup ────────────────────────────────────────────────────────────────
     SETUP_LOAD_INPUT = "setup_load_input"
     SETUP_LOAD_CONFIG = "setup_load_config"
@@ -100,6 +103,7 @@ def pre(event: HookEvent):
     """Register an observer that runs before the operation."""
 
     def decorator(fn):
+        """Register a pre-handler and return the wrapped function."""
         register_pre(event, fn)
         return fn
 
@@ -110,6 +114,7 @@ def overwrite(event: HookEvent):
     """Register a replacement implementation (last registration wins)."""
 
     def decorator(fn):
+        """Register an overwrite handler and return the wrapped function."""
         register_overwrite(event, fn)
         return fn
 
@@ -120,6 +125,7 @@ def post(event: HookEvent):
     """Register an observer that runs after the operation."""
 
     def decorator(fn):
+        """Register a post-handler and return the wrapped function."""
         register_post(event, fn)
         return fn
 
@@ -127,30 +133,37 @@ def post(event: HookEvent):
 
 
 def register_pre(event: HookEvent, handler: Callable[..., Any]) -> None:
+    """Register a pre-handler for an event."""
     _pre_hooks[event].append(handler)
 
 
 def register_overwrite(event: HookEvent, handler: Callable[..., Any]) -> None:
+    """Register the replacement handler for an event."""
     _overwrite_hooks[event] = handler
 
 
 def register_post(event: HookEvent, handler: Callable[..., Any]) -> None:
+    """Register a post-handler for an event."""
     _post_hooks[event].append(handler)
 
 
 def unregister_pre(event: HookEvent, handler: Callable[..., Any]) -> None:
+    """Unregister a pre-handler for an event."""
     _pre_hooks[event].remove(handler)
 
 
 def unregister_overwrite(event: HookEvent, handler: Callable[..., Any]) -> None:
+    """Unregister the replacement handler for an event."""
     _overwrite_hooks.pop(event, None)
 
 
 def unregister_post(event: HookEvent, handler: Callable[..., Any]) -> None:
+    """Unregister a post-handler for an event."""
     _post_hooks[event].remove(handler)
 
 
 def clear(event: HookEvent | None = None) -> None:
+    """Clear all handlers, or only those registered for a given event."""
     if event is None:
         _pre_hooks.clear()
         _overwrite_hooks.clear()
@@ -263,12 +276,14 @@ def hook(event: HookEvent, *, stage_context: bool = False):
     """
 
     def decorator(fn):
+        """Wrap a default implementation and route it through event dispatch."""
         sig = inspect.signature(fn)
 
         if inspect.iscoroutinefunction(fn):
 
             @functools.wraps(fn)
             async def async_wrapper(*args, **kwargs):
+                """Call the async dispatch for the wrapped default."""
                 bound = sig.bind(*args, **kwargs)
                 bound.apply_defaults()
                 return await _run_async(event, fn, dict(bound.arguments), stage_context)
@@ -279,6 +294,7 @@ def hook(event: HookEvent, *, stage_context: bool = False):
 
             @functools.wraps(fn)
             def sync_wrapper(*args, **kwargs):
+                """Call the sync dispatch for the wrapped default."""
                 bound = sig.bind(*args, **kwargs)
                 bound.apply_defaults()
                 return _run_sync(event, fn, dict(bound.arguments), stage_context)

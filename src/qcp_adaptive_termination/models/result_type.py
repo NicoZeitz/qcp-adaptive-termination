@@ -1,3 +1,5 @@
+"""Serialization and type model for query plan results."""
+
 from typing import Annotated, Any, Literal, overload
 
 import numpy as np
@@ -16,6 +18,7 @@ def preview_dataframe(
     show_dtypes: bool = True,
     show_row_numbers: bool = True,
 ) -> str:
+    """Render a preview string of a dataframe for display to the LLM."""
     if df is None:
         return "None"
     if df.empty:
@@ -31,10 +34,19 @@ def preview_dataframe(
 
 
 @overload
-def serialize(result: ResultType, context: Literal["preview"]) -> str: ...
+def serialize(result: ResultType, context: Literal["preview"]) -> str:
+    """Serialize a result dataframe to a preview string."""
+    ...
+
+
 @overload
-def serialize(result: ResultType, context: Literal["full"] = "full") -> dict[str, Any]: ...
+def serialize(result: ResultType, context: Literal["full"] = "full") -> dict[str, Any]:
+    """Serialize a result dataframe to a full dict."""
+    ...
+
+
 def serialize(result: ResultType, context: Literal["preview", "full"] = "full") -> str | dict[str, Any]:
+    """Serialize a result dataframe to a preview string or full dict."""
     if context == "preview":
         return preview_dataframe(result)
 
@@ -45,16 +57,19 @@ def serialize(result: ResultType, context: Literal["preview", "full"] = "full") 
 
 
 def deserialize(data: dict[str, Any]) -> ResultType:
+    """Build a result dataframe from its serialized dict form."""
     df = DataFrame(**data)
     # Convert None values back to NaN
     return df.replace({None: np.nan})
 
 
 def is_result_type(value: Any) -> bool:
+    """Return whether the value is a result dataframe."""
     return isinstance(value, DataFrame)
 
 
 def try_parse_value(value: Any) -> ResultType:
+    """Coerce an LLM-provided value into a result dataframe."""
     if value is None:
         return DataFrame()
     elif isinstance(value, DataFrame):
@@ -75,10 +90,12 @@ def try_parse_value(value: Any) -> ResultType:
 
 
 def failed_result() -> ResultType:
+    """Create a result dataframe indicating a failed query."""
     return DataFrame({"error": ["Failed to execute query"]})
 
 
 def _serialize_result(result: ResultType, info: SerializationInfo) -> JsonValue:
+    """Serialize a result according to the serialization context."""
     if info.context == "preview":
         return serialize(result, context="preview")
     else:
@@ -86,6 +103,7 @@ def _serialize_result(result: ResultType, info: SerializationInfo) -> JsonValue:
 
 
 def _validate_result(value: Any) -> ResultType:
+    """Validate and deserialize a raw value into a result dataframe."""
     if isinstance(value, ResultType):
         return value
     elif isinstance(value, dict):
@@ -103,12 +121,14 @@ SerializedResultType = SkipJsonSchema[
 
 
 def _serialize_optional_result(result: ResultType | None, info: SerializationInfo) -> JsonValue:
+    """Serialize an optional result, handling None."""
     if result is None:
         return None
     return _serialize_result(result, info)
 
 
 def _validate_optional_result(value: Any) -> ResultType | None:
+    """Validate an optional raw value into a result dataframe or None."""
     if value is None:
         return None
     return _validate_result(value)

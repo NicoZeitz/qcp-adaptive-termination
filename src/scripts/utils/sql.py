@@ -12,6 +12,7 @@ __all__ = [
 
 
 def _normalize_quotes(sql: str) -> str:
+    """Normalize curly quotes to ASCII quotes."""
     return sql.replace("‘", "'").replace("’", "'").replace("“", '"').replace("”", '"')
 
 
@@ -43,6 +44,7 @@ def rewrite_sql_identifiers(
     tree = sqlglot.parse_one(_normalize_quotes(sql), dialect="sqlite")
 
     def _transformer(node: Any) -> Any:
+        """Rewrite matching table and column identifiers in a node."""
         if isinstance(node, exp.Table) and node.name.lower() == canonical_table.lower():
             new_node = node.copy()
             new_node.set("this", exp.to_identifier(actual_table))

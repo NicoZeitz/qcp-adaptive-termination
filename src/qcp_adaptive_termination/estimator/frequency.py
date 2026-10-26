@@ -23,6 +23,7 @@ class FrequencyStats:
     """Observed (known) statistics over the integrated sample."""
 
     def __init__(self, source_samples: list[list[DataItem]]) -> None:
+        """Compute observed statistics by integrating samples from all sources."""
         self._source_samples: list[list[DataItem]] = []  # samples grouped by source
         self._all_samples: list[DataItem] = []  # all samples across all sources
         self._entities: dict[str, EntityRecord] = {}  # entity key → observation record

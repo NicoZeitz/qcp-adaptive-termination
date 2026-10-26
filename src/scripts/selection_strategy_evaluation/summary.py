@@ -18,12 +18,19 @@ class StepSummary:
     """Benchmark outcome for one step, used for summary aggregation."""
 
     query_slug: str
+    """Identifier for the evaluated query"""
     step_id: str
+    """Identifier for the step"""
     agents_total: int
+    """Total agents in the step"""
     oracle_auc: float
+    """Oracle AUC for the step"""
     final_row_count: int
+    """Number of rows in the final result set"""
     curves: dict[str, EvaluationCurve] = field(default_factory=dict)
+    """Coverage curve per strategy"""
     failures: list[tuple[str, str]] = field(default_factory=list)
+    """Strategy/error pairs for failed steps"""
 
     @property
     def is_find_step(self) -> bool:

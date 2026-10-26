@@ -30,6 +30,7 @@ USE_MC = False
 
 
 def _generate_source(agent_idx: int, entity_pool: list[str], rng: random.Random) -> list[DataItem]:
+    """Generate one agent's sampled data rows."""
     items = []
     tier_size = ENTITY_POOL_SIZE // VALUE_TIERS
     for _ in range(ROWS_PER_AGENT):
@@ -63,6 +64,7 @@ def _compute_all_stats(estimator: Estimator) -> None:
 
 
 def _generate_data(rng: random.Random) -> list[list[DataItem]]:
+    """Generate all agents' source data."""
     logging.info(
         "Generating %d agents × %d rows (pool=%d, zipf_alpha=%.1f)...",
         AGENTS,
@@ -116,6 +118,7 @@ def _run_forced_split(sources: list[list[DataItem]]) -> None:
 
 
 def _run_benchmark(sources: list[list[DataItem]]) -> list[float]:
+    """Incrementally add agents and time each incremental stat step."""
     estimator = Estimator(sources[:2])
     step_times: list[float] = []
 
@@ -133,6 +136,7 @@ def _run_benchmark(sources: list[list[DataItem]]) -> list[float]:
 
 
 def _report(step_times: list[float], total_elapsed: float) -> None:
+    """Log the benchmark's timing summary."""
     avg = sum(step_times) / len(step_times)
     p50 = sorted(step_times)[len(step_times) // 2]
     p95 = sorted(step_times)[int(len(step_times) * 0.95)]
@@ -150,6 +154,7 @@ def _report(step_times: list[float], total_elapsed: float) -> None:
 
 
 def main() -> None:
+    """Run the estimator performance benchmark."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     rng = random.Random(RANDOM_SEED)
 

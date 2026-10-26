@@ -1,9 +1,12 @@
+"""Helpers for converting raw example values into MSchema-friendly strings."""
+
 import datetime
 import decimal
 import re
 
 
 def is_email(string):
+    """Return whether the string is an email address."""
     pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
     match = re.match(pattern, string)
     return bool(match)

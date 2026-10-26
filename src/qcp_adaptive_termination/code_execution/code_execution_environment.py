@@ -46,6 +46,7 @@ class CodeExecutionResult:
 
 
 def preview_text(text: str, char_limit: int | None = None):
+    """Truncate text to a char limit while keeping both ends."""
     if char_limit is None:
         char_limit = context.get_config().llm_code_execution_preview_char_limit
     if len(text) <= char_limit:
@@ -65,6 +66,7 @@ def format_result(
     exception: Exception | None,
     locals: dict[str, Any],
 ) -> str:
+    """Format captured output and locals into a summary string."""
     formatted = ""
     if len(stdout) > 0:
         formatted += f"\nStdout: {preview_text(stdout)}"
@@ -147,6 +149,8 @@ class CodeExecutionEnvironment:
         return execution_result
 
     def as_function_tool[TContext](self) -> FunctionTool:
+        """Return a function tool that executes code via this environment."""
+
         @function_tool(
             name_override="execute_code",
             timeout=context.get_config().llm_code_execution_timeout,
@@ -161,9 +165,11 @@ class CodeExecutionEnvironment:
         return execute_python_code
 
     def get_code_executions(self) -> list[CodeExecutionResult]:
+        """Return all code execution results."""
         return self.code_executions
 
     def to_span_data(self) -> JsonValue:
+        """Serialize executed code into a JSON-compatible structure for tracing."""
         return [
             {
                 "code": code_execution.code,

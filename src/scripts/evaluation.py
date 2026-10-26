@@ -19,6 +19,7 @@ from scripts.utils.orchestrator import (
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """Build the CLI parser with an evaluation subcommand per benchmark."""
     parser = argparse.ArgumentParser(prog="python -m scripts.evaluation", description="Evaluation scripts")
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
@@ -41,6 +42,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 async def _run_subcommand(args: argparse.Namespace) -> None:
+    """Load config and run the selected evaluation subcommand."""
     config = load_config(args.config)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -80,6 +82,7 @@ async def _run_subcommand(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
+    """Parse CLI args and run the requested evaluation."""
     args = _build_parser().parse_args()
     asyncio.run(_run_subcommand(args))
 

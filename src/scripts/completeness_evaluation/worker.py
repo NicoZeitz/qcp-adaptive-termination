@@ -76,6 +76,7 @@ def _replan_error(
     query_plan: QueryPlan,
     reason: FailedExecution,
 ) -> QueryPlan:
+    """Raise since replanning is unexpected in the evaluator benchmark."""
     del execution_id, data_agents, relevant_data_agents, query_plan
     raise RuntimeError(f"Unexpected replan triggered in evaluator benchmark. Step: {reason.step.id!r}")
 
@@ -92,6 +93,7 @@ def _make_align_dispatch(
         query: str,
         merge_task: str,
     ) -> AlignedResultList:
+        """Route an align_schema call to the handler for its step query."""
         handler = handlers.get(query)
         if handler is None:
             raise ValueError(f"No align_schema handler for query={query!r}")
@@ -118,6 +120,7 @@ def _make_data_dispatch(
         additional_information: list[AdditionalInformation],
         schema_metadata: AlignedSchemaMetadata | None,
     ) -> PartialQueryAnswer:
+        """Route a data_agent call to the handler for its step query."""
         handler = handlers.get(query)
         if handler is None:
             raise ValueError(f"No data_agent handler for query={query!r}")
@@ -196,6 +199,7 @@ def _estimator_snapshot(
     lower, upper = estimator.estimated_count_bounds()
 
     def ratio(numerator, denominator) -> float | None:
+        """Relative ratio of two counts, None when the denominator is unusable."""
         if denominator is None or not math.isfinite(denominator) or denominator <= 0:
             return None
         return numerator / denominator
@@ -281,6 +285,7 @@ def _produced_scalar_and_errors(
         return None, None, None
 
     def rel_err(truth: float | None) -> float | None:
+        """Relative error of the scalar vs a truth value, None when uncomputable."""
         if truth is None or truth == 0:
             return None
         return abs(scalar - truth) / abs(truth)
@@ -292,6 +297,7 @@ class _StepTracker:
     """Collects one completeness-check record per queried agent, per step."""
 
     def __init__(self, output_dir: Path) -> None:
+        """Initialize per-step accumulation state."""
         self._output_dir = output_dir
         # step query -> step id
         self._query_to_step: dict[str, str] = {}
@@ -324,6 +330,7 @@ class _StepTracker:
         self._aggregation[step_id] = aggregation
 
     def _coverage(self, step_id: str) -> float:
+        """Fraction of unique keys seen for a step."""
         seen = self._seen_keys.get(step_id, set())
         total = self._total_unique.get(step_id, 0)
         return min(len(seen) / total, 1.0) if total > 0 else 0.0
@@ -538,9 +545,11 @@ class _StepTracker:
         return self._produced.get(step_id)
 
     def step_budget_t(self, step_id: str) -> float | None:
+        """Return the recorded step budget time for a step."""
         return self._step_budget_t.get(step_id)
 
     def aggregation_for(self, step_id: str) -> AggregationType | None:
+        """Return the step's primary aggregation type, if any."""
         return self._aggregation.get(step_id)
 
     def fill_batch_derived(self) -> None:
@@ -676,6 +685,7 @@ class _CompletenessRunner:
     """Hook-only completeness evaluation for one query."""
 
     def __init__(self) -> None:
+        """Initialize the hook-only evaluation runner."""
         self.tracker: _StepTracker | None = None
         self.step_infos: list[tuple[MultiAgentQueryPlanStep, dict[str, Any]]] = []
         self.relevant_data_agents: list[DataAgent] = []
@@ -777,6 +787,7 @@ class _CompletenessRunner:
 
         @hooks.overwrite(HookEvent.SETUP_LOAD_INPUT)
         def _load_input_override(execution_id, path) -> tuple[Any, dict[str, Any] | None]:
+            """Return the precomputed drafted plan and extra context as input."""
             del execution_id, path
             return drafted, extra
 

@@ -13,6 +13,7 @@ from scripts.utils.setup import register_stage_output_hooks, run_script
 def argument_parser(
     prog: str = "qcp-adaptive-termination", description="Collaborative Query Processing with Adaptive Termination"
 ) -> ArgumentParser:
+    """Build the CLI argument parser for a QCP run."""
     parser = ArgumentParser(
         prog="qcp-adaptive-termination",
         description="Collaborative Query Processing with Adaptive Termination",
@@ -61,6 +62,7 @@ def argument_parser(
 
 
 def main() -> None:
+    """Parse CLI args and run the QCP pipeline."""
     args = argument_parser().parse_args()
     register_stage_output_hooks()
 
@@ -69,6 +71,7 @@ def main() -> None:
 
 
 def _print_result(result) -> None:
+    """Print the pipeline result to stdout."""
     if result_type.is_result_type(result):
         print("Pipeline completed. Result preview:")
         print(

@@ -1,3 +1,5 @@
+"""Data item dataclass for a single observation of an entity."""
+
 from dataclasses import dataclass
 
 

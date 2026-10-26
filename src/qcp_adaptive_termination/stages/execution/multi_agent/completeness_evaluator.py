@@ -54,6 +54,7 @@ def _estimator_stats(estimator: Estimator | None) -> str | None:
     lower, upper = estimator.estimated_count_bounds()
 
     def ratio(num: float, den):
+        """Ratio as a fixed-width string, or n/a when the denominator is zero."""
         return f"{num / den:.3f}" if den and den > 0 else "n/a"
 
     return (
@@ -150,10 +151,12 @@ async def run_world_knowledge_stop(
     result: bool | None = None
 
     def stop():
+        """Signal that the result list is complete."""
         nonlocal result
         result = True
 
     def continue_querying():
+        """Signal that more agents should be queried."""
         nonlocal result
         result = False
 
@@ -186,6 +189,7 @@ async def run_world_knowledge_stop(
         _context: RunContextWrapper[None],
         _tool_results: list[FunctionToolResult],
     ) -> ToolsToFinalOutputResult:
+        """Expose the stop decision as final output once decided."""
         return ToolsToFinalOutputResult(
             is_final_output=result is not None,
             final_output=result,

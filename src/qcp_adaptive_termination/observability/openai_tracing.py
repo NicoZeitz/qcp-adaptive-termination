@@ -1,3 +1,5 @@
+"""OpenAI-compatible tracing exporter that truncates oversized span payloads."""
+
 from typing import Any
 
 from agents.tracing.processors import BackendSpanExporter
@@ -16,11 +18,13 @@ class TruncatingBackendSpanExporter(BackendSpanExporter):
     """
 
     def __init__(self, *args: Any, max_field_bytes: int = 9500, **kwargs: Any):
+        """Initialize the exporter with an optional per-field size cap."""
         super().__init__(*args, **kwargs)
         # Use a stricter per-field cap for OpenAI ingestion to avoid 400 payload-too-large.
         self._OPENAI_TRACING_MAX_FIELD_BYTES = max_field_bytes
 
     def _sanitize_for_openai_tracing_api(self, payload_item: dict[str, Any]) -> dict[str, Any]:
+        """Sanitize a payload for the OpenAI traces API, truncating oversized fields."""
         sanitized = super()._sanitize_for_openai_tracing_api(payload_item)
 
         sanitized = self._truncate_metadata(sanitized)
@@ -45,6 +49,7 @@ class TruncatingBackendSpanExporter(BackendSpanExporter):
         return sanitized_payload
 
     def _truncate_metadata(self, payload_item: dict[str, Any]) -> dict[str, Any]:
+        """Truncate long metadata string values to the OpenAI API limit."""
         metadata = payload_item.get("metadata")
         if not isinstance(metadata, dict):
             return payload_item

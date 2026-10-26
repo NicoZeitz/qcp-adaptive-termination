@@ -1,3 +1,5 @@
+"""Abstract base classes for agent selection strategies."""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import cast
@@ -58,6 +60,7 @@ class SelectionStrategy[PrecomputedState, RunningState](ABC):
 class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[PrecomputedScoredState, None]):
     """Base for strategies whose ranking does not change between iterations."""
 
+    # Whether to rank ascending (lowest score first).
     ascending: bool = False
 
     @abstractmethod
@@ -68,6 +71,7 @@ class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[P
         column_per_agent: dict[str, str] | None,
         query: str = "",
     ) -> dict[str, PrecomputedScoredState]:
+        """Return a per-agent mapping of static precomputed scores."""
         raise NotImplementedError
 
     def init_state(self) -> None:

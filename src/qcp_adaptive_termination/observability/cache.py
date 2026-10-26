@@ -31,8 +31,12 @@ def _key_default(obj: Any) -> Any:
 
 @dataclass(slots=True)
 class Cache:
+    """Disk-backed pickle cache with configurable read/write modes."""
+
     folder: Path
+    """Directory in which cache files are stored"""
     mode: CacheMode = field(default=CacheMode.READ_AND_WRITE)
+    """Read/write behavior mode for this cache"""
 
     def get(self, key: Any) -> tuple[Any, bool]:
         """Read a value from the cache by key.
@@ -84,6 +88,7 @@ class Cache:
         return self.folder / f"{hash}.pkl"
 
     def _throw_on_miss(self, key: Any):
+        """Raise a cache-miss error when the active mode requires it."""
         if self.mode in [
             CacheMode.READ_ONLY_THROW_ON_MISS,
             CacheMode.READ_AND_WRITE_THROW_ON_MISS,
@@ -125,12 +130,14 @@ def cached[**Param, RetType](
     def decorator(
         func: Callable[Param, Awaitable[RetType]],
     ) -> Callable[Param, Awaitable[RetType]]:
+        """Wrap the async function with cache hit/miss handling."""
         from qcp_adaptive_termination.observability.context import get_cache
 
         sig = inspect.signature(func)
 
         @wraps(func)
         async def wrapper(*args: Param.args, **kwargs: Param.kwargs) -> RetType:
+            """Async wrapper that reads from or writes to the cache."""
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
 

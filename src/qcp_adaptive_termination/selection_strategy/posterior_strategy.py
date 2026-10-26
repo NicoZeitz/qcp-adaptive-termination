@@ -1,3 +1,5 @@
+"""Bayesian-posterior agent selection strategy over column overlap."""
+
 import asyncio
 from dataclasses import dataclass, field
 from typing import cast
@@ -25,7 +27,9 @@ class PosteriorPrecomputedState:
     """Precomputed embedding and theta sketch for an agent."""
 
     embedding: np.ndarray
+    """Precomputed embedding vector for the agent"""
     theta_sketch: compact_theta_sketch
+    """Precomputed compact theta sketch of the agent's column values"""
 
 
 @dataclass(slots=True)
@@ -33,7 +37,9 @@ class PosteriorState:
     """Running posterior state: theta sketch and queried embeddings."""
 
     theta: update_theta_sketch
+    """Running theta sketch of values seen so far"""
     queried_embeddings: list[np.ndarray] = field(default_factory=list)
+    """Embeddings of agents queried so far"""
 
 
 def _normalize_probability(values: np.ndarray) -> np.ndarray:
@@ -49,9 +55,13 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
     """Ranks agents by a Bayesian posterior over column overlap."""
 
     lg_k: int = DEFAULT_LG_K
+    """Number of bits for the theta sketch precision"""
     clustered_prior: bool = False
+    """Whether to use the clustered prior"""
     min_samples: int = DEFAULT_MIN_SAMPLES
+    """Minimum number of samples to use a distribution"""
     min_cluster_size_ratio: float = DEFAULT_MIN_CLUSTER_SIZE_RATIO
+    """Minimum cluster size as a fraction of total agents"""
 
     def needs_table(self) -> bool:
         """Return True, since this strategy requires a table per agent."""
@@ -74,6 +84,7 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         vectors = await agent_registry.embedding_vector_for_table(agents, table_per_agent)
 
         async def _build(agent: DataAgent) -> tuple[str, PosteriorPrecomputedState]:
+            """Fetch one agent's column values into its precomputed state."""
             values = await asyncio.to_thread(
                 database.fetch_column_values, agent, table_per_agent[agent.name], column_per_agent[agent.name]
             )

@@ -10,8 +10,11 @@ class EvaluationCurve:
     """Coverage curve for one strategy run."""
 
     x: list[float]
+    """Fraction of agents queried"""
     y: list[float]
+    """Fraction of total unique rows covered"""
     auc: float
+    """Area under the coverage curve"""
 
 
 def compute_auc(coverages: list[float]) -> float:

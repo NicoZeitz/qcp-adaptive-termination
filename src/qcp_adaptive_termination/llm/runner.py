@@ -38,12 +38,14 @@ class _SerializedModel:
     """Pickle-safe stand-in for dynamic pydantic outputs that can't be pickled directly."""
 
     dump: dict[str, Any]
+    """Serialized model data for pickle-safe caching"""
 
     @staticmethod
     def wrap(input: Any) -> Any | _SerializedModel:
         """Wrap dynamic pydantic models in a pickle-safe form."""
 
         def _is_dynamic_model(output_type: type[Any]) -> bool:
+            """Return True if the output type is a runtime-defined (non-importable) model."""
             module = sys.modules.get(output_type.__module__)
             if module is None:
                 return True
@@ -161,6 +163,7 @@ async def run_agent[TResult](
         tool_choice: Literal["auto", "required", "none"] | None,
         label: str | None,
     ) -> AgentRunResult[Any]:
+        """Execute the agent once, returning its output, continuation, and usage."""
         nonlocal tool_use_behavior
         agent = Agent[JsonValue](
             name=display_name,

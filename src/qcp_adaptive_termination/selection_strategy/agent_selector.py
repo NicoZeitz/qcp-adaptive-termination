@@ -1,3 +1,5 @@
+"""Build selection strategies and run one multi-agent selection step."""
+
 import dataclasses
 from typing import Any
 
@@ -42,6 +44,7 @@ _STRATEGY_CLASSES: dict[SelectionStrategyType, type[SelectionStrategy]] = {
 
 
 def _build_strategy(selection_type: SelectionStrategyType, kwargs: dict[str, Any]) -> SelectionStrategy:
+    """Instantiate the strategy class for a selection type with fitting kwargs."""
     strategy_cls = _STRATEGY_CLASSES.get(selection_type)
     if strategy_cls is None:
         raise ValueError(f"Unsupported SelectionType: {selection_type}")
@@ -52,6 +55,7 @@ def _build_strategy(selection_type: SelectionStrategyType, kwargs: dict[str, Any
 
 
 async def _resolve_table(agents: list[DataAgent], query: str) -> dict[str, str]:
+    """Resolve the closest-matching table for each agent by embedding similarity."""
     agents_vectors = await agent_registry.embedding_vectors_for_all_tables(agents)
     query_vector = await embedding.create(query)
 
@@ -70,6 +74,7 @@ async def _resolve_column(
     table_per_agent: dict[str, str],
     query: str,
 ) -> dict[str, str]:
+    """Resolve the closest-matching column for each agent by embedding similarity."""
     agents_vectors = await agent_registry.embedding_vectors_for_all_columns(agents, table_per_agent)
     query_vector = await embedding.create(query)
 
@@ -99,6 +104,7 @@ class AgentSelector:
         state: Any,
         selections: list[ScoredDataAgent],
     ) -> None:
+        """Store the strategy, precomputed data, and running selection state."""
         self._strategy = strategy
         self._precomputed = precomputed
         self._state = state
@@ -110,6 +116,7 @@ class AgentSelector:
         agents: list[DataAgent],
         query: str,
     ) -> AgentSelector:
+        """Build a selector with a config-resolved strategy and its precomputed data."""
         selection_type = context.get_config().selection_type
         strategy = _build_strategy(selection_type, dict(context.get_config().selection_kwargs))
 
@@ -128,9 +135,11 @@ class AgentSelector:
         return cls(strategy, precomputed, state, selections)
 
     def rank(self, remaining: list[ScoredDataAgent]) -> list[ScoredDataAgent]:
+        """Rank the remaining agents best-first using the strategy."""
         return self._strategy.rank(remaining, self._precomputed, self._state)
 
     def update(self, result_list: AlignedResultList, agent_names: list[str] | None = None) -> None:
+        """Fold the seen column values into the strategy state."""
         col = result_list.schema_metadata.value_column or result_list.schema_metadata.keys[0]
         df = result_list.data
         values = df[col].dropna().astype(str).tolist()

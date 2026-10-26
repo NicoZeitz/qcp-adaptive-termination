@@ -17,9 +17,17 @@ _span_context_var = ContextVar[Span[CustomSpanData] | None]("current_span", defa
 
 
 @overload
-def serialize_data_for_tracing(value: dict[str, Any]) -> dict[str, JsonValue]: ...
+def serialize_data_for_tracing(value: dict[str, Any]) -> dict[str, JsonValue]:
+    """Overload: dict-valued data returns a JSON-safe dict."""
+    ...
+
+
 @overload
-def serialize_data_for_tracing(value: Any) -> JsonValue: ...
+def serialize_data_for_tracing(value: Any) -> JsonValue:
+    """Overload: any other value returns a JSON-safe scalar."""
+    ...
+
+
 def serialize_data_for_tracing(value):
     """Serialize a value into a JSON-safe form for tracing."""
     if isinstance(value, float) and not math.isfinite(value):

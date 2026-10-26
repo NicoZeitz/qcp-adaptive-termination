@@ -19,9 +19,13 @@ class EmbeddingCall:
     """A single distinct embedding computation (one unique text)."""
 
     call_id: str
+    """Unique id for the call."""
     text: str
+    """The embedded text."""
     model: str
+    """The embedding model used."""
     prompt_tokens: int
+    """Prompt token count for the text."""
 
 
 @dataclass(slots=True)
@@ -29,16 +33,27 @@ class LLMCall:
     """A single LLM run (role/agent label + aggregated SDK usage)."""
 
     call_id: str
+    """Unique id for the run."""
     role: AgentRole | str
+    """Role of the agent making the run."""
     agent_name: str | None
+    """Agent display name, if any."""
     label: str | None
+    """Optional run label."""
     model: str
+    """The model used."""
     requests: int
+    """Number of API requests in the run."""
     input_tokens: int
+    """Total input token count."""
     cached_input_tokens: int
+    """Input tokens served from cache."""
     cache_write_tokens: int
+    """Input tokens written to cache."""
     output_tokens: int
+    """Output token count."""
     reasoning_tokens: int
+    """Reasoning token count."""
 
 
 def _embedding_cost(model_cost: ModelCost | None, tokens: int) -> Decimal:
@@ -201,13 +216,21 @@ class ModelTotals:
     """Per-model accumulated usage (cost as Decimal until serialized)."""
 
     calls: int = 0
+    """Number of calls counted."""
     requests: int = 0
+    """Total API requests."""
     input_tokens: int = 0
+    """Total input tokens."""
     cached_input_tokens: int = 0
+    """Input tokens served from cache."""
     cache_write_tokens: int = 0
+    """Input tokens written to cache."""
     output_tokens: int = 0
+    """Total output tokens."""
     reasoning_tokens: int = 0
+    """Total reasoning tokens."""
     cost: Decimal = Decimal(0)
+    """Accumulated cost in dollars."""
 
 
 @dataclass(slots=True)
@@ -215,8 +238,11 @@ class UsageReport:
     """Financial-ish summary of one query execution."""
 
     embeddings: list[EmbeddingCall] = field(default_factory=list)
+    """Recorded embedding calls."""
     llm: list[LLMCall] = field(default_factory=list)
+    """Recorded LLM runs."""
     started_at: float = field(default_factory=time.monotonic)
+    """Monotonic wall-clock time the report was started."""
 
     def record_embedding(self, text: str, model: str, prompt_tokens: int) -> bool:
         """Record one embedding computation, deduplicated by text.
@@ -370,9 +396,11 @@ class UsageReport:
         ]
 
         def _embedding_row(t: ModelTotals) -> dict:
+            """Build an embedding-report row for one model's totals."""
             return {"calls": t.calls, "input_tokens": t.input_tokens, "cost": float(t.cost)}
 
         def _llm_row(t: ModelTotals) -> dict:
+            """Build an LLM-report row for one model's totals."""
             return {
                 "runs": t.calls,
                 "requests": t.requests,

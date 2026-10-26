@@ -49,6 +49,7 @@ def register_stage_output_hooks() -> None:
     """Register stage input/output JSON dump hooks for full-pipeline runs."""
 
     def _write_output_file(filename: str, data: dict) -> None:
+        """Write stage I/O data as JSON into the output dir."""
         if output_dir := context.get_output_dir():
             path = output_dir / filename
             with open(path, "w", encoding="utf-8") as f:
@@ -64,11 +65,13 @@ def register_stage_output_hooks() -> None:
         | FilteredRelevantAgents,
         extra: dict | None,
     ) -> None:
+        """Copy the input file into the output dir."""
         if output_dir := context.get_output_dir():
             shutil.copy(input_file, output_dir / input_file.name)
 
     @hooks.pre(HookEvent.SETUP_LOAD_CONFIG)
     def _write_config_file(execution_id: str, config: Config) -> None:
+        """Dump the loaded config into the output dir."""
         if output_dir := context.get_output_dir():
             with open(output_dir / "config.yaml", "w", encoding="utf-8") as f:
                 yaml.dump(config.model_dump(), f, sort_keys=False, allow_unicode=True, default_flow_style=False)
@@ -76,6 +79,7 @@ def register_stage_output_hooks() -> None:
 
     @hooks.pre(HookEvent.DISCOVERY_FILTER_RELEVANT_AGENTS)
     def _write_stage_1_input(execution_id: str, query: str, data_agents: list[DataAgent]) -> None:  # noqa: ARG001
+        """Dump the stage-1 input (query and agents) to JSON."""
         _write_output_file(
             "stage_1_input.json",
             {"query": query, "data_agents": [a.model_dump() for a in data_agents]},
@@ -83,6 +87,7 @@ def register_stage_output_hooks() -> None:
 
     @hooks.post(HookEvent.DISCOVERY_FILTER_RELEVANT_AGENTS)
     def _write_stage_1(execution_id: str, result: FilteredRelevantAgents) -> None:
+        """Dump the stage-1 output (filtered relevant agents) to JSON."""
         _write_output_file(
             "stage_1_output_filtered_relevant_agents.json",
             result.model_dump(),
@@ -92,6 +97,7 @@ def register_stage_output_hooks() -> None:
     def _write_stage_2_input(
         execution_id: str, query: str, data_agents: list[DataAgent], relevant_data_agents: list[DataAgent]
     ) -> None:
+        """Dump the stage-2 input (query and agents) to JSON."""
         _write_output_file(
             "stage_2_input_filtered_relevant_agents.json",
             {
@@ -103,6 +109,7 @@ def register_stage_output_hooks() -> None:
 
     @hooks.post(HookEvent.PLANNING_STAGE)
     def _write_stage_2(execution_id: str, result: DraftedQueryPlan) -> None:
+        """Dump the stage-2 output (drafted query plan) to JSON."""
         _write_output_file(
             "stage_2_output_drafted_query_plan.json",
             result.model_dump(),
@@ -112,6 +119,7 @@ def register_stage_output_hooks() -> None:
     def _write_stage_3_input(
         execution_id: str, attempt: int, query_plan: QueryPlan, current_data_agents: list[DataAgent]
     ) -> None:
+        """Dump the stage-3 input (query plan and agents) to JSON."""
         _write_output_file(
             "stage_3_input_drafted_query_plan.json",
             {
@@ -123,6 +131,7 @@ def register_stage_output_hooks() -> None:
 
     @hooks.post(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN)
     def _write_stage_3(execution_id: str, result: ExecutionResult) -> None:
+        """Dump the stage-3 output (execution result) to JSON."""
         _write_output_file(
             "stage_3_output_collaborative_query_answering_result.json",
             result.model_dump(),
@@ -140,23 +149,40 @@ def _write_usage_reports(output_dir: Path, usage_report: UsageReport, config: Co
 
 @dataclass(slots=True)
 class ScriptContext:
+    """Holds resolved run inputs and derived paths for a single script run."""
+
     args: argparse.Namespace
+    """Parsed CLI arguments for the run"""
     datetime_str: str
+    """Start timestamp string for the run"""
     config: Config
+    """Loaded configuration"""
     input_file: Path
+    """Path to the input JSON"""
     output_dir: Path | None
+    """Directory for run outputs"""
     cache_dir: Path | None
+    """Directory for cached results"""
     data_dir: Path
+    """Parent directory of the dataset directory"""
     dataset_dir: Path | None
+    """Directory containing the datasets"""
     start_stage: Stage
+    """First pipeline stage to run"""
     end_stage: Stage
+    """Last pipeline stage to run"""
     name: str
+    """Display name for the run"""
     trace_name: str
+    """Tracing label for the run"""
     data: CollaborativeQueryAnswering | FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult
+    """Loaded input data object"""
     extra: dict[str, Any] | None
+    """Additional metadata from the input file"""
 
     @property
     def data_agents(self) -> list[DataAgent]:
+        """Return the run's data agents from the input data."""
         if isinstance(self.data, (CollaborativeQueryAnswering, FilteredRelevantAgents, DraftedQueryPlan)):
             return self.data.data_agents
         raise TypeError(f"Input type {type(self.data).__name__} has no data_agents")
@@ -209,6 +235,7 @@ async def run_script(
     data, extra = load_input(input_file)
 
     async def _runner():
+        """Run the script within a pipeline context."""
         with context.pipeline_context(
             name=name,
             trace_name=trace_name,

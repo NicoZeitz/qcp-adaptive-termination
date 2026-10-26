@@ -4,6 +4,8 @@ from enum import StrEnum
 
 
 class Stage(StrEnum):
+    """Identifier of a pipeline stage."""
+
     DISCOVERY = "discovery"
     PLANNING = "planning"
     EXECUTION = "execution"
@@ -11,6 +13,7 @@ class Stage(StrEnum):
 
     @property
     def order(self) -> int:
+        """Zero-based position of the stage in the pipeline."""
         return _STAGE_ORDER[self]
 
     @property

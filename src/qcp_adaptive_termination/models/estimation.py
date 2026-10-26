@@ -73,6 +73,8 @@ class ConfidenceIntervalType(StrEnum):
 
 
 class AggregationType(StrEnum):
+    """Supported value aggregation functions."""
+
     COUNT = "count"
     MIN = "min"
     MAX = "max"
@@ -84,17 +86,25 @@ class AggregationType(StrEnum):
 
 
 class AlignedSchemaMetadata(BaseModel):
+    """Describes the schema of an aligned result list."""
+
     model_config = ConfigDict(extra="forbid")
 
-    aggregation_types: list[AggregationType] = Field(..., min_length=1)
-    keys: list[str] = Field(..., min_length=1)
-    value_column: str | None = None
-    columns: list[str] = Field(default_factory=list, min_length=1)
-    source_agent_column: str
+    aggregation_types: list[AggregationType] = Field(
+        ..., min_length=1, description="Aggregation functions applied per column"
+    )
+    keys: list[str] = Field(..., min_length=1, description="Columns identifying unique entities")
+    value_column: str | None = Field(default=None, description="The numeric column being aggregated")
+    columns: list[str] = Field(
+        default_factory=list, min_length=1, description="All columns present in the aligned list"
+    )
+    source_agent_column: str = Field(description="Column holding the source agent id")
 
 
 class AlignedResultList(BaseModel):
+    """A result list aligned across agents plus its schema metadata."""
+
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
-    data: SerializedResultType = ResultType()
-    schema_metadata: AlignedSchemaMetadata
+    data: SerializedResultType = Field(default=ResultType(), description="The aligned data rows")
+    schema_metadata: AlignedSchemaMetadata = Field(description="Schema metadata for the aligned list")

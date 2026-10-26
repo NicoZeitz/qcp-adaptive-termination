@@ -19,6 +19,7 @@ async def load(agent: DataAgent) -> AgentRegistryData: ...
 @overload
 async def load(agent: list[DataAgent]) -> dict[str, AgentRegistryData]: ...
 async def load(agent: DataAgent | list[DataAgent]) -> AgentRegistryData | dict[str, AgentRegistryData]:
+    """Load registry data for one agent or a list of agents."""
     if isinstance(agent, list):
         results = await asyncio.gather(*[utils.load_registry_data(a) for a in agent])
         return {a.name: r for a, r in zip(agent, results, strict=True)}
@@ -30,6 +31,7 @@ async def natural_language_info(agent: DataAgent) -> str: ...
 @overload
 async def natural_language_info(agent: list[DataAgent]) -> list[str]: ...
 async def natural_language_info(agent):
+    """Return natural language descriptions for one or more agents."""
     return utils.map_entries(await load(agent), lambda e: e.natural_language_description)
 
 
@@ -38,6 +40,7 @@ async def query_capabilities(agent: DataAgent) -> list[str]: ...
 @overload
 async def query_capabilities(agent: list[DataAgent]) -> list[list[str]]: ...
 async def query_capabilities(agent):
+    """Return query capabilities for one or more agents."""
     return utils.map_entries(await load(agent), lambda e: e.query_capabilities)
 
 
@@ -46,6 +49,7 @@ async def technical_description(agent: DataAgent) -> str: ...
 @overload
 async def technical_description(agent: list[DataAgent]) -> list[str]: ...
 async def technical_description(agent):
+    """Return technical descriptions for one or more agents."""
     return utils.map_entries(await load(agent), lambda e: e.technical_description)
 
 
@@ -62,7 +66,10 @@ async def build_registry(
     include_capabilities: bool = True,
 ) -> list[str]: ...
 async def build_registry(agent, registry_type: AgentRegistryType, include_capabilities: bool = True):
+    """Build a registry text block for one or more agents."""
+
     def format_entry(a: DataAgent, entry: AgentRegistryData) -> str:
+        """Format a single agent registry entry as text."""
         desc = (
             entry.natural_language_description
             if registry_type == AgentRegistryType.NATURAL_LANGUAGE
@@ -84,6 +91,7 @@ async def build_registry_string(
     registry_type: AgentRegistryType,
     include_capabilities: bool = True,
 ) -> str:
+    """Build a joined registry string for one or more agents."""
     texts = await build_registry(agent, registry_type, include_capabilities)
     if isinstance(texts, list):
         return "\n\n".join(texts)
@@ -103,6 +111,7 @@ async def embedding_vector_for_column(
     column_per_agent: dict[str, str],
 ) -> dict[str, np.ndarray]: ...
 async def embedding_vector_for_column(agents, table_per_agent, column_per_agent):
+    """Create an embedding vector for a column description of one or more agents."""
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
     table_map = {agents.name: table_per_agent} if single else table_per_agent
@@ -135,6 +144,7 @@ async def embedding_vectors_for_all_columns(
     table_per_agent: dict[str, str],
 ) -> dict[str, dict[str, np.ndarray]]: ...
 async def embedding_vectors_for_all_columns(agents, table_per_agent):
+    """Create embedding vectors for all columns of a table for one or more agents."""
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
     table_map = {agents.name: table_per_agent} if single else table_per_agent
@@ -181,6 +191,7 @@ async def embedding_vector_for_table(
 async def embedding_vector_for_table(
     agents, table_per_agent, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL
 ):
+    """Create an embedding vector for a table description of one or more agents."""
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
     table_map = {agents.name: table_per_agent} if single else table_per_agent
@@ -215,6 +226,7 @@ async def embedding_vectors_for_all_tables(
     registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL,
 ) -> dict[str, dict[str, np.ndarray]]: ...
 async def embedding_vectors_for_all_tables(agents, registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL):
+    """Create embedding vectors for all tables for one or more agents."""
     single = isinstance(agents, DataAgent)
     agent_list = [agents] if single else agents
 

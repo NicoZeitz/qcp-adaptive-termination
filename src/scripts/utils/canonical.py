@@ -97,6 +97,7 @@ def make_align_schema_override(step_meta: dict[str, Any], query: str) -> Callabl
         query: str,
         merge_task: str,
     ) -> AlignedResultList:
+        """Return an empty aligned schema derived from step metadata."""
         meta = step_meta["aligned_schema_metadata"]
         source_col = f"source_agent_{hashlib.sha256(query.encode()).hexdigest()[:8]}"
         agg_types = [AggregationType(a) for a in meta["aggregation_types"]]
@@ -131,6 +132,7 @@ def make_data_agent_override(
         additional_information: list[AdditionalInformation],
         schema_metadata: AlignedSchemaMetadata | None,
     ) -> PartialQueryAnswer:
+        """Serve the cached canonical result for the queried agent."""
         if data_agent.name not in data_cache:
             data_cache[data_agent.name] = query_agent_canonical(
                 data_agent, canonical_sql, canonical_table, meta_mapping, data_dir

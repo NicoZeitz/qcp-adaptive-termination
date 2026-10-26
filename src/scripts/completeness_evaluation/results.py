@@ -56,6 +56,7 @@ _CSV_COLUMNS = [
 
 
 def _step_level(result: StepResult) -> dict:
+    """Build the per-step (query-level) row fragment."""
     gt = result.ground_truth
     return {
         "step_id": result.step_id,
@@ -73,6 +74,7 @@ def _step_level(result: StepResult) -> dict:
 
 
 def save_step_results(result: StepResult, query_slug: str, output_dir: Path) -> None:
+    """Write one step's evaluator CSV, result txt, and plot."""
     output_dir.mkdir(parents=True, exist_ok=True)
     prefix = f"{query_slug}_{result.step_id}"
 

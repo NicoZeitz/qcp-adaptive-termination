@@ -87,6 +87,7 @@ async def align_schema(
         _context: RunContextWrapper[None],
         _tool_results: list[FunctionToolResult],
     ) -> ToolsToFinalOutputResult:
+        """Expose the schema metadata as final output once defined."""
         return ToolsToFinalOutputResult(
             is_final_output=schema_metadata is not None,
             final_output=schema_metadata,

@@ -1,3 +1,5 @@
+"""Sketch-based agent selection strategies (HLL, theta, MinHash)."""
+
 import asyncio
 from dataclasses import dataclass, field
 from typing import cast
@@ -32,7 +34,9 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
     """Ranks by estimated new unique values each remaining agent would contribute."""
 
     lg_k: int = DEFAULT_LG_K
+    """Number of bits for the HLL sketch precision"""
     use_ucb: bool = False
+    """Whether to score using the upper confidence bound"""
 
     def needs_column(self) -> bool:
         """Return True, since this strategy requires a column per agent."""
@@ -49,6 +53,7 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
         assert table_per_agent and column_per_agent
 
         async def _build(agent: DataAgent) -> tuple[str, hll_sketch]:
+            """Fetch and sketch one agent's column values."""
             values = await asyncio.to_thread(
                 database.fetch_column_values, agent, table_per_agent[agent.name], column_per_agent[agent.name]
             )
@@ -72,6 +77,7 @@ class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
         """Score remaining agents by the new distinct values they would add."""
 
         def score(s: ScoredDataAgent) -> float:
+            """Score an agent by the new distinct values it would add."""
             union = hll_union(self.lg_k)
             union.update(state)
             union.update(precomputed[s.agent.name])
@@ -107,7 +113,9 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
     """Ranks by estimated new unique values (agent sketch minus seen state)."""
 
     lg_k: int = DEFAULT_LG_K
+    """Number of bits for the theta sketch precision"""
     use_ucb: bool = False
+    """Whether to score using the upper confidence bound"""
 
     def needs_column(self) -> bool:
         """Return True, since this strategy requires a column per agent."""
@@ -124,6 +132,7 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
         assert table_per_agent and column_per_agent
 
         async def _build(agent: DataAgent) -> tuple[str, compact_theta_sketch] | None:
+            """Fetch and sketch one agent's column values, or None if unresolved."""
             if agent.name not in table_per_agent or agent.name not in column_per_agent:
                 return None
             values = await asyncio.to_thread(
@@ -150,6 +159,7 @@ class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_s
         """Score remaining agents by the estimated A-NOT-B new distinct values."""
 
         def score(s: ScoredDataAgent) -> float:
+            """Score an agent by its estimated A-not-B new distinct values."""
             a_not_b = theta_a_not_b().compute(precomputed[s.agent.name], state)
             if self.use_ucb:
                 return a_not_b.get_upper_bound(DEFAULT_NUM_STD)
@@ -183,7 +193,9 @@ class MinHashState:
     """Running MinHash and seen-set state for MinHashStrategy."""
 
     minhash: MinHash
+    """Running MinHash over values seen so far"""
     seen: set[str] = field(default_factory=set)
+    """Set of distinct values seen so far"""
 
 
 @dataclass(slots=True)
@@ -191,6 +203,7 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
     """Ranks by estimated new unique values via containment estimation."""
 
     num_perm: int = DEFAULT_MIN_HASH_NUM_PERM
+    """Number of permutations for the MinHash"""
 
     def needs_column(self) -> bool:
         """Return True, since this strategy requires a column per agent."""
@@ -207,6 +220,7 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
         assert table_per_agent and column_per_agent
 
         async def _build(agent: DataAgent) -> tuple[str, tuple[MinHash, int]] | None:
+            """Fetch and build a MinHash and distinct count for one agent."""
             if agent.name not in table_per_agent or agent.name not in column_per_agent:
                 return None
             values = await asyncio.to_thread(
@@ -233,6 +247,7 @@ class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
         """Score remaining agents by their estimated new distinct values."""
 
         def score(s: ScoredDataAgent) -> float:
+            """Score an agent by its estimated new distinct values."""
             agent_mh, cardinality = precomputed[s.agent.name]
             jaccard = state.minhash.jaccard(agent_mh)
             seen_count = len(state.seen)

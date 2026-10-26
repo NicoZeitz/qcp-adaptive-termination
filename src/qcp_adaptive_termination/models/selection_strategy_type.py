@@ -8,6 +8,8 @@ from enum import StrEnum
 
 
 class SelectionStrategyType(StrEnum):
+    """The strategy used to select which agents to query."""
+
     RANDOM = "random"  # Needs: None
 
     # Embedding-based

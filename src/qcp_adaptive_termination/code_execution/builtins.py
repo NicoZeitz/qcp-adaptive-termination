@@ -1,3 +1,5 @@
+"""Allowlist of safe builtins exposed to sandboxed code execution."""
+
 import builtins
 
 # Explicit allowlist: only builtins that cannot access the filesystem, network, or process state.

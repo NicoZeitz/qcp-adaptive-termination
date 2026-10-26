@@ -1,3 +1,5 @@
+"""Compute per-table and per-column statistics for cost estimation."""
+
 import textwrap
 from dataclasses import dataclass, field
 from typing import Any
@@ -18,26 +20,42 @@ DEFAULT_MAX_MCV = 100
 
 @dataclass(slots=True)
 class ColumnStatistics:
+    """Statistics for a single column: counts, min/max, MCVs, and histogram."""
+
     column_name: str
+    """Name of the column."""
     distinct_count: int
+    """Number of distinct values in the column."""
     non_null_count: int
+    """Number of non-null values in the column."""
     min_value: Any | None
+    """Minimum value in the column, or None if empty."""
     max_value: Any | None
+    """Maximum value in the column, or None if empty."""
     most_common_values: pd.DataFrame  # columns: value, frequency
     histogram: pd.DataFrame  # columns: bin_start, bin_end, count
 
 
 @dataclass(slots=True)
 class TableStatistics:
+    """Statistics for a single table and its columns."""
+
     table_name: str
+    """Name of the table."""
     total_rows: int
+    """Total number of rows in the table."""
     columns: list[ColumnStatistics] = field(default_factory=list)
+    """Statistics for each column in the table."""
 
 
 @dataclass(slots=True)
 class DatabaseStatistics:
+    """Statistics for a whole database and its tables."""
+
     name: str
+    """Name of the database."""
     tables: list[TableStatistics] = field(default_factory=list)
+    """Statistics for each table in the database."""
 
 
 def fetch_column_statistics(
@@ -47,6 +65,7 @@ def fetch_column_statistics(
     histogram_bins: int = DEFAULT_HISTOGRAM_BINS,
     max_mcv: int = DEFAULT_MAX_MCV,
 ) -> ColumnStatistics:
+    """Fetch statistics for a single column of a table."""
     return fetch_table_statistics(
         data_agent,
         table_name,
@@ -64,6 +83,7 @@ def fetch_table_statistics(
     histogram_bins: int = DEFAULT_HISTOGRAM_BINS,
     max_mcv: int = DEFAULT_MAX_MCV,
 ) -> TableStatistics:
+    """Fetch statistics for a table and its columns."""
     db_engine = get_database_engine(data_agent)
     with db_engine.connect() as conn:
         if columns is None:
@@ -166,6 +186,7 @@ def fetch_database_statistics(
     histogram_bins: int = DEFAULT_HISTOGRAM_BINS,
     max_mcv: int = DEFAULT_MAX_MCV,
 ) -> DatabaseStatistics:
+    """Fetch statistics for all tables in a database."""
     db_engine = get_database_engine(data_agent)
     with db_engine.connect() as conn:
         rows = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()

@@ -1,3 +1,5 @@
+"""Count-based static selection strategy."""
+
 import asyncio
 from dataclasses import dataclass
 

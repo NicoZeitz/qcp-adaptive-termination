@@ -51,9 +51,11 @@ async def answer_step_coordinator(
         partial_answer = PartialQueryAnswer()
 
         def raise_needs(new_needs: Any):
+            """Register needs raised by the coordinator."""
             partial_answer.add_needs(need_type.try_parse_value(new_needs))
 
         def final_answer(new_answer: Any):
+            """Set the coordinator's final answer."""
             partial_answer.set_answer(result_type.try_parse_value(new_answer))
 
         code_environment = CodeExecutionEnvironment(
@@ -72,6 +74,7 @@ async def answer_step_coordinator(
             _context: RunContextWrapper[None],
             _tool_results: list[FunctionToolResult],
         ) -> ToolsToFinalOutputResult:
+            """Expose the partial answer as final output when complete."""
             return ToolsToFinalOutputResult(
                 is_final_output=partial_answer.is_final,
                 final_output=partial_answer,

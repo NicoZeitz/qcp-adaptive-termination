@@ -31,16 +31,23 @@ class _BucketCache:
     """Cache of computed buckets with their sub-estimators."""
 
     sample_count: int
+    """Number of samples represented by these buckets"""
     buckets: list[Bucket]
+    """Resulting buckets from the last split"""
     sub_estimators: list[Estimator]
+    """One sub-estimator per bucket"""
 
 
 class Estimator:
     """Unknown-unknowns estimators for correcting aggregate query results."""
 
+    # Default count estimator.
     DEFAULT_COUNT_ESTIMATOR: CountEstimator = CountEstimator.CHAO92
+    # Default value estimator.
     DEFAULT_VALUE_ESTIMATOR: ValueEstimator = ValueEstimator.NAIVE
+    # Default confidence interval type.
     DEFAULT_CONFIDENCE_INTERVAL_TYPE: ConfidenceIntervalType = ConfidenceIntervalType.CHAO84
+    # Default maximum number of bucket splits.
     DEFAULT_MAX_BUCKET_SPLITS: int = 100
 
     def __init__(
@@ -132,6 +139,7 @@ class Estimator:
         """Estimated total unique entity count (observed + missing)."""
 
         def _compute_count() -> float:
+            """Compute the estimated total unique entity count for the configured estimator."""
             if self._use_bucket:
                 _, sub_estimators = self._get_sub_estimators()
                 return max(self._stats.observed_unique_entities, sum(self._bucket_weights(sub_estimators)))
@@ -174,6 +182,7 @@ class Estimator:
         """Estimated SUM contribution of missing entities (Δ = φ_D - φ_K)."""
 
         def _compute_delta() -> float:
+            """Compute the estimated SUM contribution of missing entities."""
             if self._use_bucket:
                 _, sub_estimators = self._get_sub_estimators()
                 return sum(sub.delta() for sub in sub_estimators)
@@ -211,6 +220,7 @@ class Estimator:
         """Estimated average across all entities (observed + missing)."""
 
         def _compute_avg() -> float:
+            """Compute the estimated average across all entities."""
             if not self._use_bucket:
                 return self.sample_avg()
 
@@ -278,6 +288,7 @@ class Estimator:
         """
 
         def _compute_quantile(q: float) -> float:
+            """Compute the estimated q-th quantile via the bucket-based CDF."""
             buckets, subs = self._get_sub_estimators()
             weights = self._bucket_weights(subs)
 

@@ -15,8 +15,11 @@ class RunMeta:
     """Identifiers attached to a run for naming + the transcript header."""
 
     role: AgentRole
+    """Role that produced this run"""
     agent_name: str | None
+    """Name of the agent that ran, if any"""
     label: str | None
+    """Human-readable label for the run, if any"""
 
 
 def _content_text(content: Any) -> str:

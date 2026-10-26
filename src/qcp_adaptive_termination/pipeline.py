@@ -1,3 +1,5 @@
+"""Top-level pipeline entry points: config/input loading and stage orchestration."""
+
 import json
 from functools import lru_cache
 from pathlib import Path
@@ -31,6 +33,7 @@ _INPUT_TYPES: dict[str, type[_InputType]] = {
 
 
 def _strip_type_tags(value: Any) -> Any:
+    """Recursively rebuild a value with internal __type__ keys removed."""
     if isinstance(value, dict):
         return {k: _strip_type_tags(v) for k, v in value.items() if k != "__type__"}
     if isinstance(value, list):
@@ -41,6 +44,7 @@ def _strip_type_tags(value: Any) -> Any:
 @hooks.hook(HookEvent.SETUP_LOAD_CONFIG)
 @lru_cache(maxsize=32)
 def load_config(source: str | Path | None) -> Config:
+    """Load and parse the config from a file path or a YAML string."""
     if source is None:
         return Config()
 
@@ -58,6 +62,7 @@ def load_input(
     CollaborativeQueryAnswering | FilteredRelevantAgents | DraftedQueryPlan | CollaborativeQueryAnsweringResult,
     dict[str, Any] | None,
 ]:
+    """Load a pipeline input file, returning its value and optional extra metadata."""
     path = Path(path)
     if path.suffix == ".json":
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -84,6 +89,7 @@ async def run_pipeline(
     cache_mode: CacheMode = CacheMode.READ_AND_WRITE,
     config: Config | None = None,
 ) -> _OutputType:
+    """Run the pipeline stages from start to end over an input file."""
     if start_stage.order > end_stage.order:
         raise ValueError("start_stage must be <= end_stage")
 
@@ -116,6 +122,7 @@ async def run_query(
     name: str,
     input_file: Path,
 ) -> SynthesizedResult:
+    """Run the full discovery-to-synthesis pipeline and return the synthesized result."""
     result = await run_pipeline(
         name=name,
         input_file=input_file,
@@ -130,6 +137,7 @@ async def run_stages(
     start_stage: Stage = Stage.DISCOVERY,
     end_stage: Stage = Stage.EXECUTION,
 ) -> _OutputType:
+    """Run the selected pipeline stages over an already-loaded input file."""
     if start_stage.order > end_stage.order:
         raise ValueError("start_stage must be <= end_stage")
 

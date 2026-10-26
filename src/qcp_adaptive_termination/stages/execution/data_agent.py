@@ -36,8 +36,11 @@ class SqlQuery:
     """A single SQL query executed against a data agent."""
 
     query: str
+    """SQL query text executed against the agent"""
     error: Exception | None = None
+    """Error raised during execution, if any"""
     result: pd.DataFrame | None = None
+    """Dataframe returned by the query, if any"""
 
     def to_span_data(self) -> JsonValue:
         """Serialize the query for tracing output."""
@@ -85,6 +88,7 @@ async def answer_query_data_agent(
         partial_answer = PartialQueryAnswer()
 
         def query_sql(query: str) -> pd.DataFrame:
+            """Run one SQL query against the data agent."""
             sql_query = SqlQuery(query=query)
 
             try:
@@ -98,9 +102,11 @@ async def answer_query_data_agent(
                 sql_queries.append(sql_query)
 
         def raise_needs(new_needs: Any):
+            """Register needs raised by the data agent."""
             partial_answer.add_needs(need_type.try_parse_value(new_needs))
 
         def final_answer(new_answer: Any):
+            """Validate and set the data agent's final answer."""
             answer_df = result_type.try_parse_value(new_answer)
             if schema_metadata is not None:
                 answer_df = validate_agent_output(answer_df, schema_metadata)
@@ -123,6 +129,7 @@ async def answer_query_data_agent(
             _context: RunContextWrapper[None],
             _tool_results: list[FunctionToolResult],
         ) -> ToolsToFinalOutputResult:
+            """Expose the partial answer as final output when complete."""
             return ToolsToFinalOutputResult(
                 is_final_output=partial_answer.is_final,
                 final_output=partial_answer,

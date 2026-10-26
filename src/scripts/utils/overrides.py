@@ -30,6 +30,7 @@ def make_completeness_override() -> Callable[..., StopDecision | None]:
         force_result: bool,
         **kwargs: Any,
     ) -> StopDecision | None:
+        """Return None so completeness never stops a strategy run."""
         return None
 
     return _handler
@@ -43,6 +44,7 @@ def make_dispatch(
     """Build a dispatch handler that routes by execution_id to a per-step handler."""
 
     def _dispatch(execution_id: str, **kwargs: Any) -> Any:
+        """Route a call to the handler matching its execution_id."""
         for handler_id, handler in handlers.items():
             if execution_id == handler_id or (prefix_match and execution_id.startswith(handler_id + "/")):
                 return handler(execution_id, **kwargs)
@@ -65,6 +67,7 @@ def make_align_schema_dispatch(
         query: str,
         merge_task: str,
     ) -> AlignedResultList:
+        """Route an align_schema call to the matching step handler."""
         for handler_id, handler in handlers.items():
             if execution_id == handler_id or (prefix_match and execution_id.startswith(handler_id + "/")):
                 return handler(
@@ -93,6 +96,7 @@ def make_data_agent_dispatch(
         additional_information: list[AdditionalInformation],
         schema_metadata: AlignedSchemaMetadata | None,
     ) -> PartialQueryAnswer:
+        """Route a data_agent call to the matching step handler."""
         for handler_id, handler in handlers.items():
             if execution_id == handler_id or (prefix_match and execution_id.startswith(handler_id + "/")):
                 return handler(

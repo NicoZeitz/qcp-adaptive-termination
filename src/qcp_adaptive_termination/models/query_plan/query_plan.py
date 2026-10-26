@@ -1,9 +1,13 @@
+"""Models for a drafted query plan and its field definitions."""
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from qcp_adaptive_termination.models.query_plan.query_plan_step import QueryPlanStep
 
 
 class FieldDefinitions:
+    """Reusable field descriptions for drafting a query plan."""
+
     dependency_step_id = Field(description="The step_id of the step that this step depends on.")
     dependency_step = Field(
         description=(
@@ -45,7 +49,9 @@ class FieldDefinitions:
 
 
 class QueryPlan(BaseModel):
+    """A plan of steps to answer the user's query."""
+
     model_config = ConfigDict(extra="forbid")
 
-    query: str
-    steps: list[QueryPlanStep]
+    query: str = Field(description="The original user query.")
+    steps: list[QueryPlanStep] = Field(description="The ordered steps of the plan.")

@@ -1,3 +1,5 @@
+"""Value-bucket data structures for the bucket estimator."""
+
 from collections import defaultdict
 from dataclasses import dataclass, field
 
@@ -93,6 +95,7 @@ class Bucket:
         self._dirty = False
 
     def _ensure_fresh(self) -> None:
+        """Rebuild the frequency vector if cached stats are stale."""
         if self._dirty:
             self.rebuild_frequency_vector()
 

@@ -1,3 +1,5 @@
+"""Random static selection strategy."""
+
 import random
 from dataclasses import dataclass
 
@@ -12,7 +14,9 @@ class RandomStrategy(StaticSelectionStrategy[float]):
     """Ranks agents in a seeded random order (independent of the query)."""
 
     ascending: bool = True
+    """Whether to rank ascending (lowest score first)"""
     seed: int = 42
+    """Seed for the random ordering"""
 
     async def precompute(
         self,

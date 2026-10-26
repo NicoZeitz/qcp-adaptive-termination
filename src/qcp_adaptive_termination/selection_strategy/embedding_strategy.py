@@ -1,3 +1,5 @@
+"""Embedding-based static selection strategy."""
+
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -16,8 +18,11 @@ class EmbeddingStrategy(StaticSelectionStrategy[float]):
     """Ranks agents by embedding distance to the query."""
 
     ascending: bool = True
+    """Whether to rank ascending (closest first)"""
     scorer: Callable[[list[float]], float] = field(default=min)
+    """Aggregates per-agent distances into a single score"""
     registry_type: AgentRegistryType = field(default=AgentRegistryType.TECHNICAL)
+    """Which registry type to embed tables from"""
 
     async def precompute(
         self,

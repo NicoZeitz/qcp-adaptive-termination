@@ -70,6 +70,7 @@ def _get_total_unique(
     meta_mapping: dict[str, Any],
     data_dir: Path,
 ) -> int:
+    """Count distinct key rows across all relevant agents."""
     with ThreadPoolExecutor() as pool:
         dfs = list(
             pool.map(
@@ -88,6 +89,7 @@ def _get_total_unique(
 
 
 def _register_agent_tracking(target_execution_id: str) -> tuple[list[str], Any]:
+    """Register a hook that records the queried agent order for a step."""
     ordered: list[str] = []
 
     def _on_agent_query(
@@ -96,6 +98,7 @@ def _register_agent_tracking(target_execution_id: str) -> tuple[list[str], Any]:
         query: str,
         result: PartialQueryAnswer,
     ) -> None:
+        """Append the queried agent for the target execution."""
         if execution_id == target_execution_id:
             ordered.append(data_agent.name)
 
@@ -116,6 +119,7 @@ async def _run_one_strategy(
     query_slug: str | None = None,
     output_dir: Path | None = None,
 ) -> tuple[str, EvaluationCurve | None, str | None]:
+    """Run one selection strategy on a step and build its coverage curve."""
     logging.info("Running strategy: %s / %s", step.id, strategy)
     execution_id = uuid4().hex[:12]
     strategy_config = config.model_copy(update={"selection_type": strategy})
@@ -362,6 +366,7 @@ async def _run_step(
     cache_dir: Path | None = None,
     strategy_workers: int | None = None,
 ) -> StepSummary | None:
+    """Run all selection strategies for one step and build its summary."""
     canonical_sql: str = step_meta["sql_query"]
     schema_meta = step_meta["aligned_schema_metadata"]
     key_cols: list[str] = schema_meta["keys"]
