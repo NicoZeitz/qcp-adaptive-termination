@@ -27,7 +27,7 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/dataset/_meta/input"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="150_DEEP_eval_stage1_recall_llm_baseline_with_llm_reasoning"
+RUN_NAME="150_DEEP_eval_stage1_recall_embedding_boundary_iterative_v4_new_queries"
 
 # write stdout and stderr to log files (in addition to printing to console)
 mkdir -p "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"
@@ -41,7 +41,7 @@ exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(t
 
 # Or use a specific list of files
 FILES=(
-    "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
+    # "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
     # "How_many_FIFA_World_Cup_games_did_England_play.json"
     # "How_many_airlines_are_headquartered_in_UK.json"
     # "How_many_chinese_woman_have_won_a_nobel_prize.json"
@@ -102,6 +102,22 @@ FILES=(
     # "Which_football_club_has_the_most_social_media_followers_across_the_top_five_euro.json"
     # "Which_province_is_the_northernmost_province_in_China.json"
     # "Who_won_the_most_world_cup_matches_in_the_last_50_years_and_how_many.json"
+
+    # Nicos new queries
+    "How_many_airlines_have_more_than_ten_thousand_employees.json"
+    "How_many_airports_are_above_3000_meters_elevation.json"
+    "How_many_countries_have_a_population_below_fifty_million.json"
+    "What_is_the_average_area_of_US_states_in_square_kilometers.json"
+    "What_is_the_average_area_of_countries_in_square_kilometers.json"
+    "What_is_the_average_attendance_of_UCL_matches.json"
+    "What_is_the_average_elevation_of_airports_in_meters.json"
+    "What_is_the_average_number_of_employees_of_airlines.json"
+    "What_is_the_average_number_of_fatalities_per_accident.json"
+    "What_is_the_average_total_assets_of_companies.json"
+    "What_is_the_total_male_population_of_all_countries.json"
+    "What_is_the_total_number_of_fatalities_in_all_accidents.json"
+    "What_is_the_total_number_of_goals_scored_in_all_tournaments.json"
+    "Which_UCL_club_has_the_most_social_media_followers.json"
 )
 
 ############################################################ RUN EVERYTHING ############################################################
