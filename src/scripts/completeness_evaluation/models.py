@@ -68,8 +68,8 @@ class BatchRecord:
     """Middle calibration coefficient"""
     c_best: float | None
     """Best-case calibration coefficient"""
-    warmup_reached: bool
-    """Whether the estimator warmup finished"""
+    estimator_active: bool
+    """Whether the estimator is eligible to decide (started at estimator_start_agents)"""
     # -- sub-decisions --
     estimator_decision: str | None  # stop | continue | warmup | n/a
     """Estimator decision (stop | continue | warmup | n/a)"""

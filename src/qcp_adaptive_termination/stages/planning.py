@@ -64,7 +64,7 @@ async def run_plan_agent(
     """
     input_items = list(history) if history is not None else []
     first = True
-    for _ in range(obs_context.get_config().max_turns or DEFAULT_MAX_TURNS):
+    for _ in range(obs_context.get_config().execution.llm_max_turns or DEFAULT_MAX_TURNS):
         run_result = await runner.run_llm(
             role=role,
             prompt_parameters=prompt_parameters,

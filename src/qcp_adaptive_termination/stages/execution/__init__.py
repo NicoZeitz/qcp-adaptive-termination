@@ -90,7 +90,7 @@ async def execute_query_plan(
         (CollaborativeQueryAnsweringResult): the execution result
     """
     config = context.get_config()
-    max_replan_attempts = config.max_replan_attempts
+    max_replan_attempts = config.execution.replanning_max_attempts
 
     attempt = 0
     # Conversation history threaded through replan attempts, extended with each replan's
@@ -99,8 +99,8 @@ async def execute_query_plan(
     while True:
         step_budgets = compute_step_budgets(
             query_plan,
-            config.target_confidence,
-            config.apportionment,
+            config.completeness.target_confidence,
+            config.completeness.target_apportionment,
         )
 
         print(

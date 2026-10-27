@@ -66,9 +66,9 @@ def update_estimator(
         return estimator
 
     if estimator is None:
-        estimator_params = context.get_config().estimator
+        estimator_params = context.get_config().completeness.estimator
         if step_budget is not None:
-            estimator_params.confidence_epsilon = 1 - step_budget.t_step
+            estimator_params.confidence_interval.epsilon = 1 - step_budget.t_step
 
         return Estimator([[item] for item in items], estimator_params)
     estimator.add_source(items)

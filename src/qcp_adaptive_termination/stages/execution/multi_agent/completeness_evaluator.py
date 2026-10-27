@@ -88,8 +88,14 @@ def run_deterministic_estimator(
     config = context.get_config()
 
     # Warm-up: never stop deterministically before enough agents have been queried.
-    if agents_queried <= config.warmup_agents:
-        logging.info("Estimator: warm-up (%s <= %s agents) — continue", agents_queried, config.warmup_agents)
+    # The estimator is first consulted exactly at ``estimator_start_agents`` (the
+    # stability point), so only skip below it.
+    if agents_queried < config.completeness.estimator.start_agents:
+        logging.info(
+            "Estimator: warm-up (%s < %s agents) — continue",
+            agents_queried,
+            config.completeness.estimator.start_agents,
+        )
         return False
 
     # No budget (e.g. find queries or no multi-agent budget) → no deterministic stop.
@@ -166,11 +172,11 @@ async def run_world_knowledge_stop(
         "query": query,
         "result_list_preview": result_list_preview,
     }
-    if config.completeness_show_estimator_stats or config.long_list_behavior == "estimator_reasoning":
+    if config.completeness.llm_world_knowledge.long_list_behavior == "estimator_reasoning":
         stats = _estimator_stats(estimator)
         if stats:
             prompt_parameters["estimator_stats"] = stats
-    if config.completeness_summarize_history and history:
+    if history:
         prompt_parameters["is_continuation"] = True
 
     code_environment = CodeExecutionEnvironment(
@@ -276,7 +282,11 @@ async def run_completeness_evaluator(
         )
         return None
 
-    if estimator is not None and run_deterministic_estimator(estimator, step_budget, agents_queried):
+    if (
+        estimator is not None
+        and context.get_config().completeness.estimator.enabled
+        and run_deterministic_estimator(estimator, step_budget, agents_queried)
+    ):
         print(
             f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
             f"observed={observed} decision=estimator",
@@ -286,30 +296,32 @@ async def run_completeness_evaluator(
 
     label = f"COMPLETENESS step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried}"
     config = context.get_config()
+    lwk = config.completeness.llm_world_knowledge
 
     # Long-list behavior: when the deduplicated result list is long, the LLM
     # should either be skipped entirely (prevent) or given the estimator's
     # unknown-unknown stats to reason with (estimator_reasoning).
     list_len = len(_result_list_for_llm(aligned_result_list))
-    if list_len > config.stop_llm_max_list_items and config.long_list_behavior == "prevent":
+    if list_len > lwk.long_list_start and lwk.long_list_behavior == "prevent":
         print(
             f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
-            f"observed={observed} decision=continue (long list {list_len} > {config.stop_llm_max_list_items}, "
+            f"observed={observed} decision=continue (long list {list_len} > {lwk.long_list_start}, "
             f"LLM prevented)",
             flush=True,
         )
         return None
     # estimator_reasoning: fall through with estimator stats fed to the LLM.
 
-    llm_stop = await run_world_knowledge_stop(
-        aligned_result_list, query, label=label, history=history, estimator=estimator
-    )
-    print(
-        f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
-        f"observed={observed} decision={'llm' if llm_stop else 'continue'}",
-        flush=True,
-    )
-    if llm_stop:
-        return StopDecision(stop_reason=StopReason.LLM)
+    if lwk.enabled:
+        llm_stop = await run_world_knowledge_stop(
+            aligned_result_list, query, label=label, history=history, estimator=estimator
+        )
+        print(
+            f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
+            f"observed={observed} decision={'llm' if llm_stop else 'continue'}",
+            flush=True,
+        )
+        if llm_stop:
+            return StopDecision(stop_reason=StopReason.LLM)
 
     return None

@@ -122,7 +122,9 @@ async def _run_one_strategy(
     """Run one selection strategy on a step and build its coverage curve."""
     logging.info("Running strategy: %s / %s", step.id, strategy)
     execution_id = uuid4().hex[:12]
-    strategy_config = config.model_copy(update={"selection_type": strategy})
+    strategy_config = config.model_copy(
+        update={"selection": config.selection.model_copy(update={"strategy": strategy})}
+    )
     ordered_agents, agent_query_handler = _register_agent_tracking(execution_id)
     # Benchmark the step in isolation: dependencies dropped, canonical SQL self-contained.
     isolated_step = step.model_copy(update={"dependencies": []})

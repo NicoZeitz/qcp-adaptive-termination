@@ -11,7 +11,8 @@ from pathlib import Path
 
 from qcp_adaptive_termination import load_config
 from qcp_adaptive_termination.observability import context
-from scripts import completeness_evaluation, selection_strategy_evaluation
+from scripts import completeness_evaluation, k_warmup, selection_strategy_evaluation
+from scripts.k_warmup.input_gen import generate_inputs
 from scripts.utils.orchestrator import run_parallel
 
 
@@ -23,6 +24,7 @@ def _parse_arguments() -> Namespace:
     for name, help_text in (
         ("selection-strategies", "Benchmark all selection strategies across query steps"),
         ("completeness", "Evaluate the completeness evaluator across query steps"),
+        ("k-warmup", "Study where the unknown-unknowns estimator stabilizes per ordering"),
     ):
         sub = subparsers.add_parser(name, help=help_text)
         sub.add_argument(
@@ -50,6 +52,17 @@ def _parse_arguments() -> Namespace:
             help="Dataset folder containing _meta/input (query JSONs) and _meta/meta_mapping.yaml",
         )
         sub.add_argument(
+            "--generate_inputs",
+            action="store_true",
+            help="(k-warmup) generate per-table single-step input files into _meta/input_kwarmup",
+        )
+        sub.add_argument(
+            "--workers",
+            type=int,
+            default=None,
+            help="(k-warmup) parallel ordering workers per table",
+        )
+        sub.add_argument(
             "--query",
             type=str,
             default=None,
@@ -69,6 +82,8 @@ def _functions_for_subcommand(subcommand: str):
         return selection_strategy_evaluation.run_query, selection_strategy_evaluation.aggregate
     if subcommand == "completeness":
         return completeness_evaluation.run_query, completeness_evaluation.aggregate
+    if subcommand == "k-warmup":
+        return k_warmup.run_query, k_warmup.aggregate
     raise ValueError(f"Unknown subcommand: {subcommand}")
 
 
@@ -81,10 +96,31 @@ async def _run_subcommand(args: Namespace):
         config = load_config(args.config)
 
         dataset_dir = Path(args.dataset_dir)
-        input_dir = dataset_dir / "_meta" / "input"
 
         run_query, aggregate = _functions_for_subcommand(args.subcommand)
-        input_files = sorted((dataset_dir / "_meta" / "input").glob("*.json"))
+        input_dir = dataset_dir / "_meta" / "input"
+
+        if args.subcommand == "k-warmup":
+            # For k-warmup, generate per-table single-step inputs (unless already present)
+            # into a dedicated input dir, then run against those.
+            kwargs_dir = dataset_dir / "_meta" / "input_kwarmup"
+            if args.generate_inputs or not list(kwargs_dir.glob("*.json")):
+                from qcp_adaptive_termination.pipeline import load_input
+
+                template_path = next(iter(input_dir.glob("*.json")))
+                _data, _ = load_input(template_path)
+                from qcp_adaptive_termination.models.stages import CollaborativeQueryAnswering
+
+                assert isinstance(_data, CollaborativeQueryAnswering)
+                generate_inputs(
+                    kwargs_dir,
+                    dataset_dir,
+                    _data.data_agents,
+                    workers=args.workers,
+                )
+            input_dir = kwargs_dir
+
+        input_files = sorted(input_dir.glob("*.json"))
         if args.query:
             needle = args.query.lower()
             input_files = [f for f in input_files if needle in f.stem.lower()]

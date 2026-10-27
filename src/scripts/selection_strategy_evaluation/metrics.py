@@ -100,11 +100,19 @@ def compute_greedy_oracle(
             )
 
     remaining = list(relevant_agent_names)
+    remaining_set = set(remaining)
     ordered: list[str] = []
-    seen_keys: set[tuple] = set()
     # Incremental remainder per agent (monotonically shrinks as seen grows).
     not_seen = {name: set(agent_keys[name]) for name in remaining}
     not_seen_total = {name: len(not_seen[name]) for name in remaining}
+
+    # Inverted index: key -> agents containing it, so each round only touches the
+    # agents that actually intersect the newly-covered keys instead of scanning
+    # all remaining agents.
+    inverted: dict[tuple, list[str]] = {}
+    for name, keys in agent_keys.items():
+        for key in keys:
+            inverted.setdefault(key, []).append(name)
 
     while remaining:
         # Pick the remaining agent contributing the most new keys.
@@ -115,13 +123,21 @@ def compute_greedy_oracle(
             ordered.extend(remaining)
             break
 
-        seen_keys.update(best_keys)
+        not_seen[best_agent] = set()
+        not_seen_total[best_agent] = 0
         remaining.remove(best_agent)
+        remaining_set.discard(best_agent)
         ordered.append(best_agent)
 
-        # Only agents whose not-yet-seen set overlaps what we just added change.
-        for name in remaining:
-            if agent_keys[name] & best_keys:
+        # Only agents containing any newly-covered key change: look them up via
+        # the inverted index instead of scanning all remaining.
+        touched: set[str] = set()
+        for key in best_keys:
+            for name in inverted.get(key, ()):
+                if name in remaining_set:
+                    touched.add(name)
+        for name in touched:
+            if not_seen[name] & best_keys:
                 not_seen[name].difference_update(best_keys)
                 not_seen_total[name] = len(not_seen[name])
 

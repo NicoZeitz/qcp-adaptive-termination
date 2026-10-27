@@ -241,7 +241,7 @@ async def run_script(
     start_stage = cast(Stage, args.start_stage)
     end_stage = cast(Stage, args.end_stage)
     name = f"{args.name} - {datetime_str}" if args.name else datetime_str
-    cache_mode = config.cache_mode
+    cache_mode = config.cache.mode
 
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)

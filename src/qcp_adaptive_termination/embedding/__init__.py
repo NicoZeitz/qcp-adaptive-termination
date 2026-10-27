@@ -22,7 +22,7 @@ _EMBEDDING_SEMAPHORE = asyncio.Semaphore(5)
 
 def _get_embedding_client_and_model() -> tuple[AsyncOpenAI, str]:
     """Resolve and return the embedding client and model name."""
-    embedding_model = context.get_config().embedding_model
+    embedding_model = context.get_config().models.embedding
     multi_provider = model_provider.get_multi_provider()
     prefix, stripped = cast(tuple[str, str], multi_provider._get_prefix_and_model_name(embedding_model))  # type: ignore[reportPrivateUsage]
     provider, model_name = cast(
@@ -154,7 +154,7 @@ async def create(text):
             await hooks.fire_post(
                 HookEvent.EMBEDDING_COMPLETED,
                 text=t,
-                model=context.get_config().embedding_model,
+                model=context.get_config().models.embedding,
                 prompt_tokens=tokens,
             )
 

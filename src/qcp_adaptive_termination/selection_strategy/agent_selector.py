@@ -117,8 +117,8 @@ class AgentSelector:
         query: str,
     ) -> AgentSelector:
         """Build a selector with a config-resolved strategy and its precomputed data."""
-        selection_type = context.get_config().selection_type
-        strategy = _build_strategy(selection_type, dict(context.get_config().selection_kwargs))
+        selection_type = context.get_config().selection.strategy
+        strategy = _build_strategy(selection_type, dict(context.get_config().selection.params))
 
         table_per_agent: dict[str, str] | None = None
         column_per_agent: dict[str, str] | None = None

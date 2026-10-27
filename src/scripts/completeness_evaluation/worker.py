@@ -405,7 +405,7 @@ class _StepTracker:
                 c_worst=None,
                 c_middle=None,
                 c_best=None,
-                warmup_reached=False,
+                estimator_active=False,
                 estimator_decision=None,
                 llm_decision=None,
                 aggregation=agg.value if agg is not None else None,
@@ -468,7 +468,7 @@ class _StepTracker:
         last.estimated_value = snapshot["estimated_value"]
         last.estimated_value_lower = snapshot["estimated_value_lower"]
         last.estimated_value_upper = snapshot["estimated_value_upper"]
-        last.warmup_reached = agents_queried > context.get_config().warmup_agents
+        last.estimator_active = agents_queried >= context.get_config().completeness.estimator.start_agents
 
     def on_estimator(
         self,
@@ -487,9 +487,9 @@ class _StepTracker:
         if not batches or agents_queried - 1 >= len(batches):
             return
         last = batches[agents_queried - 1]
-        warmup_agents = context.get_config().warmup_agents
-        last.warmup_reached = agents_queried > warmup_agents
-        if agents_queried <= warmup_agents:
+        start_agents = context.get_config().completeness.estimator.start_agents
+        last.estimator_active = agents_queried >= start_agents
+        if agents_queried < start_agents:
             last.estimator_decision = "warmup"
         else:
             last.estimator_decision = "stop" if result else "continue"

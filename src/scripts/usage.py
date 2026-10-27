@@ -125,7 +125,7 @@ def embedding_csv_row(config: Config, model: str, prompt_tokens: int, call_id: s
     Returns:
         A row dict matching ``CSV_COLUMNS``
     """
-    cost = _embedding_cost(config.costs.get(model), prompt_tokens)
+    cost = _embedding_cost(config.models.costs.get(model), prompt_tokens)
     return {
         "type": "embedding",
         "call_id": call_id,
@@ -207,7 +207,7 @@ def llm_csv_row(
         "cache_write_tokens": cache_write_tokens,
         "output_tokens": output_tokens,
         "reasoning_tokens": reasoning_tokens,
-        "cost": float(_llm_cost(config.costs.get(model), call)),
+        "cost": float(_llm_cost(config.models.costs.get(model), call)),
     }
 
 
@@ -372,8 +372,8 @@ class UsageReport:
         Returns:
             A JSON-ready dict with time, embeddings, llm and total cost
         """
-        embedding_totals = self._embedding_totals(config.costs)
-        llm_totals = self._llm_totals(config.costs)
+        embedding_totals = self._embedding_totals(config.models.costs)
+        llm_totals = self._llm_totals(config.models.costs)
         embedding_calls = [
             embedding_csv_row(config, c.model, c.prompt_tokens, c.call_id, c.text) for c in self.embeddings
         ]

@@ -42,24 +42,151 @@ class ModelCost(BaseModel):
     embedding: Decimal | None = Field(default=None, description="USD per 1M embedding tokens")
 
 
+class BucketConfig(BaseModel):
+    """Bucket-based estimation settings."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    enabled: bool = Field(default=True, description="Whether to bucket the data for estimation")
+    max_buckets: int = Field(default=100, description="Maximum number of buckets")
+
+
+class MonteCarloConfig(BaseModel):
+    """Monte Carlo estimation settings."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    enabled: bool = Field(default=False, description="Whether to use Monte Carlo simulation")
+
+
+class ConfidenceIntervalConfig(BaseModel):
+    """Confidence interval settings."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    type: ConfidenceIntervalType = Field(
+        default=ConfidenceIntervalType.CHAO84, description="Method used to compute confidence intervals"
+    )
+    epsilon: float = Field(default=0.05, description="Confidence error probability")
+
+
 class EstimatorConfig(BaseModel):
     """Configuration for the unknown-unknowns estimator."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
+    enabled: bool = Field(default=True, description="Whether the estimator may decide to stop")
+    start_agents: int = Field(
+        default=6,
+        description="Never stop deterministically before this many agents have been queried",
+    )
     count_estimator: CountEstimator = Field(
         default=CountEstimator.CHAO92, description="Estimator for the total entity count"
     )
     value_estimator: ValueEstimator = Field(
         default=ValueEstimator.NAIVE, description="Estimator for missing attribute values"
     )
-    use_bucket: bool = Field(default=True, description="Whether to bucket the data for estimation")
-    use_monte_carlo: bool = Field(default=False, description="Whether to use Monte Carlo simulation")
-    max_buckets: int = Field(default=100, description="Maximum number of buckets")
-    confidence_interval_type: ConfidenceIntervalType = Field(
-        default=ConfidenceIntervalType.CHAO84, description="Method used to compute confidence intervals"
+    bucket: BucketConfig = Field(default_factory=BucketConfig, description="Bucket-based estimation settings")
+    monte_carlo: MonteCarloConfig = Field(default_factory=MonteCarloConfig, description="Monte Carlo settings")
+    confidence_interval: ConfidenceIntervalConfig = Field(
+        default_factory=ConfidenceIntervalConfig, description="Confidence interval settings"
     )
-    confidence_epsilon: float = Field(default=0.05, description="Confidence error probability")
+
+
+class LLMWolrdKnowledgeConfig(BaseModel):
+    """World-knowledge LLM completeness stop settings."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    enabled: bool = Field(default=True, description="Whether the world-knowledge LLM may decide to stop")
+    long_list_start: int = Field(
+        default=1000,
+        description="When the deduplicated result list exceeds this many rows, long-list behavior kicks in",
+    )
+    long_list_behavior: Literal["prevent", "estimator_reasoning"] = Field(
+        default="prevent",
+        description=("Behavior for long lists: prevent skips the LLM, estimator_reasoning feeds estimator stats"),
+    )
+
+
+class CompletenessConfig(BaseModel):
+    """Termination and result-completeness settings."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    target_confidence: float = Field(
+        default=0.95, description="Global confidence threshold with which the final result must hold"
+    )
+    target_apportionment: ApportionmentType = Field(
+        default=ApportionmentType.WEIGHTED,
+        description="How the global threshold is split across multi-agent steps",
+    )
+    continue_after_final_result: bool = Field(default=False, description="Continue after the final result is produced")
+    llm_world_knowledge: LLMWolrdKnowledgeConfig = Field(
+        default_factory=LLMWolrdKnowledgeConfig, description="World-knowledge LLM stop settings"
+    )
+    estimator: EstimatorConfig = Field(
+        default_factory=EstimatorConfig, description="Config for the unknown-unknowns estimator"
+    )
+
+
+class ExecutionConfig(BaseModel):
+    """Execution engine limits."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    replanning_max_attempts: int = Field(
+        default=2, description="Maximum number of replan attempts before giving up on a query plan"
+    )
+    llm_max_turns: int | None = Field(
+        default=DEFAULT_MAX_TURNS * 4,
+        description="Maximum LLM turns per agent run; None falls back to the agents-library default",
+    )
+    llm_code_execution_timeout: int = Field(
+        default=60, description="Timeout (seconds) for LLM code execution tool calls"
+    )
+    llm_code_execution_preview_char_limit: int = Field(
+        default=2000,
+        description="Max characters of code-execution output shown to the LLM (truncated in the middle)",
+    )
+    schema_alignment_agent_limit: int = Field(default=1000, description="Max agents to align schemas against")
+
+
+class SelectionConfig(BaseModel):
+    """Agent selection strategy settings."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    strategy: SelectionStrategyType = Field(
+        default=SelectionStrategyType.POSTERIOR, description="Strategy used to select agents"
+    )
+    params: dict[str, Any] = Field(
+        default_factory=dict, description="Extra keyword args for the agent selection strategy"
+    )
+
+
+class CacheConfig(BaseModel):
+    """Result caching behavior."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    mode: CacheMode = Field(default=CacheMode.READ_AND_WRITE, description="How results are cached across runs")
+
+
+class ModelsConfig(BaseModel):
+    """Model identifiers, per-role agent configs, and pricing."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    embedding: str = Field(
+        default="openai/text-embedding-3-large",
+        description="The embedding model used for schema alignment",
+    )
+    agents: dict[str, RoleConfig] = Field(default_factory=dict, description="Per-role agent configuration")
+    costs: dict[str, ModelCost] = Field(
+        default_factory=dict,
+        description="Per-model pricing keyed by model name exactly as configured elsewhere",
+    )
 
 
 class Config(BaseModel):
@@ -67,83 +194,8 @@ class Config(BaseModel):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", frozen=True)
 
-    continue_after_final_result: bool = Field(default=False, description="Continue after the final result is produced")
-
-    selection_type: SelectionStrategyType = Field(
-        default=SelectionStrategyType.RANDOM, description="Strategy used to select agents"
-    )
-    align_schema_agent_limit: int = Field(default=1000, description="Max agents to align schemas against")
-
-    estimator: EstimatorConfig = Field(
-        default_factory=EstimatorConfig, description="Config for the unknown-unknowns estimator"
-    )
-
-    target_confidence: float = Field(
-        default=0.95, description="Global confidence threshold with which the final result must hold"
-    )
-
-    apportionment: ApportionmentType = Field(
-        default=ApportionmentType.WEIGHTED,
-        description="How the global threshold is split across multi-agent steps",
-    )
-
-    warmup_agents: int = Field(
-        default=2,
-        description="Never stop deterministically before this many agents have been queried",
-    )  # TODO: find good k value
-
-    stop_llm_max_list_items: int = Field(
-        default=1000,
-        description="When the deduplicated result list exceeds this many rows, long-list behavior kicks in",
-    )
-
-    long_list_behavior: Literal["prevent", "estimator_reasoning"] = Field(
-        default="prevent",
-        description=("Behavior for long lists: prevent skips the LLM, estimator_reasoning feeds estimator stats"),
-    )
-
-    max_replan_attempts: int = Field(
-        default=2, description="Maximum number of replan attempts before giving up on a query plan"
-    )
-
-    max_turns: int | None = Field(
-        default=DEFAULT_MAX_TURNS * 4,
-        description="Maximum LLM turns per agent run; None falls back to the agents-library default",
-    )
-
-    llm_code_execution_timeout: int = Field(
-        default=60, description="Timeout (seconds) for LLM code execution tool calls"
-    )
-
-    llm_code_execution_preview_char_limit: int = Field(
-        default=2000,
-        description="Max characters of code-execution output shown to the LLM (truncated in the middle)",
-    )
-
-    selection_kwargs: dict[str, Any] = Field(
-        default_factory=dict, description="Extra keyword args for the agent selection strategy"
-    )
-
-    embedding_model: str = Field(
-        default="openai/text-embedding-3-large",
-        description="The embedding model used for schema alignment",
-    )
-    agent_configs: dict[str, RoleConfig] = Field(default_factory=dict, description="Per-role agent configuration")
-
-    costs: dict[str, ModelCost] = Field(
-        default_factory=dict,
-        description="Per-model pricing keyed by model name exactly as configured elsewhere",
-    )
-
-    cache_mode: CacheMode = Field(default=CacheMode.READ_AND_WRITE, description="How results are cached across runs")
-
-    # -- Completeness LLM prompt context --
-    completeness_show_estimator_stats: bool = Field(
-        default=False,
-        description="Feed estimator unknown-unknown stats into the completeness LLM prompt",
-    )
-
-    completeness_summarize_history: bool = Field(
-        default=True,
-        description="Tell the completeness LLM it is a continuation and to decide on the new state",
-    )
+    completeness: CompletenessConfig = Field(default_factory=CompletenessConfig, description="Completeness settings")
+    execution: ExecutionConfig = Field(default_factory=ExecutionConfig, description="Execution engine limits")
+    selection: SelectionConfig = Field(default_factory=SelectionConfig, description="Agent selection settings")
+    cache: CacheConfig = Field(default_factory=CacheConfig, description="Result caching behavior")
+    models: ModelsConfig = Field(default_factory=ModelsConfig, description="Model identifiers and pricing")

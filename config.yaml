@@ -1,77 +1,94 @@
-estimator:
-  count_estimator: chao92
-  value_estimator: naive
-  use_bucket: true
-  use_monte_carlo: false
-  max_buckets: 100
-  confidence_interval_type: chao84
-  confidence_epsilon: 0.05
+execution:
+  replanning_max_attempts: 2
+  llm_max_turns: 40
+  llm_code_execution_timeout: 60
+  llm_code_execution_preview_char_limit: 2000
+  schema_alignment_agent_limit: 1000
 
-target_confidence: 0.95
-apportionment: weighted
-warmup_agents: 2
+selection:
+  strategy: posterior                  # random | embedding | count | distinct_count | hll_sketch | theta_sketch | min_hash | posterior
+  params:
+    # Params are per-strategy, unknown keys for a strategy are ignored
+    #
+    # random:            seed (int)
+    # embedding:         registry_type (technical | natural_language)
+    # count:             (no params)
+    # distinct_count:    (no params)
+    # hll_sketch:        lg_k (int), use_ucb (bool)
+    # theta_sketch:      lg_k (int), use_ucb (bool)
+    # min_hash:          num_perm (int)
+    # posterior:         lg_k (int), clustered_prior (bool), min_samples (int), min_cluster_size_ratio (float), registry_type (technical | natural_language)
+    lg_k: 12
+    clustered_prior: false
+    registry_type: technical
 
-# Completeness LLM long-list behavior
-# stop_llm_max_list_items: 1000
-# long_list_behavior: estimator_reasoning  # prevent | estimator_reasoning
-# completeness_show_estimator_stats: false
-# completeness_summarize_history: true
+completeness:
+  target_confidence: 0.95              # float in (0, 1), global confidence the result must hold
+  target_apportionment: weighted       # weighted | equal
 
-# Replanning
-# replan_include_prior_attempts: true
+  continue_after_final_result: false   # true | false
 
-continue_after_final_result: false
-selection_type: theta_sketch
-selection_kwargs:
-  # registry_type: natural_language  # technical | natural_language                  # embedding
-  lg_k: 12                              # <number>                                      # hll_sketch, theta_sketch, posterior
-  use_ucb: false                         # true | false                                  # hll_sketch, theta_sketch
-  # clustered_prior: false                 # true | false                                  # posterior
-  # min_samples: 1                         # <number>                                      # posterior
-  # min_cluster_size_ratio: 0.05           # <number>                                      # posterior
-  # num_perm: 128                   # <number>                                      # min_hash
-align_schema_agent_limit: 1000
+  llm_world_knowledge:
+    enabled: true                      # true | false, whether the world-knowledge LLM may decide to stop
+    long_list_start: 1000              # int >= 0, rows after which long-list behavior kicks in
+    long_list_behavior: prevent        # prevent | estimator_reasoning
 
-embedding_model: "openai/text-embedding-3-large"
+  estimator:
+    enabled: true                      # true | false, whether the estimator may decide to stop
+    start_agents: 6                    # int >= 0, queried agents before estimator becomes eligible
+    count_estimator: chao92            # chao92 | chao84 | jackknife1 | jackknife2 | unseen
+    value_estimator: naive             # naive | frequency | frequency_f12 | good_turing
+    bucket:
+      enabled: true                    # true | false, whether to bucket the data for estimation
+      max_buckets: 100                 # int > 0
+    monte_carlo:
+      enabled: false                   # true | false
+    confidence_interval:
+      type: chao84                     # good_turing | chao84
+      epsilon: 0.05                    # float in (0, 1)
 
-costs:
-  "openai/text-embedding-3-large":
-    embedding: 0.13
-  "university/unsloth/DeepSeek-V4-Flash-0731":
-    input: 0.14
-    cached_input: 0.014
-    cache_write: 0.14
-    output: 0.28
+cache:
+  mode: READ_AND_WRITE                 # READ_AND_WRITE | READ_AND_WRITE_THROW_ON_MISS | READ_ONLY | READ_ONLY_THROW_ON_MISS | WRITE_ONLY | DISABLED
 
-
-agent_configs:
-  discovery-coordinator-relevance:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
-  planning-coordinator-draft-query-plan:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  execution-coordinator-answer-step:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  execution-coordinator-replan:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  execution-coordinator-align-schema:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  execution-coordinator-world-knowledge-stop:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  execution-coordinator-result-producer:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  discovery-data-agent-schema-description:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
-  discovery-data-agent-relevance:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "none"
-  execution-data-agent-query:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
+models:
+  embedding: "openai/text-embedding-3-large" # any model id accepted by the embedding provider
+  agents:
+    discovery-coordinator-relevance:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "none"         # none | minimal | low | medium | high | xhigh
+      reasoning_summary: null          # auto | concise | detailed | null
+    planning-coordinator-draft-query-plan:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "high"
+    execution-coordinator-answer-step:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "high"
+    execution-coordinator-replan:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "high"
+    execution-coordinator-align-schema:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "high"
+    execution-coordinator-world-knowledge-stop:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "high"
+    execution-coordinator-result-producer:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "high"
+    discovery-data-agent-schema-description:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "none"
+    discovery-data-agent-relevance:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "none"
+    execution-data-agent-query:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "high"
+  costs:
+    "openai/text-embedding-3-large":   # USD per 1M tokens
+      embedding: 0.13
+    "university/unsloth/DeepSeek-V4-Flash-0731":
+      input: 0.14
+      cached_input: 0.014
+      cache_write: 0.14
+      output: 0.28

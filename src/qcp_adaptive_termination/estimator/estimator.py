@@ -18,7 +18,12 @@ from qcp_adaptive_termination.estimator.data_item import DataItem
 from qcp_adaptive_termination.estimator.frequency import FrequencyStats
 from qcp_adaptive_termination.estimator.monte_carlo import mc_count
 from qcp_adaptive_termination.estimator.value_estimators import estimate_delta
-from qcp_adaptive_termination.models.config import EstimatorConfig
+from qcp_adaptive_termination.models.config import (
+    BucketConfig,
+    ConfidenceIntervalConfig,
+    EstimatorConfig,
+    MonteCarloConfig,
+)
 from qcp_adaptive_termination.models.estimation import (
     ConfidenceIntervalType,
     CountEstimator,
@@ -61,11 +66,11 @@ class Estimator:
         self._bucket_cache: _BucketCache | None = None
         self._count_estimator = config.count_estimator
         self._value_estimator = config.value_estimator
-        self._use_bucket = config.use_bucket
-        self._use_monte_carlo = config.use_monte_carlo
-        self._max_buckets = config.max_buckets
-        self._confidence_interval_type = config.confidence_interval_type
-        self._confidence_epsilon = config.confidence_epsilon
+        self._use_bucket = config.bucket.enabled
+        self._use_monte_carlo = config.monte_carlo.enabled
+        self._max_buckets = config.bucket.max_buckets
+        self._confidence_interval_type = config.confidence_interval.type
+        self._confidence_epsilon = config.confidence_interval.epsilon
 
         # Lazy value caches, invalidated by add_source.
         self._cached_count: float | None = None
@@ -385,11 +390,12 @@ class Estimator:
             EstimatorConfig(
                 count_estimator=self._count_estimator,
                 value_estimator=self._value_estimator,
-                use_bucket=False,
-                use_monte_carlo=self._use_monte_carlo,
-                max_buckets=self._max_buckets,
-                confidence_interval_type=self._confidence_interval_type,
-                confidence_epsilon=self._confidence_epsilon,
+                bucket=BucketConfig(enabled=False, max_buckets=self._max_buckets),
+                monte_carlo=MonteCarloConfig(enabled=self._use_monte_carlo),
+                confidence_interval=ConfidenceIntervalConfig(
+                    type=self._confidence_interval_type,
+                    epsilon=self._confidence_epsilon,
+                ),
             ),
         )
 

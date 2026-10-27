@@ -98,7 +98,7 @@ def _cached_json_schema(output_type: type[BaseModel]) -> dict:
 
 def _resolve_model_config(role: AgentRole) -> tuple[str, Reasoning]:
     """Resolve the model and reasoning config for a role."""
-    role_cfg: RoleConfig = obs_context.get_config().agent_configs[role.value]
+    role_cfg: RoleConfig = obs_context.get_config().models.agents[role.value]
     reasoning = Reasoning(effort=role_cfg.reasoning_effort, summary=role_cfg.reasoning_summary)
     return role_cfg.model, reasoning
 
@@ -191,7 +191,7 @@ async def run_agent[TResult](
                     agent,
                     input,
                     context=context,
-                    max_turns=max_turns or obs_context.get_config().max_turns or DEFAULT_MAX_TURNS,
+                    max_turns=max_turns or obs_context.get_config().execution.llm_max_turns or DEFAULT_MAX_TURNS,
                     run_config=RunConfig(model_provider=model_provider.get_multi_provider()),
                 )
         except ModelBehaviorError as e:

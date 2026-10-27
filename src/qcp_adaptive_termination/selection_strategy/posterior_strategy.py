@@ -14,7 +14,7 @@ lazy import evoc
 
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.database as database
-from qcp_adaptive_termination.models import DataAgent, ScoredDataAgent
+from qcp_adaptive_termination.models import AgentRegistryType, DataAgent, ScoredDataAgent
 from qcp_adaptive_termination.selection_strategy.sketch_strategy import DEFAULT_LG_K
 from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
 
@@ -62,6 +62,8 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
     """Minimum number of samples to use a distribution"""
     min_cluster_size_ratio: float = DEFAULT_MIN_CLUSTER_SIZE_RATIO
     """Minimum cluster size as a fraction of total agents"""
+    registry_type: AgentRegistryType = AgentRegistryType.TECHNICAL
+    """Which registry type to embed tables from"""
 
     def needs_table(self) -> bool:
         """Return True, since this strategy requires a table per agent."""
@@ -81,7 +83,9 @@ class PosteriorStrategy(SelectionStrategy[PosteriorPrecomputedState, PosteriorSt
         """Precompute each agent's embedding and theta sketch."""
         assert table_per_agent and column_per_agent
 
-        vectors = await agent_registry.embedding_vector_for_table(agents, table_per_agent)
+        vectors = await agent_registry.embedding_vector_for_table(
+            agents, table_per_agent, registry_type=self.registry_type
+        )
 
         async def _build(agent: DataAgent) -> tuple[str, PosteriorPrecomputedState]:
             """Fetch one agent's column values into its precomputed state."""

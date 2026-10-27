@@ -48,7 +48,7 @@ class CodeExecutionResult:
 def preview_text(text: str, char_limit: int | None = None):
     """Truncate text to a char limit while keeping both ends."""
     if char_limit is None:
-        char_limit = context.get_config().llm_code_execution_preview_char_limit
+        char_limit = context.get_config().execution.llm_code_execution_preview_char_limit
     if len(text) <= char_limit:
         return text
 
@@ -153,7 +153,7 @@ class CodeExecutionEnvironment:
 
         @function_tool(
             name_override="execute_code",
-            timeout=context.get_config().llm_code_execution_timeout,
+            timeout=context.get_config().execution.llm_code_execution_timeout,
             timeout_behavior="error_as_result",
         )
         async def execute_python_code(ctx: RunContextWrapper[TContext], code: str) -> str:

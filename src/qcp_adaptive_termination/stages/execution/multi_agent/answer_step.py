@@ -85,7 +85,9 @@ async def answer_step_multiple_agents(
 
     result_list = await align_schema(
         data_agents=data_agents,
-        agent_names=[s.agent.name for s in remaining_selections[: context.get_config().align_schema_agent_limit]],
+        agent_names=[
+            s.agent.name for s in remaining_selections[: context.get_config().execution.schema_alignment_agent_limit]
+        ],
         query=query_plan_step.query,
         merge_task=query_plan_step.merge_task,
     )
@@ -147,7 +149,7 @@ async def answer_step_multiple_agents(
                 decision.stop_reason,
                 result_list.schema_metadata.aggregation_types,
             )
-            if not context.get_config().continue_after_final_result or not remaining_selections:
+            if not context.get_config().completeness.continue_after_final_result or not remaining_selections:
                 break
 
         selector.update(result_list, agent_names=[agent_name])
