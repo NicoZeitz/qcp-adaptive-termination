@@ -1,8 +1,12 @@
 """Data models for completeness evaluation."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from qcp_adaptive_termination.models import AggregationType
+
+# Target coverage levels at which we report the earliest possible stop point.
+# Keys in per-check records and CSV columns use ``int(target * 100)`` (e.g. 95).
+COVERAGE_TARGETS: tuple[float, ...] = (0.8, 0.9, 0.95, 0.99, 1.0)
 
 
 @dataclass(slots=True)
@@ -97,6 +101,13 @@ class BatchRecord:
     """Relative error of the observed result"""
     estimated_error: float | None
     """Relative error of the estimated result"""
+    # -- earliest possible stop analysis (step-level, repeated per row) --
+    earliest_stop: dict[str, int | None] = field(default_factory=dict)
+    """First agent index reaching each coverage target (key like ``95``); None if never reached"""
+    agents_saved: dict[str, int | None] = field(default_factory=dict)
+    """Agents queried beyond the earliest stop point for each coverage target"""
+    earliest_scalar_stop_agents: int | None = None
+    """First agent index where the observed scalar equals the true scalar (value steps)"""
 
 
 @dataclass(slots=True)

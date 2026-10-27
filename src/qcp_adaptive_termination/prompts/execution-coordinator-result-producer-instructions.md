@@ -16,6 +16,22 @@ Use the following merge task as guidance for how to combine the results:
 > {{merge_task}}
 {{/merge_task}}
 
+{{#use_estimator}}
+## Correcting for missing entities
+
+The collected results are **incomplete** (execution stopped early based on the estimator or on world knowledge). Decide from the query whether it asks for a **list of entities** or a **scalar aggregate**:
+
+- If the query asks for a **list** (e.g. "return all countries", "which companies ..."), build the answer from the deduplicated observed `result_list`. Do **not** use the estimator.
+- If the query asks for a **scalar aggregate** (e.g. `avg`, `sum`, `count()`, `min`, `max`, quantile), correct for the missing (unknown-unknown) entities using the injected `estimator` `estimated_*` methods.
+
+Use the estimator only for scalar aggregate queries. For anything else, base the answer on the observed `result_list`.
+{{/use_estimator}}
+{{^use_estimator}}
+## Using the collected results
+
+The collected results are **complete**. Build the final answer from the deduplicated observed `result_list`, applying any requested aggregation (e.g. summing, counting, selecting) across the full deduplicated result.
+{{/use_estimator}}
+
 ## Python environment
 
 Call `final_result(...)` as a Python function inside your code execution tool.
@@ -32,6 +48,8 @@ def final_result(result: pd.DataFrame | str | None) -> None: ...
 # Available variables
 query: str
 result_list: pd.DataFrame
+{{#use_estimator}}estimator: object | None  # unknown-unknowns estimator for missing entities
+{{/use_estimator}}
 ```
 
 There is one function available to call:
@@ -40,3 +58,12 @@ There is one function available to call:
 Input information is provided in the following variables:
 * `query`: The natural language query that should be answered
 * `result_list`: Contains the results of all the queried agents.
+{{#use_estimator}}
+* `estimator`: The unknown-unknowns estimator for correcting aggregate results. Its `sample_*` methods return observed (uncorrected) values; its `estimated_*` methods correct for missing entities. Useful methods:
+  * `estimator.estimated_count()` — estimated total unique entities
+  * `estimator.estimated_sum()` — sum corrected for missing entities
+  * `estimator.estimated_avg()` — average over observed + missing entities
+  * `estimator.estimated_min()`, `estimator.estimated_max()` — confirmed min/max, or `None`
+  * `estimator.estimated_quantile(q)`, `estimator.estimated_median()` — estimated quantiles
+  * `estimator.sample_count()`, `estimator.sample_sum()`, `estimator.sample_avg()` and other `sample_*` — observed (uncorrected) values
+{{/use_estimator}}

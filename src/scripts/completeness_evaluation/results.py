@@ -6,8 +6,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from scripts.completeness_evaluation.models import StepResult
+from scripts.completeness_evaluation.models import COVERAGE_TARGETS, StepResult
 from scripts.completeness_evaluation.plotting import save_step_plot
+
+_EARLY_STOP_COLUMNS: list[str] = (
+    [f"earliest_stop_agents_{int(t * 100)}" for t in COVERAGE_TARGETS]
+    + [f"agents_saved_{int(t * 100)}" for t in COVERAGE_TARGETS]
+    + ["earliest_scalar_stop_agents"]
+)
 
 # CSV columns: one row per completeness check (per queried agent).
 _CSV_COLUMNS = [
@@ -52,6 +58,7 @@ _CSV_COLUMNS = [
     "result_rel_err_avg",
     "result_rel_err_sum",
     "result",
+    *_EARLY_STOP_COLUMNS,
 ]
 
 
@@ -113,6 +120,15 @@ def save_step_results(result: StepResult, query_slug: str, output_dir: Path):
                 "predicted_remaining": b.predicted_remaining,
                 "realized_unseen": b.realized_unseen,
                 "coverage_achieved": b.coverage_achieved,
+                **{
+                    f"earliest_stop_agents_{int(t * 100)}": (b.earliest_stop or {}).get(str(int(t * 100)))
+                    for t in COVERAGE_TARGETS
+                },
+                **{
+                    f"agents_saved_{int(t * 100)}": (b.agents_saved or {}).get(str(int(t * 100)))
+                    for t in COVERAGE_TARGETS
+                },
+                "earliest_scalar_stop_agents": b.earliest_scalar_stop_agents,
             },
         }
         rows.append(row)

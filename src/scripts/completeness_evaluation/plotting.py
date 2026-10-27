@@ -71,6 +71,11 @@ def save_step_plot(result: StepResult, prefix: str, output_dir: Path):
     ax_cov.set_ylim(0.0, 1.15)
     ax_cov.set_title(f"Coverage & completeness ratios\n{prefix}")
     ax_cov.set_xticks(range(0, xs[-1] + 1))
+    earliest = checks[-1].earliest_stop or {}
+    for label, color, target_label in (("95", "orange", "95%"), ("100", "green", "100%")):
+        idx = earliest.get(label)
+        if idx is not None:
+            ax_cov.axvline(idx, color=color, linestyle=":", alpha=0.8, label=f"earliest {target_label} (agent {idx})")
     ax_cov.legend(fontsize=8)
 
     # Counts + estimated bounds
@@ -120,6 +125,14 @@ def save_step_plot(result: StepResult, prefix: str, output_dir: Path):
         if tv is not None:
             ax_val.axhline(tv, color="green", linestyle=":", alpha=0.7, label=f"true value ({tv:.3g})")
         ax_val.axvline(stop_x, color="red", linestyle="--", alpha=0.7)
+        if checks[-1].earliest_scalar_stop_agents is not None:
+            ax_val.axvline(
+                checks[-1].earliest_scalar_stop_agents,
+                color="green",
+                linestyle=":",
+                alpha=0.8,
+                label=f"earliest scalar (agent {checks[-1].earliest_scalar_stop_agents})",
+            )
         agg_label = result.aggregation.value if result.aggregation is not None else "value"
         ax_val.set_xlabel("Agents queried")
         ax_val.set_ylabel(f"Value ({agg_label})")
@@ -234,3 +247,43 @@ def save_aggregate_plots(step_df: pd.DataFrame, output_dir: Path):
     ax.set_ylabel("Agents queried at stop")
     ax.legend()
     _save(fig, output_dir, "aggregate_evaluator_agents_at_stop")
+
+    # 6. Earliest possible stop vs actual stop (full coverage), identity line
+    fig, ax = plt.subplots(figsize=(7, 7))
+    earliest_n = np.asarray(step_df["earliest_stop_agents_100"], dtype=float)
+    actual_n = np.asarray(step_df["agents_queried_at_stop"], dtype=float)
+    keep = np.isfinite(earliest_n) & np.isfinite(actual_n)
+    if keep.any():
+        for reason, color in palette.items():
+            sub = step_df[step_df["stop_reason"] == reason]
+            e = np.asarray(sub["earliest_stop_agents_100"], dtype=float)
+            a = np.asarray(sub["agents_queried_at_stop"], dtype=float)
+            m = np.isfinite(e) & np.isfinite(a)
+            if m.any():
+                ax.scatter(e[m], a[m], alpha=0.6, s=30, color=color, label=reason, zorder=3)
+        lo = float(min(float(earliest_n[keep].min()), float(actual_n[keep].min())))
+        hi = float(max(float(earliest_n[keep].max()), float(actual_n[keep].max())))
+        ax.plot([lo, hi], [lo, hi], color="red", linestyle="--", linewidth=1, label="stop == earliest 100%")
+        ax.set_xlabel("Earliest stop at 100% coverage (agents)")
+        ax.set_ylabel("Actual agents queried at stop")
+        ax.set_title("Could we have stopped earlier? (count)")
+        ax.legend()
+    _save(fig, output_dir, "aggregate_evaluator_earliest_vs_actual")
+
+    # 7. Agents saved distribution (full coverage + 95% coverage)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    actual_max = float(np.nanmax(np.asarray(step_df["agents_queried_at_stop"], dtype=float)))
+    bins = np.arange(0, actual_max + 2, 1).tolist()
+    saved_100 = np.asarray(step_df["agents_saved_100"], dtype=float)
+    saved_95 = np.asarray(step_df["agents_saved_95"], dtype=float)
+    s100 = saved_100[np.isfinite(saved_100)]
+    s95 = saved_95[np.isfinite(saved_95)]
+    if s100.size:
+        ax.hist(s100, bins=bins, alpha=0.6, label="100% coverage", color="#4c72b0", align="left")
+    if s95.size:
+        ax.hist(s95, bins=bins, alpha=0.6, label="95% coverage", color="#dd8452", align="left")
+    ax.set_title("Agents saved by stopping at earliest coverage target")
+    ax.set_xlabel("Agents saved (= actual stop - earliest possible)")
+    ax.set_ylabel("Number of steps")
+    ax.legend()
+    _save(fig, output_dir, "aggregate_evaluator_agents_saved")

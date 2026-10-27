@@ -49,7 +49,12 @@ from qcp_adaptive_termination.models.stages import (
 )
 from qcp_adaptive_termination.observability import context
 from scripts.completeness_evaluation.ground_truth import compute_ground_truth
-from scripts.completeness_evaluation.models import BatchRecord, GroundTruth, StepResult
+from scripts.completeness_evaluation.models import (
+    COVERAGE_TARGETS,
+    BatchRecord,
+    GroundTruth,
+    StepResult,
+)
 from scripts.completeness_evaluation.results import save_step_results
 from scripts.utils.canonical import (
     load_meta_mapping,
@@ -317,6 +322,38 @@ def _produced_scalar_and_errors(
         return abs(scalar - truth) / abs(truth)
 
     return scalar, rel_err(gt.value_avg), rel_err(gt.value_sum)
+
+
+def _target_eval(checks: list[BatchRecord]) -> dict[str, int | None]:
+    """Map each coverage target to the first agent index that reached it."""
+    reached: dict[str, int | None] = {f"{int(t * 100)}": None for t in COVERAGE_TARGETS}
+    for check in checks:
+        coverage = check.coverage_achieved
+        for target in COVERAGE_TARGETS:
+            label = f"{int(target * 100)}"
+            if reached[label] is None and coverage + 1e-9 >= target:
+                reached[label] = check.cumulative_agents
+    return reached
+
+
+def _fill_early_stop(checks: list[BatchRecord], stop_agents: int):
+    """Record earliest-stop and agents-saved for each coverage target on every check."""
+    reached = _target_eval(checks)
+    for check in checks:
+        check.earliest_stop = reached
+        check.agents_saved = {label: (stop_agents - idx) if idx is not None else None for label, idx in reached.items()}
+
+
+def _scalar_equality_stop(checks: list[BatchRecord]) -> int | None:
+    """Return the first agent index where the observed scalar equals the true scalar."""
+    for check in checks:
+        if (
+            check.observed_value is not None
+            and check.true_value is not None
+            and check.observed_value == check.true_value
+        ):
+            return check.cumulative_agents
+    return None
 
 
 class _StepTracker:
@@ -668,6 +705,12 @@ def _build_step_result(
     agents_queried_at_stop = stop_batch.cumulative_agents
     stop_fraction = agents_queried_at_stop / agents_total if agents_total > 0 else 0.0
     early_stop = agents_queried_at_stop < agents_total
+
+    _fill_early_stop(batches, agents_queried_at_stop)
+    if uses_value:
+        earliest_scalar = _scalar_equality_stop(batches)
+        for batch in batches:
+            batch.earliest_scalar_stop_agents = earliest_scalar
 
     produced_raw = tracker.produced_for(step.id)
     produced_text = json.dumps(produced_raw, default=str) if produced_raw is not None else None
