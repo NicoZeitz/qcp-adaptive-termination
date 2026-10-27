@@ -110,6 +110,7 @@ def aggregate(results_dir: Path, input_dir: Path) -> Path:
     usage_frame = _aggregate_usage(results_dir, input_dir)
     if usage_frame is not None:
         usage_frame.to_csv(results_dir / "usage_summary.csv", index=False)
+        usage_frame.to_json(results_dir / "usage_summary.json", orient="records", indent=2)
         logging.info("Aggregated usage for %d queries to %s", len(usage_frame), results_dir / "usage_summary.csv")
 
     pd.DataFrame(status_rows).to_csv(results_dir / "evaluator_run_status.csv", index=False)

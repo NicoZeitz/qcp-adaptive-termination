@@ -34,12 +34,14 @@ async def filter_data_agent(
         ),
     }
 
-    is_relevant = await runner.run_llm(
-        role=AgentRole.DISCOVERY_DATA_AGENT_RELEVANCE,
-        agent_name=data_agent.name,
-        prompt_parameters=prompt_parameters,
-        output_type=bool,
-    )
+    is_relevant = (
+        await runner.run_llm(
+            role=AgentRole.DISCOVERY_DATA_AGENT_RELEVANCE,
+            agent_name=data_agent.name,
+            prompt_parameters=prompt_parameters,
+            output_type=bool,
+        )
+    ).output
 
     tracing.append_to_span_output({f"{data_agent.name}_relevant": is_relevant})
     return data_agent if is_relevant else None

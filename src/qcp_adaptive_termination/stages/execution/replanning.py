@@ -10,7 +10,6 @@ from pydantic import BaseModel
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.hooks as hooks
 from qcp_adaptive_termination.hooks import HookEvent
-from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent, ResultType, need_type, result_type
 from qcp_adaptive_termination.models.execution import FailedExecution
 from qcp_adaptive_termination.models.query_plan import (
@@ -23,6 +22,7 @@ from qcp_adaptive_termination.stages.discovery import filter_relevant_agents
 from qcp_adaptive_termination.stages.planning import (
     create_query_plan_model,
     map_query_plan_model_to_query_plan,
+    run_plan_agent,
 )
 
 
@@ -111,7 +111,7 @@ async def replan_query_plan(
     relevant_data_agents: list[DataAgent],
     query_plan: QueryPlan,
     reason: FailedExecution,
-    history: list[TResponseInputItem] | None = None,
+    history: list[TResponseInputItem],
 ) -> QueryPlan:
     """Revise the query plan after a failed execution.
 
@@ -138,21 +138,16 @@ async def replan_query_plan(
     if history:
         prompt_parameters["is_continuation"] = True
 
-    run_result = await runner.run_agent(
+    query_plan, continuation = await run_plan_agent(
         role=AgentRole.EXECUTION_COORDINATOR_REPLAN,
         prompt_parameters=prompt_parameters,
         output_type=QueryReplanModel,
-        max_turns=1,
-        tools=[],
-        previous_input=history or None,
+        map_output=lambda out: map_query_replan_model_to_query_plan(out, query_plan.query, answer_map),
+        error_kind="replanning",
+        history=history,
     )
 
-    # Carry the conversation forward so the next replan continues from here
-    # (mirrors the completeness LLM's history threading).
-    if history is not None:
-        history[:] = run_result.continuation_input
-
-    query_plan = map_query_replan_model_to_query_plan(run_result.output, query_plan.query, answer_map)
+    history[:] = continuation
     return query_plan
 
 
@@ -163,7 +158,7 @@ async def replan(
     data_agents: list[DataAgent],
     query_plan: QueryPlan,
     failed_execution: FailedExecution,
-    history: list[TResponseInputItem] | None = None,
+    history: list[TResponseInputItem],
 ) -> tuple[list[DataAgent], QueryPlan]:
     """Replan: expand the agent set if needed and revise the query plan.
 

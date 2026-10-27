@@ -1,7 +1,9 @@
 """
 Hook system. Every event can have pre, overwrite, and post handlers.
 - **pre**: observers that run before the operation (all run, receive the call args)
-- **overwrite**: a single replacement implementation (last registration wins)
+- **overwrite**: a single replacement implementation (last registration wins); the
+  overwrite handler receives the raw default implementation as ``default_fn`` if it
+  declares such a parameter, letting it delegate to the real implementation
 - **post**: observers that run after the operation (all run, receive call args + result)
 """
 
@@ -232,7 +234,9 @@ async def _run_async(
                 await result
 
         result = (
-            _call(_overwrite_hooks[event], execution_id, kwargs) if event in _overwrite_hooks else default(**kwargs)
+            _call(_overwrite_hooks[event], execution_id, {**kwargs, "default_fn": default})
+            if event in _overwrite_hooks
+            else default(**kwargs)
         )
         if inspect.isawaitable(result):
             result = await result
@@ -255,7 +259,9 @@ def _run_sync(
             _call(handler, execution_id, kwargs)
 
         result = (
-            _call(_overwrite_hooks[event], execution_id, kwargs) if event in _overwrite_hooks else default(**kwargs)
+            _call(_overwrite_hooks[event], execution_id, {**kwargs, "default_fn": default})
+            if event in _overwrite_hooks
+            else default(**kwargs)
         )
 
         for handler in _post_hooks[event]:

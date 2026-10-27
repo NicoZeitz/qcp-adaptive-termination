@@ -54,15 +54,17 @@ async def filter_coordinator(
     """
     RelevanceModel = _build_relevance_model(data_agents)
 
-    relevances = await runner.run_llm(
-        role=AgentRole.DISCOVERY_COORDINATOR_RELEVANCE,
-        prompt_parameters={
-            "agent_registry": registry_string,
-            "query": query,
-            "additional_context": additional_context,
-        },
-        output_type=RelevanceModel,
-    )
+    relevances = (
+        await runner.run_llm(
+            role=AgentRole.DISCOVERY_COORDINATOR_RELEVANCE,
+            prompt_parameters={
+                "agent_registry": registry_string,
+                "query": query,
+                "additional_context": additional_context,
+            },
+            output_type=RelevanceModel,
+        )
+    ).output
 
     relevant_agents_with_reasoning: list[tuple[DataAgent, str]] = []
     for agent in data_agents:

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from qcp_adaptive_termination.models import StopReason
 from scripts.completeness_evaluation.models import StepResult
 
 _PLOT_EXTS = ("png", "pdf", "svg")
@@ -140,9 +141,13 @@ def save_aggregate_plots(step_df: pd.DataFrame, output_dir: Path):
         logging.warning("No step rows for aggregate plots")
         return
 
-    reason_order = ["all_agents", "estimator", "llm"]
+    reason_order = [StopReason.ALL_AGENTS.value, StopReason.ESTIMATOR.value, StopReason.LLM.value]
     present_reasons = [r for r in reason_order if (step_df["stop_reason"] == r).any()]
-    palette = {"all_agents": "#4c72b0", "estimator": "#dd8452", "llm": "#55a868"}
+    palette = {
+        StopReason.ALL_AGENTS.value: "#4c72b0",
+        StopReason.ESTIMATOR.value: "#dd8452",
+        StopReason.LLM.value: "#55a868",
+    }
 
     # 1. Stop-condition histogram
     fig, ax = plt.subplots(figsize=(8, 5))

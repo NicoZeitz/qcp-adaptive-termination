@@ -3,6 +3,7 @@
 from decimal import Decimal
 from typing import Any, ClassVar, Literal
 
+from agents.run_config import DEFAULT_MAX_TURNS
 from pydantic import BaseModel, ConfigDict, Field
 
 from qcp_adaptive_termination.models.cache_mode import CacheMode
@@ -103,6 +104,11 @@ class Config(BaseModel):
 
     max_replan_attempts: int = Field(
         default=2, description="Maximum number of replan attempts before giving up on a query plan"
+    )
+
+    max_turns: int | None = Field(
+        default=DEFAULT_MAX_TURNS * 4,
+        description="Maximum LLM turns per agent run; None falls back to the agents-library default",
     )
 
     llm_code_execution_timeout: int = Field(

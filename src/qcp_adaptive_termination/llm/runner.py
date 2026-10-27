@@ -28,7 +28,8 @@ import qcp_adaptive_termination.hooks as hooks
 import qcp_adaptive_termination.llm.model_provider as model_provider
 import qcp_adaptive_termination.llm.prompt as prompt
 from qcp_adaptive_termination.models import AgentRole, CacheMode, RoleConfig
-from qcp_adaptive_termination.observability import cache, context
+from qcp_adaptive_termination.observability import cache
+from qcp_adaptive_termination.observability import context as obs_context
 
 _AGENT_SEMAPHORE = asyncio.Semaphore(5)
 
@@ -97,7 +98,7 @@ def _cached_json_schema(output_type: type[BaseModel]) -> dict:
 
 def _resolve_model_config(role: AgentRole) -> tuple[str, Reasoning]:
     """Resolve the model and reasoning config for a role."""
-    role_cfg: RoleConfig = context.get_config().agent_configs[role.value]
+    role_cfg: RoleConfig = obs_context.get_config().agent_configs[role.value]
     reasoning = Reasoning(effort=role_cfg.reasoning_effort, summary=role_cfg.reasoning_summary)
     return role_cfg.model, reasoning
 
@@ -132,13 +133,15 @@ async def run_agent[TResult](
     tool_choice: Literal["auto", "required", "none"] | None = None,
     cache_mode: CacheMode | None = None,
     previous_input: list[TResponseInputItem] | None = None,
+    render_prompt_after_previous_history: bool = True,
     label: str | None = None,
 ) -> AgentRunResult[TResult]:
     """Run an agent for a role against the current prompt, with caching and hooks."""
+    if not render_prompt_after_previous_history and not previous_input:
+        raise ValueError("render_prompt_after_previous_history=False requires a non-empty previous_input")
+
     display_name = f"{agent_name} - {role.value}" if agent_name else role.value
     model, reasoning = _resolve_model_config(role)
-    if max_turns is None:
-        max_turns = DEFAULT_MAX_TURNS * 2
 
     instructions, prompts = prompt.load_prompt(role.value, prompt_parameters)
     tools = tools or []
@@ -180,7 +183,7 @@ async def run_agent[TResult](
             output_type=output_type,
         )
 
-        logging.info("Running agent: %s", display_name)
+        logging.debug("Running agent: %s", display_name)
 
         try:
             async with _AGENT_SEMAPHORE:
@@ -188,7 +191,7 @@ async def run_agent[TResult](
                     agent,
                     input,
                     context=context,
-                    max_turns=max_turns,
+                    max_turns=max_turns or obs_context.get_config().max_turns or DEFAULT_MAX_TURNS,
                     run_config=RunConfig(model_provider=model_provider.get_multi_provider()),
                 )
         except ModelBehaviorError as e:
@@ -206,7 +209,7 @@ async def run_agent[TResult](
 
     cached = await compute_value(
         instructions,
-        input=[*(previous_input or []), *prompts],
+        input=([*(previous_input or []), *prompts] if render_prompt_after_previous_history else (previous_input or [])),
         context=context,
         output=output,
         function_tools=list(
@@ -229,8 +232,6 @@ async def run_agent[TResult](
     output = _SerializedModel.unwrap(cached.output, output_type)
     continuation_input = cached.continuation_input
 
-    # Fire on both real runs and cache hits; the raw continuation is passed so
-    # consumers can render a transcript / extract reasoning from it directly.
     await hooks.fire_post(
         hooks.HookEvent.AGENT_COMPLETED,
         role=role,
@@ -257,9 +258,11 @@ async def run_llm[TResult](
     output_type: type[TResult] | None = str,  # ty: ignore[invalid-parameter-default]
     context: JsonValue = None,
     cache_mode: CacheMode | None = None,
-) -> TResult:
-    """Run a single-turn LLM call for a role and return the parsed output."""
-    result = await run_agent(
+    previous_input: list[TResponseInputItem] | None = None,
+    render_prompt_after_previous_history: bool = True,
+) -> AgentRunResult[TResult]:
+    """Run a single-turn LLM call for a role, with optional continuation history."""
+    return await run_agent(
         role=role,
         agent_name=agent_name,
         prompt_parameters=prompt_parameters,
@@ -268,5 +271,6 @@ async def run_llm[TResult](
         context=context,
         tools=[],
         cache_mode=cache_mode,
+        previous_input=previous_input,
+        render_prompt_after_previous_history=render_prompt_after_previous_history,
     )
-    return result.output

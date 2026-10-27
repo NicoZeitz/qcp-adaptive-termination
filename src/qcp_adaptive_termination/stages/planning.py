@@ -1,7 +1,11 @@
 """Planning stage: draft a query plan for the selected data agents."""
 
+import logging
+from collections.abc import Callable, Mapping
 from typing import Literal
 
+from agents.items import TResponseInputItem
+from agents.run_config import DEFAULT_MAX_TURNS
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
 import qcp_adaptive_termination.agent_registry as agent_registry
@@ -19,6 +23,66 @@ from qcp_adaptive_termination.models.query_plan import (
 )
 from qcp_adaptive_termination.models.stages import DraftedQueryPlan, Stage
 from qcp_adaptive_termination.observability import cache, tracing
+from qcp_adaptive_termination.observability import context as obs_context
+
+
+def correction_input(error: ValueError) -> TResponseInputItem:
+    """Build a user message asking a plan agent to fix an invalid plan."""
+    return {
+        "type": "message",
+        "role": "user",
+        "content": [
+            {
+                "type": "input_text",
+                "text": f"Your query plan was invalid: {error}. Please re-draft a corrected query plan.",
+            }
+        ],
+    }
+
+
+async def run_plan_agent(
+    *,
+    role: AgentRole,
+    prompt_parameters: Mapping[str, str | int | float | bool | None],
+    output_type: type[BaseModel],
+    map_output: Callable[[BaseModel], QueryPlan],
+    error_kind: Literal["drafting", "replanning"],
+    history: list[TResponseInputItem] | None = None,
+) -> tuple[QueryPlan, list[TResponseInputItem]]:
+    """Run a plan agent, retrying with correction feedback until a valid plan is produced.
+
+    Args:
+        role: the agent role to run
+        prompt_parameters: prompt parameters for the role
+        output_type: the query plan output model
+        map_output: converts a model output to a validated QueryPlan (raises ValueError if invalid)
+        error_kind: short action noun for logging and error messages
+        history: prior conversation to continue from
+
+    Returns:
+        (QueryPlan, list[TResponseInputItem]): the validated plan and its continuation
+    """
+    input_items = list(history) if history is not None else []
+    first = True
+    for _ in range(obs_context.get_config().max_turns or DEFAULT_MAX_TURNS):
+        run_result = await runner.run_llm(
+            role=role,
+            prompt_parameters=prompt_parameters,
+            output_type=output_type,
+            previous_input=input_items or None,
+            render_prompt_after_previous_history=first,
+        )
+
+        first = False
+
+        try:
+            query_plan = map_output(run_result.output)
+            return query_plan, run_result.continuation_input
+        except ValueError as error:
+            logging.warning("Invalid query plan output, retrying: %s", error)
+            input_items = [*run_result.continuation_input, correction_input(error)]
+
+    raise RuntimeError(f"Query plan {error_kind} exceeded max_turns")
 
 
 def create_query_plan_model(data_agents: list[DataAgent]) -> type[BaseModel]:
@@ -100,12 +164,12 @@ def map_query_plan_model_to_query_plan(query_plan_model: BaseModel, query: str) 
 
     for step_model in getattr(query_plan_model, "steps", []):
         if getattr(step_model, "id", None) in step_mapping:
-            continue  # TODO:DRAFT_ERROR Ignore duplicate step ids, only the first one will be considered valid
+            raise ValueError(f"Duplicate step id found: {step_model.id}")
 
         dependencies = []
         for dependency_model in getattr(step_model, "dependencies", []):
             if getattr(dependency_model, "step_id", None) not in step_mapping:
-                continue  # TODO:DRAFT_ERROR Ignore invalid dependencies that refer to steps not defined in the plan
+                raise ValueError(f"Invalid dependency: step {dependency_model.step_id} not found in the plan")
 
             dependencies.append(
                 QueryDependency(
@@ -185,18 +249,17 @@ async def draft_query_plan(
         )
         QueryPlanModel = create_query_plan_model(relevant_data_agents)
 
-        result = await runner.run_agent(
+        query_plan, _ = await run_plan_agent(
             role=AgentRole.PLANNING_COORDINATOR_DRAFT_QUERY_PLAN,
             prompt_parameters={
                 "agent_registry": registry_string,
                 "query": query,
             },
             output_type=QueryPlanModel,
-            max_turns=1,
-            tools=[],
+            map_output=lambda out: map_query_plan_model_to_query_plan(out, query),
+            error_kind="drafting",
         )
 
-        query_plan = map_query_plan_model_to_query_plan(result.output, query)
         tracing.append_to_span_output({"query_plan": query_plan})
 
         drafted_query_plan = DraftedQueryPlan(

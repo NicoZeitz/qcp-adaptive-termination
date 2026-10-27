@@ -1,11 +1,12 @@
 """Completeness evaluation worker: run one query and capture per-step results."""
 
+import asyncio
 import json
 import logging
 import math
 import re
 from argparse import Namespace
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -115,27 +116,55 @@ def _make_align_dispatch(
 
 def _make_data_dispatch(
     handlers: dict[str, Callable[..., PartialQueryAnswer]],
-) -> Callable[..., PartialQueryAnswer]:
-    """Dispatch DATA_AGENT by step query (each step has a distinct query)."""
+) -> Callable[..., Awaitable[PartialQueryAnswer]]:
+    """Dispatch DATA_AGENT by step query (each step has a distinct query).
 
-    def _dispatch(
+    Runs the canonical stub and the real data-agent LLM call in parallel so the
+    actual query cost is recorded (via the AGENT_COMPLETED usage hook) while the
+    stub's deterministic result is kept. Errors from the real call are ignored.
+    """
+
+    async def _dispatch(
         execution_id: str,
         data_agent: DataAgent,
         query: str,
         additional_information: list[AdditionalInformation],
         schema_metadata: AlignedSchemaMetadata | None,
+        default_fn: Callable[..., Awaitable[PartialQueryAnswer]] | None = None,
     ) -> PartialQueryAnswer:
-        """Route a data_agent call to the handler for its step query."""
+        """Route a data_agent call to the stub handler, running the real call in parallel."""
         handler = handlers.get(query)
         if handler is None:
             raise ValueError(f"No data_agent handler for query={query!r}")
-        return handler(
-            execution_id,
-            data_agent=data_agent,
-            query=query,
-            additional_information=additional_information,
-            schema_metadata=schema_metadata,
+
+        async def _run_stub() -> PartialQueryAnswer:
+            """Return the canonical stub result for the queried agent."""
+            return handler(
+                execution_id,
+                data_agent=data_agent,
+                query=query,
+                additional_information=additional_information,
+                schema_metadata=schema_metadata,
+            )
+
+        async def _run_real() -> None:
+            """Run the real data-agent call so its usage is recorded; result discarded."""
+            if default_fn is not None:
+                await default_fn(
+                    data_agent=data_agent,
+                    query=query,
+                    additional_information=additional_information,
+                    schema_metadata=schema_metadata,
+                )
+
+        stub_result, _real_result = await asyncio.gather(
+            _run_stub(),
+            _run_real(),
+            return_exceptions=True,
         )
+        if isinstance(stub_result, BaseException):
+            raise stub_result
+        return stub_result
 
     return _dispatch
 
@@ -693,7 +722,7 @@ class _CompletenessRunner:
         self.query_slug: str = ""
         self.output_dir: Path | None = None
         self._align_dispatch: Callable[..., AlignedResultList] | None = None
-        self._data_dispatch: Callable[..., PartialQueryAnswer] | None = None
+        self._data_dispatch: Callable[..., Awaitable[PartialQueryAnswer]] | None = None
 
     async def before(self, ctx: ScriptContext):
         """Pre-build data caches/ground truth and register all hooks."""
