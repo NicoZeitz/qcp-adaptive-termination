@@ -17,8 +17,9 @@ selection:
     # hll_sketch:        lg_k (int), use_ucb (bool)
     # theta_sketch:      lg_k (int), use_ucb (bool)
     # min_hash:          num_perm (int)
-    # posterior:         lg_k (int), clustered_prior (bool), min_samples (int), min_cluster_size_ratio (float), registry_type (technical | natural_language)
+    # posterior:         lg_k (int), prior_w (float), clustered_prior (bool), min_samples (int), min_cluster_size_ratio (float), registry_type (technical | natural_language)
     lg_k: 12
+    prior_w: 0.5
     clustered_prior: false
     registry_type: technical
 

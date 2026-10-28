@@ -29,7 +29,10 @@ from qcp_adaptive_termination.selection_strategy.sketch_strategy import (
     MinHashStrategy,
     ThetaSketchStrategy,
 )
-from qcp_adaptive_termination.selection_strategy.strategy import SelectionStrategy
+from qcp_adaptive_termination.selection_strategy.strategy import (
+    SelectionStrategy,
+    StaticSelectionStrategy,
+)
 
 _STRATEGY_CLASSES: dict[SelectionStrategyType, type[SelectionStrategy]] = {
     SelectionStrategyType.RANDOM: RandomStrategy,
@@ -100,7 +103,7 @@ class AgentSelector:
     def __init__(
         self,
         strategy: SelectionStrategy,
-        precomputed: dict[str, Any],
+        precomputed: Any,
         state: Any,
         selections: list[ScoredDataAgent],
     ):
@@ -109,6 +112,7 @@ class AgentSelector:
         self._precomputed = precomputed
         self._state = state
         self.selections = selections
+        self._has_ranked = False
 
     @classmethod
     async def create(
@@ -136,10 +140,18 @@ class AgentSelector:
 
     def rank(self, remaining: list[ScoredDataAgent]) -> list[ScoredDataAgent]:
         """Rank the remaining agents best-first using the strategy."""
-        return self._strategy.rank(remaining, self._precomputed, self._state)
+        if isinstance(self._strategy, StaticSelectionStrategy) and self._has_ranked:
+            return remaining
+
+        ranked = self._strategy.rank(remaining, self._precomputed, self._state)
+        self._has_ranked = True
+        return ranked
 
     def update(self, result_list: AlignedResultList, agent_names: list[str] | None = None):
         """Fold the seen column values into the strategy state."""
+        if isinstance(self._strategy, StaticSelectionStrategy):
+            return
+
         col = result_list.schema_metadata.value_column or result_list.schema_metadata.keys[0]
         df = result_list.data
         values = df[col].dropna().astype(str).tolist()
