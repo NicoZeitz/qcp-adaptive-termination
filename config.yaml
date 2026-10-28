@@ -54,40 +54,45 @@ models:
   embedding: "openai/text-embedding-3-large" # any model id accepted by the embedding provider
   agents:
     discovery-coordinator-relevance:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4-flash-0731"
       reasoning_effort: "none"         # none | minimal | low | medium | high | xhigh
       reasoning_summary: null          # auto | concise | detailed | null
     planning-coordinator-draft-query-plan:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4-flash-0731"
       reasoning_effort: "high"
     execution-coordinator-answer-step:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4-flash-0731"
       reasoning_effort: "high"
     execution-coordinator-replan:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4-flash-0731"
       reasoning_effort: "high"
     execution-coordinator-align-schema:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4-flash-0731"
       reasoning_effort: "high"
     execution-coordinator-world-knowledge-stop:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4-flash-0731"
       reasoning_effort: "high"
     execution-coordinator-result-producer:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4-flash-0731"
       reasoning_effort: "high"
     discovery-data-agent-schema-description:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4-flash-0731"
       reasoning_effort: "none"
     discovery-data-agent-relevance:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4-flash-0731"
       reasoning_effort: "none"
     execution-data-agent-query:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4-flash-0731"
       reasoning_effort: "high"
   costs:
     "openai/text-embedding-3-large":   # USD per 1M tokens
       embedding: 0.13
     "university/unsloth/DeepSeek-V4-Flash-0731":
+      input: 0.14
+      cached_input: 0.014
+      cache_write: 0.14
+      output: 0.28
+    "openrouter/deepseek/deepseek-v4-flash-0731":
       input: 0.14
       cached_input: 0.014
       cache_write: 0.14

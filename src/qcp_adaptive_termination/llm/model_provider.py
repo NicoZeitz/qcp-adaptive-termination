@@ -149,6 +149,7 @@ def _setup_multi_provider() -> MultiProvider:
     """Set up and return the MultiProvider from configured providers."""
     provider_map = MultiProviderMap()
     _add_provider("OPENAI", provider_map=provider_map)
+    _add_provider("OPENROUTER", provider_map=provider_map)
     _add_provider(
         "UNIVERSITY",
         provider_map=provider_map,
