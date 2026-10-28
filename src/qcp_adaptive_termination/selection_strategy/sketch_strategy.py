@@ -30,7 +30,7 @@ DEFAULT_MIN_HASH_NUM_PERM = 128
 
 
 @dataclass(slots=True)
-class HllSketchStrategy(SelectionStrategy[dict[str, hll_sketch], hll_sketch]):
+class HllSketchStrategy(SelectionStrategy[hll_sketch, hll_sketch]):
     """Ranks by estimated new unique values each remaining agent would contribute."""
 
     lg_k: int = DEFAULT_LG_K
@@ -109,7 +109,7 @@ class HllSketchStrategy(SelectionStrategy[dict[str, hll_sketch], hll_sketch]):
 
 
 @dataclass(slots=True)
-class ThetaSketchStrategy(SelectionStrategy[dict[str, compact_theta_sketch], update_theta_sketch]):
+class ThetaSketchStrategy(SelectionStrategy[compact_theta_sketch, update_theta_sketch]):
     """Ranks by estimated new unique values (agent sketch minus seen state)."""
 
     lg_k: int = DEFAULT_LG_K
@@ -199,7 +199,7 @@ class MinHashState:
 
 
 @dataclass(slots=True)
-class MinHashStrategy(SelectionStrategy[dict[str, tuple[MinHash, int]], MinHashState]):
+class MinHashStrategy(SelectionStrategy[tuple[MinHash, int], MinHashState]):
     """Ranks by estimated new unique values via containment estimation."""
 
     num_perm: int = DEFAULT_MIN_HASH_NUM_PERM

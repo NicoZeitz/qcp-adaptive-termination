@@ -26,8 +26,8 @@ class SelectionStrategy[PrecomputedState, RunningState](ABC):
         table_per_agent: dict[str, str] | None,
         column_per_agent: dict[str, str] | None,
         query: str = "",
-    ) -> PrecomputedState:
-        """Return all data precomputed for this strategy run."""
+    ) -> dict[str, PrecomputedState]:
+        """Return precomputed state indexed by agent name."""
         raise NotImplementedError
 
     @abstractmethod
@@ -39,7 +39,7 @@ class SelectionStrategy[PrecomputedState, RunningState](ABC):
     def rank(
         self,
         remaining: list[ScoredDataAgent],
-        precomputed: PrecomputedState,
+        precomputed: dict[str, PrecomputedState],
         state: RunningState,
     ) -> list[ScoredDataAgent]:
         """Return remaining agents sorted best-first given the current running state."""
@@ -51,16 +51,14 @@ class SelectionStrategy[PrecomputedState, RunningState](ABC):
         state: RunningState,
         values: list[str],
         agent_names: list[str],
-        precomputed: PrecomputedState,
+        precomputed: dict[str, PrecomputedState],
     ) -> RunningState:
         """Fold the column values seen so far into the running state and return it."""
         raise NotImplementedError
 
 
 @dataclass(slots=True)
-class StaticSelectionStrategy[PrecomputedScoredState: float](
-    SelectionStrategy[dict[str, PrecomputedScoredState], None]
-):
+class StaticSelectionStrategy[PrecomputedScoredState: float](SelectionStrategy[PrecomputedScoredState, None]):
     """Base for strategies whose ranking does not change between iterations."""
 
     ascending: ClassVar[bool] = False

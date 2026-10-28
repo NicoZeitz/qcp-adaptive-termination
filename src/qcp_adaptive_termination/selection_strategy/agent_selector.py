@@ -3,11 +3,13 @@
 import dataclasses
 from typing import Any
 
+import pandas as pd
+
 import qcp_adaptive_termination.agent_registry as agent_registry
 import qcp_adaptive_termination.embedding as embedding
 from qcp_adaptive_termination.embedding import VectorIndex
 from qcp_adaptive_termination.models import (
-    AlignedResultList,
+    AlignedSchemaMetadata,
     DataAgent,
     ScoredDataAgent,
     SelectionStrategyType,
@@ -97,7 +99,7 @@ class AgentSelector:
     Usage:
         selector = await AgentSelector.create(agents, selection_type, query, ...)
         ranked = selector.rank(remaining)
-        selector.update(queried)
+        selector.update(schema_metadata, new_results=queried, agent_names=[agent_name])
     """
 
     def __init__(
@@ -147,17 +149,21 @@ class AgentSelector:
         self._has_ranked = True
         return ranked
 
-    def update(self, result_list: AlignedResultList, agent_names: list[str] | None = None):
-        """Fold the seen column values into the strategy state."""
+    def update(
+        self,
+        schema_metadata: AlignedSchemaMetadata,
+        new_results: pd.DataFrame,
+        agent_names: list[str],
+    ):
+        """Fold newly returned column values into the strategy state."""
         if isinstance(self._strategy, StaticSelectionStrategy):
             return
 
-        col = result_list.schema_metadata.value_column or result_list.schema_metadata.keys[0]
-        df = result_list.data
-        values = df[col].dropna().astype(str).tolist()
+        col = schema_metadata.value_column or schema_metadata.keys[0]
+        values = new_results[col].dropna().astype(str).tolist()
         self._state = self._strategy.update(
             self._state,
             values,
-            agent_names=agent_names or [],
+            agent_names=agent_names,
             precomputed=self._precomputed,
         )

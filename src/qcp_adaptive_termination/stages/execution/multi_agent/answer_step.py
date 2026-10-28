@@ -152,7 +152,11 @@ async def answer_step_multiple_agents(
             if not context.get_config().completeness.continue_after_final_result or not remaining_selections:
                 break
 
-        selector.update(result_list, agent_names=[agent_name])
+        selector.update(
+            result_list.schema_metadata,
+            new_results=result.answer,
+            agent_names=[agent_name],
+        )
         remaining_selections = selector.rank(remaining_selections)
 
     tracing.append_to_span_output(
