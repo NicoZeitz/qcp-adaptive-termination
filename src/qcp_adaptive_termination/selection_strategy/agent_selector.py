@@ -160,7 +160,7 @@ class AgentSelector:
             return
 
         col = schema_metadata.value_column or schema_metadata.keys[0]
-        values = new_results[col].dropna().astype(str).tolist()
+        values = new_results[col].dropna().astype(str).tolist() if col in new_results.columns else []
         self._state = self._strategy.update(
             self._state,
             values,

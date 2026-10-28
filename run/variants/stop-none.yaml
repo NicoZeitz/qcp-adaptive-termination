@@ -1,0 +1,6 @@
+# No early stopping: every agent is queried (baseline, gives the full trajectory per ordering).
+completeness:
+  estimator:
+    enabled: false
+  llm_world_knowledge:
+    enabled: false

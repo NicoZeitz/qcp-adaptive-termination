@@ -6,14 +6,27 @@ Usage:
 """
 
 import asyncio
+import shutil
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
+from types import ModuleType
+
+import yaml
 
 from qcp_adaptive_termination import load_config
+from qcp_adaptive_termination.models import Config
 from qcp_adaptive_termination.observability import context
 from scripts import completeness_evaluation, k_warmup, selection_strategy_evaluation
-from scripts.k_warmup.input_gen import generate_inputs
 from scripts.utils.orchestrator import run_parallel
+
+_SUBCOMMANDS: dict[str, tuple[ModuleType, str]] = {
+    "selection-strategies": (
+        selection_strategy_evaluation,
+        "Benchmark all selection strategies across query steps",
+    ),
+    "completeness": (completeness_evaluation, "Evaluate the completeness evaluator across query steps"),
+    "k-warmup": (k_warmup, "Study where the unknown-unknowns estimator stabilizes per ordering"),
+}
 
 
 def _parse_arguments() -> Namespace:
@@ -21,17 +34,20 @@ def _parse_arguments() -> Namespace:
     parser = ArgumentParser(prog="qcp-adaptive-termination-evaluation", description="Evaluation scripts for QCP")
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
-    for name, help_text in (
-        ("selection-strategies", "Benchmark all selection strategies across query steps"),
-        ("completeness", "Evaluate the completeness evaluator across query steps"),
-        ("k-warmup", "Study where the unknown-unknowns estimator stabilizes per ordering"),
-    ):
+    for name, (_, help_text) in _SUBCOMMANDS.items():
         sub = subparsers.add_parser(name, help=help_text)
         sub.add_argument(
             "--config",
             type=str,
             default=None,
             help="Config as a YAML file path or inline YAML string",
+        )
+        sub.add_argument(
+            "--config_override",
+            type=str,
+            action="append",
+            default=None,
+            help="YAML file path or inline YAML string deep-merged onto --config, repeatable (applied in order)",
         )
         sub.add_argument(
             "--output_dir",
@@ -49,18 +65,7 @@ def _parse_arguments() -> Namespace:
             "--dataset_dir",
             type=str,
             default=None,
-            help="Dataset folder containing _meta/input (query JSONs) and _meta/meta_mapping.yaml",
-        )
-        sub.add_argument(
-            "--generate_inputs",
-            action="store_true",
-            help="(k-warmup) generate per-table single-step input files into _meta/input_kwarmup",
-        )
-        sub.add_argument(
-            "--workers",
-            type=int,
-            default=None,
-            help="(k-warmup) parallel ordering workers per table",
+            help="Dataset folder containing _meta/<input folder of the subcommand> and _meta/meta_mapping.yaml",
         )
         sub.add_argument(
             "--query",
@@ -76,15 +81,36 @@ def _parse_arguments() -> Namespace:
     return parser.parse_args()
 
 
-def _functions_for_subcommand(subcommand: str):
-    """Return the run_query worker+aggregate pair for an evaluation subcommand."""
-    if subcommand == "selection-strategies":
-        return selection_strategy_evaluation.run_query, selection_strategy_evaluation.aggregate
-    if subcommand == "completeness":
-        return completeness_evaluation.run_query, completeness_evaluation.aggregate
-    if subcommand == "k-warmup":
-        return k_warmup.run_query, k_warmup.aggregate
-    raise ValueError(f"Unknown subcommand: {subcommand}")
+def _read_yaml(source: str) -> dict:
+    """Read a YAML mapping from a file path or an inline YAML string."""
+    path = Path(source)
+    raw = yaml.safe_load(path.read_text(encoding="utf-8") if len(source) <= 255 and path.is_file() else source)
+    return raw or {}
+
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    """Recursively merge override onto base (override wins)."""
+    merged = dict(base)
+    for key, value in override.items():
+        merged[key] = (
+            _deep_merge(merged[key], value) if isinstance(value, dict) and isinstance(merged.get(key), dict) else value
+        )
+    return merged
+
+
+def _save_config(output_dir: Path, source: str | None, overrides: list[str], config: Config):
+    """Copy the input config (and overrides) and write the resolved config into the output directory."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    named = [("config.yaml", source)] + [(f"config_override_{i}.yaml", o) for i, o in enumerate(overrides, 1)]
+    for name, text in named:
+        if text is None:
+            continue
+        if len(text) <= 255 and Path(text).is_file():
+            shutil.copy(text, output_dir / name)
+        else:
+            (output_dir / name).write_text(text, encoding="utf-8")
+    with (output_dir / "config_resolved.yaml").open("w", encoding="utf-8") as f:
+        yaml.safe_dump(config.model_dump(mode="json"), f, sort_keys=False, allow_unicode=True)
 
 
 async def _run_subcommand(args: Namespace):
@@ -94,39 +120,27 @@ async def _run_subcommand(args: Namespace):
 
     with context.logging_context(output_dir):
         config = load_config(args.config)
+        overrides: list[str] = args.config_override or []
+        if overrides:
+            merged = config.model_dump(mode="json")
+            for override in overrides:
+                merged = _deep_merge(merged, _read_yaml(override))
+            config = Config.model_validate(merged)
+        _save_config(output_dir, args.config, overrides, config)
 
         dataset_dir = Path(args.dataset_dir)
 
-        run_query, aggregate = _functions_for_subcommand(args.subcommand)
-        input_dir = dataset_dir / "_meta" / "input"
-
-        if args.subcommand == "k-warmup":
-            # For k-warmup, generate per-table single-step inputs (unless already present)
-            # into a dedicated input dir, then run against those.
-            kwargs_dir = dataset_dir / "_meta" / "input_kwarmup"
-            if args.generate_inputs or not list(kwargs_dir.glob("*.json")):
-                from qcp_adaptive_termination.pipeline import load_input
-
-                template_path = next(iter(input_dir.glob("*.json")))
-                _data, _ = load_input(template_path)
-                from qcp_adaptive_termination.models.stages import CollaborativeQueryAnswering
-
-                assert isinstance(_data, CollaborativeQueryAnswering)
-                generate_inputs(
-                    kwargs_dir,
-                    dataset_dir,
-                    _data.data_agents,
-                    workers=args.workers,
-                )
-            input_dir = kwargs_dir
-
+        module, _ = _SUBCOMMANDS[args.subcommand]
+        input_dir = dataset_dir / "_meta" / module.INPUT_DIR
         input_files = sorted(input_dir.glob("*.json"))
+        if not input_files:
+            raise FileNotFoundError(f"No input files in {input_dir}")
         if args.query:
             needle = args.query.lower()
             input_files = [f for f in input_files if needle in f.stem.lower()]
 
         await run_parallel(
-            run_query,
+            module.run_query,
             input_files,
             config=config,
             dataset_dir=dataset_dir,
@@ -135,7 +149,7 @@ async def _run_subcommand(args: Namespace):
             parallel=not args.sequential,
             max_workers=args.max_workers,
         )
-        aggregate(output_dir, input_dir)
+        module.aggregate(output_dir, input_dir)
 
 
 def main():

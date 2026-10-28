@@ -20,9 +20,9 @@ def _build_step_frame(results_dir: Path, step_frames: list[pd.DataFrame]) -> pd.
     """
     step_rows: list[dict[str, Any]] = []
     for frame in step_frames:
-        query = frame.iloc[0]["query"]
         if frame.empty:
             continue
+        query = frame.iloc[0]["query"]
         last = frame.iloc[-1].to_dict()
         agents_total = last.get("agents_total")
         agents_queried = last.get("agents_queried")
@@ -37,37 +37,85 @@ def _build_step_frame(results_dir: Path, step_frames: list[pd.DataFrame]) -> pd.
     return pd.DataFrame(step_rows)
 
 
-def _aggregate_usage(results_dir: Path, input_dir: Path) -> pd.DataFrame | None:
-    """Collapse each query's ``usage.json`` into one summary row (LLM + embeddings)."""
-    rows: list[dict[str, Any]] = []
+_USAGE_SUMS = [
+    "requests",
+    "input_tokens",
+    "cached_input_tokens",
+    "cache_write_tokens",
+    "output_tokens",
+    "reasoning_tokens",
+    "cost",
+    "cost_uncached",
+]
+
+
+def _load_usage_calls(results_dir: Path, input_dir: Path) -> pd.DataFrame | None:
+    """Concatenate every query's per-call ``usage.csv``."""
+    frames: list[pd.DataFrame] = []
     for input_file in sorted(input_dir.glob("*.json")):
-        query_slug = input_file.stem
-        usage_path = results_dir / query_slug / "usage.json"
+        usage_path = results_dir / input_file.stem / "usage.csv"
         if not usage_path.exists():
             continue
-        with usage_path.open(encoding="utf-8") as f:
-            usage = json.load(f)
-        llm = usage["llm"]
-        emb = usage["embeddings"]
-        llm_input = sum(v.get("input_tokens", 0) for v in llm["per_model"].values())
-        emb_tokens = sum(v.get("input_tokens", 0) for v in emb["per_model"].values())
-        rows.append(
-            {
-                "query": query_slug,
-                "llm_runs": llm["runs"],
-                "llm_requests": llm["requests"],
-                "llm_input_tokens": llm_input,
-                "llm_cost": llm["cost"],
-                "embedding_calls": emb["calls"],
-                "embedding_tokens": emb_tokens,
-                "embedding_cost": emb["cost"],
-                "total_cost": usage["total_cost"],
-                "time_s": usage["time_s"],
-            }
-        )
-    if not rows:
-        return None
-    return pd.DataFrame(rows)
+        frame = pd.read_csv(usage_path, keep_default_na=False, na_values=[""])
+        frame = frame.assign(**{c: 0 for c in _USAGE_SUMS if c not in frame.columns})
+        frame.insert(0, "query", input_file.stem)
+        frames.append(frame)
+    return pd.concat(frames, ignore_index=True) if frames else None
+
+
+def _usage_summary(calls: pd.DataFrame, by: list[str]) -> pd.DataFrame:
+    """Sum usage per group, split by call type and role."""
+    calls = calls.assign(
+        role=calls["role"].fillna("").astype(str),
+        step_id=calls["step_id"].fillna("").astype(str),
+    )
+    grouped = calls.groupby([*by, "type", "role"], dropna=False)
+    summary = pd.DataFrame(grouped[_USAGE_SUMS].sum())
+    summary.insert(0, "calls", grouped.size())
+    return summary.reset_index()
+
+
+def _aggregate_usage(results_dir: Path, input_dir: Path) -> dict[str, pd.DataFrame]:
+    """Usage per query, per (query, step) and per role, from the per-call usage CSVs."""
+    calls = _load_usage_calls(results_dir, input_dir)
+    if calls is None or calls.empty:
+        return {}
+    per_query = pd.DataFrame(calls.groupby("query")[_USAGE_SUMS].sum())
+    per_query.insert(0, "llm_runs", calls.loc[calls["type"] == "llm"].groupby("query").size())
+    per_query.insert(1, "embedding_calls", calls.loc[calls["type"] == "embedding"].groupby("query").size())
+    per_query = per_query.fillna(0).reset_index()
+    return {
+        "usage_summary": per_query,
+        "usage_by_step": _usage_summary(calls, ["query", "step_id"]),
+        "usage_by_role": _usage_summary(calls, []),
+    }
+
+
+def _query_status(results_dir: Path, query_slug: str, has_csv: bool) -> dict[str, Any]:
+    """Status row of one query from its ``query_summary.json``."""
+    summary_path = results_dir / query_slug / "query_summary.json"
+    if not summary_path.exists():
+        return {
+            "query": query_slug,
+            "status": "complete" if has_csv else "missing_output",
+            "details": "" if has_csv else "no evaluator csv",
+        }
+    with summary_path.open(encoding="utf-8") as f:
+        summary = json.load(f)
+    error = summary.get("error") or ""
+    return {
+        "query": query_slug,
+        "status": summary.get("status"),
+        "details": error.strip().splitlines()[-1] if error else "",
+        "steps_total": summary.get("steps_total"),
+        "steps_built": len(summary.get("steps_built") or []),
+        "compounded_steps": ",".join(summary.get("compounded_steps") or []),
+        "full_answer": json.dumps(summary.get("full_answer"), default=str),
+        "final_result": json.dumps(summary.get("final_result"), default=str),
+        "final_scalar": summary.get("final_scalar"),
+        "final_rel_err": summary.get("final_rel_err"),
+        "combined_completeness": summary.get("combined_completeness"),
+    }
 
 
 def aggregate(results_dir: Path, input_dir: Path) -> Path:
@@ -75,8 +123,8 @@ def aggregate(results_dir: Path, input_dir: Path) -> Path:
 
     Reads each per-query subfolder's ``*_evaluator.csv`` and writes a combined
     ``evaluator_summary_all_queries.csv`` (all per-check rows), the stop-level
-    frame ``evaluator_step_summary_all_queries.csv``, and the cross-query
-    aggregate plots, all at the top level of ``results_dir``.
+    frame ``evaluator_step_summary_all_queries.csv``, usage summaries, the query
+    status table and the cross-query aggregate plots, all at the top level of ``results_dir``.
     """
     results_dir.mkdir(parents=True, exist_ok=True)
     frames: list[pd.DataFrame] = []
@@ -86,14 +134,11 @@ def aggregate(results_dir: Path, input_dir: Path) -> Path:
         query_slug = input_file.stem
         run_dir = results_dir / query_slug
         step_paths = sorted(run_dir.glob("*_evaluator.csv")) if run_dir.is_dir() else []
-        if not step_paths:
-            status_rows.append({"query": query_slug, "status": "missing_output", "details": "no evaluator csv"})
-            continue
         for step_path in step_paths:
             frame = pd.read_csv(step_path)
             frame.insert(0, "query", query_slug)
             frames.append(frame)
-        status_rows.append({"query": query_slug, "status": "complete", "details": ""})
+        status_rows.append(_query_status(results_dir, query_slug, bool(step_paths)))
 
     if frames:
         combined = pd.concat(frames, ignore_index=True)
@@ -103,15 +148,19 @@ def aggregate(results_dir: Path, input_dir: Path) -> Path:
         step_frame.to_csv(results_dir / "evaluator_step_summary_all_queries.csv", index=False)
         save_aggregate_plots(step_frame, results_dir)
 
-        logging.info("Aggregated %d/%d input queries to %s", len(frames), len(status_rows), results_dir)
+        logging.info("Aggregated %d steps of %d input queries to %s", len(frames), len(status_rows), results_dir)
     else:
         logging.warning("No evaluator summaries found under %s", results_dir)
 
-    usage_frame = _aggregate_usage(results_dir, input_dir)
-    if usage_frame is not None:
-        usage_frame.to_csv(results_dir / "usage_summary.csv", index=False)
-        usage_frame.to_json(results_dir / "usage_summary.json", orient="records", indent=2)
-        logging.info("Aggregated usage for %d queries to %s", len(usage_frame), results_dir / "usage_summary.csv")
+    for name, frame in _aggregate_usage(results_dir, input_dir).items():
+        frame.to_csv(results_dir / f"{name}.csv", index=False)
+    if (results_dir / "usage_summary.csv").exists():
+        logging.info("Aggregated usage to %s", results_dir / "usage_summary.csv")
 
-    pd.DataFrame(status_rows).to_csv(results_dir / "evaluator_run_status.csv", index=False)
+    status = pd.DataFrame(status_rows)
+    status.to_csv(results_dir / "evaluator_run_status.csv", index=False)
+    print(
+        f"[AGGREGATE] {results_dir}: " + ", ".join(f"{k}={v}" for k, v in status["status"].value_counts().items()),
+        flush=True,
+    )
     return results_dir

@@ -33,6 +33,7 @@ completeness:
     enabled: true                      # true | false, whether the world-knowledge LLM may decide to stop
     long_list_start: 1000              # int >= 0, rows after which long-list behavior kicks in
     long_list_behavior: prevent        # prevent | estimator_reasoning
+    long_list_history_turns: 5         # int >= 0, LLM history turns kept on long lists
 
   estimator:
     enabled: true                      # true | false, whether the estimator may decide to stop

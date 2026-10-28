@@ -17,7 +17,5 @@ python3 -m scripts.evaluation k-warmup \
   --output_dir "${LOG_DIR}" \
   --cache_dir "${CACHE_DIR}" \
   --config "${PROJECT_DIR}/config.yaml" \
-  --generate_inputs \
-  --workers 3 \
   --parallel \
   --max_workers 6

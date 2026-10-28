@@ -1,0 +1,7 @@
+# Early stopping by the estimator, then the world-knowledge LLM; the LLM is skipped on long lists.
+completeness:
+  estimator:
+    enabled: true
+  llm_world_knowledge:
+    enabled: true
+    long_list_behavior: prevent

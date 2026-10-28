@@ -1,6 +1,5 @@
 """Result-producing agent: turns the merged result list into a final answer."""
 
-import math
 from typing import Any
 
 import pandas as pd
@@ -36,27 +35,6 @@ class ResultProducerResult(BaseModel):
     result: SerializedOptionalResultType = Field(default=None, description="Serialized final produced answer.")
 
 
-def _completeness(estimator: Estimator | None, stop_reason: StopReason) -> float:
-    """Overall completeness of the collected result list.
-
-    Args:
-        estimator: the current estimator
-        stop_reason: why execution stopped
-
-    Returns:
-        (float): completeness in [0, 1]
-    """
-    if stop_reason == StopReason.ALL_AGENTS or (stop_reason == StopReason.LLM and estimator is None):
-        return 1.0
-    if estimator is None:
-        return 1.0
-    observed = estimator.sample_count()
-    estimated = estimator.estimated_count()
-    if not math.isfinite(estimated) or estimated <= 0:
-        return 1.0
-    return min(1.0, observed / estimated)
-
-
 @hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_RESULT_PRODUCER)
 async def produce_result(
     aligned_result_list: AlignedResultList,
@@ -69,7 +47,7 @@ async def produce_result(
 
     Args:
         aligned_result_list: the aligned result list
-        estimator: the current estimator
+        estimator: the estimator, only when the stop decision was based on it
         query: the step's query
         merge_task: how agent results should be merged
         stop_reason: why execution stopped
@@ -78,8 +56,7 @@ async def produce_result(
         (SerializedOptionalResultType): the final produced answer
     """
     result = ResultProducerResult()
-    completeness = _completeness(estimator, stop_reason)
-    use_estimator = completeness < 1.0 and estimator is not None
+    use_estimator = estimator is not None
 
     def final_result(result_value: Any):
         """Set the final produced answer."""
@@ -117,7 +94,6 @@ async def produce_result(
         input={
             "query": query,
             "result_list_preview": result_list_preview,
-            "completeness": completeness,
             "use_estimator": use_estimator,
             "stop_reason": stop_reason.value,
         },

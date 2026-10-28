@@ -1,0 +1,7 @@
+# Early stopping by the estimator, then the world-knowledge LLM; on long lists the LLM gets the estimator's stats.
+completeness:
+  estimator:
+    enabled: true
+  llm_world_knowledge:
+    enabled: true
+    long_list_behavior: estimator_reasoning

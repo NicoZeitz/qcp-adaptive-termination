@@ -361,14 +361,13 @@ async def _run_table(
     data_dir: Path,
     config: Config,
     cache_dir: Path | None,
-    workers: int | None,
 ) -> TableSummary | None:
     """Run all orderings for one table and build its summary."""
     canonical_sql = select_all_sql(table)
     canonical_table = parse_canonical_table(canonical_sql)
     if canonical_table is None:
         return None
-    key_cols = canonical_key_cols(meta_mapping, table)
+    key_cols = step_meta.get("aligned_schema_metadata", {}).get("keys") or canonical_key_cols(meta_mapping, table)
     if not key_cols:
         logging.warning("%s: no key columns — skipping", table)
         return None
@@ -393,7 +392,7 @@ async def _run_table(
         cache_dir=cache_dir,
         output_dir=output_dir,
         table=table,
-        workers=workers or _default_workers(),
+        workers=_default_workers(),
     )
 
     trajectories = {o: t for o, (t, _) in runs.items() if t is not None}
@@ -450,8 +449,6 @@ async def run_query(
         completeness_override,
     )
 
-    workers: int | None = extra.get("k_warmup_workers")
-
     try:
         summaries = await asyncio.gather(
             *[
@@ -466,7 +463,6 @@ async def run_query(
                     data_dir=data_dir,
                     config=config,
                     cache_dir=cache_dir,
-                    workers=workers,
                 )
                 for step in multi_steps
             ]

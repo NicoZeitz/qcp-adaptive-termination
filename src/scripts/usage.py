@@ -26,6 +26,8 @@ class EmbeddingCall:
     """The embedding model used."""
     prompt_tokens: int
     """Prompt token count for the text."""
+    step_id: str | None = None
+    """Query plan step the computation belongs to, if any."""
 
 
 @dataclass(slots=True)
@@ -54,6 +56,8 @@ class LLMCall:
     """Output token count."""
     reasoning_tokens: int
     """Reasoning token count."""
+    step_id: str | None = None
+    """Query plan step the run belongs to, if any."""
 
 
 def _embedding_cost(model_cost: ModelCost | None, tokens: int) -> Decimal:
@@ -71,21 +75,27 @@ def _embedding_cost(model_cost: ModelCost | None, tokens: int) -> Decimal:
     return Decimal(tokens) * model_cost.embedding / _PER_MILLION
 
 
-def _llm_cost(model_cost: ModelCost | None, call: LLMCall) -> Decimal:
+def _llm_cost(model_cost: ModelCost | None, call: LLMCall, cache_discount: bool = True) -> Decimal:
     """Compute the USD cost of an LLM call from its token usage.
 
     Args:
         model_cost: pricing for the model, or None to return zero
         call: the LLM call with raw token counts
+        cache_discount: price cached/cache-write tokens at their own rates instead of the input rate
 
     Returns:
         The cost in dollars
     """
     if model_cost is None:
         return Decimal(0)
+    input_price = model_cost.input or Decimal(0)
+    if not cache_discount:
+        return (
+            Decimal(call.input_tokens) * input_price + Decimal(call.output_tokens) * (model_cost.output or Decimal(0))
+        ) / _PER_MILLION
     non_cached_input = call.input_tokens - call.cached_input_tokens - call.cache_write_tokens
     total = (
-        Decimal(non_cached_input) * (model_cost.input or Decimal(0))
+        Decimal(non_cached_input) * input_price
         + Decimal(call.cached_input_tokens) * (model_cost.cached_input or Decimal(0))
         + Decimal(call.cache_write_tokens) * (model_cost.cache_write or Decimal(0))
         + Decimal(call.output_tokens) * (model_cost.output or Decimal(0))
@@ -96,6 +106,7 @@ def _llm_cost(model_cost: ModelCost | None, call: LLMCall) -> Decimal:
 CSV_COLUMNS = [
     "type",
     "call_id",
+    "step_id",
     "model",
     "label",
     "role",
@@ -109,10 +120,18 @@ CSV_COLUMNS = [
     "output_tokens",
     "reasoning_tokens",
     "cost",
+    "cost_uncached",
 ]
 
 
-def embedding_csv_row(config: Config, model: str, prompt_tokens: int, call_id: str, text: str = "") -> dict[str, Any]:
+def embedding_csv_row(
+    config: Config,
+    model: str,
+    prompt_tokens: int,
+    call_id: str,
+    text: str = "",
+    step_id: str | None = None,
+) -> dict[str, Any]:
     """Build a CSV row for a distinct embedding computation.
 
     Args:
@@ -121,6 +140,7 @@ def embedding_csv_row(config: Config, model: str, prompt_tokens: int, call_id: s
         prompt_tokens: prompt token count
         call_id: unique call identifier
         text: the embedded text, for reference
+        step_id: query plan step the computation belongs to
 
     Returns:
         A row dict matching ``CSV_COLUMNS``
@@ -129,6 +149,7 @@ def embedding_csv_row(config: Config, model: str, prompt_tokens: int, call_id: s
     return {
         "type": "embedding",
         "call_id": call_id,
+        "step_id": step_id or "",
         "model": model,
         "label": "",
         "role": "",
@@ -142,6 +163,7 @@ def embedding_csv_row(config: Config, model: str, prompt_tokens: int, call_id: s
         "output_tokens": 0,
         "reasoning_tokens": 0,
         "cost": float(cost),
+        "cost_uncached": float(cost),
     }
 
 
@@ -159,6 +181,7 @@ def llm_csv_row(
     cache_write_tokens: int,
     output_tokens: int,
     reasoning_tokens: int,
+    step_id: str | None = None,
 ) -> dict[str, Any]:
     """Build a CSV row for a single LLM run.
 
@@ -175,6 +198,7 @@ def llm_csv_row(
         cache_write_tokens: input tokens written to cache
         output_tokens: output token count
         reasoning_tokens: reasoning token count
+        step_id: query plan step the run belongs to
 
     Returns:
         A row dict matching ``CSV_COLUMNS``
@@ -195,6 +219,7 @@ def llm_csv_row(
     return {
         "type": "llm",
         "call_id": call_id,
+        "step_id": step_id or "",
         "model": model,
         "label": label or "",
         "role": role.value if isinstance(role, AgentRole) else str(role),
@@ -208,6 +233,7 @@ def llm_csv_row(
         "output_tokens": output_tokens,
         "reasoning_tokens": reasoning_tokens,
         "cost": float(_llm_cost(config.models.costs.get(model), call)),
+        "cost_uncached": float(_llm_cost(config.models.costs.get(model), call, cache_discount=False)),
     }
 
 
@@ -231,6 +257,8 @@ class ModelTotals:
     """Total reasoning tokens."""
     cost: Decimal = Decimal(0)
     """Accumulated cost in dollars."""
+    cost_uncached: Decimal = Decimal(0)
+    """Accumulated cost in dollars with every input token at the full input price."""
 
 
 @dataclass(slots=True)
@@ -244,20 +272,23 @@ class UsageReport:
     started_at: float = field(default_factory=time.monotonic)
     """Monotonic wall-clock time the report was started."""
 
-    def record_embedding(self, text: str, model: str, prompt_tokens: int) -> bool:
+    def record_embedding(self, text: str, model: str, prompt_tokens: int, step_id: str | None = None) -> bool:
         """Record one embedding computation, deduplicated by text.
 
         Args:
             text: the embedded text
             model: the embedding model
             prompt_tokens: prompt token count for the text
+            step_id: query plan step the computation belongs to
 
         Returns:
             False if text was already recorded
         """
         if any(call.text == text for call in self.embeddings):
             return False
-        self.embeddings.append(EmbeddingCall(call_id=uuid4().hex, text=text, model=model, prompt_tokens=prompt_tokens))
+        self.embeddings.append(
+            EmbeddingCall(call_id=uuid4().hex, text=text, model=model, prompt_tokens=prompt_tokens, step_id=step_id)
+        )
         return True
 
     def record_llm(
@@ -267,6 +298,7 @@ class UsageReport:
         label: str | None,
         model: str,
         usage,
+        step_id: str | None = None,
     ):
         """Record one LLM run from an SDK usage object plus the model it ran on.
 
@@ -276,6 +308,7 @@ class UsageReport:
             label: optional run label
             model: the model used
             usage: the SDK Usage object with token counts
+            step_id: query plan step the run belongs to
         """
         self.llm.append(
             LLMCall(
@@ -290,6 +323,7 @@ class UsageReport:
                 cache_write_tokens=getattr(usage.input_tokens_details, "cache_write_tokens", 0),
                 output_tokens=usage.output_tokens,
                 reasoning_tokens=usage.output_tokens_details.reasoning_tokens,
+                step_id=step_id,
             )
         )
 
@@ -308,6 +342,7 @@ class UsageReport:
             t.calls += 1
             t.input_tokens += call.prompt_tokens
             t.cost += _embedding_cost(costs.get(call.model), call.prompt_tokens)
+            t.cost_uncached += _embedding_cost(costs.get(call.model), call.prompt_tokens)
         return dict(totals)
 
     def _llm_totals(self, costs: dict[str, ModelCost]) -> dict[str, ModelTotals]:
@@ -330,6 +365,7 @@ class UsageReport:
             t.output_tokens += call.output_tokens
             t.reasoning_tokens += call.reasoning_tokens
             t.cost += _llm_cost(costs.get(call.model), call)
+            t.cost_uncached += _llm_cost(costs.get(call.model), call, cache_discount=False)
         return dict(totals)
 
     def call_rows(self, config: Config) -> list[dict[str, Any]]:
@@ -341,7 +377,9 @@ class UsageReport:
         Returns:
             A list of row dicts matching ``CSV_COLUMNS``
         """
-        rows = [embedding_csv_row(config, c.model, c.prompt_tokens, c.call_id, c.text) for c in self.embeddings]
+        rows = [
+            embedding_csv_row(config, c.model, c.prompt_tokens, c.call_id, c.text, c.step_id) for c in self.embeddings
+        ]
         rows.extend(
             llm_csv_row(
                 config,
@@ -356,6 +394,7 @@ class UsageReport:
                 cache_write_tokens=c.cache_write_tokens,
                 output_tokens=c.output_tokens,
                 reasoning_tokens=c.reasoning_tokens,
+                step_id=c.step_id,
             )
             for c in self.llm
         )
@@ -374,30 +413,18 @@ class UsageReport:
         """
         embedding_totals = self._embedding_totals(config.models.costs)
         llm_totals = self._llm_totals(config.models.costs)
-        embedding_calls = [
-            embedding_csv_row(config, c.model, c.prompt_tokens, c.call_id, c.text) for c in self.embeddings
-        ]
-        llm_calls = [
-            llm_csv_row(
-                config,
-                c.role,
-                c.agent_name,
-                c.label,
-                c.model,
-                c.call_id,
-                requests=c.requests,
-                input_tokens=c.input_tokens,
-                cached_input_tokens=c.cached_input_tokens,
-                cache_write_tokens=c.cache_write_tokens,
-                output_tokens=c.output_tokens,
-                reasoning_tokens=c.reasoning_tokens,
-            )
-            for c in self.llm
-        ]
+        rows = self.call_rows(config)
+        embedding_calls = [r for r in rows if r["type"] == "embedding"]
+        llm_calls = [r for r in rows if r["type"] == "llm"]
 
         def _embedding_row(t: ModelTotals) -> dict:
             """Build an embedding-report row for one model's totals."""
-            return {"calls": t.calls, "input_tokens": t.input_tokens, "cost": float(t.cost)}
+            return {
+                "calls": t.calls,
+                "input_tokens": t.input_tokens,
+                "cost": float(t.cost),
+                "cost_uncached": float(t.cost_uncached),
+            }
 
         def _llm_row(t: ModelTotals) -> dict:
             """Build an LLM-report row for one model's totals."""
@@ -410,12 +437,14 @@ class UsageReport:
                 "output_tokens": t.output_tokens,
                 "reasoning_tokens": t.reasoning_tokens,
                 "cost": float(t.cost),
+                "cost_uncached": float(t.cost_uncached),
             }
 
         embedding_rows = {model: _embedding_row(t) for model, t in embedding_totals.items()}
         llm_rows = {model: _llm_row(t) for model, t in llm_totals.items()}
         embedding_cost = sum(t.cost for t in embedding_totals.values())
         llm_cost = sum(t.cost for t in llm_totals.values())
+        uncached = sum(t.cost_uncached for t in [*embedding_totals.values(), *llm_totals.values()])
 
         return {
             "time_s": time.monotonic() - self.started_at,
@@ -433,4 +462,5 @@ class UsageReport:
                 "cost": float(llm_cost),
             },
             "total_cost": float(embedding_cost + llm_cost),
+            "total_cost_uncached": float(uncached),
         }

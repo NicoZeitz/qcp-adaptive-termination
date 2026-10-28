@@ -39,13 +39,13 @@ def register_default_hooks():
     def _write_llm_usage(execution_id: str, role, agent_name: str | None, label: str | None, model: str, usage):
         """Record one LLM run's usage into the report."""
         del execution_id
-        usage_report.record_llm(role, agent_name, label, model, usage)
+        usage_report.record_llm(role, agent_name, label, model, usage, step_id=context.get_step_id())
 
     @hooks.post(HookEvent.EMBEDDING_COMPLETED)
     def _write_embedding_usage(execution_id: str, text: str, model: str, prompt_tokens: int):
         """Record one embedding computation's usage into the report."""
         del execution_id
-        usage_report.record_embedding(text, model, prompt_tokens)
+        usage_report.record_embedding(text, model, prompt_tokens, step_id=context.get_step_id())
 
     @hooks.post(HookEvent.PIPELINE_END)
     def _write_usage_report(execution_id: str):
@@ -293,14 +293,19 @@ async def run_script(
 
         await hooks.fire_post(HookEvent.PIPELINE_START, name=name, input_file=str(input_file))
 
-        if run_fn is not None:
-            result = await run_fn(ctx)
-        else:
-            result = await run_stages(
-                input_file=input_file,
-                start_stage=start_stage,
-                end_stage=end_stage,
-            )
+        try:
+            if run_fn is not None:
+                result = await run_fn(ctx)
+            else:
+                result = await run_stages(
+                    input_file=input_file,
+                    start_stage=start_stage,
+                    end_stage=end_stage,
+                )
+        except Exception:
+            # Usage reports must also be written for failed runs.
+            await hooks.fire_post(HookEvent.PIPELINE_END, result=None)
+            raise
 
         await hooks.fire_post(HookEvent.PIPELINE_END, result=result)
 

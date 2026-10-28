@@ -32,3 +32,8 @@ class StopDecision(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     stop_reason: StopReason = Field(description="Why the completeness evaluator stopped.")
+
+    @property
+    def estimator_informed(self) -> bool:
+        """Whether the decision was based on the estimator (estimator stop, or LLM stop given its stats)."""
+        return self.stop_reason in (StopReason.ESTIMATOR, StopReason.LLM_WITH_ESTIMATOR)

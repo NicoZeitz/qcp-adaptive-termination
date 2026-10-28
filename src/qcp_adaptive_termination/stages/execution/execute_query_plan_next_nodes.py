@@ -21,7 +21,7 @@ from qcp_adaptive_termination.models.query_plan import (
     QueryPlanStep,
     SingleAgentQueryPlanStep,
 )
-from qcp_adaptive_termination.observability import tracing
+from qcp_adaptive_termination.observability import context, tracing
 from qcp_adaptive_termination.stages.execution.coordinator import (
     answer_step_coordinator,
 )
@@ -174,12 +174,15 @@ async def execute_query_plan_step(
     Returns:
         (tuple[PartialQueryAnswer, StepUncertainty | None]): the step answer and its uncertainty
     """
-    with tracing.own_span(
-        f"Execute Step: {query_plan_step.id}",
-        input={
-            "step": query_plan_step,
-            "additional_information": additional_information,
-        },
+    with (
+        context.step_context(query_plan_step.id),
+        tracing.own_span(
+            f"Execute Step: {query_plan_step.id}",
+            input={
+                "step": query_plan_step,
+                "additional_information": additional_information,
+            },
+        ),
     ):
         uncertainty: StepUncertainty | None = None
         if isinstance(query_plan_step, SingleAgentQueryPlanStep) and query_plan_step.to_agent == "Coordinator":

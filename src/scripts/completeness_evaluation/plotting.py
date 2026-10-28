@@ -154,12 +154,18 @@ def save_aggregate_plots(step_df: pd.DataFrame, output_dir: Path):
         logging.warning("No step rows for aggregate plots")
         return
 
-    reason_order = [StopReason.ALL_AGENTS.value, StopReason.ESTIMATOR.value, StopReason.LLM.value]
+    reason_order = [
+        StopReason.ALL_AGENTS.value,
+        StopReason.ESTIMATOR.value,
+        StopReason.LLM.value,
+        StopReason.LLM_WITH_ESTIMATOR.value,
+    ]
     present_reasons = [r for r in reason_order if (step_df["stop_reason"] == r).any()]
     palette = {
         StopReason.ALL_AGENTS.value: "#4c72b0",
         StopReason.ESTIMATOR.value: "#dd8452",
         StopReason.LLM.value: "#55a868",
+        StopReason.LLM_WITH_ESTIMATOR.value: "#8172b3",
     }
 
     # 1. Stop-condition histogram

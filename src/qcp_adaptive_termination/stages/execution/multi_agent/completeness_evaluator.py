@@ -69,6 +69,16 @@ def _estimator_stats(estimator: Estimator | None) -> str | None:
     )
 
 
+def _truncate_history(history: list[TResponseInputItem] | None, turns: int) -> list[TResponseInputItem] | None:
+    """Keep only the conversation items of the last ``turns`` completeness evaluations."""
+    if not history:
+        return history
+    turn_starts = [i for i, item in enumerate(history) if isinstance(item, dict) and item.get("role") == "user"]
+    if len(turn_starts) <= turns:
+        return history
+    return history[turn_starts[-turns] :] if turns > 0 else []
+
+
 @hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS_ESTIMATOR)
 def run_deterministic_estimator(
     estimator: Estimator,
@@ -137,11 +147,12 @@ async def run_world_knowledge_stop(
     label: str | None = None,
     history: list[TResponseInputItem] | None = None,
     estimator: Estimator | None = None,
-) -> bool:
+    long_list: bool = False,
+) -> bool | None:
     """Ask the LLM whether the result list is complete using world knowledge.
 
     ``label`` identifies this evaluation in traces; ``history`` carries prior
-    turns forward; ``estimator`` supplies unknown-unknown stats when configured.
+    turns forward; ``estimator`` supplies unknown-unknown stats on long lists.
 
     Args:
         aligned_result_list: the aligned result list
@@ -149,9 +160,10 @@ async def run_world_knowledge_stop(
         label: identifier for trace and print association
         history: prior conversation items to continue from
         estimator: the current estimator for unknown-unknown stats
+        long_list: whether the deduplicated result list exceeds the long-list threshold
 
     Returns:
-        (bool): True to stop, False to keep querying
+        (bool | None): True to stop, False to keep querying, None when the LLM did not decide
     """
     config = context.get_config()
     result: bool | None = None
@@ -172,11 +184,13 @@ async def run_world_knowledge_stop(
         "query": query,
         "result_list_preview": result_list_preview,
     }
-    if config.completeness.llm_world_knowledge.long_list_behavior == "estimator_reasoning":
+    lwk = config.completeness.llm_world_knowledge
+    if long_list and lwk.long_list_behavior == "estimator_reasoning":
         stats = _estimator_stats(estimator)
         if stats:
             prompt_parameters["estimator_stats"] = stats
-    if history:
+    previous_input = _truncate_history(history, lwk.long_list_history_turns) if long_list else history
+    if previous_input:
         prompt_parameters["is_continuation"] = True
 
     code_environment = CodeExecutionEnvironment(
@@ -220,7 +234,7 @@ async def run_world_knowledge_stop(
                 parallel_tool_calls=False,
                 tool_choice="required",
                 output_type=bool,
-                previous_input=history,
+                previous_input=previous_input,
                 label=label,
             )
             result = run_result.output
@@ -232,7 +246,7 @@ async def run_world_knowledge_stop(
             history[:] = run_result.continuation_input
         tracing.append_to_span_output({"stop": result, "max_turns_exceeded": max_turns_exceeded})
 
-    return bool(result)
+    return result
 
 
 @hooks.hook(HookEvent.EXECUTION_EXECUTE_QUERY_PLAN_EXECUTE_STEP_ANSWER_STEP_MULTIPLE_AGENTS_COMPLETENESS)
@@ -295,33 +309,32 @@ async def run_completeness_evaluator(
         return StopDecision(stop_reason=StopReason.ESTIMATOR)
 
     label = f"COMPLETENESS step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried}"
-    config = context.get_config()
-    lwk = config.completeness.llm_world_knowledge
-
-    # Long-list behavior: when the deduplicated result list is long, the LLM
-    # should either be skipped entirely (prevent) or given the estimator's
-    # unknown-unknown stats to reason with (estimator_reasoning).
-    list_len = len(_result_list_for_llm(aligned_result_list))
-    if list_len > lwk.long_list_start and lwk.long_list_behavior == "prevent":
-        print(
-            f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
-            f"observed={observed} decision=continue (long list {list_len} > {lwk.long_list_start}, "
-            f"LLM prevented)",
-            flush=True,
-        )
-        return None
-    # estimator_reasoning: fall through with estimator stats fed to the LLM.
+    lwk = context.get_config().completeness.llm_world_knowledge
 
     if lwk.enabled:
+        # Long lists: either skip the LLM (prevent) or give it the estimator's stats (estimator_reasoning).
+        list_len = len(_result_list_for_llm(aligned_result_list))
+        long_list = list_len > lwk.long_list_start
+        if long_list and lwk.long_list_behavior == "prevent":
+            print(
+                f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
+                f"observed={observed} decision=continue (long list {list_len} > {lwk.long_list_start}, "
+                f"LLM prevented)",
+                flush=True,
+            )
+            return None
+
         llm_stop = await run_world_knowledge_stop(
-            aligned_result_list, query, label=label, history=history, estimator=estimator
+            aligned_result_list, query, label=label, history=history, estimator=estimator, long_list=long_list
         )
+        estimator_informed = long_list and lwk.long_list_behavior == "estimator_reasoning" and estimator is not None
+        llm_decision = ("llm+estimator" if estimator_informed else "llm") if llm_stop else "continue"
         print(
             f"[COMPLETENESS] step={step_budget.step_id if step_budget else '?'} agents_queried={agents_queried} "
-            f"observed={observed} decision={'llm' if llm_stop else 'continue'}",
+            f"observed={observed} decision={llm_decision}",
             flush=True,
         )
         if llm_stop:
-            return StopDecision(stop_reason=StopReason.LLM)
+            return StopDecision(stop_reason=StopReason.LLM_WITH_ESTIMATOR if estimator_informed else StopReason.LLM)
 
     return None

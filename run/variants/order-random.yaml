@@ -1,0 +1,4 @@
+selection:
+  strategy: random
+  params:
+    seed: 42

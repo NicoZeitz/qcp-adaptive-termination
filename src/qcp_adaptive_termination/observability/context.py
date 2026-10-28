@@ -41,6 +41,7 @@ _cache_var: ContextVar[Cache | None] = ContextVar("cache", default=None)
 _config_var: ContextVar[Config | None] = ContextVar("config", default=None)
 _data_dir_var: ContextVar[Path | None] = ContextVar("data_dir", default=None)
 _output_dir_var: ContextVar[Path | None] = ContextVar("output_dir", default=None)
+_step_id_var: ContextVar[str | None] = ContextVar("step_id", default=None)
 _logging_active_var: ContextVar[bool] = ContextVar("logging_active", default=False)
 _tracing_providers_var: ContextVar[list[Literal["openai", "file", "langfuse"]] | None] = ContextVar(
     "tracing_providers", default=None
@@ -90,6 +91,25 @@ def get_data_dir() -> Path | None:
 def get_output_dir() -> Path | None:
     """Return the active output directory, or None if not set."""
     return _output_dir_var.get()
+
+
+def get_step_id() -> str | None:
+    """Return the id of the query plan step currently executing, or None outside a step."""
+    return _step_id_var.get()
+
+
+@contextmanager
+def step_context(step_id: str) -> Generator[None]:
+    """Mark the enclosed code as executing the given query plan step.
+
+    Args:
+        step_id: id of the executing step
+    """
+    token = _step_id_var.set(step_id)
+    try:
+        yield
+    finally:
+        _step_id_var.reset(token)
 
 
 def get_tracing_providers() -> list[Literal["openai", "file", "langfuse"]]:

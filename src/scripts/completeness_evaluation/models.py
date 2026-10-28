@@ -15,6 +15,8 @@ class GroundTruth:
 
     count: int
     """Distinct count of rows in the ground truth"""
+    value_count: int
+    """Distinct rows with a non-missing value"""
     value_sum: float | None
     """Sum of the aggregated value column"""
     value_avg: float | None
@@ -23,6 +25,8 @@ class GroundTruth:
     """Minimum of the aggregated value column"""
     value_max: float | None
     """Maximum of the aggregated value column"""
+    value_median: float | None
+    """Median of the aggregated value column"""
 
 
 @dataclass(slots=True)
@@ -108,6 +112,20 @@ class BatchRecord:
     """Agents queried beyond the earliest stop point for each coverage target"""
     earliest_scalar_stop_agents: int | None = None
     """First agent index where the observed scalar equals the true scalar (value steps)"""
+    llm_status: str | None = None
+    """LLM outcome (stop | continue | undecided) or why it was not called"""
+    long_list: bool = False
+    """Whether the deduplicated result list exceeded the long-list threshold"""
+    observed_by_aggregation: dict[str, float | None] = field(default_factory=dict)
+    """Observed value for every aggregation type of the step"""
+    e2e_true_count: int | None = None
+    """End-to-end ground-truth distinct count (all previous steps complete)"""
+    e2e_true_value: float | None = None
+    """End-to-end ground-truth aggregated value"""
+    e2e_coverage_achieved: float | None = None
+    """Observed rows that belong to the end-to-end truth over the end-to-end true count"""
+    e2e_observed_error: float | None = None
+    """Relative error of the observed result against the end-to-end truth"""
 
 
 @dataclass(slots=True)
@@ -127,18 +145,34 @@ class StepResult:
     stop_reason: str
     """Why the step stopped"""
     ground_truth: GroundTruth
-    """Ground-truth answer for the step"""
+    """Ground-truth answer for the step given the actual previous step results"""
+    e2e_ground_truth: GroundTruth
+    """Ground-truth answer for the step assuming all previous steps were complete"""
+    step_sql: str
+    """SQL used for the step's agents (compounded or canonical)"""
+    compounded: bool
+    """Whether the step's filter was rewritten from previous step results"""
+    compound_source: str | None
+    """Where the compounded filter values came from (produced | observed | none)"""
     checks: list[BatchRecord]
     """Per-agent completeness check records"""
     aggregation: AggregationType | None
     """Primary aggregation type used"""
     step_budget_t: float | None
-    """Step execution budget in seconds"""
+    """Step completeness threshold"""
     produced_result: str | None
     """Final produced result string"""
     produced_scalar: float | None
-    """Final produced scalar value"""
-    result_rel_err_avg: float | None
-    """Average relative result error"""
-    result_rel_err_sum: float | None
-    """Sum of relative result errors"""
+    """Produced value of the primary aggregation (scalar answer, or the list answer aggregated)"""
+    produced_value_source: str | None
+    """How the produced value was obtained (scalar | aggregated)"""
+    produced_rel_err: float | None
+    """Relative error of the produced scalar against the primary aggregation truth"""
+    e2e_produced_rel_err: float | None
+    """Relative error of the produced scalar against the end-to-end truth"""
+    produced_precision: float | None
+    """Fraction of produced keys that are in the ground truth (list results)"""
+    produced_recall: float | None
+    """Fraction of ground-truth keys present in the produced result (list results)"""
+    produced_used_estimator: bool
+    """Whether the result producer was given the estimator"""

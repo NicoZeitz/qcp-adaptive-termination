@@ -107,6 +107,10 @@ class LLMWolrdKnowledgeConfig(BaseModel):
         default="prevent",
         description=("Behavior for long lists: prevent skips the LLM, estimator_reasoning feeds estimator stats"),
     )
+    long_list_history_turns: int = Field(
+        default=5,
+        description="On long lists, only the last this many completeness evaluations are kept in the LLM history",
+    )
 
 
 class CompletenessConfig(BaseModel):

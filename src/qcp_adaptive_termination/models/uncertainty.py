@@ -40,6 +40,7 @@ class StopReason(StrEnum):
 
     ESTIMATOR = "Estimator"
     LLM = "LLM World Knowledge"
+    LLM_WITH_ESTIMATOR = "LLM World Knowledge + Estimator"
     ALL_AGENTS = "All Agents Queried"
 
 

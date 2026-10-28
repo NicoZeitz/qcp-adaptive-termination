@@ -1,0 +1,6 @@
+# Early stopping by the estimator only.
+completeness:
+  estimator:
+    enabled: true
+  llm_world_knowledge:
+    enabled: false

@@ -137,7 +137,7 @@ async def answer_step_multiple_agents(
         if isinstance(decision, StopDecision):
             final_result = await produce_result(
                 result_list,
-                estimator,
+                estimator if decision.estimator_informed else None,
                 query_plan_step.query,
                 query_plan_step.merge_task,
                 decision.stop_reason,

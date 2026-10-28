@@ -30,8 +30,10 @@ def dataframe_to_data_items(
         names = pd.Series([""] * len(dataframe), index=dataframe.index)
 
     if value_col and value_col in dataframe.columns:
-        raw_values: pd.Series = pd.to_numeric(dataframe[value_col], errors="coerce")  # type: ignore[assignment]
-        values = raw_values.fillna(1.0)
+        values: pd.Series = pd.to_numeric(dataframe[value_col], errors="coerce")  # type: ignore[assignment]
+        # Value aggregates ignore missing values (SQL NULL semantics), so such rows are not part of the population.
+        has_value = values.notna().to_numpy()
+        names, values = names.loc[has_value], values.loc[has_value]
     else:
         values = pd.Series([1.0] * len(dataframe), index=dataframe.index)
 
@@ -68,6 +70,7 @@ def update_estimator(
     if estimator is None:
         estimator_params = context.get_config().completeness.estimator
         if step_budget is not None:
+            estimator_params = estimator_params.model_copy(deep=True)
             estimator_params.confidence_interval.epsilon = 1 - step_budget.t_step
 
         return Estimator([[item] for item in items], estimator_params)

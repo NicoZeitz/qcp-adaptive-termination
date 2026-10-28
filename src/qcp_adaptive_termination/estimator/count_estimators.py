@@ -278,13 +278,14 @@ def _chao84_confidence_interval(stats: FrequencyStats, confidence_epsilon: float
     doubleton_count = stats.doubleton_count
     unique_count = stats.observed_unique_entities
 
+    # Chao84 is undefined without doubletons; its point estimate would collapse the interval to the observed count.
+    if doubleton_count == 0 and singleton_count > 0:
+        return _good_turing_confidence_interval(stats, confidence_epsilon)
+
     estimated_count = _chao84(stats)
     estimated_count_minus_observed = estimated_count - unique_count
     if estimated_count_minus_observed == 0:
         return (unique_count, unique_count)
-
-    if doubleton_count == 0:
-        return _good_turing_confidence_interval(stats, confidence_epsilon)
 
     z_prime = float(norm.ppf(1.0 - confidence_epsilon / 2.0))
 
