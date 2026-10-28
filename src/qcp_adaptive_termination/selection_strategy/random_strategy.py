@@ -3,7 +3,7 @@
 import random
 from dataclasses import dataclass
 
-from qcp_adaptive_termination.models import DataAgent
+from qcp_adaptive_termination.models import DataAgent, ScoredDataAgent
 from qcp_adaptive_termination.selection_strategy.strategy import (
     StaticSelectionStrategy,
 )
@@ -13,8 +13,6 @@ from qcp_adaptive_termination.selection_strategy.strategy import (
 class RandomStrategy(StaticSelectionStrategy[float]):
     """Ranks agents in a seeded random order (independent of the query)."""
 
-    ascending: bool = True
-    """Whether to rank ascending (lowest score first)"""
     seed: int = 42
     """Seed for the random ordering"""
 
@@ -29,3 +27,18 @@ class RandomStrategy(StaticSelectionStrategy[float]):
         names = [a.name for a in agents]
         random.Random(self.seed).shuffle(names)
         return {name: float(i) for i, name in enumerate(names)}
+
+    def rank(
+        self,
+        remaining: list[ScoredDataAgent],
+        precomputed: dict[str, float],
+        state: None,
+    ) -> list[ScoredDataAgent]:
+        """Return agents in precomputed shuffle order without sorting."""
+        by_name = {selection.agent.name: selection for selection in remaining}
+        ranked = []
+        for name in precomputed:
+            if selection := by_name.get(name):
+                selection.score = precomputed[name]
+                ranked.append(selection)
+        return ranked

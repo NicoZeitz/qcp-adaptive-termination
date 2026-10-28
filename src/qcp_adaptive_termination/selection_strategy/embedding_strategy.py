@@ -3,6 +3,7 @@
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 import numpy as np
 
@@ -17,8 +18,8 @@ from qcp_adaptive_termination.selection_strategy.strategy import StaticSelection
 class EmbeddingStrategy(StaticSelectionStrategy[float]):
     """Ranks agents by embedding distance to the query."""
 
-    ascending: bool = True
-    """Whether to rank ascending (closest first)"""
+    ascending: ClassVar[bool] = True
+    """Whether the closest query distance ranks first"""
     scorer: Callable[[list[float]], float] = field(default=min)
     """Aggregates per-agent distances into a single score"""
     registry_type: AgentRegistryType = field(default=AgentRegistryType.TECHNICAL)

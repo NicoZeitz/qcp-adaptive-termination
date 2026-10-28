@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import cast
+from typing import ClassVar, cast
 
 from qcp_adaptive_termination.models import DataAgent, ScoredDataAgent
 
@@ -63,8 +63,8 @@ class StaticSelectionStrategy[PrecomputedScoredState: float](
 ):
     """Base for strategies whose ranking does not change between iterations."""
 
-    # Whether to rank ascending (lowest score first).
-    ascending: bool = False
+    ascending: ClassVar[bool] = False
+    """Whether to rank scores from lowest to highest; fixed by each strategy class"""
 
     @abstractmethod
     async def precompute(
