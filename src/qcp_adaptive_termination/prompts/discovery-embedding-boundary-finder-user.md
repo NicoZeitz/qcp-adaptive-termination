@@ -1,7 +1,7 @@
 【Query】
 {{query}}
 
-【Ranked candidate columns (ascending L2 distance)】
-{{ranked_columns}}
+【Ranked candidate agents (ascending L2 distance)】
+{{ranked_agents}}
 
-Which agents are relevant to this query, where is the boundary between fitting columns and irrelevant ones?
+Where is the boundary between relevant and irrelevant agents?

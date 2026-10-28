@@ -21,82 +21,48 @@ embedding_model: "openai/text-embedding-3-large"
 llm_timeout: 120.0
 log_llm_requests: false
 cache_mode: READ_AND_WRITE # TODO:FW change this after evaluation
-discovery_filter_mode: embedding_boundary_iterative_v4
 
 agent_configs:
-  coordinator_relevance:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
   coordinator_planning:
     model: "openai/gpt-5"
     reasoning_effort: "high"
     reasoning_summary: "concise"
   coordinator_code:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
   coordinator_replanning:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
   coordinator_align_schema:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
   coordinator_completeness_evaluator:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
   data_agent_schema_description:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
   data_agent_relevance:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
   data_agent_code:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  query_decomposer:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
   embedding_text_generator:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
-  embedding_column_relevance:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  embedding_iterative_relevance:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+  iterative_embedding_filter_agent_relevance:
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
   embedding_boundary_finder:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
-  embedding_boundary_finder_schema:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+  iterative_embedding_filter_query_completeness:
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
-  embedding_boundary_iterative:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  embedding_boundary_iterative_agent:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  embedding_boundary_iterative_aggregate:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  embedding_boundary_iterative_v3_agent:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  embedding_boundary_iterative_v3_aggregate:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  embedding_boundary_finder_v4:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  embedding_boundary_iterative_v4_agent:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  embedding_boundary_iterative_v4_aggregate:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
-    reasoning_effort: "high"
-  embedding_boundary_iterative_v4_decomposer:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+  iterative_embedding_filter_decomposer:
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"
   baseline_filter:
-    model: "university/unsloth/DeepSeek-V4-Flash-0731"
+    model: "openrouter/deepseek/deepseek-v4-flash-0731"
     reasoning_effort: "high"

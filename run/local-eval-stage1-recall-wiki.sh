@@ -27,7 +27,7 @@ DATASET_DIR="${BASE_DATASET_DIR}/${DATASET_NAME}"
 DATA_DIR="${DATASET_DIR}"
 INPUT_DIR="${DATASET_DIR}/dataset/_meta/input"
 ############################################################ RUN SETUP ############################################################
-RUN_NAME="150_DEEP_eval_stage1_recall_embedding_boundary_schema_embed"
+RUN_NAME="eval_stage1_recall"
 
 # write stdout and stderr to log files (in addition to printing to console)
 mkdir -p "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}"
@@ -41,7 +41,7 @@ exec > >(tee -i "${BASE_LOG_DIR}/${DATASET_NAME}/${RUN_NAME}/stdout.log") 2> >(t
 
 # Or use a specific list of files
 FILES=(
-    "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
+    # "How_many_NATO_members_have_a_GDP_less_than_fifty_billion.json"
     # "How_many_FIFA_World_Cup_games_did_England_play.json"
     # "How_many_airlines_are_headquartered_in_UK.json"
     # "How_many_chinese_woman_have_won_a_nobel_prize.json"
@@ -83,7 +83,7 @@ FILES=(
     # "What_is_the_total_population_of_all_NATO_member_countries.json"
     # "What_is_the_total_population_of_countries_with_a_GDP_above_1_trillion_USD.json"
     # "What_was_the_combined_area_of_the_German_states_that_were_part_of_the_DDR_measur.json"
-    # "What_would_be_the_size_of_the_US_if_we_traded_Louisiana_for_Canada.json"
+    "What_would_be_the_size_of_the_US_if_we_traded_Louisiana_for_Canada.json"
     # "When_and_where_did_the_highest_attendance_at_a_FIFA_world_cup_stadium_occur_and_how_many_people.json"
     # "Which_Champions_League_venue_has_the_highest_capacity.json"
     # "Which_German_state_has_the_largest_area.json"

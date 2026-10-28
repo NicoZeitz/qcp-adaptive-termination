@@ -10,4 +10,3 @@ Return:
 - **is_complete**: true only when all data dimensions needed to answer the original query are covered by the confirmed agents and no confirmed agent reports a missing aspect that is not covered by another confirmed agent
 - **data_not_available**: true **only as a last resort** when the required data clearly does not exist in this system (use only after multiple failed query attempts for same information)
 - **queries**: one short and concise semantic phrase per missing data need. Exactly one entry per distinct missing data type, empty if is_complete or data_not_available. These will be used for embedding search to find additional agents, so phrase them as **descriptions of the data type needed, not as SQL queries, no questions with specific filter values also not naming or mentioning the goal you want to achieve**.
-- **reasoning**: brief explanation

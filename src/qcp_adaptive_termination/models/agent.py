@@ -54,7 +54,6 @@ class AgentRegistryType(StrEnum):
 
 
 class AgentRole(StrEnum):
-    COORDINATOR_RELEVANCE = "coordinator_relevance"
     COORDINATOR_PLANNING = "coordinator_planning"
     COORDINATOR_CODE = "coordinator_code"
     COORDINATOR_REPLANNING = "coordinator_replanning"
@@ -63,27 +62,16 @@ class AgentRole(StrEnum):
     DATA_AGENT_SCHEMA_DESCRIPTION = "data_agent_schema_description"
     DATA_AGENT_RELEVANCE = "data_agent_relevance"
     DATA_AGENT_CODE = "data_agent_code"
-    QUERY_DECOMPOSER = "query_decomposer"
     EMBEDDING_TEXT_GENERATOR = "embedding_text_generator"
-    EMBEDDING_COLUMN_RELEVANCE = "embedding_column_relevance"
-    EMBEDDING_ITERATIVE_RELEVANCE = "embedding_iterative_relevance"
+    ITERATIVE_EMBEDDING_FILTER_AGENT_RELEVANCE = "iterative_embedding_filter_agent_relevance"
     EMBEDDING_BOUNDARY_FINDER = "embedding_boundary_finder"
-    EMBEDDING_BOUNDARY_FINDER_SCHEMA = "embedding_boundary_finder_schema"
-    EMBEDDING_BOUNDARY_ITERATIVE = "embedding_boundary_iterative"
-    EMBEDDING_BOUNDARY_ITERATIVE_AGENT = "embedding_boundary_iterative_agent"
-    EMBEDDING_BOUNDARY_ITERATIVE_AGGREGATE = "embedding_boundary_iterative_aggregate"
-    EMBEDDING_BOUNDARY_ITERATIVE_V3_AGENT = "embedding_boundary_iterative_v3_agent"
-    EMBEDDING_BOUNDARY_ITERATIVE_V3_AGGREGATE = "embedding_boundary_iterative_v3_aggregate"
-    EMBEDDING_BOUNDARY_FINDER_V4 = "embedding_boundary_finder_v4"
-    EMBEDDING_BOUNDARY_ITERATIVE_V4_AGENT = "embedding_boundary_iterative_v4_agent"
-    EMBEDDING_BOUNDARY_ITERATIVE_V4_AGGREGATE = "embedding_boundary_iterative_v4_aggregate"
-    EMBEDDING_BOUNDARY_ITERATIVE_V4_DECOMPOSER = "embedding_boundary_iterative_v4_decomposer"
+    ITERATIVE_EMBEDDING_FILTER_QUERY_COMPLETENESS = "iterative_embedding_filter_query_completeness"
+    ITERATIVE_EMBEDDING_FILTER_DECOMPOSER = "iterative_embedding_filter_decomposer"
     BASELINE_FILTER = "baseline_filter"
 
     @property
     def prompt_name(self) -> str:
         return {
-            AgentRole.COORDINATOR_RELEVANCE: "discovery-coordinator-relevance",
             AgentRole.COORDINATOR_PLANNING: "planning-coordinator-planning",
             AgentRole.COORDINATOR_CODE: "execution-coordinator-aggregate",
             AgentRole.COORDINATOR_REPLANNING: "execution-coordinator-replanning",
@@ -92,20 +80,10 @@ class AgentRole(StrEnum):
             AgentRole.DATA_AGENT_SCHEMA_DESCRIPTION: "discovery-data-agent-sql-schema-description",
             AgentRole.DATA_AGENT_RELEVANCE: "discovery-data-agent-sql-relevance",
             AgentRole.DATA_AGENT_CODE: "execution-data-agent-sql-code",
-            AgentRole.QUERY_DECOMPOSER: "discovery-query-decomposer",
             AgentRole.EMBEDDING_TEXT_GENERATOR: "discovery-embedding-text-generator",
-            AgentRole.EMBEDDING_COLUMN_RELEVANCE: "discovery-embedding-column-relevance",
-            AgentRole.EMBEDDING_ITERATIVE_RELEVANCE: "discovery-embedding-iterative-relevance",
+            AgentRole.ITERATIVE_EMBEDDING_FILTER_AGENT_RELEVANCE: "discovery-iterative-embedding-filter-agent-relevance",
             AgentRole.EMBEDDING_BOUNDARY_FINDER: "discovery-embedding-boundary-finder",
-            AgentRole.EMBEDDING_BOUNDARY_FINDER_SCHEMA: "discovery-embedding-boundary-finder-schema",
-            AgentRole.EMBEDDING_BOUNDARY_ITERATIVE: "discovery-embedding-boundary-iterative",
-            AgentRole.EMBEDDING_BOUNDARY_ITERATIVE_AGENT: "discovery-embedding-boundary-iterative-agent",
-            AgentRole.EMBEDDING_BOUNDARY_ITERATIVE_AGGREGATE: "discovery-embedding-boundary-iterative-aggregate",
-            AgentRole.EMBEDDING_BOUNDARY_ITERATIVE_V3_AGENT: "discovery-embedding-boundary-iterative-v3-agent",
-            AgentRole.EMBEDDING_BOUNDARY_ITERATIVE_V3_AGGREGATE: "discovery-embedding-boundary-iterative-v3-aggregate",
-            AgentRole.EMBEDDING_BOUNDARY_FINDER_V4: "discovery-embedding-boundary-finder-v4",
-            AgentRole.EMBEDDING_BOUNDARY_ITERATIVE_V4_AGENT: "discovery-embedding-boundary-iterative-v4-agent",
-            AgentRole.EMBEDDING_BOUNDARY_ITERATIVE_V4_AGGREGATE: "discovery-embedding-boundary-iterative-v4-aggregate",
-            AgentRole.EMBEDDING_BOUNDARY_ITERATIVE_V4_DECOMPOSER: "discovery-embedding-boundary-iterative-v4-decomposer",
+            AgentRole.ITERATIVE_EMBEDDING_FILTER_QUERY_COMPLETENESS: "discovery-iterative-embedding-filter-query-completeness",
+            AgentRole.ITERATIVE_EMBEDDING_FILTER_DECOMPOSER: "discovery-iterative-embedding-filter-decomposer",
             AgentRole.BASELINE_FILTER: "discovery-baseline-filter",
         }[self]
