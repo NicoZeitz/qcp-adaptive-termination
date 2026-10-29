@@ -13,7 +13,7 @@ import yaml
 
 from qcp_adaptive_termination.models import StopReason
 
-_PLOT_EXTS = ("png", "pdf")
+_PLOT_EXTS = ("png", "pdf", "svg")
 
 # Accuracy thresholds (in percent) at which optimal stops are reported; ``budget`` uses the step threshold.
 _REPORTED_TARGETS = ("100", "95", "budget")

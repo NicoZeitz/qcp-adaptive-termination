@@ -17,10 +17,6 @@ STOPPINGS=(none llm-prevent estimator estimator-llm-prevent estimator-llm-estima
 
 # dataset-name|dataset-dir|orderings
 EXPERIMENTS=(
-  "crowdwork-query-estimation|dataset_GDP2025|posterior random"
-  "crowdwork-query-estimation|dataset_siliconvalley_employee|posterior random"
-  "crowdwork-query-estimation|dataset_siliconvalley_revenue|posterior random"
-  "crowdwork-query-estimation|dataset_vldbsigmod|posterior random"
   "wikidata-federated-overlap-dataset|dataset|posterior random"
   "wikidata-federated-overlap-dataset|dataset-50|posterior random"
   "web-data-commons-product|dataset|count"
