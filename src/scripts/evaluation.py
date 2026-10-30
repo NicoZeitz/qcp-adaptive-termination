@@ -77,6 +77,12 @@ def _parse_arguments() -> Namespace:
         sub.add_argument("--parallel", action="store_true", default=True, help="Run queries in parallel (default)")
         sub.add_argument("--sequential", action="store_true", help="Run queries sequentially")
         sub.add_argument("--max_workers", type=int, default=None, help="Max parallel worker processes")
+        sub.add_argument(
+            "--langfuse",
+            action="store_true",
+            default=False,
+            help="Enable Langfuse tracing (requires LANGFUSE_* env vars)",
+        )
 
     return parser.parse_args()
 
@@ -148,6 +154,7 @@ async def _run_subcommand(args: Namespace):
             cache_dir=args.cache_dir,
             parallel=not args.sequential,
             max_workers=args.max_workers,
+            langfuse=args.langfuse,
         )
         module.aggregate(output_dir, input_dir)
 

@@ -57,6 +57,12 @@ def _parse_arguments() -> Namespace:
         default=None,
         help="Dataset folder containing _meta/input (default: derived from input file)",
     )
+    parser.add_argument(
+        "--langfuse",
+        action="store_true",
+        default=False,
+        help="Enable Langfuse tracing (requires LANGFUSE_* env vars)",
+    )
     return parser.parse_args()
 
 
