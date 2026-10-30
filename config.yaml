@@ -61,7 +61,7 @@ models:
   agents:
     discovery-coordinator-relevance:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
-      reasoning_effort: "none"         # none | minimal | low | medium | high | xhigh
+      reasoning_effort: "high"         # high | minimal | low | medium | high | xhigh
       reasoning_summary: null          # auto | concise | detailed | null
     planning-coordinator-draft-query-plan:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
@@ -83,10 +83,10 @@ models:
       reasoning_effort: "high"
     discovery-data-agent-schema-description:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
-      reasoning_effort: "none"
+      reasoning_effort: "high"
     discovery-data-agent-relevance:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
-      reasoning_effort: "none"
+      reasoning_effort: "high"
     execution-data-agent-query:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
       # reasoning_effort=high: streaming tests showed the first-turn generation is fast
@@ -96,19 +96,19 @@ models:
       reasoning_effort: "high"
     discovery-baseline-filter:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
-      reasoning_effort: "none"
+      reasoning_effort: "high"
     discovery-embedding-boundary-finder:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
-      reasoning_effort: "none"
+      reasoning_effort: "high"
     discovery-iterative-embedding-filter-agent-relevance:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
-      reasoning_effort: "none"
+      reasoning_effort: "high"
     discovery-iterative-embedding-filter-query-completeness:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
-      reasoning_effort: "none"
+      reasoning_effort: "high"
     discovery-iterative-embedding-filter-decomposer:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
-      reasoning_effort: "none"
+      reasoning_effort: "high"
   costs:
     "openai/text-embedding-3-large":   # USD per 1M tokens
       embedding: 0.13
