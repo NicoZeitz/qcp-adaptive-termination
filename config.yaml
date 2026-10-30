@@ -3,6 +3,8 @@ execution:
   llm_max_turns: 40
   llm_code_execution_timeout: 60
   llm_code_execution_preview_char_limit: 2000
+  llm_max_retries: 2
+  llm_timeout: 60
   schema_alignment_agent_limit: 1000
 
 selection:
@@ -85,6 +87,10 @@ models:
       reasoning_effort: "none"
     execution-data-agent-query:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      # reasoning_effort=high: streaming tests showed the first-turn generation is fast
+      # (~0.5s) even with thinking enabled, so high reasoning is fine. Endpoint hangs are
+      # intermittent (server-side under load) and are handled by the retry-with-backoff on
+      # the discarded real call, not by disabling reasoning.
       reasoning_effort: "high"
   costs:
     "openai/text-embedding-3-large":   # USD per 1M tokens

@@ -84,13 +84,9 @@ def format_result(
         # When code failed (e.g. calling a function that does not exist → NameError),
         # remind the agent of the injected functions and constants it has available.
         if injected_tools:
-            formatted += "\nAvailable functions you can call: " + ", ".join(
-                f"`{name}`" for name in injected_tools
-            )
+            formatted += "\nAvailable functions you can call: " + ", ".join(f"`{name}`" for name in injected_tools)
         if injected_constants:
-            formatted += "\nAvailable variables/constants: " + ", ".join(
-                f"`{name}`" for name in injected_constants
-            )
+            formatted += "\nAvailable variables/constants: " + ", ".join(f"`{name}`" for name in injected_constants)
 
     available = ",".join([f"'{k}': {type(v).__name__}" for k, v in locals.items() if not k.startswith("_")])
 

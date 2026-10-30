@@ -153,6 +153,14 @@ class ExecutionConfig(BaseModel):
         default=2000,
         description="Max characters of code-execution output shown to the LLM (truncated in the middle)",
     )
+    llm_max_retries: int = Field(
+        default=2,
+        description="LLM SDK retries for transient network errors before raising.",
+    )
+    llm_timeout: int = Field(
+        default=60,
+        description="LLM SDK per-connection timeout (seconds).",
+    )
     schema_alignment_agent_limit: int = Field(default=1000, description="Max agents to align schemas against")
 
 
