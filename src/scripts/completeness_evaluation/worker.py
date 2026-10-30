@@ -1277,6 +1277,7 @@ async def run_query(
             before_fn=runner.before,
             after_fn=runner.after,
             config=config,
+            open_context=False,
         )
     except Exception as error:
         runner.finalize(None, error)
