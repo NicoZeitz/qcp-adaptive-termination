@@ -5,6 +5,8 @@ execution:
   llm_code_execution_preview_char_limit: 2000
   schema_alignment_agent_limit: 1000
 
+discovery_filter_mode: iterative_embedding_filter   # llm_baseline | iterative_embedding_filter
+
 selection:
   strategy: posterior                  # random | embedding | count | distinct_count | hll_sketch | theta_sketch | min_hash | posterior
   params:
@@ -86,6 +88,21 @@ models:
     execution-data-agent-query:
       model: "university/unsloth/DeepSeek-V4-Flash-0731"
       reasoning_effort: "high"
+    discovery-baseline-filter:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "none"
+    discovery-embedding-boundary-finder:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "none"
+    discovery-iterative-embedding-filter-agent-relevance:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "none"
+    discovery-iterative-embedding-filter-query-completeness:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "none"
+    discovery-iterative-embedding-filter-decomposer:
+      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      reasoning_effort: "none"
   costs:
     "openai/text-embedding-3-large":   # USD per 1M tokens
       embedding: 0.13

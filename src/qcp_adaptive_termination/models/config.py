@@ -203,3 +203,7 @@ class Config(BaseModel):
     selection: SelectionConfig = Field(default_factory=SelectionConfig, description="Agent selection settings")
     cache: CacheConfig = Field(default_factory=CacheConfig, description="Result caching behavior")
     models: ModelsConfig = Field(default_factory=ModelsConfig, description="Model identifiers and pricing")
+    discovery_filter_mode: Literal["llm_baseline", "iterative_embedding_filter"] = Field(
+        default="iterative_embedding_filter",
+        description="Which discovery pre-filter to run: embedding-guided iterative filter or the LLM baseline",
+    )
