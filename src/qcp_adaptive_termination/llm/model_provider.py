@@ -14,6 +14,8 @@ from agents.models.multi_provider import MultiProviderMap
 from httpx import AsyncBaseTransport, AsyncClient, Request, Response
 from openai import AsyncOpenAI
 
+from qcp_adaptive_termination.observability import context
+
 _multi_provider: MultiProvider | None = None
 
 
@@ -132,11 +134,14 @@ def _add_provider(
         logging.warning(f"{prefix.upper()}_BASE_URL not set; skipping provider registration.")
         return
 
+    cfg = context.get_config().execution
     http_client = AsyncClient(transport=_vLlmTransport()) if prefix.upper() == "UNIVERSITY" else AsyncClient()
     client = AsyncOpenAI(
         base_url=base_url,
         api_key=api_key or "not-required",
         http_client=http_client,
+        timeout=cfg.llm_timeout,
+        max_retries=cfg.llm_max_retries,
     )
     provider = OpenAIProvider(
         openai_client=client,

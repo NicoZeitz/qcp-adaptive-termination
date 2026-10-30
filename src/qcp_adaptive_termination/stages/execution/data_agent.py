@@ -105,7 +105,7 @@ async def answer_query_data_agent(
             """Register needs raised by the data agent."""
             partial_answer.add_needs(need_type.try_parse_value(new_needs))
 
-        def final_answer(new_answer: Any):
+        def final_result(new_answer: Any):
             """Validate and set the data agent's final answer."""
             answer_df = result_type.try_parse_value(new_answer)
             if schema_metadata is not None:
@@ -120,7 +120,7 @@ async def answer_query_data_agent(
             },
             tools={
                 "raise_needs": raise_needs,
-                "final_answer": final_answer,
+                "final_result": final_result,
                 "query_sql": query_sql,
             },
         )

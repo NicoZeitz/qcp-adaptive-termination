@@ -65,6 +65,9 @@ def format_result(
     stderr: str,
     exception: Exception | None,
     locals: dict[str, Any],
+    *,
+    injected_tools: dict[str, Callable] | None = None,
+    injected_constants: dict[str, Any] | None = None,
 ) -> str:
     """Format captured output and locals into a summary string."""
     formatted = ""
@@ -78,6 +81,12 @@ def format_result(
 
     if exception is not None:
         formatted += f"\n{type(exception).__name__}: {preview_text(str(exception))}"
+        # When code failed (e.g. calling a function that does not exist → NameError),
+        # remind the agent of the injected functions and constants it has available.
+        if injected_tools:
+            formatted += "\nAvailable functions you can call: " + ", ".join(f"`{name}`" for name in injected_tools)
+        if injected_constants:
+            formatted += "\nAvailable variables/constants: " + ", ".join(f"`{name}`" for name in injected_constants)
 
     available = ",".join([f"'{k}': {type(v).__name__}" for k, v in locals.items() if not k.startswith("_")])
 
@@ -142,7 +151,14 @@ class CodeExecutionEnvironment:
             stderr=stderr,
             exception=exception,
             locals=locals,
-            formatted=format_result(stdout, stderr, exception, locals),
+            formatted=format_result(
+                stdout,
+                stderr,
+                exception,
+                locals,
+                injected_tools=self.tools,
+                injected_constants=self.variables,
+            ),
         )
 
         self.code_executions.append(execution_result)

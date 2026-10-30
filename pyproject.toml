@@ -48,7 +48,6 @@ packages = ["src/qcp_adaptive_termination"]
 
 [tool.uv]
 exclude-newer = "P2D"
-exclude-newer-package = { ty = "2026-10-14T00:00:00Z" }
 
 [tool.uv.pip]
 exclude-newer = "P2D"

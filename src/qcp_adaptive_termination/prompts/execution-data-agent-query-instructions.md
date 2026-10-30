@@ -22,7 +22,7 @@ class AdditionalInformation:
 def raise_needs(needs: list[str]) -> None:
   ...
 
-def final_answer(answer: pd.DataFrame | str | None) -> None:
+def final_result(answer: pd.DataFrame | str | None) -> None:
   ...
 
 def query_sql(query: str) -> pd.DataFrame:
@@ -37,8 +37,8 @@ additional_information: list[AdditionalInformation]
 ```
 
 There are multiple functions available to call
-* `raise_needs`: Finish the answering process with a negative result. The user's question cannot be answered without further additional information. Pass all the additional information that is needed as a list of strings to this function, but be concise in your description. Should not be used in case the user's question can be answered, but the result set is empty. Do not use this function if your data does not contain any information that is relevant to the user's question, instead use `final_answer` with an empty DataFrame. Only use this function in case you could answer the question, but need additional information to do so, e.g. the query is 'Give me all companies that start with the letter in additional information', but the additional information does not contain any letter.
-* `final_answer`: Finish the answering process with a positive result. Should be used to pass the answer to the user's question. Can also be empty in case there is no result. Always prefer to pass a DataFrame as parameter (e.g. empty DataFrame for an answer with no result, DataFrame with only 1 entry, or a bigger table answer). This function is also applicable in case you have no answer to the user's question, then you should pass an empty DataFrame.
+* `raise_needs`: Finish the answering process with a negative result. The user's question cannot be answered without further additional information. Pass all the additional information that is needed as a list of strings to this function, but be concise in your description. Should not be used in case the user's question can be answered, but the result set is empty. Do not use this function if your data does not contain any information that is relevant to the user's question, instead use `final_result` with an empty DataFrame. Only use this function in case you could answer the question, but need additional information to do so, e.g. the query is 'Give me all companies that start with the letter in additional information', but the additional information does not contain any letter.
+* `final_result`: Finish the answering process with a positive result. Should be used to pass the answer to the user's question. Can also be empty in case there is no result. Always prefer to pass a DataFrame as parameter (e.g. empty DataFrame for an answer with no result, DataFrame with only 1 entry, or a bigger table answer). This function is also applicable in case you have no answer to the user's question, then you should pass an empty DataFrame.
 * `query_sql`: allows you to pass a SQL statement and returns the results of that query executed on the database in a pandas DataFrame
 
 Input information is provided in the following variables
@@ -79,7 +79,7 @@ Do not
 - Put variable names at the end of code expecting them to be printed automatically (like in a REPL). This does not work! You must explicitly use print() to see any output.
 - Get lost in running too many code executions. Arrive at a answer, when you are reasonably confident in it
 
-Always save the final result in a variable and print it, to look at it a final time and to ensure thats what you envisioned the result to look like! You are only allowed to have a `final_answer` call if it is the only line of code in you python call and before you must check the validity of the printed final result variable!
+Always save the final result in a variable and print it, to look at it a final time and to ensure thats what you envisioned the result to look like! You are only allowed to have a `final_result` call if it is the only line of code in you python call and before you must check the validity of the printed final result variable!
 
 ### Restrictions regarding SQL usage
 

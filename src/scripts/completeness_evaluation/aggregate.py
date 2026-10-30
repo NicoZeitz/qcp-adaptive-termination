@@ -49,10 +49,12 @@ _USAGE_SUMS = [
 ]
 
 
-def _load_usage_calls(results_dir: Path, input_dir: Path) -> pd.DataFrame | None:
-    """Concatenate every query's per-call ``usage.csv``."""
+def _load_usage_calls(results_dir: Path, input_dir: Path, completed: set[str]) -> pd.DataFrame | None:
+    """Concatenate every completed query's per-call ``usage.csv``."""
     frames: list[pd.DataFrame] = []
     for input_file in sorted(input_dir.glob("*.json")):
+        if input_file.stem not in completed:
+            continue
         usage_path = results_dir / input_file.stem / "usage.csv"
         if not usage_path.exists():
             continue
@@ -75,9 +77,9 @@ def _usage_summary(calls: pd.DataFrame, by: list[str]) -> pd.DataFrame:
     return summary.reset_index()
 
 
-def _aggregate_usage(results_dir: Path, input_dir: Path) -> dict[str, pd.DataFrame]:
+def _aggregate_usage(results_dir: Path, input_dir: Path, completed: set[str]) -> dict[str, pd.DataFrame]:
     """Usage per query, per (query, step) and per role, from the per-call usage CSVs."""
-    calls = _load_usage_calls(results_dir, input_dir)
+    calls = _load_usage_calls(results_dir, input_dir, completed)
     if calls is None or calls.empty:
         return {}
     per_query = pd.DataFrame(calls.groupby("query")[_USAGE_SUMS].sum())
@@ -129,16 +131,21 @@ def aggregate(results_dir: Path, input_dir: Path) -> Path:
     results_dir.mkdir(parents=True, exist_ok=True)
     frames: list[pd.DataFrame] = []
     status_rows: list[dict[str, Any]] = []
+    completed: set[str] = set()
 
     for input_file in sorted(input_dir.glob("*.json")):
         query_slug = input_file.stem
         run_dir = results_dir / query_slug
         step_paths = sorted(run_dir.glob("*_evaluator.csv")) if run_dir.is_dir() else []
+        summary = _query_status(results_dir, query_slug, bool(step_paths))
+        status_rows.append(summary)
+        if summary["status"] != "complete":
+            continue
+        completed.add(query_slug)
         for step_path in step_paths:
             frame = pd.read_csv(step_path)
             frame.insert(0, "query", query_slug)
             frames.append(frame)
-        status_rows.append(_query_status(results_dir, query_slug, bool(step_paths)))
 
     if frames:
         combined = pd.concat(frames, ignore_index=True)
@@ -148,11 +155,11 @@ def aggregate(results_dir: Path, input_dir: Path) -> Path:
         step_frame.to_csv(results_dir / "evaluator_step_summary_all_queries.csv", index=False)
         save_aggregate_plots(step_frame, results_dir)
 
-        logging.info("Aggregated %d steps of %d input queries to %s", len(frames), len(status_rows), results_dir)
+        logging.info("Aggregated %d steps of %d completed queries to %s", len(frames), len(completed), results_dir)
     else:
         logging.warning("No evaluator summaries found under %s", results_dir)
 
-    for name, frame in _aggregate_usage(results_dir, input_dir).items():
+    for name, frame in _aggregate_usage(results_dir, input_dir, completed).items():
         frame.to_csv(results_dir / f"{name}.csv", index=False)
     if (results_dir / "usage_summary.csv").exists():
         logging.info("Aggregated usage to %s", results_dir / "usage_summary.csv")

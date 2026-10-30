@@ -219,6 +219,7 @@ async def run_script(
     before_fn=None,
     after_fn=None,
     config: Config | None = None,
+    open_context: bool = True,
 ):
     """Run the pipeline (or the provided ``run_fn``) for one explicit args set.
 
@@ -228,6 +229,9 @@ async def run_script(
         before_fn: async function run before the run with the script context
         after_fn: async function run after the run with the context and result
         config: config to use, loaded from args when omitted
+        open_context: whether this call owns a ``pipeline_context``. Pass False when
+            already inside an outer ``pipeline_context`` to avoid opening a
+            nested context.
     """
     datetime_str = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
 
@@ -258,21 +262,7 @@ async def run_script(
 
     data, extra = load_input(input_file)
 
-    with context.pipeline_context(
-        name=name,
-        trace_name=trace_name,
-        output_dir=output_dir,
-        cache_dir=cache_dir,
-        data_dir=data_dir,
-        cache_mode=cache_mode,
-        config=config,
-        trace_metadata={
-            "start_stage": start_stage.value,
-            "end_stage": end_stage.value,
-            "input_file": str(input_file),
-        },
-        tracing_providers=tracing_providers,
-    ):
+    async def _run():
         ctx = ScriptContext(
             args=args,
             datetime_str=datetime_str,
@@ -315,3 +305,22 @@ async def run_script(
             await after_fn(ctx, result)
 
         return result
+
+    if open_context:
+        with context.pipeline_context(
+            name=name,
+            trace_name=trace_name,
+            output_dir=output_dir,
+            cache_dir=cache_dir,
+            data_dir=data_dir,
+            cache_mode=cache_mode,
+            config=config,
+            trace_metadata={
+                "start_stage": start_stage.value,
+                "end_stage": end_stage.value,
+                "input_file": str(input_file),
+            },
+        ):
+            return await _run()
+
+    return await _run()

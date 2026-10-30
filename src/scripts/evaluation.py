@@ -6,6 +6,8 @@ Usage:
 """
 
 import asyncio
+import csv
+import logging
 import shutil
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
@@ -84,6 +86,14 @@ def _parse_arguments() -> Namespace:
             help="Enable Langfuse tracing (requires LANGFUSE_* env vars)",
         )
 
+    completeness = subparsers.choices["completeness"]
+    completeness.add_argument(
+        "--continue",
+        action="store_true",
+        help="completeness only: rerun queries that previously failed in --output_dir, "
+        "clearing their per-query folder first, then re-aggregate over all queries.",
+    )
+
     return parser.parse_args()
 
 
@@ -119,6 +129,18 @@ def _save_config(output_dir: Path, source: str | None, overrides: list[str], con
         yaml.safe_dump(config.model_dump(mode="json"), f, sort_keys=False, allow_unicode=True)
 
 
+def _failed_queries(status_csv: Path) -> list[str]:
+    """Query slugs whose completeness status is not ``complete``."""
+    with status_csv.open(encoding="utf-8") as f:
+        return [row["query"] for row in csv.DictReader(f) if row.get("status") != "complete"]
+
+
+def _clear_outputs(slugs: list[str], output_dir: Path):
+    """Remove each failed query's per-query output folder so it starts clean."""
+    for slug in slugs:
+        shutil.rmtree(output_dir / slug, ignore_errors=True)
+
+
 async def _run_subcommand(args: Namespace):
     """Load config and run the selected evaluation subcommand."""
 
@@ -144,6 +166,21 @@ async def _run_subcommand(args: Namespace):
         if args.query:
             needle = args.query.lower()
             input_files = [f for f in input_files if needle in f.stem.lower()]
+
+        if getattr(args, "continue", False):
+            if args.subcommand != "completeness":
+                raise SystemExit("--continue is only supported for the completeness subcommand")
+            status_csv = output_dir / "evaluator_run_status.csv"
+            if not status_csv.exists():
+                raise SystemExit(f"--continue requires a previous run with {status_csv} in --output_dir")
+            failed = _failed_queries(status_csv)
+            _clear_outputs(failed, output_dir)
+            if not failed:
+                logging.info("Nothing to rerun: no failed queries in %s", output_dir)
+                return
+            failed_set = set(failed)
+            input_files = [f for f in input_files if f.stem in failed_set]
+            logging.info("Rerunning %d failed queries into %s", len(input_files), output_dir)
 
         await run_parallel(
             module.run_query,

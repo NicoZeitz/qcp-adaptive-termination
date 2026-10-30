@@ -54,7 +54,7 @@ async def answer_step_coordinator(
             """Register needs raised by the coordinator."""
             partial_answer.add_needs(need_type.try_parse_value(new_needs))
 
-        def final_answer(new_answer: Any):
+        def final_result(new_answer: Any):
             """Set the coordinator's final answer."""
             partial_answer.set_answer(result_type.try_parse_value(new_answer))
 
@@ -65,7 +65,7 @@ async def answer_step_coordinator(
                 "pd": pd,
             },
             tools={
-                "final_answer": final_answer,
+                "final_result": final_result,
                 "raise_needs": raise_needs,
             },
         )
