@@ -30,6 +30,7 @@ import qcp_adaptive_termination.llm.prompt as prompt
 from qcp_adaptive_termination.models import AgentRole, CacheMode, RoleConfig
 from qcp_adaptive_termination.observability import cache
 from qcp_adaptive_termination.observability import context as obs_context
+from qcp_adaptive_termination.observability.tracing import append_to_span_input, append_to_span_output
 
 _AGENT_SEMAPHORE = asyncio.Semaphore(5)
 
@@ -207,9 +208,10 @@ async def run_agent[TResult](
             usage=usage,
         )
 
+    agent_input = [*(previous_input or []), *prompts] if render_prompt_after_previous_history else (previous_input or [])
     cached = await compute_value(
         instructions,
-        input=([*(previous_input or []), *prompts] if render_prompt_after_previous_history else (previous_input or [])),
+        input=agent_input,
         context=context,
         output=output,
         function_tools=list(
@@ -231,6 +233,10 @@ async def run_agent[TResult](
     )
     output = _SerializedModel.unwrap(cached.output, output_type)
     continuation_input = cached.continuation_input
+
+    span_key = display_name if not label else f"{display_name} ({label})"
+    append_to_span_input({span_key: agent_input})
+    append_to_span_output({span_key: output})
 
     await hooks.fire_post(
         hooks.HookEvent.AGENT_COMPLETED,
