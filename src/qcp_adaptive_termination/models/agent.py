@@ -78,7 +78,6 @@ class AgentRole(StrEnum):
     """The role an agent plays during a pipeline stage."""
 
     DISCOVERY_DATA_AGENT_SCHEMA_DESCRIPTION = "discovery-data-agent-schema-description"
-    DISCOVERY_COORDINATOR_RELEVANCE = "discovery-coordinator-relevance"
     DISCOVERY_DATA_AGENT_RELEVANCE = "discovery-data-agent-relevance"
     BASELINE_FILTER = "discovery-baseline-filter"
     EMBEDDING_BOUNDARY_FINDER = "discovery-embedding-boundary-finder"
