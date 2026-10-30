@@ -149,11 +149,11 @@ async def run_agent[TResult](
         acc = obs_context.get_usage_accumulator()
         acc.input_tokens += usage.input_tokens
         acc.output_tokens += usage.output_tokens
-        acc.llm_calls += 1
         acc.duration_ms += duration_ms
 
         return result.final_output
 
+    obs_context.get_usage_accumulator().llm_calls += 1
     return await compute_value(
         instructions["content"],
         prompts=list(
@@ -192,7 +192,7 @@ async def run_llm[TResult](
         role=role,
         agent_name=agent_name,
         prompt_parameters=prompt_parameters,
-        max_turns=1,
+        max_turns=2,
         output_type=output_type,
         context=context,
         tools=[],

@@ -118,6 +118,7 @@ async def create(text):
         acc = context.get_usage_accumulator()
         acc.embedding_calls += 1
         acc.embedding_duration_ms += elapsed_ms
+        acc.embedding_tokens += sum(_num_tokens_from_string(texts))
         return results[0] if is_single else results
 
 

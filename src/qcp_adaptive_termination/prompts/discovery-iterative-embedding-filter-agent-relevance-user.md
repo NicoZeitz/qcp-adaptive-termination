@@ -7,4 +7,4 @@
 【Candidate agent】
 {{schema}}
 
-Is this agent relevant to the original query or any of the matched queries?
+Is this agent (partially) relevant to any of the matched queries?

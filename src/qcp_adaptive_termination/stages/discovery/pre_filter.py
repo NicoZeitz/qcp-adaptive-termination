@@ -74,9 +74,14 @@ async def filter_by_llm_baseline(
     logging.info("Baseline filter: kept %d / %d agents", len(relevant), len(data_agents))
     return relevant
 
+class _RankDecision(BaseModel):
+    rank: int
+    is_relevant: bool
+
+
 class _BoundaryResult(BaseModel):
-    cutoff_rank: int | None
-    excluded_ranks: list[int]
+    decisions: list[_RankDecision]
+    expand_to_rank: int | None = None
 
 
 class _DecomposerResult(BaseModel):
@@ -101,8 +106,9 @@ async def _boundary_finder(
     vector_index: VectorIndex[tuple[str, str, str]],
     agent_data: dict[str, AgentRegistryData],
     selected_set: set[str],
-    top_cols_per_agent: int = 1,
-    boundary_window: int = 50,
+    top_cols_per_agent: int,
+    boundary_window: int,
+    max_expansions: int,
 ) -> tuple[str, list[str]]:
     """Run boundary finder for one query. Returns (query, candidate_agent_names)."""
     t_rank = time.monotonic()
@@ -115,58 +121,98 @@ async def _boundary_finder(
 
     cq_agent_best = {name: cols[0] for name, cols in cq_agent_cols.items()}
     sorted_cq = sorted(cq_agent_best.items(), key=lambda x: x[1][0])
-    windowed_cq = sorted_cq[:boundary_window]
-    ranked_lines = []
-    for rank, (name, (dist, best_tbl, _)) in enumerate(windowed_cq, start=1):
-        td = agent_data[name].individual_descriptions.get(best_tbl)
-        tbl_nl = td.natural_language_description if td else best_tbl
-        col_parts = []
-        for col_dist, col_tbl, col_col in cq_agent_cols[name]:
-            col_td = agent_data[name].individual_descriptions.get(col_tbl)
-            col_nl = col_td.columns[col_col].natural_language_description if col_td and col_col in col_td.columns else col_col
-            col_parts.append(f"{col_nl} (L2={col_dist:.4f})")
-        ranked_lines.append(f"[{rank}] {tbl_nl} {' '.join(col_parts)}")
 
-    logging.info("Iterative Embedding Filter query %r — boundary ranked agents (window=%d/%d):", query, len(windowed_cq), len(sorted_cq))
+    def _build_ranked_lines(window: list[tuple[str, tuple[float, str, str]]]) -> list[str]:
+        lines = []
+        for rank, (name, (dist, best_tbl, _)) in enumerate(window, start=1):
+            td = agent_data[name].individual_descriptions.get(best_tbl)
+            tbl_nl = td.natural_language_description if td else best_tbl
+            col_parts = []
+            for col_dist, col_tbl, col_col in cq_agent_cols[name]:
+                col_td = agent_data[name].individual_descriptions.get(col_tbl)
+                col_nl = col_td.columns[col_col].natural_language_description if col_td and col_col in col_td.columns else col_col
+                col_parts.append(f"{col_nl} (L2={col_dist:.4f})")
+            lines.append(f"[{rank}] {tbl_nl} {' '.join(col_parts)}")
+        return lines
+
+    def _tail_line(shown_count: int) -> str | None:
+        tail = sorted_cq[shown_count:]
+        if not tail:
+            return None
+        tail_dists = [d for _, (d, _, _) in tail]
+        return f"[tail] {len(tail)} agents not shown, L2 range: {min(tail_dists):.4f} to {max(tail_dists):.4f}"
+
+    current_window_size = min(boundary_window, len(sorted_cq))
+    windowed_cq = sorted_cq[:current_window_size]
+    all_ranked_lines = _build_ranked_lines(sorted_cq)  # built for full list, sliced per window
+    ranked_lines = all_ranked_lines[:current_window_size]
+
+    logging.info("Iterative Embedding Filter query %r — boundary ranked agents (window=%d/%d):", query, current_window_size, len(sorted_cq))
     for line in ranked_lines:
         logging.info("  %s", line)
 
-    while True:
-        try:
-            result = await runner.run_llm(
-                role=AgentRole.EMBEDDING_BOUNDARY_FINDER,
-                prompt_parameters={
-                    "query": query,
-                    "ranked_agents": "\n".join(ranked_lines),
-                },
-                output_type=_BoundaryResult,
-            )
-            break
-        except APITimeoutError:
-            logging.warning("Iterative Embedding Filter LLM timed out for %r — retrying", query)
-            await asyncio.sleep(2)
+    tail = _tail_line(current_window_size)
+    prompt_lines = ranked_lines + ([tail] if tail else [])
 
-    logging.info(
-        "Iterative Embedding Filter query %r: cutoff_rank=%s excluded_ranks=%s — %s",
-        query,
-        result.cutoff_rank,
-        result.excluded_ranks,
-    )
+    # decisions accumulated across potential expansions; keyed by rank
+    all_decisions: dict[int, bool] = {}
 
-    if result.cutoff_rank is None:
-        return query, []
+    for expansion in range(max_expansions + 1):
+        while True:
+            try:
+                result = await runner.run_llm(
+                    role=AgentRole.EMBEDDING_BOUNDARY_FINDER,
+                    prompt_parameters={
+                        "query": query,
+                        "ranked_agents": "\n".join(prompt_lines),
+                    },
+                    output_type=_BoundaryResult,
+                )
+                break
+            except APITimeoutError:
+                logging.warning("Iterative Embedding Filter LLM timed out for %r — retrying", query)
+                await asyncio.sleep(2)
 
-    if result.cutoff_rank >= boundary_window and len(sorted_cq) > boundary_window:
-        logging.warning(
-            "Iterative Embedding Filter query %r: cutoff_rank=%d hit the window ceiling (%d) — "
-            "%d agents were not shown; consider increasing boundary_window",
-            query, result.cutoff_rank, boundary_window, len(sorted_cq) - boundary_window,
+        for d in result.decisions:
+            if d.rank not in all_decisions:
+                all_decisions[d.rank] = d.is_relevant
+
+        logging.info(
+            "Iterative Embedding Filter query %r (expansion=%d): decisions=%s expand_to_rank=%s",
+            query,
+            expansion,
+            {r: v for r, v in sorted(all_decisions.items())},
+            result.expand_to_rank,
         )
 
-    excluded = set(result.excluded_ranks)
+        if result.expand_to_rank is None or result.expand_to_rank <= current_window_size:
+            break
+        if expansion == max_expansions:
+            logging.warning(
+                "Iterative Embedding Filter query %r: expand_to_rank=%d still requested after %d expansions — stopping",
+                query, result.expand_to_rank, max_expansions,
+            )
+            break
+        if current_window_size >= len(sorted_cq):
+            break
+
+        new_window_size = min(result.expand_to_rank, len(sorted_cq))
+        new_tail_lines = all_ranked_lines[current_window_size:new_window_size]
+        logging.info(
+            "Iterative Embedding Filter query %r: expanding window %d → %d (%d new agents)",
+            query, current_window_size, new_window_size, len(new_tail_lines),
+        )
+        current_window_size = new_window_size
+        windowed_cq = sorted_cq[:current_window_size]
+
+        relevant_ranks = sorted(r for r, v in all_decisions.items() if v)
+        curated_prior = [all_ranked_lines[r - 1] for r in relevant_ranks if r <= len(all_ranked_lines)]
+        tail = _tail_line(current_window_size)
+        prompt_lines = curated_prior + new_tail_lines + ([tail] if tail else [])
+
     candidates = [
-        name for rank, (name, _) in enumerate(windowed_cq[:result.cutoff_rank], start=1)
-        if name not in selected_set and rank not in excluded
+        name for rank, (name, _) in enumerate(windowed_cq, start=1)
+        if all_decisions.get(rank, False) and name not in selected_set
     ]
     return query, candidates
 
@@ -199,7 +245,7 @@ async def _check_agent(
                 logging.warning("Iterative Embedding Filter agent LLM [%s] timed out — retrying", agent_name)
                 await asyncio.sleep(2)
     logging.info(
-        "Iterative Embedding Filter agent [%s] is_relevant=%s matched=%s covered=%r missing=%r — %s",
+        "Iterative Embedding Filter agent [%s] is_relevant=%s matched=%s covered=%r missing=%r",
         agent_name,
         result.is_relevant,
         matched_queries,
@@ -229,7 +275,7 @@ async def _decompose(
             logging.warning("Iterative Embedding Filter decomposer LLM timed out — retrying")
             await asyncio.sleep(2)
     logging.info(
-        "Iterative Embedding Filter: queries=%s — %s",
+        "Iterative Embedding Filter: queries=%s",
         result.queries,
     )
     return result.queries
@@ -241,6 +287,7 @@ async def iterative_embedding_filter(
     max_rounds: int = 10,
     top_cols_per_agent: int = 3,
     boundary_window: int = 50,
+    max_expansions: int = 3,
 ) -> list[DataAgent]:
     """Parallel queue-based filter with semantic boundary finding.
 
@@ -309,7 +356,7 @@ async def iterative_embedding_filter(
                 agent_all_dists[agent_name].append(dist)
 
         boundary_tasks = [
-            _boundary_finder(q, emb, vector_index, agent_data, selected_set, top_cols_per_agent, boundary_window)
+            _boundary_finder(q, emb, vector_index, agent_data, selected_set, top_cols_per_agent, boundary_window, max_expansions)
             for q, emb in zip(current_queries, cq_embeddings)
         ]
         boundary_results: list[tuple[str, list[str]]] = await asyncio.gather(*boundary_tasks)
@@ -406,7 +453,7 @@ async def iterative_embedding_filter(
                 await asyncio.sleep(2)
 
         logging.info(
-            "Iterative Embedding Filter round %d aggregate: is_complete=%s data_not_available=%s queries=%s — %s",
+            "Iterative Embedding Filter round %d aggregate: is_complete=%s data_not_available=%s queries=%s",
             round_idx,
             agg.is_complete,
             agg.data_not_available,

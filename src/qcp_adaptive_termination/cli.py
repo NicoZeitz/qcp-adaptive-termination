@@ -80,6 +80,7 @@ def register_default_output_hooks() -> None:
                 "total_tokens": acc.input_tokens + acc.output_tokens,
                 "llm_duration_ms": acc.duration_ms,
                 "embedding_calls": acc.embedding_calls,
+                "embedding_tokens": acc.embedding_tokens,
                 "embedding_duration_ms": acc.embedding_duration_ms,
                 "ranking_duration_ms": acc.ranking_duration_ms,
             },

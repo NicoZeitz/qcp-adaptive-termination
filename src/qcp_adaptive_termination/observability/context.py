@@ -54,6 +54,7 @@ class UsageAccumulator:
     duration_ms: int = 0
     embedding_calls: int = 0
     embedding_duration_ms: int = 0
+    embedding_tokens: int = 0
     ranking_duration_ms: int = 0
 
 
