@@ -320,6 +320,7 @@ async def run_script(
                 "end_stage": end_stage.value,
                 "input_file": str(input_file),
             },
+            tracing_providers=tracing_providers,
         ):
             return await _run()
 
