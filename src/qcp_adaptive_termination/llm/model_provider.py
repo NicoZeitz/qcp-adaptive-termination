@@ -107,7 +107,7 @@ class _vLlmTransport(AsyncBaseTransport):
 
     @staticmethod
     def _modify_response_content(payload: dict[str, Any]) -> bytes:
-        """Mirror ``reasoning`` and ``reasoning_content`` on the response."""
+        """Mirror ``reasoning`` and ``reasoning_content`` on the response and strip DeepSeek JSON prefixes."""
 
         for choice in payload.get("choices", []) or []:
             message = choice.get("message") or {}
@@ -116,6 +116,17 @@ class _vLlmTransport(AsyncBaseTransport):
             if isinstance(reasoning, str) and reasoning.strip():
                 message["reasoning"] = reasoning
                 message["reasoning_content"] = reasoning
+
+            content = message.get("content")
+            if isinstance(content, str):
+                last_brace = content.rfind("{")
+                if last_brace > 0:
+                    candidate = content[last_brace:]
+                    try:
+                        json.loads(candidate)
+                        message["content"] = candidate
+                    except json.JSONDecodeError:
+                        pass
 
         return json.dumps(payload).encode("utf-8")
 
