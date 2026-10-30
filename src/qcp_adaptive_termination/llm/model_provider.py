@@ -19,6 +19,28 @@ from qcp_adaptive_termination.observability import context
 _multi_provider: MultiProvider | None = None
 
 
+def _is_valid_json(text: str) -> bool:
+    try:
+        json.loads(text)
+        return True
+    except json.JSONDecodeError:
+        return False
+
+
+def _find_first_valid_json(text: str) -> str | None:
+    """Return the substring starting at the first '{' that parses as complete JSON, or None."""
+    pos = 0
+    while True:
+        idx = text.find("{", pos)
+        if idx == -1:
+            return None
+        try:
+            json.loads(text[idx:])
+            return text[idx:]
+        except json.JSONDecodeError:
+            pos = idx + 1
+
+
 def get_multi_provider() -> MultiProvider:
     """Return the lazily-initialized MultiProvider."""
     global _multi_provider
@@ -118,15 +140,10 @@ class _vLlmTransport(AsyncBaseTransport):
                 message["reasoning_content"] = reasoning
 
             content = message.get("content")
-            if isinstance(content, str):
-                last_brace = content.rfind("{")
-                if last_brace > 0:
-                    candidate = content[last_brace:]
-                    try:
-                        json.loads(candidate)
-                        message["content"] = candidate
-                    except json.JSONDecodeError:
-                        pass
+            if isinstance(content, str) and not _is_valid_json(content):
+                fixed = _find_first_valid_json(content)
+                if fixed is not None:
+                    message["content"] = fixed
 
         return json.dumps(payload).encode("utf-8")
 
