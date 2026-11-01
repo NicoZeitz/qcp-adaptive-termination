@@ -7,7 +7,7 @@ from qcp_adaptive_termination.hooks import HookEvent
 from qcp_adaptive_termination.models import CacheMode, DataAgent
 from qcp_adaptive_termination.models.stages import FilteredRelevantAgents, Stage
 from qcp_adaptive_termination.observability import cache, context, tracing
-from qcp_adaptive_termination.stages.discovery.pre_filter import filter_by_llm_baseline, iterative_embedding_filter
+from qcp_adaptive_termination.stages.discovery.discovery_filter import filter_by_llm_baseline, iterative_embedding_filter
 
 
 @hooks.hook(HookEvent.DISCOVERY_STAGE, stage_context=True)
