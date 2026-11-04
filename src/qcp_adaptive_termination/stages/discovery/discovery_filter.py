@@ -132,6 +132,12 @@ async def iterative_embedding_filter(
                 failed_queries.append((q, "only matched already-confirmed agents"))
 
         if not agent_to_queries:
+            if set(current_queries) != {query}:
+                logging.info(
+                    "Iterative Embedding Filter round %d: no candidates found for sub-queries — stopping",
+                    round_idx,
+                )
+                break
             logging.info(
                 "Iterative Embedding Filter round %d: no candidates found — running decomposer",
                 round_idx,
@@ -168,6 +174,12 @@ async def iterative_embedding_filter(
         )
 
         if not newly_confirmed and not selected_order:
+            if set(current_queries) != {query}:
+                logging.info(
+                    "Iterative Embedding Filter round %d: nothing confirmed for sub-queries — stopping",
+                    round_idx,
+                )
+                break
             logging.info(
                 "Iterative Embedding Filter round %d: nothing confirmed yet — running decomposer",
                 round_idx,

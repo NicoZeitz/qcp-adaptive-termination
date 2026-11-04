@@ -2,11 +2,8 @@
 
 import asyncio
 import logging
-from collections.abc import Callable, Coroutine
-from typing import Any
 
 import numpy as np
-from openai import APITimeoutError
 from pydantic import BaseModel
 
 import qcp_adaptive_termination.agent_registry as agent_registry
@@ -16,18 +13,6 @@ from qcp_adaptive_termination.llm import runner
 from qcp_adaptive_termination.models import AgentRegistryType, AgentRole, DataAgent
 from qcp_adaptive_termination.models.agent import AgentRegistryData
 from qcp_adaptive_termination.observability import tracing
-
-
-async def _run_with_retry[T](
-    make_coro: Callable[[], Coroutine[Any, Any, T]],
-    label: str,
-) -> T:
-    while True:
-        try:
-            return await make_coro()
-        except APITimeoutError:
-            logging.warning("LLM timed out (%s) — retrying", label)
-            await asyncio.sleep(2)
 
 
 # --- Output models ---
@@ -66,14 +51,11 @@ class QueryCompletenessResult(BaseModel):
 
 async def baseline_filter(query: str, agent: DataAgent) -> tuple[DataAgent, bool]:
     schema = await agent_registry.build_registry_string(agent, AgentRegistryType.TECHNICAL)
-    result = await _run_with_retry(
-        lambda: runner.run_llm(
-            role=AgentRole.BASELINE_FILTER,
-            agent_name=agent.name,
-            prompt_parameters={"schema": schema, "query": query},
-            output_type=_SingleAgentRelevanceResult,
-        ),
-        label=f"baseline_filter/{agent.name}",
+    result = await runner.run_llm(
+        role=AgentRole.DISCOVERY_BASELINE_FILTER,
+        agent_name=agent.name,
+        prompt_parameters={"schema": schema, "query": query},
+        output_type=_SingleAgentRelevanceResult,
     )
     is_relevant = result.output.is_relevant
     logging.info("Baseline filter [%s] is_relevant=%s", agent.name, is_relevant)
@@ -146,16 +128,13 @@ async def select_candidates(
     all_decisions: dict[int, bool] = {}
 
     for expansion in range(max_expansions + 1):
-        result = await _run_with_retry(
-            lambda pl=prompt_lines: runner.run_llm(
-                role=AgentRole.EMBEDDING_BOUNDARY_FINDER,
-                prompt_parameters={
-                    "query": query,
-                    "ranked_agents": "\n".join(pl),
-                },
-                output_type=BoundaryResult,
-            ),
-            label=f"boundary_finder/{query!r}",
+        result = await runner.run_llm(
+            role=AgentRole.DISCOVERY_EMBEDDING_BOUNDARY_FINDER,
+            prompt_parameters={
+                "query": query,
+                "ranked_agents": "\n".join(prompt_lines),
+            },
+            output_type=BoundaryResult,
         )
         boundary = result.output
 
@@ -220,18 +199,15 @@ async def agent_relevance(
     schema = agent_data[agent_name].technical_description
     matched_str = "\n".join(f"- {q}" for q in matched_queries)
     async with semaphore:
-        result = await _run_with_retry(
-            lambda: runner.run_llm(
-                role=AgentRole.ITERATIVE_EMBEDDING_FILTER_AGENT_RELEVANCE,
-                agent_name=f"{round_label} - {agent_name}",
-                prompt_parameters={
-                    "query": query,
-                    "matched_queries": matched_str,
-                    "schema": schema,
-                },
-                output_type=AgentRelevanceResult,
-            ),
-            label=f"agent_relevance/{agent_name}",
+        result = await runner.run_llm(
+            role=AgentRole.DISCOVERY_ITERATIVE_EMBEDDING_FILTER_AGENT_RELEVANCE,
+            agent_name=f"{round_label} - {agent_name}",
+            prompt_parameters={
+                "query": query,
+                "matched_queries": matched_str,
+                "schema": schema,
+            },
+            output_type=AgentRelevanceResult,
         )
     relevance = result.output
     logging.info(
@@ -247,13 +223,10 @@ async def agent_relevance(
 
 async def decompose(query: str, failed_queries: list[tuple[str, str]]) -> list[str]:
     failed_str = "\n".join(f"- {q} ({reason})" for q, reason in failed_queries)
-    result = await _run_with_retry(
-        lambda: runner.run_llm(
-            role=AgentRole.ITERATIVE_EMBEDDING_FILTER_DECOMPOSER,
-            prompt_parameters={"query": query, "failed_queries": failed_str},
-            output_type=DecomposerResult,
-        ),
-        label="decomposer",
+    result = await runner.run_llm(
+        role=AgentRole.DISCOVERY_ITERATIVE_EMBEDDING_FILTER_DECOMPOSER,
+        prompt_parameters={"query": query, "failed_queries": failed_str},
+        output_type=DecomposerResult,
     )
     queries = result.output.queries
     logging.info("Iterative Embedding Filter: queries=%s", queries)
@@ -272,19 +245,16 @@ async def query_completeness(
         + (f" - Missing: {agent_coverage[name][1]}" if agent_coverage[name][1] else "")
         for name in selected_order
     ]
-    result = await _run_with_retry(
-        lambda: runner.run_llm(
-            role=AgentRole.ITERATIVE_EMBEDDING_FILTER_QUERY_COMPLETENESS,
-            agent_name=round_label,
-            prompt_parameters={
-                "query": query,
-                "agent_coverage_summary": "\n".join(coverage_lines),
-                "failed_queries": "\n".join(f"- {q} ({reason})" for q, reason in failed_queries),
-                "original_query_found_nothing": "",
-            },
-            output_type=QueryCompletenessResult,
-        ),
-        label=f"aggregate/{round_label}",
+    result = await runner.run_llm(
+        role=AgentRole.DISCOVERY_ITERATIVE_EMBEDDING_FILTER_QUERY_COMPLETENESS,
+        agent_name=round_label,
+        prompt_parameters={
+            "query": query,
+            "agent_coverage_summary": "\n".join(coverage_lines),
+            "failed_queries": "\n".join(f"- {q} ({reason})" for q, reason in failed_queries),
+            "original_query_found_nothing": "",
+        },
+        output_type=QueryCompletenessResult,
     )
     return result.output
 
