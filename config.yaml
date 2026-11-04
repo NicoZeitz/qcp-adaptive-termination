@@ -3,11 +3,16 @@ execution:
   llm_max_turns: 40
   llm_code_execution_timeout: 60
   llm_code_execution_preview_char_limit: 2000
-  llm_max_retries: 2
+  llm_max_retries: 3
   llm_timeout: 60
   schema_alignment_agent_limit: 1000
 
-discovery_filter_mode: iterative_embedding_filter   # llm_baseline | iterative_embedding_filter
+discovery:
+  filter_mode: iterative_embedding_filter   # llm_baseline | iterative_embedding_filter
+  ief_max_filter_rounds: 10
+  ief_top_cols_per_agent: 3
+  ief_initial_boundary_window_size: 50 
+  ief_max_boundary_window_expansions: 3
 
 selection:
   strategy: posterior                  # random | embedding | count | distinct_count | hll_sketch | theta_sketch | min_hash | posterior

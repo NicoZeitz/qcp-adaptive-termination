@@ -40,10 +40,10 @@ async def filter_by_llm_baseline(
 async def iterative_embedding_filter(
     query: str,
     data_agents: list[DataAgent],
-    max_rounds: int = 10,
-    top_cols_per_agent: int = 3,
-    boundary_window: int = 50,
-    max_expansions: int = 3,
+    ief_max_filter_rounds: int,
+    ief_top_cols_per_agent: int,
+    ief_initial_boundary_window_size: int,
+    ief_max_boundary_window_expansions: int,
 ) -> list[DataAgent]:
     """Parallel queue-based filter with semantic boundary finding.
 
@@ -87,7 +87,7 @@ async def iterative_embedding_filter(
     failed_queries: list[tuple[str, str]] = []
     all_tried_queries: set[str] = {query}
 
-    for round_idx in range(max_rounds):
+    for round_idx in range(ief_max_filter_rounds):
         round_label = f"round {round_idx}"
         logging.info(
             "Iterative Embedding Filter round %d: %d queries: %s",
@@ -108,7 +108,7 @@ async def iterative_embedding_filter(
         boundary_results: list[tuple[str, list[str]]] = await asyncio.gather(*[
             select_candidates(
                 q, emb, vector_index, agent_data, selected_set,
-                top_cols_per_agent, boundary_window, max_expansions,
+                ief_top_cols_per_agent, ief_initial_boundary_window_size, ief_max_boundary_window_expansions,
             )
             for q, emb in zip(current_queries, query_embeddings, strict=True)
         ])

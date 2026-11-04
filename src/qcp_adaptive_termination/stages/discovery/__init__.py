@@ -55,7 +55,7 @@ async def filter_relevant_agents(
     Returns:
         (FilteredRelevantAgents): the relevant data agents
     """
-    filter_mode = context.get_config().discovery_filter_mode
+    filter_mode = context.get_config().discovery.filter_mode
 
     if filter_mode == "iterative_embedding_filter" and pre_filter:
         with tracing.own_span(
@@ -65,7 +65,19 @@ async def filter_relevant_agents(
                 "total_agents": len(data_agents),
             },
         ):
-            candidate_data_agents = await iterative_embedding_filter(query, data_agents)
+            ief_max_filter_rounds = context.get_config().discovery.ief_max_filter_rounds
+            ief_top_cols_per_agent = context.get_config().discovery.ief_top_cols_per_agent
+            ief_initial_boundary_window_size = context.get_config().discovery.ief_initial_boundary_window_size
+            ief_max_boundary_window_expansions = context.get_config().discovery.ief_max_boundary_window_expansions
+
+            candidate_data_agents = await iterative_embedding_filter(
+                query,
+                data_agents,
+                ief_max_filter_rounds,
+                ief_top_cols_per_agent,
+                ief_initial_boundary_window_size,
+                ief_max_boundary_window_expansions,
+            )
             logging.info(
                 "Iterative Embedding Filter: %d → %d agents", len(data_agents), len(candidate_data_agents)
             )

@@ -200,6 +200,21 @@ class ModelsConfig(BaseModel):
         description="Per-model pricing keyed by model name exactly as configured elsewhere",
     )
 
+class DiscoveryConfig(BaseModel):
+    """Discovery filter settings."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    filter_mode: Literal["llm_baseline", "iterative_embedding_filter"] = Field(
+        default="iterative_embedding_filter",
+        description="Discovery filter to run",
+    )
+
+    ief_max_filter_rounds: int = Field(default=10, description="Maximum number of filter rounds")
+    ief_top_cols_per_agent: int = Field(default=3, description="Top columns to consider per agent")
+    ief_initial_boundary_window_size: int = Field(default=50, description="Initial boundary window size")
+    ief_max_boundary_window_expansions: int = Field(default=3, description="Maximum number of boundary window expansions")
+
 
 class Config(BaseModel):
     """Top-level application configuration."""
@@ -211,7 +226,4 @@ class Config(BaseModel):
     selection: SelectionConfig = Field(default_factory=SelectionConfig, description="Agent selection settings")
     cache: CacheConfig = Field(default_factory=CacheConfig, description="Result caching behavior")
     models: ModelsConfig = Field(default_factory=ModelsConfig, description="Model identifiers and pricing")
-    discovery_filter_mode: Literal["llm_baseline", "iterative_embedding_filter"] = Field(
-        default="iterative_embedding_filter",
-        description="Which discovery pre-filter to run: embedding-guided iterative filter or the LLM baseline",
-    )
+    discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig, description="Discovery filter settings")
