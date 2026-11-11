@@ -78,8 +78,12 @@ class AgentRole(StrEnum):
     """The role an agent plays during a pipeline stage."""
 
     DISCOVERY_DATA_AGENT_SCHEMA_DESCRIPTION = "discovery-data-agent-schema-description"
-    DISCOVERY_COORDINATOR_RELEVANCE = "discovery-coordinator-relevance"
     DISCOVERY_DATA_AGENT_RELEVANCE = "discovery-data-agent-relevance"
+    DISCOVERY_BASELINE_FILTER = "discovery-baseline-filter"
+    DISCOVERY_EMBEDDING_BOUNDARY_FINDER = "discovery-embedding-boundary-finder"
+    DISCOVERY_ITERATIVE_EMBEDDING_FILTER_AGENT_RELEVANCE = "discovery-iterative-embedding-filter-agent-relevance"
+    DISCOVERY_ITERATIVE_EMBEDDING_FILTER_QUERY_COMPLETENESS = "discovery-iterative-embedding-filter-query-completeness"
+    DISCOVERY_ITERATIVE_EMBEDDING_FILTER_DECOMPOSER = "discovery-iterative-embedding-filter-decomposer"
     PLANNING_COORDINATOR_DRAFT_QUERY_PLAN = "planning-coordinator-draft-query-plan"
     EXECUTION_COORDINATOR_ALIGN_SCHEMA = "execution-coordinator-align-schema"
     EXECUTION_COORDINATOR_WORLD_KNOWLEDGE_STOP = "execution-coordinator-world-knowledge-stop"

@@ -246,6 +246,7 @@ async def run_script(
     end_stage = cast(Stage, args.end_stage)
     name = f"{args.name} - {datetime_str}" if args.name else datetime_str
     cache_mode = config.cache.mode
+    tracing_providers = ["file", "langfuse"] if getattr(args, "langfuse", False) else ["file"]
 
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -319,6 +320,7 @@ async def run_script(
                 "end_stage": end_stage.value,
                 "input_file": str(input_file),
             },
+            tracing_providers=tracing_providers,
         ):
             return await _run()
 

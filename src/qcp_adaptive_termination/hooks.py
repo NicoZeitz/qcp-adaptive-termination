@@ -51,7 +51,6 @@ class HookEvent(StrEnum):
     DISCOVERY_LOAD_REGISTRY_DATA = "discovery_load_registry_data"
     DISCOVERY_DATA_AGENT_SCHEMA_DESCRIPTION = "discovery_data_agent_schema_description"
     DISCOVERY_EMBEDDING_PRE_FILTER = "discovery_embedding_pre_filter"
-    DISCOVERY_COORDINATOR_RELEVANCE = "discovery_coordinator_relevance"
     DISCOVERY_DATA_AGENT_RELEVANCE = "discovery_data_agent_relevance"
 
     # ── Stage 2: Planning ────────────────────────────────────────────────────

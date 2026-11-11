@@ -19,6 +19,28 @@ from qcp_adaptive_termination.observability import context
 _multi_provider: MultiProvider | None = None
 
 
+def _is_valid_json(text: str) -> bool:
+    try:
+        json.loads(text)
+        return True
+    except json.JSONDecodeError:
+        return False
+
+
+def _find_first_valid_json(text: str) -> str | None:
+    """Return the substring starting at the first '{' that parses as complete JSON, or None."""
+    pos = 0
+    while True:
+        idx = text.find("{", pos)
+        if idx == -1:
+            return None
+        try:
+            json.loads(text[idx:])
+            return text[idx:]
+        except json.JSONDecodeError:
+            pos = idx + 1
+
+
 def get_multi_provider() -> MultiProvider:
     """Return the lazily-initialized MultiProvider."""
     global _multi_provider
@@ -107,7 +129,7 @@ class _vLlmTransport(AsyncBaseTransport):
 
     @staticmethod
     def _modify_response_content(payload: dict[str, Any]) -> bytes:
-        """Mirror ``reasoning`` and ``reasoning_content`` on the response."""
+        """Mirror ``reasoning`` and ``reasoning_content`` on the response and strip DeepSeek JSON prefixes."""
 
         for choice in payload.get("choices", []) or []:
             message = choice.get("message") or {}
@@ -116,6 +138,12 @@ class _vLlmTransport(AsyncBaseTransport):
             if isinstance(reasoning, str) and reasoning.strip():
                 message["reasoning"] = reasoning
                 message["reasoning_content"] = reasoning
+
+            content = message.get("content")
+            if isinstance(content, str) and not _is_valid_json(content):
+                fixed = _find_first_valid_json(content)
+                if fixed is not None:
+                    message["content"] = fixed
 
         return json.dumps(payload).encode("utf-8")
 

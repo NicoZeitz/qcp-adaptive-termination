@@ -24,12 +24,14 @@ async def _run_worker(
     dataset_dir: Path,
     output_dir: Path,
     cache_dir: Path | None,
+    langfuse: bool = False,
 ) -> Any:
     """Load input and config for one query and run the worker."""
     data, extra = load_input(input_file)
     query_slug = input_file.stem
     run_output_dir = output_dir / query_slug
     cache_dir = Path(cache_dir) if cache_dir is not None else None
+    tracing_providers = ["file", "langfuse"] if langfuse else ["file"]
     with context.pipeline_context(
         name=f"query-{query_slug}",
         trace_name=f"[QCP-EVAL] {query_slug}",
@@ -37,6 +39,7 @@ async def _run_worker(
         cache_dir=cache_dir,
         data_dir=dataset_dir.parent,
         config=config,
+        tracing_providers=tracing_providers,
     ):
         return await worker(
             input_file=input_file,
@@ -56,9 +59,10 @@ def _run_worker_sync(
     dataset_dir: Path,
     output_dir: Path,
     cache_dir: Path | None,
+    langfuse: bool = False,
 ) -> Any:
     """Process-pool entry point: run the async worker in a fresh event loop."""
-    return asyncio.run(_run_worker(worker, input_file, config, dataset_dir, output_dir, cache_dir))
+    return asyncio.run(_run_worker(worker, input_file, config, dataset_dir, output_dir, cache_dir, langfuse))
 
 
 async def run_parallel(
@@ -71,6 +75,7 @@ async def run_parallel(
     *,
     parallel: bool = True,
     max_workers: int | None = None,
+    langfuse: bool = False,
 ) -> list[Any]:
     """Run `worker` for every input file, in parallel or sequentially.
 
@@ -95,6 +100,7 @@ async def run_parallel(
                 dataset_dir,
                 output_dir,
                 cache_dir,
+                langfuse,
             )
             for input_file in input_files
         ]
