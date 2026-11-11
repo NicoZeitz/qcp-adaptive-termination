@@ -65,55 +65,55 @@ models:
   embedding: "openai/text-embedding-3-large" # any model id accepted by the embedding provider
   agents:
     planning-coordinator-draft-query-plan:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high" # high | minimal | low | medium | high | xhigh
     execution-coordinator-answer-step:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     execution-coordinator-replan:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     execution-coordinator-align-schema:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     execution-coordinator-world-knowledge-stop:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     execution-coordinator-result-producer:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     discovery-data-agent-schema-description:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     discovery-data-agent-relevance:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     execution-data-agent-query:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       # reasoning_effort=high: streaming tests showed the first-turn generation is fast
       # (~0.5s) even with thinking enabled, so high reasoning is fine. Endpoint hangs are
       # intermittent (server-side under load) and are handled by the retry-with-backoff on
       # the discarded real call, not by disabling reasoning.
       reasoning_effort: "high"
     discovery-baseline-filter:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     discovery-embedding-boundary-finder:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     discovery-iterative-embedding-filter-agent-relevance:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     discovery-iterative-embedding-filter-query-completeness:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
     discovery-iterative-embedding-filter-decomposer:
-      model: "university/unsloth/DeepSeek-V4-Flash-0731"
+      model: "openrouter/deepseek/deepseek-v4.1-flash-1017"
       reasoning_effort: "high"
   costs:
     "openai/text-embedding-3-large":   # USD per 1M tokens
       embedding: 0.13
-    "university/unsloth/DeepSeek-V4-Flash-0731":
+    "openrouter/deepseek/deepseek-v4.1-flash-1017":
       input: 0.14
       cached_input: 0.014
       cache_write: 0.14
